@@ -1,0 +1,95 @@
+/* src/renderer/src/views/Login/LoginView.module.css */
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-dark); /* Dark navy background for contrast */
+  -webkit-app-region: drag; /* Allows moving the frameless window from the background */
+}
+
+.loginCard {
+  background-color: var(--bg-panel);
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 450px;
+  -webkit-app-region: no-drag; /* Ensures inputs and buttons can be clicked */
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* --- HEADER --- */
+.header {
+  text-align: center;
+  border-bottom: 2px solid var(--bg-main);
+  padding-bottom: 20px;
+}
+
+.brand {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--text-dark);
+  text-transform: uppercase;
+}
+
+.brand span {
+  color: var(--brand-primary);
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 8px 0 0 0;
+}
+
+/* --- FORM --- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inputGroup label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* --- ERRORS --- */
+.errorContainer {
+  min-height: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.errorText {
+  color: var(--action-danger);
+}
+
+.infoText {
+  color: var(--brand-secondary);
+}
+
+/* --- ACTIONS --- */
+.actionGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
+}

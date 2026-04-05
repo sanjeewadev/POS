@@ -1,0 +1,130 @@
+/* src/renderer/src/pages/Reports/CreditAccounts.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--bg-main);
+}
+
+.topPanel {
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  padding: 25px;
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panelTitle {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+.summaryBox {
+  background-color: #fef2f2;
+  padding: 15px 25px;
+  border-radius: var(--radius-sm);
+  text-align: right;
+  border: 1px solid #fecaca;
+}
+
+.summaryLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #dc2626;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.summaryValueDanger {
+  font-size: 24px;
+  font-weight: 900;
+  color: #dc2626;
+}
+
+.mainPanel {
+  flex: 1;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tableWrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Use the standard table styles */
+.classicTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.classicTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-main);
+  padding: 15px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  z-index: 1;
+}
+.classicTable td {
+  padding: 15px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+.classicTable tr:hover {
+  background-color: #f8fafc;
+}
+
+/* --- MODALS --- */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modalBox {
+  background: var(--bg-panel);
+  width: 90%;
+  max-width: 500px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid var(--bg-main);
+  background-color: #f8fafc;
+}
+
+.modalBody {
+  padding: 25px;
+}

@@ -1,0 +1,94 @@
+/* src/renderer/src/components/TopNavigationBar/TopNavigationBar.module.css */
+
+.headerContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-dark); /* Deep Navy Blue */
+  height: 80px; /* Massive height for easy tapping */
+  padding: 0 var(--spacing-lg);
+  -webkit-app-region: drag; /* Allows the user to drag the frameless window */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+/* We must disable dragging on interactive elements, or they cannot be clicked! */
+.noDrag {
+  -webkit-app-region: no-drag;
+}
+
+/* --- BRANDING --- */
+.brand {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--text-light);
+  text-transform: uppercase;
+}
+
+.brand span {
+  color: var(--action-warning); /* A bright orange pop to look hardware-industrial */
+}
+
+/* --- THE TABS --- */
+.tabContainer {
+  display: flex;
+  gap: 4px;
+  height: 100%;
+  align-items: flex-end; /* Pushes the tabs to sit flush on the bottom edge */
+}
+
+.tabButton {
+  height: 60px;
+  min-width: 140px;
+  padding: 0 20px;
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  border-bottom: none;
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tabButton:active {
+  transform: scale(0.95);
+}
+
+.tabActive {
+  background-color: var(--bg-main); /* Matches the app background so it blends perfectly */
+  color: var(--brand-primary);
+  border: 2px solid var(--bg-main);
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* --- USER INFO --- */
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.userName {
+  color: var(--text-light);
+  font-weight: 800;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.userRole {
+  color: var(--action-success);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 1px;
+}

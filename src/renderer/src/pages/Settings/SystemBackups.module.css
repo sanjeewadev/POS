@@ -1,0 +1,71 @@
+/* src/renderer/src/pages/Settings/SystemBackups.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background-color: var(--bg-main);
+  overflow-y: auto;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  max-width: 800px;
+}
+
+.card {
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 25px;
+  background-color: #f8fafc;
+  border-bottom: 2px solid var(--bg-main);
+}
+
+.cardHeader h3 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--text-dark);
+}
+
+.cardHeader p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cardBody {
+  padding: 25px;
+}
+
+.dangerCard {
+  border: 2px solid #fecaca;
+}
+
+.resetConfirmBox {
+  background-color: #fef2f2;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 2px dashed #fca5a5;
+}

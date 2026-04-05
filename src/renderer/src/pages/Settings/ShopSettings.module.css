@@ -1,0 +1,171 @@
+/* src/renderer/src/pages/Settings/ShopSettings.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.loadingState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--bg-main);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  margin: 8px 0 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.splitLayout {
+  display: flex;
+  gap: 40px;
+  flex: 1;
+}
+
+/* --- LEFT: FORM PANEL --- */
+.formPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.settingsForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* --- RIGHT: RECEIPT PREVIEW --- */
+.previewPanel {
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--bg-main);
+  padding: 30px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #cbd5e1;
+}
+
+.previewHeader {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+/* Thermal Paper Illusion */
+.receiptPaper {
+  background-color: white;
+  width: 100%;
+  max-width: 320px;
+  padding: 25px 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  font-family: 'Courier New', Courier, monospace; /* Classic Receipt Font */
+  color: #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.receiptTop {
+  text-align: center;
+}
+
+.receiptShopName {
+  font-size: 18px;
+  font-weight: 900;
+  margin: 0 0 5px 0;
+  text-transform: uppercase;
+}
+
+.receiptAddress,
+.receiptPhone {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.receiptDivider {
+  text-align: center;
+  color: #94a3b8;
+  letter-spacing: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.receiptMeta {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.receiptTable {
+  width: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  border-collapse: collapse;
+}
+
+.receiptTable th {
+  padding-bottom: 5px;
+  border-bottom: 1px dashed #94a3b8;
+}
+
+.receiptTable td {
+  padding: 5px 0;
+}
+
+.receiptTotals {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.receiptFooterText {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 10px;
+}

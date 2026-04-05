@@ -1,0 +1,116 @@
+/* src/renderer/src/pages/Reports/Dashboard.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--bg-main);
+}
+
+.controlHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-panel);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+}
+
+.pageTitle {
+  font-size: 20px;
+  font-weight: 900;
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.filterGroup {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.dateFilters {
+  display: flex;
+  gap: 15px;
+}
+
+/* KPI Cards */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.kpiCard {
+  background-color: var(--bg-panel);
+  padding: 25px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  border-bottom: 6px solid transparent;
+}
+
+.kpiCard.primary {
+  border-bottom-color: var(--brand-primary);
+}
+.kpiCard.success {
+  border-bottom-color: var(--action-success);
+}
+.kpiCard.warning {
+  border-bottom-color: var(--action-warning);
+}
+
+.kpiTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.kpiValue {
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--text-dark);
+}
+
+/* Chart Area */
+.chartCard {
+  flex: 1;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.cardHeader {
+  margin-bottom: 20px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-dark);
+  text-transform: uppercase;
+}
+
+.chartWrapper {
+  flex: 1;
+  min-height: 300px;
+}
+
+.emptyChart {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-weight: 600;
+  background-color: #f8fafc;
+  border-radius: var(--radius-sm);
+}

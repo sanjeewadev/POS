@@ -1,0 +1,140 @@
+/* src/renderer/src/pages/Inventory/AdjustStock.module.css */
+
+.container {
+  display: flex;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+}
+
+/* --- LEFT SIDEBAR (Product List) --- */
+.leftSidebar {
+  width: 320px;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.searchHeader {
+  padding: var(--spacing-md);
+  background-color: var(--bg-main);
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.productList {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-sm);
+}
+
+.productCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.productCard:hover {
+  background-color: #f1f5f9;
+}
+
+.productCard.active {
+  background-color: #eff6ff;
+  border-color: var(--brand-secondary);
+}
+
+.prodName {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+.prodCode {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.stockBadge {
+  background-color: var(--brand-primary);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stockBadge.empty {
+  background-color: var(--action-danger);
+}
+
+/* --- MAIN WORKSPACE --- */
+.mainArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.emptyPanel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  box-shadow: var(--shadow-panel);
+}
+
+.panel {
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-panel);
+}
+
+.productHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--bg-main);
+}
+
+.productTitle {
+  font-size: 24px;
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dark);
+  text-transform: uppercase;
+}

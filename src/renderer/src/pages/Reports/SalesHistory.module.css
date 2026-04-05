@@ -1,0 +1,283 @@
+/* src/renderer/src/pages/Reports/SalesHistory.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--bg-main);
+}
+
+/* --- TOP PANEL (Filters) --- */
+.topPanel {
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  padding: 25px;
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 30px;
+  align-items: flex-end;
+  flex: 1;
+}
+
+.dateFilters {
+  display: flex;
+  gap: 15px;
+}
+
+.inputStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inputStack label,
+.searchStack label {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.searchStack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* --- SUMMARIES --- */
+.summaryGroup {
+  display: flex;
+  gap: 20px;
+}
+
+.summaryBox {
+  background-color: var(--bg-main);
+  padding: 15px 25px;
+  border-radius: var(--radius-sm);
+  text-align: right;
+  min-width: 220px;
+  border: 1px solid #cbd5e1;
+}
+
+.summaryLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.summaryValueSuccess {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--action-success);
+}
+.summaryValueDanger {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--action-danger);
+}
+
+/* --- MAIN PANEL (Table) --- */
+.mainPanel {
+  flex: 1;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tableWrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.classicTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.classicTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-main);
+  padding: 15px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.classicTable td {
+  padding: 15px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.voidedRow {
+  background-color: #f8fafc;
+  opacity: 0.6;
+}
+
+/* --- BADGES (Reused from TodaySales) --- */
+.statusBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+}
+.statusPaid {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+.statusUnpaid {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+.statusPartial {
+  background-color: #fef9c3;
+  color: #d97706;
+}
+.statusVoid {
+  background-color: #f1f5f9;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.cashBadge {
+  background-color: #f1f5f9;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.creditBadge {
+  background-color: #fef3c7;
+  color: #b45309;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid #fcd34d;
+}
+
+/* --- MODALS --- */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modalBoxView {
+  background: var(--bg-panel);
+  width: 90%;
+  max-width: 1100px;
+  max-height: 90vh;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid var(--bg-main);
+  background-color: #f8fafc;
+}
+
+.modalBody {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modalFooter {
+  padding: 15px 20px;
+  background-color: #f8fafc;
+  border-top: 2px solid var(--bg-main);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modalSummaryBox {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding: 25px;
+  background-color: #f8fafc;
+  border: 2px solid var(--bg-main);
+  border-radius: var(--radius-md);
+}
+
+.summaryLeft {
+  flex: 1;
+}
+.summaryRight {
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summaryLine {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.paidLine {
+  color: var(--action-success);
+  font-weight: 900;
+  font-size: 18px;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 8px;
+}
+.balanceLine {
+  color: var(--action-danger);
+  font-weight: 900;
+  font-size: 22px;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 8px;
+}
+
+.savingsTag {
+  display: inline-block;
+  background-color: #fef3c7;
+  color: #b45309;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  border: 1px solid #fde68a;
+}

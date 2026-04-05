@@ -1,0 +1,141 @@
+/* src/renderer/src/pages/Returns/ReturnsCenter.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--bg-main);
+}
+
+/* --- SEARCH PANEL --- */
+.searchPanel {
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  padding: 25px;
+  box-shadow: var(--shadow-panel);
+}
+
+.panelTitle {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin: 0 0 15px 0;
+  text-transform: uppercase;
+}
+
+.searchForm {
+  display: flex;
+  gap: 15px;
+}
+
+/* --- MAIN AREA --- */
+.mainArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  box-shadow: var(--shadow-panel);
+  text-align: center;
+}
+
+.emptyState h2 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+/* --- BILL PANEL --- */
+.billPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.billHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 25px;
+  border-bottom: 2px solid var(--bg-main);
+}
+
+.dangerBanner {
+  background-color: #fef2f2;
+  color: var(--action-danger);
+  padding: 15px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 14px;
+  border-bottom: 2px solid #fecaca;
+  text-transform: uppercase;
+}
+
+/* --- TABLE --- */
+.tableWrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.classicTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.classicTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-main);
+  padding: 15px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.classicTable td {
+  padding: 15px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.rowDisabled {
+  background-color: #f8fafc;
+  opacity: 0.6;
+}
+
+/* --- FOOTER --- */
+.billFooter {
+  padding: 25px;
+  background-color: var(--bg-main);
+  border-top: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.summaryBox {
+  background-color: #fef2f2;
+  padding: 15px 30px;
+  border-radius: 8px;
+  text-align: right;
+  border: 2px solid #fecaca;
+}

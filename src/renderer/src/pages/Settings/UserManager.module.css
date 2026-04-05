@@ -1,0 +1,123 @@
+/* src/renderer/src/pages/Settings/UserManager.module.css */
+
+.container {
+  display: flex;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--bg-main);
+}
+
+/* --- LEFT PANEL --- */
+.leftPanel {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid var(--bg-main);
+}
+
+.panelTitle {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* --- RIGHT PANEL --- */
+.rightPanel {
+  flex: 1;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.formHeader {
+  padding: 20px;
+  background-color: var(--bg-main);
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.formBody {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.infoBox {
+  background-color: #f8fafc;
+  padding: 15px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #cbd5e1;
+  color: var(--text-muted);
+}
+
+/* --- TABLE --- */
+.tableWrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.classicTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.classicTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-main);
+  padding: 15px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  z-index: 1;
+}
+.classicTable td {
+  padding: 15px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+  transition: background-color 0.1s;
+}
+.classicTable tr:hover td {
+  background-color: #f8fafc;
+}
+
+.statusBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+}

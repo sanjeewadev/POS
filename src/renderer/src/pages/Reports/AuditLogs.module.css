@@ -1,0 +1,103 @@
+/* src/renderer/src/pages/Reports/AuditLogs.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--bg-main);
+}
+
+.topPanel {
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  padding: 25px;
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panelTitle {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+.controlBar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.tabGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.mainPanel {
+  flex: 1;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tableWrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Use the standard table styles */
+.classicTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.classicTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-main);
+  padding: 15px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  z-index: 1;
+}
+.classicTable td {
+  padding: 15px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+.classicTable tr:hover {
+  background-color: #f8fafc;
+}
+
+/* --- BADGES --- */
+.badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  border: 1px solid transparent;
+}
+.badgeVoid {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border-color: #cbd5e1;
+}
+.badgeReturn {
+  background-color: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+.badgeAdjust {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}

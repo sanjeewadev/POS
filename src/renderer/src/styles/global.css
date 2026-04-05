@@ -1,0 +1,135 @@
+/* src/renderer/src/styles/global.css */
+
+/* ==========================================================================
+   1. GLOBAL VARIABLES (THE DESIGN SYSTEM)
+   ========================================================================== */
+:root {
+  /* 🎨 Color Palette (High Contrast for Retail Environments) */
+  --bg-main: #e2e8f0; /* Light grayish-blue for the main background */
+  --bg-panel: #ffffff; /* Pure white for panels and receipts */
+  --bg-dark: #0f172a; /* Deep navy blue for sidebars and headers */
+
+  --brand-primary: #1e3a8a; /* The classic POS Blue */
+  --brand-secondary: #3b82f6; /* Lighter blue for active states */
+
+  /* Action Colors (The massive touch buttons) */
+  --action-success: #16a34a; /* Bright Green (Pay, Log On, Enter) */
+  --action-danger: #dc2626; /* Bright Red (Void, Clear, Delete) */
+  --action-warning: #ea580c; /* Orange/Yellow (Discounts, Credit) */
+  --action-neutral: #64748b; /* Gray (Numbers, generic functions) */
+
+  /* Typography Colors */
+  --text-dark: #0f172a; /* For light backgrounds */
+  --text-muted: #64748b; /* For secondary information */
+  --text-light: #f8fafc; /* For dark backgrounds and colored buttons */
+
+  /* 📏 Touch-Friendly Sizing */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+
+  /* Shadows for depth */
+  --shadow-panel: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-btn: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================================================
+     2. CSS RESET
+     ========================================================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  user-select: none; /* Prevents text highlighting when tapping screen fast */
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-dark);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden; /* Prevents bouncing/scrolling on touch screens */
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+     3. UNIVERSAL TOUCH-FRIENDLY CLASSES
+     ========================================================================== */
+
+/* Use this class for ANY button in the POS. 
+    It guarantees a massive, easy-to-tap target area.
+  */
+.pos-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-light);
+  background-color: var(--brand-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-btn);
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+  text-align: center;
+  min-height: 60px; /* Force minimum height for fat fingers */
+}
+
+.pos-btn:active {
+  transform: scale(0.97); /* Physical "click" feedback */
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2);
+}
+
+.pos-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Color Modifiers for buttons */
+.pos-btn.success {
+  background-color: var(--action-success);
+}
+.pos-btn.danger {
+  background-color: var(--action-danger);
+}
+.pos-btn.warning {
+  background-color: var(--action-warning);
+}
+.pos-btn.neutral {
+  background-color: var(--action-neutral);
+}
+
+/* Use this for forms and inputs. Massive hit areas.
+  */
+.pos-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-dark);
+  background-color: #f1f5f9;
+  border: 2px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.2s;
+  user-select: auto; /* Allow typing */
+}
+
+.pos-input:focus {
+  border-color: var(--brand-secondary);
+  background-color: #ffffff;
+}
