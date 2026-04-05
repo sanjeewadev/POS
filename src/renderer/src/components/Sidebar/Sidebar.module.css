@@ -1,48 +1,50 @@
 /* src/renderer/src/components/Sidebar/Sidebar.module.css */
 
 .sidebarContainer {
-  width: 120px; /* Slim but wide enough for fat fingers */
+  width: 140px;
   height: 100%;
-  background-color: var(--bg-dark);
+  background: #0f1117;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
   z-index: 90;
+  flex-shrink: 0;
 }
 
-/* --- TIME WIDGET --- */
+/* ── Time Widget ── */
 .timeWidget {
-  padding: var(--spacing-md) 0;
+  padding: 16px 12px;
   text-align: center;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .timeText {
-  color: var(--text-light);
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 1px;
+  color: #e2e8f0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .dateText {
-  color: var(--action-warning);
-  font-size: 11px;
-  font-weight: 800;
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 600;
   text-transform: uppercase;
-  margin-top: 4px;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
 }
 
-/* --- QUICK ACTIONS --- */
+/* ── Quick Actions ── */
 .quickActions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: var(--spacing-md);
-  flex: 1; /* Pushes the system status to the bottom */
-  margin-top: 20px;
+  gap: 6px;
+  padding: 12px;
+  flex: 1;
 }
 
 .actionBtn {
@@ -50,72 +52,97 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  padding: 15px 5px;
+  gap: 7px;
+  padding: 14px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 9px;
+  color: #94a3b8;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 10px;
-  font-weight: 800;
-  text-align: center;
-  gap: 8px;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.actionBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
 }
 
 .actionBtn:active {
-  transform: scale(0.92);
-  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.icon {
-  font-size: 24px;
+.actionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
 }
 
-/* --- SYSTEM STATUS --- */
-.systemStatus {
-  padding: var(--spacing-md) 0;
+.actionLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   text-align: center;
-  background-color: rgba(0, 0, 0, 0.3);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  line-height: 1.3;
+  color: inherit;
+}
+
+/* ── System Status ── */
+.systemStatus {
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .statusIndicator {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--action-success);
-  font-size: 10px;
-  margin-bottom: 4px;
+  gap: 6px;
 }
 
 .pulseDot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--action-success);
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
   border-radius: 50%;
-  box-shadow: 0 0 8px var(--action-success);
-  animation: pulse 2s infinite;
+  flex-shrink: 0;
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+.statusText {
+  color: #22c55e;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .versionText {
-  color: var(--text-muted);
+  color: #475569;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
+  letter-spacing: 0.03em;
 }
 
 @keyframes pulse {
   0% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
   }
   70% {
-    opacity: 0.5;
-    box-shadow: 0 0 0 6px rgba(22, 163, 74, 0);
+    opacity: 0.7;
+    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0);
   }
   100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
   }
 }

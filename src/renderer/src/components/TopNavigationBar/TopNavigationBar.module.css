@@ -2,88 +2,194 @@
 
 .headerContainer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background-color: var(--bg-dark);
-  height: 50px; /* 🚀 Drastically shrunk from 80px */
-  padding: 0 var(--spacing-lg);
+  justify-content: space-between;
+  height: 58px;
+  background: #0f1117;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 0 20px;
+  gap: 16px;
   -webkit-app-region: drag;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
   z-index: 100;
+  flex-shrink: 0;
 }
 
 .noDrag {
   -webkit-app-region: no-drag;
 }
 
+/* ── Brand ── */
 .brand {
-  font-size: 18px; /* Smaller, sleeker */
-  font-weight: 800;
-  letter-spacing: 1px;
-  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brandText {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #e2e8f0;
   text-transform: uppercase;
 }
 
-.brand span {
-  color: var(--action-warning);
+.brandText span {
+  color: #3b82f6;
 }
 
+/* ── Tabs ── */
 .tabContainer {
   display: flex;
+  align-items: center;
   gap: 2px;
-  height: 100%;
-  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 4px;
 }
 
 .tabButton {
-  height: 40px; /* Shrunk from 60px */
-  min-width: 100px;
-  padding: 0 15px;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #94a3b8;
-  background-color: transparent;
+  height: 34px;
+  padding: 0 14px;
   border: 1px solid transparent;
-  border-bottom: none;
-  border-top-left-radius: var(--radius-sm);
-  border-top-right-radius: var(--radius-sm);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all 0.15s ease;
+  color: #94a3b8;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
-.tabButton:hover {
-  color: var(--text-light);
+.tabButton:hover:not(.tabActive) {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tabActive {
-  background-color: var(--bg-main);
-  color: var(--text-dark);
-  border-color: var(--bg-main);
+  background: #1e293b;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
+/* Blue dot shown only on active tab */
+.tabDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.tabActive .tabDot {
+  background: #3b82f6;
+}
+
+/* ── Right: User section ── */
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 9px;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  background: #1d4ed8;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #bfdbfe;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
 }
 
 .userText {
   display: flex;
   flex-direction: column;
-  text-align: right;
   line-height: 1.2;
 }
 
 .userName {
-  color: var(--text-light);
-  font-weight: 700;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e2e8f0;
 }
 
 .userRole {
-  color: var(--action-success);
-  font-weight: 800;
   font-size: 10px;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #22c55e; /* default: Staff */
+}
+
+/* Role colour overrides */
+.userRole.admin {
+  color: #f59e0b;
+}
+
+.userRole.root {
+  color: #a78bfa;
+}
+
+/* ── Logout button ── */
+.logoutBtn {
+  height: 34px;
+  padding: 0 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.logoutBtn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.logoutBtn:active {
+  transform: scale(0.97);
 }
