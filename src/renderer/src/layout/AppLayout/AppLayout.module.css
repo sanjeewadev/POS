@@ -16,155 +16,16 @@
   overflow: hidden;
 }
 
-/* --- SIDE NAVIGATION --- */
-.sideNav {
-  width: 100px;
-  background-color: var(--bg-dark);
-  display: flex;
-  flex-direction: column;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  flex-shrink: 0;
-}
-
-.clockWidget {
-  padding: 15px 5px;
-  text-align: center;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
-  margin-bottom: 10px;
-}
-
-.timeText {
-  color: var(--text-light);
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-}
-
-.dateText {
-  color: var(--action-warning);
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
-
-.navActions {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 0 5px;
-  flex: 1;
-}
-
-.actionBtn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-  border: 1px solid transparent;
-  padding: 15px 5px;
-  border-radius: var(--radius-sm);
-  color: #94a3b8;
-  cursor: pointer;
-  transition: all 0.1s ease;
-  min-height: 80px;
-}
-
-.actionBtn:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--text-light);
-}
-
-.actionBtn:active {
-  background-color: rgba(255, 255, 255, 0.1);
-  transform: scale(0.95);
-}
-
-.actionIcon {
-  font-size: 24px;
-  margin-bottom: 5px;
-  filter: grayscale(100%);
-  opacity: 0.8;
-  transition: all 0.2s ease;
-}
-
-.actionBtn:hover .actionIcon {
-  filter: grayscale(0%);
-  opacity: 1;
-}
-
-.actionText {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  text-align: center;
-  line-height: 1.2;
-}
-
-.lockBtn {
-  margin-top: auto;
-  margin-bottom: 10px;
-  color: #fca5a5;
-}
-
-.lockBtn:hover {
-  background-color: rgba(220, 38, 38, 0.1);
-  color: #fef2f2;
-}
-
-.systemStatus {
-  padding: 15px 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-top: 2px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.2);
-}
-
-.statusDot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--action-success);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--action-success);
-}
-
-.statusText {
-  display: flex;
-  flex-direction: column;
-}
-
-.statusText strong {
-  color: var(--action-success);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.statusText span {
-  color: #64748b;
-  font-size: 9px;
-  font-weight: 600;
-}
-
 .contentArea {
   flex: 1;
   background-color: var(--bg-main);
   overflow: hidden;
 }
 
-/* ========================================================
-   🚀 HARDWARE MODALS (LOCK SCREEN & CALCULATOR)
-   ======================================================== */
-
+/* ── Lock Screen ── */
 .lockScreen {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(10px);
   z-index: 9999;
@@ -184,14 +45,47 @@
   align-items: center;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+.lockIcon {
+  color: #94a3b8;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lockTitle {
+  margin: 0;
+  color: var(--text-dark);
+  font-size: 22px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lockSubtitle {
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.lockUser {
+  color: var(--brand-primary);
+  font-weight: 700;
+}
+
+.lockForm {
+  width: 100%;
+  margin-top: 24px;
+}
+
+/* ── Calculator Modal ── */
 .calcOverlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(15, 23, 42, 0.5);
   z-index: 5000;
   display: flex;
@@ -205,17 +99,19 @@
   border-radius: var(--radius-md);
   width: 320px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .calcHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: white;
+  color: #e2e8f0;
   margin-bottom: 15px;
-  text-transform: uppercase;
   font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .calcDisplay {
@@ -223,13 +119,14 @@
   color: #38bdf8;
   font-family: monospace;
   font-size: 32px;
-  font-weight: 900;
+  font-weight: 700;
   text-align: right;
   padding: 15px;
   border-radius: var(--radius-sm);
   margin-bottom: 15px;
   overflow: hidden;
-  border: 1px solid #334155;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-variant-numeric: tabular-nums;
 }
 
 .calcGrid {
@@ -239,15 +136,19 @@
 }
 
 .calcBtn {
-  background: #334155;
-  color: white;
-  border: none;
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius-sm);
-  font-size: 20px;
-  font-weight: 900;
+  font-size: 18px;
+  font-weight: 600;
   padding: 15px 0;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: all 0.1s ease;
+}
+
+.calcBtn:hover {
+  background: #334155;
 }
 
 .calcBtn:active {
@@ -257,16 +158,24 @@
 
 .calcClearBtn {
   grid-column: span 4;
-  background: var(--action-danger);
-  color: white;
-  border: none;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
   border-radius: var(--radius-sm);
-  font-size: 16px;
-  font-weight: 900;
-  padding: 15px 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 13px 0;
   cursor: pointer;
-  margin-top: 5px;
+  margin-top: 4px;
+  transition: all 0.15s ease;
 }
+
+.calcClearBtn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
 .calcClearBtn:active {
   transform: scale(0.98);
 }

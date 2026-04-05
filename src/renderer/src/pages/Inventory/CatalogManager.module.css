@@ -1,29 +1,30 @@
-/* src/renderer/src/views/Inventory/CatalogManager.module.css */
+/* src/renderer/src/pages/Inventory/CatalogManager.module.css */
+
 .container {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-lg);
   height: 100%;
 }
 
 /* --- LAYER 1: Left Panel (VS Code Tree) --- */
 .leftPanel {
-  width: 280px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-lg);
+  width: 300px;
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-panel);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .panelHeader {
   padding: 20px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-canvas);
+  border-bottom: 2px solid var(--bg-main);
+  background: #f8fafc;
   font-size: 14px;
-  font-weight: 800;
-  color: var(--text-muted);
+  font-weight: 900;
+  color: var(--text-dark);
   text-transform: uppercase;
 }
 
@@ -36,23 +37,24 @@
 .treeNode {
   display: flex;
   align-items: center;
-  padding: 6px 8px;
+  padding: 8px 10px;
   cursor: pointer;
-  border-radius: var(--border-radius-sm);
-  color: var(--text-main);
-  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--text-dark);
+  font-weight: 600;
   font-size: 14px;
   user-select: none;
   transition: background 0.1s;
+  margin-bottom: 2px;
 }
 
 .treeNode:hover {
-  background: var(--bg-hover);
+  background: var(--bg-main);
 }
 .treeNode.active {
-  background: rgba(37, 99, 235, 0.1);
-  color: var(--primary);
-  font-weight: 700;
+  background: #eff6ff;
+  color: var(--brand-primary);
+  font-weight: 800;
 }
 
 .expandIcon {
@@ -65,18 +67,17 @@
 
 .folderIcon {
   margin-right: 8px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 /* --- LAYER 2: Right Panel (Contents) --- */
 .rightPanel {
   flex: 1;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-lg);
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-panel);
   overflow: hidden;
 }
 
@@ -85,106 +86,53 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 2px solid var(--bg-main);
 }
 
 .breadcrumb {
-  font-size: 18px;
-  color: var(--text-main);
-  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-dark);
+  font-weight: 900;
 }
 .breadcrumb span {
   color: var(--text-muted);
-  font-weight: normal;
-}
-
-/* ADD THIS TO CatalogManager.module.css */
-
-.globalSearch {
-  width: 250px;
-  padding: 10px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-size: 13px;
-  background: var(--bg-canvas);
-  color: var(--text-main);
-  transition: 0.2s;
-  outline: none;
-}
-
-.globalSearch:focus {
-  border-color: var(--primary);
-  background: var(--bg-surface);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.addBtn {
-  background: var(--primary);
-  color: var(--bg-surface);
-  border: none;
-  padding: 10px 20px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.addBtn:hover {
-  filter: brightness(0.9);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 12px;
 }
 
 .tableWrapper {
   flex: 1;
   overflow-y: auto;
 }
+
 .classicTable {
   width: 100%;
   border-collapse: collapse;
 }
 .classicTable th {
-  background: var(--bg-canvas);
-  padding: 12px 20px;
+  background: var(--bg-main);
+  padding: 15px 20px;
   text-align: left;
   font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
   color: var(--text-muted);
-  border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
+  z-index: 1;
 }
 .classicTable td {
   padding: 15px 20px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e2e8f0;
   font-size: 14px;
+  vertical-align: middle;
 }
 
 .rowIcon {
   font-size: 18px;
   margin-right: 10px;
   vertical-align: middle;
-}
-
-/* Actions */
-.actionBtn {
-  background: transparent;
-  border: none;
-  font-weight: 700;
-  cursor: pointer;
-  margin-right: 15px;
-  font-size: 12px;
-}
-.btnOpen {
-  color: var(--primary);
-}
-.btnView {
-  color: var(--success);
-}
-.btnEdit {
-  color: var(--warning);
-}
-.btnDel {
-  color: var(--danger);
-  margin-right: 0;
 }
 
 /* --- MODALS --- */
@@ -194,7 +142,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -202,170 +151,41 @@
 }
 
 .modalBox {
-  background: var(--bg-surface);
-  border-radius: var(--border-radius-lg);
-  width: 500px;
-  box-shadow: var(--shadow-lg);
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.modalBoxView {
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
+  width: 90%;
+  max-width: 800px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
 .modalHeader {
   padding: 20px;
-  background: var(--bg-canvas);
-  border-bottom: 1px solid var(--border-color);
+  background: #f8fafc;
+  border-bottom: 2px solid var(--bg-main);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 .modalBody {
-  padding: 30px 20px;
+  padding: 30px;
 }
+
 .modalFooter {
   padding: 20px;
-  background: var(--bg-canvas);
-  border-top: 1px solid var(--border-color);
+  background: #f8fafc;
+  border-top: 2px solid var(--bg-main);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-}
-
-/* The Big Choice Buttons */
-.choiceGrid {
-  display: flex;
-  gap: 20px;
-}
-.choiceBtn {
-  flex: 1;
-  padding: 40px 20px;
-  border: 2px dashed var(--border-color);
-  border-radius: var(--border-radius-md);
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-  transition: all 0.2s;
-}
-.choiceBtn:hover {
-  border-color: var(--primary);
-  background: rgba(37, 99, 235, 0.05);
-}
-.choiceIcon {
-  font-size: 40px;
-}
-.choiceTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-main);
-}
-
-/* Form inputs */
-.formGroup {
-  margin-bottom: 20px;
-}
-.formGroup label {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-.formGroup input,
-.formGroup select {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  font-family: inherit;
-  font-size: 14px;
-}
-.cancelBtn {
-  padding: 10px 20px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text-main);
-}
-.saveBtn {
-  padding: 10px 20px;
-  background: var(--primary);
-  color: var(--bg-surface);
-  border: none;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-weight: 700;
-}
-
-/* --- EXTRA BUTTONS --- */
-.backBtn {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  padding: 6px 12px;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-right: 15px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.backBtn:hover {
-  background: var(--bg-hover);
-}
-
-/* ADD THESE TO THE BOTTOM OF CatalogManager.module.css */
-
-.iconCloseBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: var(--text-muted);
-  transition: color 0.2s;
-}
-.iconCloseBtn:hover {
-  color: var(--danger);
-}
-
-/* The massive 1000px modal specifically for the VIEW panel */
-.modalBoxView {
-  background: var(--bg-surface);
-  border-radius: var(--border-radius-lg);
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-}
-
-/* Big close button for View panel */
-.closeBtn {
-  padding: 12px 24px;
-  background: #0f172a;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 800;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-.closeBtn:hover {
-  background: #1e293b;
-}
-
-/* The red warning badge */
-.dangerBadge {
-  background: #fef2f2;
-  color: #dc2626;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 800;
-  font-size: 13px;
-  border: 1px solid #fee2e2;
-  display: inline-block;
 }

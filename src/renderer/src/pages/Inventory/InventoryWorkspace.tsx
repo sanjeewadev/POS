@@ -1,9 +1,15 @@
 // src/renderer/src/pages/Inventory/InventoryWorkspace.tsx
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../store/AuthContext'
+import {
+  RiSearchLine,
+  RiTruckLine,
+  RiScales3Line,
+  RiFoldersLine,
+  RiBuilding2Line
+} from 'react-icons/ri'
 import styles from './InventoryWorkspace.module.css'
 
-// We will update these individual pages soon!
 import ProductCatalog from './ProductCatalog'
 import SupplierManager from './SupplierManager'
 import StockInManager from './StockInManager'
@@ -14,10 +20,8 @@ export default function InventoryWorkspace() {
   const { currentUser } = useAuth()
   const [activeTab, setActiveTab] = useState('Products')
 
-  // 🚀 RBAC: Recognize both Root (0) and Admin (1)
   const isAdmin = currentUser?.Role === 0 || currentUser?.Role === 1
 
-  // 🚀 RBAC: If a staff member tries to navigate to a blocked tab, kick them back
   useEffect(() => {
     if (!isAdmin && (activeTab === 'Catalog' || activeTab === 'Suppliers')) {
       setActiveTab('Products')
@@ -43,57 +47,56 @@ export default function InventoryWorkspace() {
 
   return (
     <div className={styles.workspaceContainer}>
-      {/* --- INNER SIDEBAR MENU --- */}
       <aside className={styles.innerSidebar}>
-        <div className={styles.menuHeader}>INVENTORY</div>
+        <div className={styles.navGroup}>
+          <div className={styles.groupLabel}>Inventory</div>
 
-        <button
-          className={`${styles.navBtn} ${activeTab === 'Products' ? styles.active : ''}`}
-          onClick={() => setActiveTab('Products')}
-        >
-          <span className={styles.icon}>🔍</span>
-          <div className={styles.btnText}>
-            <strong>View Products</strong>
-            <span>Quick Stock Add</span>
-          </div>
-        </button>
+          <button
+            className={`${styles.navBtn} ${activeTab === 'Products' ? styles.active : ''}`}
+            onClick={() => setActiveTab('Products')}
+          >
+            <RiSearchLine className={styles.navIcon} />
+            <div className={styles.navText}>
+              <strong>View Products</strong>
+              <span>Quick Stock Add</span>
+            </div>
+          </button>
 
-        <button
-          className={`${styles.navBtn} ${activeTab === 'StockIn' ? styles.active : ''}`}
-          onClick={() => setActiveTab('StockIn')}
-        >
-          <span className={styles.icon}>🚚</span>
-          <div className={styles.btnText}>
-            <strong>Receive GRN</strong>
-            <span>Supplier Invoices</span>
-          </div>
-        </button>
+          <button
+            className={`${styles.navBtn} ${activeTab === 'StockIn' ? styles.active : ''}`}
+            onClick={() => setActiveTab('StockIn')}
+          >
+            <RiTruckLine className={styles.navIcon} />
+            <div className={styles.navText}>
+              <strong>Receive GRN</strong>
+              <span>Supplier Invoices</span>
+            </div>
+          </button>
 
-        <button
-          className={`${styles.navBtn} ${activeTab === 'Adjustments' ? styles.active : ''}`}
-          onClick={() => setActiveTab('Adjustments')}
-        >
-          <span className={styles.icon}>⚖️</span>
-          <div className={styles.btnText}>
-            <strong>Adjust Stock</strong>
-            <span>Loss / Corrections</span>
-          </div>
-        </button>
+          <button
+            className={`${styles.navBtn} ${activeTab === 'Adjustments' ? styles.active : ''}`}
+            onClick={() => setActiveTab('Adjustments')}
+          >
+            <RiScales3Line className={styles.navIcon} />
+            <div className={styles.navText}>
+              <strong>Adjust Stock</strong>
+              <span>Loss / Corrections</span>
+            </div>
+          </button>
+        </div>
 
-        {/* 🚀 RBAC: Hide Management Tools from standard Staff */}
         {isAdmin && (
-          <>
-            <div className={styles.divider}></div>
-            <div className={styles.menuHeader} style={{ color: 'var(--action-warning)' }}>
-              MANAGER TOOLS
+          <div className={styles.navGroup}>
+            <div className={styles.groupLabel} style={{ color: 'var(--action-warning)' }}>
+              Manager Tools
             </div>
 
             <button
               className={`${styles.navBtn} ${activeTab === 'Catalog' ? styles.active : ''}`}
               onClick={() => setActiveTab('Catalog')}
             >
-              <span className={styles.icon}>🗂️</span>
-              <div className={styles.btnText}>
+              <RiFoldersLine className={styles.navIcon} />
+              <div className={styles.navText}>
                 <strong>Catalog Setup</strong>
                 <span>Folders & Items</span>
               </div>
@@ -103,17 +106,16 @@ export default function InventoryWorkspace() {
               className={`${styles.navBtn} ${activeTab === 'Suppliers' ? styles.active : ''}`}
               onClick={() => setActiveTab('Suppliers')}
             >
-              <span className={styles.icon}>🏢</span>
-              <div className={styles.btnText}>
+              <RiBuilding2Line className={styles.navIcon} />
+              <div className={styles.navText}>
                 <strong>Suppliers</strong>
                 <span>Vendor Profiles</span>
               </div>
             </button>
-          </>
+          </div>
         )}
       </aside>
 
-      {/* --- MAIN CONTENT AREA --- */}
       <section className={styles.contentArea}>{renderContent()}</section>
     </div>
   )

@@ -29,7 +29,6 @@ export default function UserManager() {
   const [users, setUsers] = useState<User[]>([])
   const [search, setSearch] = useState('')
 
-  // Form State
   const [editingId, setEditingId] = useState<number | null>(null)
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
@@ -74,10 +73,8 @@ export default function UserManager() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-
     const safeFullName = fullName.trim()
     const safeUsername = username.trim().toLowerCase()
-
     if (!safeFullName || !safeUsername)
       return Swal.fire('Missing Info', 'Name and Username are required!', 'warning')
     if (!editingId && !password)
@@ -125,7 +122,6 @@ export default function UserManager() {
         'error'
       )
     }
-
     const confirmResult = await Swal.fire({
       title: `${currentStatus ? 'BLOCK' : 'UNBLOCK'} USER?`,
       text: `Are you sure you want to ${currentStatus ? 'block' : 'unblock'} ${u.Username}?`,
@@ -134,7 +130,6 @@ export default function UserManager() {
       confirmButtonColor: currentStatus ? '#dc2626' : '#16a34a',
       confirmButtonText: `Yes, ${currentStatus ? 'Block' : 'Unblock'}`
     })
-
     if (confirmResult.isConfirmed) {
       try {
         const payload = { ...u, IsActive: !currentStatus }
@@ -161,14 +156,15 @@ export default function UserManager() {
 
   return (
     <div className={styles.container}>
+      {/* ── Left: User Table ── */}
       <div className={styles.leftPanel}>
         <div className={styles.panelHeader}>
-          <h2 className={styles.panelTitle}>SYSTEM ACCOUNTS</h2>
+          <h2 className={styles.panelTitle}>System Accounts</h2>
           <input
             type="text"
             className="pos-input"
-            style={{ width: '300px' }}
-            placeholder="Search by name or username..."
+            style={{ width: '280px' }}
+            placeholder="Search users by name or username..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -178,11 +174,11 @@ export default function UserManager() {
           <table className={styles.classicTable}>
             <thead>
               <tr>
-                <th>USERNAME</th>
-                <th>FULL NAME</th>
-                <th>ROLE</th>
-                <th>STATUS</th>
-                <th style={{ textAlign: 'right' }}>COMMAND</th>
+                <th>Username</th>
+                <th>Full Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right', width: '110px' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -190,9 +186,14 @@ export default function UserManager() {
                 <tr>
                   <td
                     colSpan={5}
-                    style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}
+                    style={{
+                      textAlign: 'center',
+                      padding: '60px 20px',
+                      color: '#64748b',
+                      fontSize: '14px'
+                    }}
                   >
-                    No users found.
+                    No users found. Try a different search term.
                   </td>
                 </tr>
               ) : (
@@ -202,53 +203,65 @@ export default function UserManager() {
                     <tr
                       key={u.Id}
                       onClick={() => handleEdit(u)}
-                      style={{
-                        cursor: 'pointer',
-                        backgroundColor: editingId === u.Id ? '#eff6ff' : 'transparent'
-                      }}
+                      className={editingId === u.Id ? styles.selectedRow : ''}
                     >
-                      <td
-                        style={{
-                          fontWeight: 800,
-                          color: 'var(--primary)',
-                          fontFamily: 'monospace'
-                        }}
-                      >
-                        {u.Username}
-                      </td>
-                      <td style={{ fontWeight: 800 }}>{u.FullName}</td>
+                      <td className={styles.usernameCell}>{u.Username}</td>
+                      <td className={styles.nameCell}>{u.FullName}</td>
                       <td>
                         <span
                           className={styles.statusBadge}
-                          style={{
-                            backgroundColor: u.Role === 1 ? '#fef3c7' : '#f1f5f9',
-                            color: u.Role === 1 ? '#b45309' : 'var(--text-muted)'
-                          }}
+                          style={
+                            u.Role === 1
+                              ? {
+                                  background: '#fffbeb',
+                                  color: '#d97706',
+                                  border: '1px solid #fef3c7'
+                                }
+                              : {
+                                  background: '#f1f5f9',
+                                  color: '#475569',
+                                  border: '1px solid #e2e8f0'
+                                }
+                          }
                         >
-                          {u.Role === 1 ? 'ADMIN' : 'STAFF'}
+                          {u.Role === 1 ? 'Administrator' : 'Staff'}
                         </span>
                       </td>
                       <td>
                         <span
                           className={styles.statusBadge}
-                          style={{
-                            backgroundColor: active ? '#dcfce7' : '#fee2e2',
-                            color: active ? '#16a34a' : '#dc2626'
-                          }}
+                          style={
+                            active
+                              ? {
+                                  background: '#f0fdf4',
+                                  color: '#16a34a',
+                                  border: '1px solid #bbf7d0'
+                                }
+                              : {
+                                  background: '#fef2f2',
+                                  color: '#ef4444',
+                                  border: '1px solid #fecaca'
+                                }
+                          }
                         >
-                          {active ? 'ACTIVE' : 'BLOCKED'}
+                          {active ? 'Active' : 'Blocked'}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button
                           className={`pos-btn ${active ? 'danger' : 'success'}`}
-                          style={{ minHeight: '35px', padding: '5px 15px', fontSize: '11px' }}
+                          style={{
+                            minHeight: '38px',
+                            padding: '6px 18px',
+                            fontSize: '13px',
+                            fontWeight: 600
+                          }}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleToggleBlock(u, active)
                           }}
                         >
-                          {active ? 'BLOCK' : 'UNBLOCK'}
+                          {active ? 'Block' : 'Unblock'}
                         </button>
                       </td>
                     </tr>
@@ -260,19 +273,19 @@ export default function UserManager() {
         </div>
       </div>
 
+      {/* ── Right: Form ── */}
       <div className={styles.rightPanel}>
         <div className={styles.formHeader}>
-          <h2
-            className={styles.panelTitle}
-            style={{ color: editingId ? 'var(--action-warning)' : 'var(--text-main)' }}
-          >
-            {editingId ? 'MODIFY ACCOUNT' : 'REGISTER NEW USER'}
+          <h2 className={styles.panelTitle} style={{ color: editingId ? '#d97706' : '#0f172a' }}>
+            {editingId ? 'Modify Account' : 'Create New Account'}
           </h2>
         </div>
 
         <form onSubmit={handleSave} className={styles.formBody}>
           <div className={styles.formGroup}>
-            <label>FULL NAME *</label>
+            <label>
+              Full Name <span className={styles.required}>*</span>
+            </label>
             <input
               type="text"
               className="pos-input"
@@ -284,7 +297,9 @@ export default function UserManager() {
           </div>
 
           <div className={styles.formGroup}>
-            <label>USERNAME *</label>
+            <label>
+              Username <span className={styles.required}>*</span>
+            </label>
             <input
               type="text"
               className="pos-input"
@@ -297,24 +312,22 @@ export default function UserManager() {
           </div>
 
           <div className={styles.formGroup}>
-            <label>SYSTEM ROLE</label>
+            <label>System Role</label>
             <select
               className="pos-input"
               value={role}
               onChange={(e) => setRole(Number(e.target.value))}
             >
-              <option value={2}>Staff (Fixed Permissions)</option>
-              <option value={1}>Administrator (Full Access)</option>
+              <option value={2}>Staff — Limited permissions</option>
+              <option value={1}>Administrator — Full access</option>
             </select>
           </div>
 
           <div className={styles.formGroup}>
             <label>
-              PASSWORD{' '}
+              Password{' '}
               {editingId && (
-                <span style={{ textTransform: 'none', fontWeight: 'normal' }}>
-                  (Leave blank to keep current)
-                </span>
+                <span className={styles.optional}>(leave blank to keep current password)</span>
               )}
             </label>
             <input
@@ -327,31 +340,29 @@ export default function UserManager() {
           </div>
 
           <div className={styles.infoBox}>
-            <div style={{ fontSize: '12px', fontWeight: 900, marginBottom: '5px' }}>
-              PERMISSIONS NOTE:
-            </div>
-            <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.4 }}>
+            <div className={styles.infoTitle}>Permissions</div>
+            <p className={styles.infoText}>
               {role === 1
-                ? 'Administrators have unrestricted access to all modules.'
-                : 'Staff are restricted to POS, Returns, View Products, Alerts, and Ledger.'}
+                ? 'Administrators can access every module in the system.'
+                : 'Staff accounts are restricted to POS operations, returns, product view, alerts, sales reports, and credit ledger.'}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '15px', marginTop: 'auto' }}>
+          <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
             <button
               type="button"
               className="pos-btn neutral"
-              style={{ flex: 1 }}
+              style={{ flex: 1, height: '48px', fontSize: '14px' }}
               onClick={handleClear}
             >
-              {editingId ? 'CANCEL' : 'CLEAR'}
+              {editingId ? 'Cancel' : 'Clear Form'}
             </button>
             <button
               type="submit"
               className={`pos-btn ${editingId ? 'warning' : 'success'}`}
-              style={{ flex: 2 }}
+              style={{ flex: 2, height: '48px', fontSize: '14px', fontWeight: 600 }}
             >
-              {editingId ? 'UPDATE ACCOUNT' : 'CREATE ACCOUNT'}
+              {editingId ? 'Update Account' : 'Create Account'}
             </button>
           </div>
         </form>

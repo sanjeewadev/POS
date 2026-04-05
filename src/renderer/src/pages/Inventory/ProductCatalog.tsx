@@ -17,10 +17,12 @@ export default function ProductCatalog() {
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null)
   const [productBatches, setProductBatches] = useState<any[]>([])
 
-  // 🚀 NEW: Quick Add State
+  // 🚀 UPGRADED: Quick Add State (Now includes Selling Price & Discount)
   const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null)
   const [quickAddQty, setQuickAddQty] = useState('')
   const [quickAddCost, setQuickAddCost] = useState('')
+  const [quickAddSell, setQuickAddSell] = useState('')
+  const [quickAddDiscount, setQuickAddDiscount] = useState('')
 
   const loadData = async () => {
     try {
@@ -59,11 +61,14 @@ export default function ProductCatalog() {
     }
   }
 
-  // --- 🚀 NEW: ACTIONS: QUICK ADD STOCK ---
+  // --- 🚀 UPGRADED ACTIONS: QUICK ADD STOCK ---
   const handleOpenQuickAdd = (product: Product) => {
     setQuickAddProduct(product)
     setQuickAddQty('')
-    setQuickAddCost(product.BuyingPrice.toString()) // Default to last known buying price
+    // Pre-fill fields with current data to save time!
+    setQuickAddCost(product.BuyingPrice ? product.BuyingPrice.toString() : '')
+    setQuickAddSell(product.SellingPrice ? product.SellingPrice.toString() : '')
+    setQuickAddDiscount(product.DiscountLimit ? product.DiscountLimit.toString() : '0')
   }
 
   const submitQuickAdd = async (e: React.FormEvent) => {
@@ -72,13 +77,19 @@ export default function ProductCatalog() {
 
     const qty = parseFloat(quickAddQty)
     const cost = parseFloat(quickAddCost)
+    const sell = parseFloat(quickAddSell)
+    const disc = parseFloat(quickAddDiscount) || 0
 
-    if (isNaN(qty) || qty <= 0 || isNaN(cost) || cost < 0) {
+    if (isNaN(qty) || qty <= 0 || isNaN(cost) || cost < 0 || isNaN(sell) || sell <= 0) {
       return Swal.fire(
         'Invalid Input',
-        'Please enter valid numbers for quantity and cost.',
+        'Please enter valid numbers for quantity and prices.',
         'error'
       )
+    }
+
+    if (sell < cost) {
+      return Swal.fire('Warning', 'Selling Price cannot be lower than Buying Cost!', 'warning')
     }
 
     // 🚀 Flawless Decimal Validation
@@ -95,6 +106,8 @@ export default function ProductCatalog() {
         ProductId: quickAddProduct.Id,
         Quantity: qty,
         UnitCost: cost,
+        SellingPrice: sell, // 🚀 Added to payload
+        Discount: disc, // 🚀 Added to payload
         Date: new Date().toISOString()
       }
 
@@ -309,10 +322,10 @@ export default function ProductCatalog() {
         </div>
       </div>
 
-      {/* --- 🚀 MODAL: QUICK ADD STOCK --- */}
+      {/* --- 🚀 UPGRADED MODAL: QUICK ADD STOCK --- */}
       {quickAddProduct !== null && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalBoxView} style={{ maxWidth: '500px' }}>
+          <div className={styles.modalBoxView} style={{ maxWidth: '600px' }}>
             <div className={styles.modalHeader}>
               <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>
                 ⚡ Fast Stock Receive
@@ -346,15 +359,9 @@ export default function ProductCatalog() {
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '15px',
-                  marginBottom: '20px'
-                }}
-              >
-                <div>
+              {/* Row 1: Qty and Cost */}
+              <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ flex: 1 }}>
                   <label
                     style={{
                       fontSize: '12px',
@@ -363,7 +370,7 @@ export default function ProductCatalog() {
                       textTransform: 'uppercase'
                     }}
                   >
-                    Quantity Received
+                    Qty Received
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <input
@@ -381,7 +388,7 @@ export default function ProductCatalog() {
                   </div>
                 </div>
 
-                <div>
+                <div style={{ flex: 1 }}>
                   <label
                     style={{
                       fontSize: '12px',
@@ -390,7 +397,7 @@ export default function ProductCatalog() {
                       textTransform: 'uppercase'
                     }}
                   >
-                    Supplier Unit Cost (Buying Price)
+                    Supplier Unit Cost
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>Rs</span>
@@ -406,19 +413,79 @@ export default function ProductCatalog() {
                 </div>
               </div>
 
+              {/* Row 2: Retail Price and Discount */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '15px',
+                  marginBottom: '20px',
+                  padding: '15px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  backgroundColor: '#f8fafc'
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      color: 'var(--action-success)',
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    New Selling Price
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>Rs</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="pos-input"
+                      style={{ borderColor: 'var(--action-success)' }}
+                      value={quickAddSell}
+                      onChange={(e) => setQuickAddSell(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      color: 'var(--action-warning)',
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    Max Allowable Discount
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontWeight: 800, color: 'var(--text-muted)' }}>Rs</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="pos-input"
+                      value={quickAddDiscount}
+                      onChange={(e) => setQuickAddDiscount(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <button type="submit" className="pos-btn success" style={{ width: '100%' }}>
-                CONFIRM & ADD TO INVENTORY
+                CONFIRM & ADD BATCH TO INVENTORY
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* --- MODAL: BATCH DETAILS (Same as Before) --- */}
+      {/* --- MODAL: BATCH DETAILS --- */}
       {viewingProduct !== null && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalBoxView}>
-            {/* Modal Header */}
             <div className={styles.modalHeader}>
               <div>
                 <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--text-main)' }}>
@@ -463,7 +530,6 @@ export default function ProductCatalog() {
               </div>
             </div>
 
-            {/* Modal Body */}
             <div className={styles.modalBody}>
               <h3
                 style={{

@@ -27,7 +27,7 @@
 }
 
 .brandText {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #e2e8f0;
@@ -42,17 +42,17 @@
 .tabContainer {
   display: flex;
   align-items: center;
-  gap: 2px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 10px;
   padding: 4px;
 }
 
 .tabButton {
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid transparent;
+  height: 38px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 7px;
   font-size: 12px;
   font-weight: 600;
@@ -60,8 +60,8 @@
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.15s ease;
-  color: #94a3b8;
-  background: transparent;
+  color: #e2e8f0;
+  background: #1e293b;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -69,29 +69,22 @@
 }
 
 .tabButton:hover:not(.tabActive) {
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.04);
+  color: white;
+  background: #273549;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.tabButton:active {
+  transform: scale(0.97);
 }
 
 .tabActive {
-  background: #1e293b;
-  color: white;
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-/* Blue dot shown only on active tab */
-.tabDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: transparent;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
-.tabActive .tabDot {
-  background: #3b82f6;
+  background: #1f56cdae;
+  color: #fff;
+  border-color: #3b82f6;
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.4),
+    0 2px 6px rgba(37, 99, 235, 0.4);
 }
 
 /* ── Right: User section ── */
@@ -114,8 +107,8 @@
   align-items: center;
   gap: 10px;
   padding: 6px 12px 6px 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9px;
 }
 
@@ -151,10 +144,9 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: #22c55e; /* default: Staff */
+  color: #22c55e;
 }
 
-/* Role colour overrides */
 .userRole.admin {
   color: #f59e0b;
 }
@@ -165,10 +157,10 @@
 
 /* ── Logout button ── */
 .logoutBtn {
-  height: 34px;
-  padding: 0 14px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  height: 38px;
+  padding: 0 16px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 8px;
   color: #f87171;
   font-size: 12px;
@@ -185,8 +177,8 @@
 }
 
 .logoutBtn:hover {
-  background: rgba(239, 68, 68, 0.18);
-  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
   color: #fca5a5;
 }
 

@@ -51,7 +51,6 @@ export default function TopNavigationBar({ currentMode, setMode }: Props) {
             className={`${styles.tabButton} ${currentMode === tab ? styles.tabActive : ''}`}
             onClick={() => setMode(tab)}
           >
-            <span className={styles.tabDot} />
             {tab}
           </button>
         ))}

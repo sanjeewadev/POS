@@ -3,7 +3,9 @@ import React, { useState } from 'react'
 import Swal from 'sweetalert2'
 import { useAuth } from '../../store/AuthContext'
 import TopNavigationBar from '../../components/TopNavigationBar/TopNavigationBar'
+import Sidebar from '../../components/Sidebar/Sidebar'
 import styles from './AppLayout.module.css'
+import { RiLockLine } from 'react-icons/ri'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -14,20 +16,16 @@ interface AppLayoutProps {
 export default function AppLayout({ children, currentMode, setMode }: AppLayoutProps) {
   const { currentUser, login } = useAuth()
 
-  // --- HARDWARE & UTILITY STATES ---
   const [isLocked, setIsLocked] = useState(false)
   const [unlockPassword, setUnlockPassword] = useState('')
   const [isUnlocking, setIsUnlocking] = useState(false)
-
   const [showCalculator, setShowCalculator] = useState(false)
   const [calcDisplay, setCalcDisplay] = useState('0')
 
-  // --- HARDWARE ACTIONS ---
   const handleOpenDrawer = async () => {
     try {
-      // @ts-ignore - Assuming you add this to your preload script later!
+      // @ts-ignore
       if (window.api.openCashDrawer) await window.api.openCashDrawer()
-
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -45,7 +43,6 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
     try {
       // @ts-ignore
       if (window.api.printLastReceipt) await window.api.printLastReceipt()
-
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -59,15 +56,11 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
     }
   }
 
-  // --- LOCK SCREEN ACTIONS ---
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!currentUser || !unlockPassword) return
-
     setIsUnlocking(true)
-    // Re-verify the password using our secure AuthContext
     const result = await login(currentUser.Username, unlockPassword)
-
     if (result.success) {
       setIsLocked(false)
       setUnlockPassword('')
@@ -78,21 +71,16 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
     setIsUnlocking(false)
   }
 
-  // --- CALCULATOR ACTIONS ---
   const handleCalcInput = (val: string) => {
-    if (calcDisplay === '0' && val !== '.') {
-      setCalcDisplay(val)
-    } else {
-      setCalcDisplay((prev) => prev + val)
-    }
+    if (calcDisplay === '0' && val !== '.') setCalcDisplay(val)
+    else setCalcDisplay((prev) => prev + val)
   }
 
   const handleCalcEval = () => {
     try {
-      // Safely evaluate the math string
       const result = new Function('return ' + calcDisplay)()
       setCalcDisplay(String(result))
-    } catch (e) {
+    } catch {
       setCalcDisplay('Error')
       setTimeout(() => setCalcDisplay('0'), 1000)
     }
@@ -100,27 +88,18 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
 
   return (
     <div className={styles.appWrapper}>
-      {/* 🚀 THE LOCK SCREEN OVERLAY */}
+      {/* Lock Screen Overlay */}
       {isLocked && (
         <div className={styles.lockScreen}>
           <div className={styles.lockBox}>
-            <div style={{ fontSize: '48px', marginBottom: '10px' }}>🔒</div>
-            <h2
-              style={{
-                margin: 0,
-                color: 'var(--text-dark)',
-                fontSize: '24px',
-                textTransform: 'uppercase'
-              }}
-            >
-              Register Locked
-            </h2>
-            <p style={{ color: 'var(--text-muted)', fontWeight: 600, marginTop: '5px' }}>
-              Locked by:{' '}
-              <span style={{ color: 'var(--brand-primary)' }}>{currentUser?.FullName}</span>
+            <div className={styles.lockIcon}>
+              <RiLockLine size={40} />
+            </div>
+            <h2 className={styles.lockTitle}>Register Locked</h2>
+            <p className={styles.lockSubtitle}>
+              Locked by: <span className={styles.lockUser}>{currentUser?.FullName}</span>
             </p>
-
-            <form onSubmit={handleUnlock} style={{ width: '100%', marginTop: '20px' }}>
+            <form onSubmit={handleUnlock} className={styles.lockForm}>
               <input
                 type="password"
                 className="pos-input"
@@ -144,18 +123,18 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
         </div>
       )}
 
-      {/* 🚀 THE CALCULATOR MODAL */}
+      {/* Calculator Modal */}
       {showCalculator && (
         <div className={styles.calcOverlay} onClick={() => setShowCalculator(false)}>
           <div className={styles.calcBox} onClick={(e) => e.stopPropagation()}>
             <div className={styles.calcHeader}>
-              <span style={{ fontWeight: 900 }}>Quick Calc</span>
+              <span>Quick Calc</span>
               <button
                 className="pos-btn danger"
                 style={{ minHeight: '30px', padding: '0 10px' }}
                 onClick={() => setShowCalculator(false)}
               >
-                ✖
+                Close
               </button>
             </div>
             <div className={styles.calcDisplay}>{calcDisplay}</div>
@@ -175,7 +154,7 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
                 )
               )}
               <button className={styles.calcClearBtn} onClick={() => setCalcDisplay('0')}>
-                CLEAR
+                Clear
               </button>
             </div>
           </div>
@@ -185,54 +164,12 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
       <TopNavigationBar currentMode={currentMode} setMode={setMode} />
 
       <div className={styles.mainLayout}>
-        <nav className={styles.sideNav}>
-          <div className={styles.clockWidget}>
-            <div className={styles.timeText}>
-              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-            <div className={styles.dateText}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric'
-              })}
-            </div>
-          </div>
-
-          <div className={styles.navActions}>
-            <button className={styles.actionBtn} onClick={handleOpenDrawer}>
-              <span className={styles.actionIcon}>💰</span>
-              <span className={styles.actionText}>OPEN DRAWER</span>
-            </button>
-
-            <button className={styles.actionBtn} onClick={handleLastReceipt}>
-              <span className={styles.actionIcon}>🖨️</span>
-              <span className={styles.actionText}>LAST RECEIPT</span>
-            </button>
-
-            <button className={styles.actionBtn} onClick={() => setShowCalculator(true)}>
-              <span className={styles.actionIcon}>📱</span>
-              <span className={styles.actionText}>CALCULATOR</span>
-            </button>
-
-            <button
-              className={`${styles.actionBtn} ${styles.lockBtn}`}
-              onClick={() => setIsLocked(true)}
-            >
-              <span className={styles.actionIcon}>🔒</span>
-              <span className={styles.actionText}>LOCK REGISTER</span>
-            </button>
-          </div>
-
-          <div className={styles.systemStatus}>
-            <span className={styles.statusDot}></span>
-            <div className={styles.statusText}>
-              <strong>SYSTEM ONLINE</strong>
-              <span>Version 2.0.0</span>
-            </div>
-          </div>
-        </nav>
-
+        <Sidebar
+          onOpenDrawer={handleOpenDrawer}
+          onLastReceipt={handleLastReceipt}
+          onCalculator={() => setShowCalculator(true)}
+          onLockRegister={() => setIsLocked(true)}
+        />
         <main className={styles.contentArea}>{children}</main>
       </div>
     </div>

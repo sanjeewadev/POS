@@ -1,21 +1,58 @@
 // src/renderer/src/pages/Settings/SettingsWorkspace.tsx
 import { useState } from 'react'
 import styles from './SettingsWorkspace.module.css'
+import { RiStore2Line, RiTeamLine, RiDatabase2Line } from 'react-icons/ri'
 
 import UserManager from './UserManager'
 import SystemBackups from './SystemBackups'
-import ShopSettings from './ShopSettings' // 🚀 NEW: We will build this next!
+import ShopSettings from './ShopSettings'
+
+const NAV_ITEMS = [
+  {
+    group: 'Store Configuration',
+    items: [
+      {
+        key: 'Shop',
+        label: 'Shop Details',
+        sub: 'Name, Receipt, Address',
+        icon: <RiStore2Line size={18} />
+      }
+    ]
+  },
+  {
+    group: 'Maintenance',
+    items: [
+      {
+        key: 'System',
+        label: 'System & DB',
+        sub: 'Backups & Resets',
+        icon: <RiDatabase2Line size={18} />
+      }
+    ]
+  },
+  {
+    group: 'Security & Access',
+    items: [
+      {
+        key: 'Users',
+        label: 'User Accounts',
+        sub: 'Cashiers & Admins',
+        icon: <RiTeamLine size={18} />
+      }
+    ]
+  }
+]
 
 export default function SettingsWorkspace() {
-  // Default to the new Shop Settings page
   const [activeTab, setActiveTab] = useState('Shop')
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'Shop':
-        return <ShopSettings />
       case 'Users':
         return <UserManager />
+      case 'Shop':
+        return <ShopSettings />
+
       case 'System':
         return <SystemBackups />
       default:
@@ -25,51 +62,27 @@ export default function SettingsWorkspace() {
 
   return (
     <div className={styles.workspaceContainer}>
-      {/* --- INNER SIDEBAR MENU --- */}
       <aside className={styles.innerSidebar}>
-        <div className={styles.menuHeader}>STORE CONFIGURATION</div>
-
-        <button
-          className={`${styles.navBtn} ${activeTab === 'Shop' ? styles.active : ''}`}
-          onClick={() => setActiveTab('Shop')}
-        >
-          <span className={styles.icon}>🏪</span>
-          <div className={styles.btnText}>
-            <strong>Shop Details</strong>
-            <span>Name, Receipt, Address</span>
+        {NAV_ITEMS.map((group) => (
+          <div key={group.group} className={styles.navGroup}>
+            <div className={styles.groupLabel}>{group.group}</div>
+            {group.items.map((item) => (
+              <button
+                key={item.key}
+                className={`${styles.navBtn} ${activeTab === item.key ? styles.active : ''}`}
+                onClick={() => setActiveTab(item.key)}
+              >
+                <span className={styles.navIcon}>{item.icon}</span>
+                <div className={styles.navText}>
+                  <strong>{item.label}</strong>
+                  <span>{item.sub}</span>
+                </div>
+              </button>
+            ))}
           </div>
-        </button>
-
-        <div className={styles.divider}></div>
-        <div className={styles.menuHeader}>SECURITY & ACCESS</div>
-
-        <button
-          className={`${styles.navBtn} ${activeTab === 'Users' ? styles.active : ''}`}
-          onClick={() => setActiveTab('Users')}
-        >
-          <span className={styles.icon}>👥</span>
-          <div className={styles.btnText}>
-            <strong>User Accounts</strong>
-            <span>Cashiers & Admins</span>
-          </div>
-        </button>
-
-        <div className={styles.divider}></div>
-        <div className={styles.menuHeader}>MAINTENANCE</div>
-
-        <button
-          className={`${styles.navBtn} ${activeTab === 'System' ? styles.active : ''}`}
-          onClick={() => setActiveTab('System')}
-        >
-          <span className={styles.icon}>⚙️</span>
-          <div className={styles.btnText}>
-            <strong>System & DB</strong>
-            <span>Backups & Resets</span>
-          </div>
-        </button>
+        ))}
       </aside>
 
-      {/* --- MAIN CONTENT AREA --- */}
       <section className={styles.contentArea}>{renderContent()}</section>
     </div>
   )
