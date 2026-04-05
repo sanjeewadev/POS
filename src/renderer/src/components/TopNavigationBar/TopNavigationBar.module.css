@@ -4,91 +4,86 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--bg-dark); /* Deep Navy Blue */
-  height: 80px; /* Massive height for easy tapping */
+  background-color: var(--bg-dark);
+  height: 50px; /* 🚀 Drastically shrunk from 80px */
   padding: 0 var(--spacing-lg);
-  -webkit-app-region: drag; /* Allows the user to drag the frameless window */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  -webkit-app-region: drag;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 100;
 }
 
-/* We must disable dragging on interactive elements, or they cannot be clicked! */
 .noDrag {
   -webkit-app-region: no-drag;
 }
 
-/* --- BRANDING --- */
 .brand {
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: 2px;
+  font-size: 18px; /* Smaller, sleeker */
+  font-weight: 800;
+  letter-spacing: 1px;
   color: var(--text-light);
   text-transform: uppercase;
 }
 
 .brand span {
-  color: var(--action-warning); /* A bright orange pop to look hardware-industrial */
+  color: var(--action-warning);
 }
 
-/* --- THE TABS --- */
 .tabContainer {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   height: 100%;
-  align-items: flex-end; /* Pushes the tabs to sit flush on the bottom edge */
+  align-items: flex-end;
 }
 
 .tabButton {
-  height: 60px;
-  min-width: 140px;
-  padding: 0 20px;
-  font-size: 18px;
-  font-weight: 800;
+  height: 40px; /* Shrunk from 60px */
+  min-width: 100px;
+  padding: 0 15px;
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-muted);
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 2px solid transparent;
+  color: #94a3b8;
+  background-color: transparent;
+  border: 1px solid transparent;
   border-bottom: none;
-  border-top-left-radius: var(--radius-md);
-  border-top-right-radius: var(--radius-md);
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.1s ease;
 }
 
-.tabButton:active {
-  transform: scale(0.95);
+.tabButton:hover {
+  color: var(--text-light);
 }
 
 .tabActive {
-  background-color: var(--bg-main); /* Matches the app background so it blends perfectly */
-  color: var(--brand-primary);
-  border: 2px solid var(--bg-main);
-  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-main);
+  color: var(--text-dark);
+  border-color: var(--bg-main);
 }
 
-/* --- USER INFO --- */
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 15px;
 }
 
 .userText {
   display: flex;
   flex-direction: column;
   text-align: right;
+  line-height: 1.2;
 }
 
 .userName {
   color: var(--text-light);
-  font-weight: 800;
-  font-size: 16px;
-  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .userRole {
   color: var(--action-success);
-  font-weight: 900;
-  font-size: 12px;
-  letter-spacing: 1px;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.5px;
 }

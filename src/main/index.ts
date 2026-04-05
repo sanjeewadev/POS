@@ -10,7 +10,7 @@ import { registerInventoryHandlers } from './handlers/inventoryHandlers'
 import { registerSalesHandlers } from './handlers/salesHandlers'
 import { registerUserHandlers } from './handlers/userHandlers'
 
-app.disablePOSAcceleration()
+app.disableHardwareAcceleration()
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows', 'true')
 app.commandLine.appendSwitch('disable-renderer-backgrounding', 'true')
 

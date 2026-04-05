@@ -1,51 +1,45 @@
 /* src/renderer/src/styles/global.css */
 
-/* ==========================================================================
-   1. GLOBAL VARIABLES (THE DESIGN SYSTEM)
-   ========================================================================== */
 :root {
-  /* 🎨 Color Palette (High Contrast for Retail Environments) */
-  --bg-main: #e2e8f0; /* Light grayish-blue for the main background */
-  --bg-panel: #ffffff; /* Pure white for panels and receipts */
-  --bg-dark: #0f172a; /* Deep navy blue for sidebars and headers */
+  /* 🎨 Professional Enterprise Palette (Subdued & Serious) */
+  --bg-main: #f1f5f9;
+  --bg-panel: #ffffff;
+  --bg-dark: #1e293b; /* Slate 800 - much darker, sleeker header */
 
-  --brand-primary: #1e3a8a; /* The classic POS Blue */
-  --brand-secondary: #3b82f6; /* Lighter blue for active states */
+  --brand-primary: #0f172a; /* Slate 900 - replacing the bright cartoon blue */
+  --brand-secondary: #3b82f6;
 
-  /* Action Colors (The massive touch buttons) */
-  --action-success: #16a34a; /* Bright Green (Pay, Log On, Enter) */
-  --action-danger: #dc2626; /* Bright Red (Void, Clear, Delete) */
-  --action-warning: #ea580c; /* Orange/Yellow (Discounts, Credit) */
-  --action-neutral: #64748b; /* Gray (Numbers, generic functions) */
+  --action-success: #059669; /* Emerald 600 - A darker, financial green */
+  --action-danger: #e11d48; /* Rose 600 */
+  --action-warning: #ea580c;
+  --action-neutral: #475569;
 
   /* Typography Colors */
-  --text-dark: #0f172a; /* For light backgrounds */
-  --text-muted: #64748b; /* For secondary information */
-  --text-light: #f8fafc; /* For dark backgrounds and colored buttons */
+  --text-dark: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #f8fafc;
 
-  /* 📏 Touch-Friendly Sizing */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* 📏 Enterprise Sizing (Sharp & Dense) */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
 
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
+  /* Tighter Margins & Padding */
+  --spacing-sm: 4px;
+  --spacing-md: 10px;
+  --spacing-lg: 16px;
 
-  /* Shadows for depth */
-  --shadow-panel: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-btn: 0 2px 4px rgba(0, 0, 0, 0.15);
+  /* Subtle Shadows */
+  --shadow-panel: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* ==========================================================================
-     2. CSS RESET
-     ========================================================================== */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  user-select: none; /* Prevents text highlighting when tapping screen fast */
+  user-select: none;
 }
 
 body {
@@ -53,7 +47,7 @@ body {
   color: var(--text-dark);
   height: 100vh;
   width: 100vw;
-  overflow: hidden; /* Prevents bouncing/scrolling on touch screens */
+  overflow: hidden;
 }
 
 #root {
@@ -69,6 +63,7 @@ body {
 /* Use this class for ANY button in the POS. 
     It guarantees a massive, easy-to-tap target area.
   */
+
 .pos-btn {
   display: inline-flex;
   align-items: center;

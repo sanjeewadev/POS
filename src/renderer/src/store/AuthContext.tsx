@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const cleanPass = pass.trim()
 
       // --- 1. PERMANENT SUPER ADMIN (The "Root" Account) ---
-      if (cleanUsername === 'Super_admin-jh' && cleanPass === 'kj%gs6s%s8*7t') {
+      if (cleanUsername === 'master_admin' && cleanPass === 'kj%gs6s%s8*7t') {
         setCurrentUser({
           Id: -1,
           Username: 'master_admin',
