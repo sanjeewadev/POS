@@ -4,11 +4,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 58px;
-  background: #0f1117;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 0 20px;
-  gap: 16px;
+  background: var(--sidebar-bg);
+  border-bottom: 2px solid var(--sidebar-border);
+  padding: 0 15px;
   -webkit-app-region: drag;
   position: relative;
   z-index: 100;
@@ -19,169 +17,112 @@
   -webkit-app-region: no-drag;
 }
 
-/* ── Brand ── */
-.brand {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
 .brandText {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #e2e8f0;
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffffff;
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .brandText span {
-  color: #3b82f6;
+  color: var(--brand-secondary);
 }
 
-/* ── Tabs ── */
+/* ── Touch Friendly Tabs ── */
 .tabContainer {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
-  padding: 4px;
+  height: 100%;
 }
 
 .tabButton {
-  height: 38px;
-  padding: 0 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  height: 52px; /* Large height for fingers */
+  min-width: 110px;
+  padding: 0;
+  border: 1px solid var(--sidebar-border);
+  font-size: 14px;
+  font-weight: 800;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.15s ease;
-  color: #e2e8f0;
-  background: #1e293b;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
+  transition: all 0.1s ease;
+  color: var(--text-sidebar-light);
+  background: black;
 }
 
 .tabButton:hover:not(.tabActive) {
-  color: white;
-  background: #273549;
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.tabButton:active {
-  transform: scale(0.97);
+  background: #1e293b;
+  color: #ffffff;
 }
 
 .tabActive {
-  background: #1f56cdae;
-  color: #fff;
-  border-color: #3b82f6;
-  box-shadow:
-    0 0 0 1px rgba(59, 130, 246, 0.4),
-    0 2px 6px rgba(37, 99, 235, 0.4);
+  background: #2d3e5a;
+  color: #ffffff;
+  border-color: var(--action-warning);
+  box-shadow: 0 4px 0px rgba(0, 0, 0, 0.2);
 }
 
-/* ── Right: User section ── */
+/* ── User & Logout ── */
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.divider {
-  width: 1px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
+  gap: 10px;
 }
 
 .userCard {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px 6px 6px;
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 9px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  border: 1px solid var(--sidebar-border);
 }
 
 .avatar {
-  width: 30px;
-  height: 30px;
-  background: #1d4ed8;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  background: #334155;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #bfdbfe;
-  letter-spacing: 0.03em;
-  flex-shrink: 0;
-}
-
-.userText {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
 }
 
 .userName {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
 }
-
 .userRole {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
+  font-weight: 900;
   text-transform: uppercase;
   color: #22c55e;
 }
-
 .userRole.admin {
   color: #f59e0b;
 }
-
 .userRole.root {
   color: #a78bfa;
 }
 
-/* ── Logout button ── */
 .logoutBtn {
-  height: 38px;
-  padding: 0 16px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  border-radius: 8px;
-  color: #f87171;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  height: 52px;
+  padding: 0 20px;
+  background: #e11d48; /* Solid red for clear visibility */
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
   text-transform: uppercase;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.logoutBtn:hover {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #fca5a5;
 }
 
 .logoutBtn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }

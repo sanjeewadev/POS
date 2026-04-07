@@ -1,5 +1,13 @@
 // src/renderer/src/pages/Reports/AuditLogs.tsx
 import React, { useState, useEffect, useMemo } from 'react'
+import {
+  RiSearchLine,
+  RiCalendarCheckLine,
+  RiRefreshLine,
+  RiArrowGoBackLine,
+  RiCloseCircleLine,
+  RiEqualizerLine
+} from 'react-icons/ri'
 import styles from './AuditLogs.module.css'
 
 export default function AuditLogs() {
@@ -36,7 +44,6 @@ export default function AuditLogs() {
 
   const displayedLogs = useMemo(() => {
     let filtered = logs
-
     if (filterType !== 'ALL') {
       filtered = filtered.filter((log) => {
         if (filterType === 'VOIDS') return log.IsVoided === 1
@@ -45,7 +52,6 @@ export default function AuditLogs() {
         return true
       })
     }
-
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       filtered = filtered.filter(
@@ -65,29 +71,41 @@ export default function AuditLogs() {
 
     if (log.IsVoided === 1) {
       return {
-        badge: <span className={`${styles.badge} ${styles.badgeVoid}`}>VOIDED SALE</span>,
+        badge: (
+          <span className={`${styles.badge} ${styles.badgeVoid}`}>
+            <RiCloseCircleLine /> VOIDED SALE
+          </span>
+        ),
         impactLabel: 'Reversed Revenue',
         financial: qty * price,
         stockDir: '+',
-        stockColor: 'var(--action-success)'
+        stockClass: styles.stockPositive
       }
     }
     if (log.Type === 4) {
       return {
-        badge: <span className={`${styles.badge} ${styles.badgeReturn}`}>CUSTOMER RETURN</span>,
+        badge: (
+          <span className={`${styles.badge} ${styles.badgeReturn}`}>
+            <RiArrowGoBackLine /> CUSTOMER RETURN
+          </span>
+        ),
         impactLabel: 'Refund Given',
         financial: qty * price,
         stockDir: '+',
-        stockColor: 'var(--action-success)'
+        stockClass: styles.stockPositive
       }
     }
     if (log.Type === 3) {
       return {
-        badge: <span className={`${styles.badge} ${styles.badgeAdjust}`}>STOCK ADJUSTMENT</span>,
+        badge: (
+          <span className={`${styles.badge} ${styles.badgeAdjust}`}>
+            <RiEqualizerLine /> ADJUSTMENT
+          </span>
+        ),
         impactLabel: 'Loss / Value',
         financial: qty * cost,
         stockDir: '-',
-        stockColor: 'var(--action-danger)'
+        stockClass: styles.stockNegative
       }
     }
     return {
@@ -95,201 +113,153 @@ export default function AuditLogs() {
       impactLabel: '-',
       financial: 0,
       stockDir: '',
-      stockColor: 'var(--text-main)'
+      stockClass: ''
     }
   }
 
   return (
     <div className={styles.container}>
-      {/* --- TOP PANEL: FILTERS --- */}
-      <div className={styles.topPanel}>
-        <div>
-          <h2 className={styles.panelTitle}>SECURITY & AUDIT LOGS</h2>
-          <p
-            style={{
-              margin: '5px 0 0 0',
-              color: 'var(--text-muted)',
-              fontSize: '13px',
-              fontWeight: 600
-            }}
-          >
-            Tracking Voids, Returns, and Manual Adjustments
-          </p>
-        </div>
-
-        <form onSubmit={loadLogs} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)' }}>
-              FROM
-            </label>
-            <input
-              type="date"
-              className="pos-input"
-              style={{ padding: '8px' }}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)' }}>
-              TO
-            </label>
-            <input
-              type="date"
-              className="pos-input"
-              style={{ padding: '8px' }}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="pos-btn neutral"
-            style={{ minHeight: '42px', padding: '10px 20px', fontSize: '12px' }}
-            disabled={loading}
-          >
-            {loading ? 'LOADING...' : 'REFRESH NOW'}
-          </button>
-        </form>
-      </div>
-
-      {/* --- MIDDLE PANEL: SEARCH & TABS --- */}
-      <div className={styles.controlBar}>
-        <input
-          type="text"
-          className="pos-input"
-          style={{ flex: 1 }}
-          placeholder="Search Product, Receipt ID, or Note..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <div className={styles.tabGroup}>
-          <button
-            className={`pos-btn ${filterType === 'ALL' ? 'success' : 'neutral'}`}
-            style={{ minHeight: '40px', padding: '10px 20px', fontSize: '12px' }}
-            onClick={() => setFilterType('ALL')}
-          >
-            ALL EVENTS
-          </button>
-          <button
-            className={`pos-btn ${filterType === 'VOIDS' ? 'warning' : 'neutral'}`}
-            style={{ minHeight: '40px', padding: '10px 20px', fontSize: '12px' }}
-            onClick={() => setFilterType('VOIDS')}
-          >
-            VOIDS
-          </button>
-          <button
-            className={`pos-btn ${filterType === 'RETURNS' ? 'warning' : 'neutral'}`}
-            style={{ minHeight: '40px', padding: '10px 20px', fontSize: '12px' }}
-            onClick={() => setFilterType('RETURNS')}
-          >
-            RETURNS
-          </button>
-          <button
-            className={`pos-btn ${filterType === 'ADJUSTMENTS' ? 'danger' : 'neutral'}`}
-            style={{ minHeight: '40px', padding: '10px 20px', fontSize: '12px' }}
-            onClick={() => setFilterType('ADJUSTMENTS')}
-          >
-            ADJUSTMENTS
-          </button>
-        </div>
-      </div>
-
-      {/* --- MAIN TABLE --- */}
       <div className={styles.mainPanel}>
-        <div className={styles.tableWrapper}>
-          <table className={styles.classicTable}>
-            <thead>
-              <tr>
-                <th>DATE & TIME</th>
-                <th>EVENT TYPE</th>
-                <th>PRODUCT</th>
-                <th>REFERENCE / NOTE</th>
-                <th style={{ textAlign: 'center' }}>QTY IMPACT</th>
-                <th style={{ textAlign: 'right' }}>FINANCIAL IMPACT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedLogs.length === 0 ? (
+        <div className={styles.panelHeader}>
+          <div className={styles.titleArea}>
+            {/* 🚀 Applied Global Title */}
+            <h2 className="pos-page-title">Security & Audit Logs</h2>
+            <p className={styles.pageSubtitle}>Tracking Voids, Returns, and Manual Adjustments</p>
+          </div>
+
+          <form onSubmit={loadLogs} className={styles.filterForm}>
+            <div className={styles.inputStack}>
+              <label>
+                <RiCalendarCheckLine /> FROM
+              </label>
+              <input
+                type="date"
+                className="pos-input"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className={styles.inputStack}>
+              <label>
+                <RiCalendarCheckLine /> TO
+              </label>
+              <input
+                type="date"
+                className="pos-input"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className={`pos-btn neutral ${styles.refreshBtn}`}
+              disabled={loading}
+            >
+              <RiRefreshLine className={loading ? styles.spin : ''} /> REFRESH
+            </button>
+          </form>
+        </div>
+
+        <div className={styles.panelBody}>
+          <div className={styles.controlBar}>
+            <div className={styles.searchWrapper}>
+              <RiSearchLine className={styles.searchIcon} />
+              <input
+                type="text"
+                className={`pos-input ${styles.searchInput}`}
+                placeholder="Search Product, Receipt ID, or Note..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className={styles.tabGroup}>
+              <button
+                className={`${styles.filterBtn} ${filterType === 'ALL' ? styles.activeAll : ''}`}
+                onClick={() => setFilterType('ALL')}
+              >
+                ALL EVENTS
+              </button>
+              <button
+                className={`${styles.filterBtn} ${filterType === 'VOIDS' ? styles.activeVoid : ''}`}
+                onClick={() => setFilterType('VOIDS')}
+              >
+                VOIDS
+              </button>
+              <button
+                className={`${styles.filterBtn} ${filterType === 'RETURNS' ? styles.activeReturn : ''}`}
+                onClick={() => setFilterType('RETURNS')}
+              >
+                RETURNS
+              </button>
+              <button
+                className={`${styles.filterBtn} ${filterType === 'ADJUSTMENTS' ? styles.activeAdjust : ''}`}
+                onClick={() => setFilterType('ADJUSTMENTS')}
+              >
+                ADJUSTMENTS
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.tableWrapper}>
+            <table className={styles.classicTable}>
+              <thead>
                 <tr>
-                  <td
-                    colSpan={6}
-                    style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}
-                  >
-                    No security events found for the selected filters.
-                  </td>
+                  <th className={styles.colDate}>DATE & TIME</th>
+                  <th className={styles.colEvent}>EVENT TYPE</th>
+                  <th className={styles.colProduct}>PRODUCT</th>
+                  <th className={styles.colRef}>REFERENCE</th>
+                  <th className={styles.colStock}>STOCK IMPACT</th>
+                  <th className={styles.colImpact}>FINANCIAL IMPACT</th>
                 </tr>
-              ) : (
-                displayedLogs.map((log, idx) => {
-                  const details = getEventDetails(log)
-                  return (
-                    <tr key={log.Id || idx}>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>
-                        {new Date(log.Date).toLocaleString()}
-                      </td>
-                      <td>{details.badge}</td>
-                      <td style={{ fontWeight: 800 }}>{log.ProductName || 'System Event'}</td>
-                      <td style={{ fontSize: '12px' }}>
-                        {log.ReceiptId && (
-                          <strong
-                            style={{
-                              color: 'var(--brand-primary)',
-                              fontFamily: 'monospace',
-                              fontSize: '14px'
-                            }}
+              </thead>
+              <tbody>
+                {displayedLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className={styles.emptyState}>
+                      No security events found for the selected filters.
+                    </td>
+                  </tr>
+                ) : (
+                  displayedLogs.map((log, idx) => {
+                    const details = getEventDetails(log)
+                    return (
+                      <tr key={log.Id || idx}>
+                        <td className={styles.cellDate}>{new Date(log.Date).toLocaleString()}</td>
+                        <td>{details.badge}</td>
+                        <td className={styles.cellProduct}>
+                          <div
+                            className={styles.truncatedText}
+                            title={log.ProductName || 'System Event'}
                           >
-                            {log.ReceiptId} <br />
-                          </strong>
-                        )}
-                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-                          {log.Note || '-'}
-                        </span>
-                      </td>
-                      <td
-                        style={{
-                          textAlign: 'center',
-                          fontWeight: 900,
-                          fontSize: '16px',
-                          color: details.stockColor
-                        }}
-                      >
-                        {details.stockDir}
-                        {parseFloat(log.Quantity) || 0}{' '}
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 'normal',
-                            color: 'var(--text-muted)'
-                          }}
-                        >
-                          {log.Unit || ''}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: 'var(--text-muted)',
-                            textTransform: 'uppercase',
-                            fontWeight: 800
-                          }}
-                        >
-                          {details.impactLabel}
-                        </div>
-                        <div
-                          style={{ fontWeight: 900, color: 'var(--text-dark)', fontSize: '16px' }}
-                        >
-                          Rs {details.financial.toFixed(2)}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                            {log.ProductName || 'System Event'}
+                          </div>
+                        </td>
+                        <td className={styles.cellRef}>
+                          {log.ReceiptId && <div className={styles.receiptId}>{log.ReceiptId}</div>}
+                          <div className={styles.noteText} title={log.Note || '-'}>
+                            {log.Note || '-'}
+                          </div>
+                        </td>
+                        <td className={`${styles.cellStock} ${details.stockClass}`}>
+                          {details.stockDir}
+                          {parseFloat(log.Quantity) || 0}{' '}
+                          <span className={styles.unitText}>{log.Unit}</span>
+                        </td>
+                        <td className={styles.cellImpact}>
+                          <div className={styles.impactLabel}>{details.impactLabel}</div>
+                          <div className={styles.impactValue}>
+                            Rs {details.financial.toFixed(2)}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

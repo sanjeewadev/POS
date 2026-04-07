@@ -9,7 +9,7 @@
 
 /* ── Inner Sidebar ── */
 .innerSidebar {
-  width: 260px;
+  width: 220px;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
   display: flex;
@@ -43,7 +43,7 @@
   padding: 12px 12px;
   background: var(--sidebar-item-bg);
   border: 1px solid var(--sidebar-border);
-  border-radius: var(--radius-md); /* Using your 4px global radius */
+  border-radius: var(--radius-md);
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;

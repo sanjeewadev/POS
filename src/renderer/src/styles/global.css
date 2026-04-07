@@ -1,39 +1,11 @@
 /* src/renderer/src/styles/global.css */
 
 :root {
-  /* 🎨 Professional Enterprise Palette (Subdued & Serious) */
+  /* 🎨 Professional Enterprise Palette */
   --bg-main: #f1f5f9;
   --bg-panel: #ffffff;
-  --bg-dark: #1e293b; /* Slate 800 - much darker, sleeker header */
+  --bg-dark: #1e293b;
 
-  --brand-primary: #0f172a; /* Slate 900 - replacing the bright cartoon blue */
-  --brand-secondary: #3b82f6;
-
-  --action-success: #059669; /* Emerald 600 - A darker, financial green */
-  --action-danger: #e11d48; /* Rose 600 */
-  --action-warning: #ea580c;
-  --action-neutral: #475569;
-
-  /* Typography Colors */
-  --text-dark: #0f172a;
-  --text-muted: #64748b;
-  --text-light: #f8fafc;
-
-  /* 📏 Enterprise Sizing (Sharp & Dense) */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-
-  /* Tighter Margins & Padding */
-  --spacing-sm: 4px;
-  --spacing-md: 10px;
-  --spacing-lg: 16px;
-
-  /* Subtle Shadows */
-  --shadow-panel: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.05);
-
-  /* 🌑 Dark Sidebar & Workspace Palette (From Settings) */
   --sidebar-bg: #0f1117;
   --sidebar-item-bg: #1e293bae;
   --sidebar-item-hover: #22324b;
@@ -41,23 +13,56 @@
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-active-border: #385f9f;
 
-  /* Typography for Dark Backgrounds */
+  --brand-primary: #0f172a;
+  --brand-secondary: #3b82f6;
+
+  --action-success: #059669;
+  --action-danger: #e11d48;
+  --action-warning: #ea580c;
+  --action-neutral: #475569;
+
+  --text-main: #0f172a;
+  --text-dark: #1e293b;
+  --text-muted: #64748b;
+  --text-light: #f8fafc;
+
   --text-sidebar-muted: #64748b;
   --text-sidebar-light: #cbd5e1;
   --text-sidebar-active: #93c5fd;
+
+  /* 📏 Enterprise Sizing */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --spacing-sm: 4px;
+  --spacing-md: 10px;
+  --spacing-lg: 16px;
+
+  --shadow-panel: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 body {
   background-color: var(--bg-main);
-  color: var(--text-dark);
+  color: var(--text-main);
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -69,72 +74,117 @@ body {
   flex-direction: column;
 }
 
+/* Allow text highlighting ONLY where it makes sense */
+input,
+textarea,
+[contenteditable],
+.selectable-text,
+table td {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: auto;
+}
+
+/* 🚀 THE FIX: A Global, Beautiful Page Title */
+.pos-page-title {
+  font-size: 24px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+  letter-spacing: -0.03em; /* Pulls letters slightly closer for a premium logo-like look */
+  margin: 0;
+}
+
 /* ==========================================================================
-     3. UNIVERSAL TOUCH-FRIENDLY CLASSES
-     ========================================================================== */
+     UNIVERSAL TOUCH-FRIENDLY CLASSES
+   ========================================================================== */
 
-/* Use this class for ANY button in the POS. 
-    It guarantees a massive, easy-to-tap target area.
-  */
-
+/* UNIVERSAL TOUCH-FRIENDLY CLASSES */
 .pos-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: var(--spacing-md) var(--spacing-lg);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--text-light);
   background-color: var(--brand-primary);
   border: none;
-  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-btn);
   cursor: pointer;
   transition: all 0.1s ease-in-out;
   text-align: center;
-  min-height: 60px; /* Force minimum height for fat fingers */
+  min-height: 52px;
 }
 
-.pos-btn:active {
-  transform: scale(0.97); /* Physical "click" feedback */
+/* 🚀 NEW: Compact Buttons for Dense Data Tables */
+.pos-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-light);
+  background-color: var(--brand-primary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+  text-align: center;
+  min-height: 32px;
+  letter-spacing: 0.05em;
+}
+
+.pos-btn:active,
+.pos-btn-sm:active {
+  transform: scale(0.97);
   box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2);
 }
 
-.pos-btn:disabled {
+.pos-btn:disabled,
+.pos-btn-sm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Color Modifiers for buttons */
-.pos-btn.success {
+/* Color Modifiers for BOTH button sizes */
+.pos-btn.success,
+.pos-btn-sm.success {
   background-color: var(--action-success);
 }
-.pos-btn.danger {
+.pos-btn.danger,
+.pos-btn-sm.danger {
   background-color: var(--action-danger);
 }
-.pos-btn.warning {
+.pos-btn.warning,
+.pos-btn-sm.warning {
   background-color: var(--action-warning);
 }
-.pos-btn.neutral {
-  background-color: var(--action-neutral);
+.pos-btn.neutral,
+.pos-btn-sm.neutral {
+  background-color: #e2e8f0;
+  color: var(--text-main);
+  box-shadow: none;
+}
+.pos-btn.neutral:hover,
+.pos-btn-sm.neutral:hover {
+  background-color: #cbd5e1;
 }
 
-/* Use this for forms and inputs. Massive hit areas.
-  */
 .pos-input {
   width: 100%;
   padding: var(--spacing-md);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-dark);
   background-color: #f1f5f9;
   border: 2px solid #cbd5e1;
-  border-radius: var(--radius-sm);
   outline: none;
   transition: border-color 0.2s;
-  user-select: auto; /* Allow typing */
+  user-select: auto;
 }
 
 .pos-input:focus {

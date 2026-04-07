@@ -10,6 +10,14 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
+import {
+  RiBarChartGroupedLine,
+  RiFundsLine,
+  RiMoneyDollarCircleLine,
+  RiTimeLine,
+  RiRefreshLine,
+  RiCalendarCheckLine
+} from 'react-icons/ri'
 import styles from './Dashboard.module.css'
 
 export default function Dashboard() {
@@ -48,135 +56,134 @@ export default function Dashboard() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.controlHeader}>
-        <h2 className={styles.pageTitle}>EXECUTIVE DASHBOARD</h2>
-        <div className={styles.filterGroup}>
-          <div className={styles.dateFilters}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase'
-                }}
-              >
-                From
-              </label>
-              <input
-                type="date"
-                className="pos-input"
-                style={{ padding: '8px' }}
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-              />
+      <div className={styles.mainPanel}>
+        <div className={styles.panelHeader}>
+          {/* 🚀 Applied Global Title */}
+          <h2 className="pos-page-title">Executive Dashboard</h2>
+          <div className={styles.filterGroup}>
+            <div className={styles.dateFilters}>
+              <div className={styles.inputStack}>
+                <label>
+                  <RiCalendarCheckLine /> From
+                </label>
+                <input
+                  type="date"
+                  className="pos-input"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div className={styles.inputStack}>
+                <label>
+                  <RiTimeLine /> To
+                </label>
+                <input
+                  type="date"
+                  className="pos-input"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase'
-                }}
-              >
-                To
-              </label>
-              <input
-                type="date"
-                className="pos-input"
-                style={{ padding: '8px' }}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-              />
+            <button
+              className={`pos-btn success ${styles.loadBtn}`}
+              onClick={loadData}
+              disabled={loading}
+            >
+              <RiRefreshLine className={loading ? styles.spin : ''} />{' '}
+              {loading ? '...' : 'LOAD DATA'}
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.panelBody}>
+          {/* KPI Cards */}
+          <div className={styles.kpiGrid}>
+            <div className={`${styles.kpiCard} ${styles.primary}`}>
+              <RiBarChartGroupedLine size={32} className={styles.kpiIcon} />
+              <div className={styles.kpiContent}>
+                <div className={styles.kpiTitle}>Gross Sales</div>
+                <div className={styles.kpiValue}>Rs {(metrics.grossSales || 0).toFixed(2)}</div>
+              </div>
+            </div>
+            <div className={`${styles.kpiCard} ${styles.success}`}>
+              <RiFundsLine size={32} className={styles.kpiIcon} />
+              <div className={styles.kpiContent}>
+                <div className={styles.kpiTitle}>Net Profit</div>
+                <div className={styles.kpiValue}>Rs {(metrics.netProfit || 0).toFixed(2)}</div>
+              </div>
+            </div>
+            <div className={`${styles.kpiCard} ${styles.warning}`}>
+              <RiMoneyDollarCircleLine size={32} className={styles.kpiIcon} />
+              <div className={styles.kpiContent}>
+                <div className={styles.kpiTitle}>Pending Credit</div>
+                <div className={styles.kpiValue}>Rs {(metrics.pendingCredit || 0).toFixed(2)}</div>
+              </div>
             </div>
           </div>
-          <button
-            className="pos-btn success"
-            style={{
-              alignSelf: 'flex-end',
-              minHeight: '44px',
-              padding: '10px 20px',
-              fontSize: '14px'
-            }}
-            onClick={loadData}
-            disabled={loading}
-          >
-            {loading ? '⏳' : '🔄 LOAD'}
-          </button>
-        </div>
-      </div>
 
-      <div className={styles.kpiGrid}>
-        <div className={`${styles.kpiCard} ${styles.primary}`}>
-          <div className={styles.kpiTitle}>Gross Sales (Selected Period)</div>
-          <div className={styles.kpiValue}>Rs {(metrics.grossSales || 0).toFixed(2)}</div>
-        </div>
-        <div className={`${styles.kpiCard} ${styles.success}`}>
-          <div className={styles.kpiTitle}>Net Profit (Selected Period)</div>
-          <div className={styles.kpiValue}>Rs {(metrics.netProfit || 0).toFixed(2)}</div>
-        </div>
-        <div className={`${styles.kpiCard} ${styles.warning}`}>
-          <div className={styles.kpiTitle}>Pending Credit Owed (All Time)</div>
-          <div className={styles.kpiValue}>Rs {(metrics.pendingCredit || 0).toFixed(2)}</div>
-        </div>
-      </div>
-
-      <div className={styles.chartCard}>
-        <div className={styles.cardHeader}>
-          <div className={styles.cardTitle}>Revenue vs. Profit Analysis</div>
-        </div>
-        <div className={styles.chartWrapper}>
-          {chartData.length === 0 ? (
-            <div className={styles.emptyChart}>
-              No sales data found for the selected date range.
+          {/* Chart Section */}
+          <div className={styles.chartSection}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Revenue vs. Profit Analysis</h3>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis
-                  dataKey="dateLabel"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
-                  dy={10}
-                />
-                <YAxis
-                  tickFormatter={formatCurrency}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(241, 245, 249, 0.5)' }}
-                  contentStyle={{
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                  }}
-                  formatter={(value: any) => [`Rs ${Number(value).toFixed(2)}`, '']}
-                />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontWeight: 700 }} />
-                <Bar
-                  dataKey="sales"
-                  name="Gross Revenue"
-                  fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={60}
-                />
-                <Bar
-                  dataKey="profit"
-                  name="Net Profit"
-                  fill="#10b981"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={60}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+            <div className={styles.chartWrapper}>
+              {chartData.length === 0 ? (
+                <div className={styles.emptyChart}>No sales data found for the selected range.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="dateLabel"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
+                      dy={10}
+                    />
+                    <YAxis
+                      tickFormatter={formatCurrency}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(241, 245, 249, 0.6)' }}
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                        fontWeight: 700
+                      }}
+                      formatter={(value: any) => [`Rs ${Number(value).toFixed(2)}`, '']}
+                    />
+                    <Legend
+                      verticalAlign="top"
+                      align="right"
+                      iconType="circle"
+                      wrapperStyle={{ paddingBottom: '30px', fontWeight: 700, fontSize: '13px' }}
+                    />
+                    <Bar
+                      dataKey="sales"
+                      name="Gross Revenue"
+                      fill="#0284c7"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={50}
+                    />
+                    <Bar
+                      dataKey="profit"
+                      name="Net Profit"
+                      fill="#10b981"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={50}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

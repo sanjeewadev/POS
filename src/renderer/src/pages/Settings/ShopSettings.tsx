@@ -5,10 +5,11 @@ import { RiStore2Line, RiMapPin2Line, RiPhoneLine, RiFontSize } from 'react-icon
 import styles from './ShopSettings.module.css'
 
 export default function ShopSettings() {
-  const [shopName, setShopName] = useState('My POS System')
+  // Started with empty strings so it doesn't flash default text before loading
+  const [shopName, setShopName] = useState('')
   const [shopAddress, setShopAddress] = useState('')
   const [shopPhone, setShopPhone] = useState('')
-  const [receiptFooter, setReceiptFooter] = useState('Thank you for your business!')
+  const [receiptFooter, setReceiptFooter] = useState('')
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -40,7 +41,14 @@ export default function ShopSettings() {
 
     setIsSaving(true)
     try {
-      const payload = { shopName, shopAddress, shopPhone, receiptFooter }
+      // 🚀 THE FIX: Capitalized the keys to perfectly match systemRepo.ts!
+      const payload = {
+        ShopName: shopName,
+        ShopAddress: shopAddress,
+        ShopPhone: shopPhone,
+        ReceiptFooter: receiptFooter
+      }
+
       // @ts-ignore
       await window.api.updateSettings(payload)
       Swal.fire({ title: 'Saved!', icon: 'success', timer: 1500, showConfirmButton: false })
@@ -57,7 +65,7 @@ export default function ShopSettings() {
     <div className={styles.container}>
       <div className={styles.mainPanel}>
         <div className={styles.panelHeader}>
-          <h2 className={styles.pageTitle}>Store Configuration</h2>
+          <h2 className="pos-page-title">Store Configuration</h2>
         </div>
 
         <div className={styles.panelBody}>
@@ -116,8 +124,7 @@ export default function ShopSettings() {
 
                 <button
                   type="submit"
-                  className="pos-btn success"
-                  style={{ height: '50px', marginTop: '10px', fontWeight: 800 }}
+                  className={`pos-btn success ${styles.saveBtn}`}
                   disabled={isSaving}
                 >
                   {isSaving ? 'SAVING...' : 'SAVE STORE CONFIGURATION'}
@@ -145,23 +152,21 @@ export default function ShopSettings() {
                 <table className={styles.receiptTable}>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: 'left' }}>Item</th>
-                      <th style={{ textAlign: 'right' }}>Amount</th>
+                      <th className={styles.textLeft}>Item</th>
+                      <th className={styles.textRight}>Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td>Sample Product</td>
-                      <td style={{ textAlign: 'right' }}>500.00</td>
+                      <td className={styles.textRight}>500.00</td>
                     </tr>
                   </tbody>
                 </table>
 
                 <div className={styles.receiptDivider}>--------------------------------</div>
                 <div className={styles.receiptTotals}>
-                  <div
-                    style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900 }}
-                  >
+                  <div className={styles.totalRow}>
                     <span>TOTAL</span>
                     <span>Rs 500.00</span>
                   </div>

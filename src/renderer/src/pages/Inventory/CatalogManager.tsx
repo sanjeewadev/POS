@@ -31,7 +31,7 @@ export default function CatalogManager() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editProdName, setEditProdName] = useState('')
   const [editPrintName, setEditPrintName] = useState('')
-  const [editBarcode, setEditBarcode] = useState('') // 🚀 Allow editing barcodes
+  const [editBarcode, setEditBarcode] = useState('')
   const [editProdUnit, setEditProdUnit] = useState('')
   const [editQuantityType, setEditQuantityType] = useState('quantity')
   const [editProdFolder, setEditProdFolder] = useState<number>(0)
@@ -125,7 +125,6 @@ export default function CatalogManager() {
     }
   }
 
-  // --- 🚀 GENERATE RANDOM BARCODE ---
   const handleGenerateBarcode = () => {
     const randomCode = Math.floor(100000000000 + Math.random() * 900000000000).toString()
     setNewBarcode(randomCode)
@@ -165,13 +164,13 @@ export default function CatalogManager() {
     const safeName = newItemName.trim()
     if (!safeName) return Swal.fire('Error', 'Product name cannot be empty.', 'error')
 
-    // 🚀 BARCODE LOGIC: If they left it blank, generate one automatically
     const finalBarcode =
       newBarcode.trim() || Math.floor(100000000000 + Math.random() * 900000000000).toString()
+    const finalPrintName = newPrintName.trim() || safeName.substring(0, 20)
 
     const payload = {
       Name: safeName,
-      PrintName: newPrintName.trim() || safeName.substring(0, 20),
+      PrintName: finalPrintName,
       Barcode: finalBarcode,
       CategoryId: selectedFolderId,
       Unit: prodUnit,
@@ -189,7 +188,7 @@ export default function CatalogManager() {
       setModalView('CLOSED')
       setNewItemName('')
       setNewPrintName('')
-      setNewBarcode('') // Reset barcode
+      setNewBarcode('')
       setProdUnit('Pcs')
       setNewQuantityType('quantity')
       loadData()
@@ -241,12 +240,16 @@ export default function CatalogManager() {
     const safeName = editProdName.trim()
     if (!safeName) return Swal.fire('Error', 'Product name cannot be empty.', 'error')
 
+    const finalBarcode =
+      editBarcode.trim() || Math.floor(100000000000 + Math.random() * 900000000000).toString()
+    const finalPrintName = editPrintName.trim() || safeName.substring(0, 20)
+
     try {
       const payload = {
         ...editingProduct,
         Name: safeName,
-        PrintName: editPrintName.trim(),
-        Barcode: editBarcode.trim() || editingProduct.Barcode, // Keep old if they accidentally cleared it
+        PrintName: finalPrintName,
+        Barcode: finalBarcode,
         Unit: editProdUnit,
         QuantityType: editQuantityType,
         CategoryId: editProdFolder
@@ -344,14 +347,10 @@ export default function CatalogManager() {
       {/* LAYER 2: CONTENTS (RIGHT) */}
       <div className={styles.rightPanel}>
         <div className={styles.rightHeader}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div className={styles.breadcrumbGroup}>
             {!globalSearch && selectedFolderId !== null && (
-              <button
-                className="pos-btn neutral"
-                onClick={handleBack}
-                style={{ padding: '0 15px', minHeight: '40px' }}
-              >
-                Back
+              <button className={`pos-btn-sm neutral ${styles.backBtn}`} onClick={handleBack}>
+                ← Back
               </button>
             )}
             <div className={styles.breadcrumb}>
@@ -359,23 +358,22 @@ export default function CatalogManager() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <div className={styles.actionGroup}>
             <input
               type="text"
-              className="pos-input"
+              className={`pos-input ${styles.searchInput}`}
               placeholder="Search catalog..."
               value={globalSearch}
               onChange={(e) => {
                 setGlobalSearch(e.target.value)
                 if (e.target.value) setSelectedFolderId(null)
               }}
-              style={{ width: '300px', minHeight: '40px' }}
             />
             <button
-              className="pos-btn success"
+              className={`pos-btn success ${styles.addBtn}`}
               onClick={() => setModalView('CHOICE')}
               disabled={!!globalSearch}
-              style={{ minHeight: '40px' }}
+              style={{ width: 200 }}
             >
               + ADD NEW
             </button>
@@ -386,37 +384,39 @@ export default function CatalogManager() {
           <table className={styles.classicTable}>
             <thead>
               <tr>
-                <th>TYPE & NAME</th>
-                <th>INFO</th>
-                <th style={{ textAlign: 'right' }}>ACTIONS</th>
+                <th className={styles.colName}>TYPE & NAME</th>
+                <th className={styles.colInfo}>INFO</th>
+                <th className={styles.colActions}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {displayedFolders.map((folder) => (
                 <tr key={`cat-${folder.Id}`}>
-                  <td style={{ fontWeight: 700 }}>
-                    <span className={styles.rowIcon}>📁</span> {folder.Name}
+                  <td className={styles.itemNameCell}>
+                    <div className={styles.itemNameWrapper}>
+                      <span className={styles.rowIcon}>📁</span>
+                      <span className={styles.truncatedText} title={folder.Name}>
+                        {folder.Name}
+                      </span>
+                    </div>
                   </td>
-                  <td style={{ color: 'var(--text-muted)' }}>Folder</td>
-                  <td style={{ display: 'flex', gap: '5px', justifyContent: 'flex-end' }}>
+                  <td className={styles.itemMetaCell}>Folder</td>
+                  <td className={styles.actionCell}>
                     <button
-                      className="pos-btn neutral"
+                      className={`pos-btn-sm neutral ${styles.actionBtnSm}`}
                       onClick={() => setSelectedFolderId(folder.Id)}
-                      style={{ minHeight: '30px', padding: '5px 15px', fontSize: '11px' }}
                     >
                       OPEN
                     </button>
                     <button
-                      className="pos-btn warning"
+                      className={`pos-btn-sm warning ${styles.actionBtnSm}`}
                       onClick={() => openEditFolder(folder)}
-                      style={{ minHeight: '30px', padding: '5px 15px', fontSize: '11px' }}
                     >
                       EDIT
                     </button>
                     <button
-                      className="pos-btn danger"
+                      className={`pos-btn-sm danger ${styles.actionBtnSm}`}
                       onClick={() => handleDeleteFolder(folder.Id)}
-                      style={{ minHeight: '30px', padding: '5px 15px', fontSize: '11px' }}
                     >
                       DEL
                     </button>
@@ -426,41 +426,33 @@ export default function CatalogManager() {
 
               {displayedProducts.map((prod) => (
                 <tr key={`prod-${prod.Id}`}>
-                  <td style={{ fontWeight: 700 }}>
-                    <span className={styles.rowIcon}>📦</span> {prod.Name}
+                  <td className={styles.itemNameCell}>
+                    <div className={styles.itemNameWrapper}>
+                      <span className={styles.rowIcon}>📦</span>
+                      <span className={styles.truncatedText} title={prod.Name}>
+                        {prod.Name}
+                      </span>
+                    </div>
                   </td>
-                  <td style={{ color: 'var(--text-muted)' }}>
-                    SKU:{' '}
-                    <span
-                      style={{
-                        fontFamily: 'monospace',
-                        color: 'var(--brand-primary)',
-                        fontWeight: 800
-                      }}
-                    >
-                      {prod.Barcode}
-                    </span>{' '}
-                    | {prod.Unit}
+                  <td className={styles.itemMetaCell}>
+                    SKU: <span className={styles.skuHighlight}>{prod.Barcode}</span> | {prod.Unit}
                   </td>
-                  <td style={{ display: 'flex', gap: '5px', justifyContent: 'flex-end' }}>
+                  <td className={styles.actionCell}>
                     <button
-                      className="pos-btn neutral"
+                      className={`pos-btn-sm neutral ${styles.actionBtnSm}`}
                       onClick={() => handleViewProduct(prod)}
-                      style={{ minHeight: '30px', padding: '5px 15px', fontSize: '11px' }}
                     >
                       VIEW
                     </button>
                     <button
-                      className="pos-btn warning"
+                      className={`pos-btn-sm warning ${styles.actionBtnSm}`}
                       onClick={() => openEditProduct(prod)}
-                      style={{ minHeight: '30px', padding: '5px 15px', fontSize: '11px' }}
                     >
                       EDIT
                     </button>
                     <button
-                      className="pos-btn danger"
+                      className={`pos-btn-sm danger ${styles.actionBtnSm}`}
                       onClick={() => handleDeleteProduct(prod.Id)}
-                      style={{ minHeight: '30px', padding: '5px 15px', fontSize: '11px' }}
                     >
                       DEL
                     </button>
@@ -479,14 +471,13 @@ export default function CatalogManager() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
             <div className={styles.modalHeader}>
-              <h2 style={{ margin: 0, fontSize: '20px' }}>
+              <h2 className="pos-page-title">
                 {modalView === 'CHOICE' && 'What do you want to create?'}
                 {modalView === 'FOLDER' && 'Create Sub-Folder'}
                 {modalView === 'PRODUCT' && 'Create Product'}
               </h2>
               <button
-                className="pos-btn neutral"
-                style={{ minHeight: '30px', padding: '5px 10px' }}
+                className={`pos-btn neutral ${styles.actionBtnSm}`}
                 onClick={() => setModalView('CLOSED')}
               >
                 ✖
@@ -495,17 +486,15 @@ export default function CatalogManager() {
 
             {modalView === 'CHOICE' && (
               <div className={styles.modalBody}>
-                <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+                <div className={styles.choiceGroup}>
                   <button
-                    className="pos-btn neutral"
+                    className={`pos-btn neutral ${styles.choiceBtn}`}
                     onClick={() => setModalView('FOLDER')}
-                    style={{ padding: '30px', flex: 1, flexDirection: 'column' }}
                   >
-                    <span style={{ fontSize: '32px' }}>📁</span> <br /> New Folder
+                    <span className={styles.choiceIcon}>📁</span> <br /> New Folder
                   </button>
                   <button
-                    className="pos-btn success"
-                    style={{ padding: '30px', flex: 1, flexDirection: 'column' }}
+                    className={`pos-btn success ${styles.choiceBtn}`}
                     onClick={() => {
                       if (!selectedFolderId) {
                         Swal.fire(
@@ -518,7 +507,7 @@ export default function CatalogManager() {
                       setModalView('PRODUCT')
                     }}
                   >
-                    <span style={{ fontSize: '32px' }}>📦</span> <br /> New Product
+                    <span className={styles.choiceIcon}>📦</span> <br /> New Product
                   </button>
                 </div>
               </div>
@@ -527,12 +516,8 @@ export default function CatalogManager() {
             {modalView === 'FOLDER' && (
               <form onSubmit={handleSaveFolder}>
                 <div className={styles.modalBody}>
-                  <div style={{ marginBottom: '15px' }}>
-                    <label
-                      style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      FOLDER NAME
-                    </label>
+                  <div className={styles.formGroup}>
+                    <label className={styles.inputLabel}>FOLDER NAME</label>
                     <input
                       type="text"
                       className="pos-input"
@@ -561,12 +546,8 @@ export default function CatalogManager() {
             {modalView === 'PRODUCT' && (
               <form onSubmit={handleSaveProduct}>
                 <div className={styles.modalBody}>
-                  <div style={{ marginBottom: '15px' }}>
-                    <label
-                      style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      PRODUCT NAME (FULL) *
-                    </label>
+                  <div className={styles.formGroup}>
+                    <label className={styles.inputLabel}>PRODUCT NAME (FULL) *</label>
                     <input
                       type="text"
                       className="pos-input"
@@ -578,15 +559,10 @@ export default function CatalogManager() {
                     />
                   </div>
 
-                  <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                    <div style={{ flex: 1 }}>
-                      <label
-                        style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                      >
-                        BARCODE / SKU
-                      </label>
-                      <div style={{ display: 'flex', gap: '5px' }}>
-                        {/* 🚀 If user scans a physical barcode, it types here. If they want a random one, they click the button */}
+                  <div className={styles.formRow}>
+                    <div className={styles.formCol}>
+                      <label className={styles.inputLabel}>BARCODE / SKU</label>
+                      <div className={styles.inputGroup}>
                         <input
                           type="text"
                           className="pos-input"
@@ -596,21 +572,16 @@ export default function CatalogManager() {
                         />
                         <button
                           type="button"
-                          className="pos-btn neutral"
+                          className={`pos-btn neutral ${styles.diceBtn}`}
                           onClick={handleGenerateBarcode}
-                          style={{ minHeight: '40px', padding: '0 10px' }}
                           title="Generate Random Barcode"
                         >
                           🎲
                         </button>
                       </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <label
-                        style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                      >
-                        RECEIPT PRINT NAME
-                      </label>
+                    <div className={styles.formCol}>
+                      <label className={styles.inputLabel}>RECEIPT PRINT NAME</label>
                       <input
                         type="text"
                         className="pos-input"
@@ -622,13 +593,9 @@ export default function CatalogManager() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                    <div style={{ flex: 1 }}>
-                      <label
-                        style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                      >
-                        BASE UNIT
-                      </label>
+                  <div className={styles.formRow}>
+                    <div className={styles.formCol}>
+                      <label className={styles.inputLabel}>BASE UNIT</label>
                       <select
                         className="pos-input"
                         value={prodUnit}
@@ -640,12 +607,8 @@ export default function CatalogManager() {
                         <option value="m">m</option>
                       </select>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <label
-                        style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                      >
-                        SOLD BY (DECIMALS)
-                      </label>
+                    <div className={styles.formCol}>
+                      <label className={styles.inputLabel}>SOLD BY (DECIMALS)</label>
                       <select
                         className="pos-input"
                         value={newQuantityType}
@@ -682,10 +645,9 @@ export default function CatalogManager() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
             <div className={styles.modalHeader}>
-              <h2 style={{ margin: 0, fontSize: '20px' }}>Edit Folder</h2>
+              <h2 className="pos-page-title">Edit Folder</h2>
               <button
-                className="pos-btn neutral"
-                style={{ minHeight: '30px', padding: '5px 10px' }}
+                className={`pos-btn neutral ${styles.actionBtnSm}`}
                 onClick={() => setEditingFolder(null)}
               >
                 ✖
@@ -693,17 +655,17 @@ export default function CatalogManager() {
             </div>
             <form onSubmit={handleUpdateFolder}>
               <div className={styles.modalBody}>
-                <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}>
-                  FOLDER NAME
-                </label>
-                <input
-                  type="text"
-                  className="pos-input"
-                  value={editFolderName}
-                  onChange={(e) => setEditFolderName(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <div className={styles.formGroup}>
+                  <label className={styles.inputLabel}>FOLDER NAME</label>
+                  <input
+                    type="text"
+                    className="pos-input"
+                    value={editFolderName}
+                    onChange={(e) => setEditFolderName(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
               </div>
               <div className={styles.modalFooter}>
                 <button
@@ -729,10 +691,9 @@ export default function CatalogManager() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
             <div className={styles.modalHeader}>
-              <h2 style={{ margin: 0, fontSize: '20px' }}>Edit Product</h2>
+              <h2 className="pos-page-title">Edit Product</h2>
               <button
-                className="pos-btn neutral"
-                style={{ minHeight: '30px', padding: '5px 10px' }}
+                className={`pos-btn neutral ${styles.actionBtnSm}`}
                 onClick={() => setEditingProduct(null)}
               >
                 ✖
@@ -740,10 +701,8 @@ export default function CatalogManager() {
             </div>
             <form onSubmit={handleUpdateProduct}>
               <div className={styles.modalBody}>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}>
-                    PRODUCT NAME
-                  </label>
+                <div className={styles.formGroup}>
+                  <label className={styles.inputLabel}>PRODUCT NAME</label>
                   <input
                     type="text"
                     className="pos-input"
@@ -753,14 +712,10 @@ export default function CatalogManager() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label
-                      style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      BARCODE / SKU
-                    </label>
-                    <div style={{ display: 'flex', gap: '5px' }}>
+                <div className={styles.formRow}>
+                  <div className={styles.formCol}>
+                    <label className={styles.inputLabel}>BARCODE / SKU</label>
+                    <div className={styles.inputGroup}>
                       <input
                         type="text"
                         className="pos-input"
@@ -770,20 +725,15 @@ export default function CatalogManager() {
                       />
                       <button
                         type="button"
-                        className="pos-btn neutral"
+                        className={`pos-btn neutral ${styles.diceBtn}`}
                         onClick={handleGenerateEditBarcode}
-                        style={{ minHeight: '40px', padding: '0 10px' }}
                       >
                         🎲
                       </button>
                     </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label
-                      style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      RECEIPT PRINT NAME
-                    </label>
+                  <div className={styles.formCol}>
+                    <label className={styles.inputLabel}>RECEIPT PRINT NAME</label>
                     <input
                       type="text"
                       className="pos-input"
@@ -794,13 +744,9 @@ export default function CatalogManager() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label
-                      style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      BASE UNIT
-                    </label>
+                <div className={styles.formRow}>
+                  <div className={styles.formCol}>
+                    <label className={styles.inputLabel}>BASE UNIT</label>
                     <select
                       className="pos-input"
                       value={editProdUnit}
@@ -812,12 +758,8 @@ export default function CatalogManager() {
                       <option value="m">m</option>
                     </select>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label
-                      style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      SOLD BY
-                    </label>
+                  <div className={styles.formCol}>
+                    <label className={styles.inputLabel}>SOLD BY</label>
                     <select
                       className="pos-input"
                       value={editQuantityType}
@@ -828,10 +770,8 @@ export default function CatalogManager() {
                     </select>
                   </div>
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)' }}>
-                    MOVE TO FOLDER
-                  </label>
+                <div className={styles.formGroup}>
+                  <label className={styles.inputLabel}>MOVE TO FOLDER</label>
                   <select
                     className="pos-input"
                     value={editProdFolder}
@@ -869,55 +809,41 @@ export default function CatalogManager() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalBoxView}>
             <div className={styles.modalHeader}>
-              <h2 style={{ margin: 0, fontSize: '20px' }}>{viewingProduct.Name}</h2>
+              <h2 className="pos-page-title">{viewingProduct.Name}</h2>
               <button
-                className="pos-btn neutral"
-                style={{ minHeight: '30px', padding: '5px 10px' }}
+                className={`pos-btn neutral ${styles.actionBtnSm}`}
                 onClick={() => setViewingProduct(null)}
               >
                 ✖
               </button>
             </div>
             <div className={styles.modalBody}>
-              <h3
-                style={{
-                  marginBottom: '15px',
-                  fontSize: '14px',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)'
-                }}
-              >
-                Active Inventory Batches
-              </h3>
+              <h3 className={styles.tableTitle}>Active Inventory Batches</h3>
               {productBatches.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)' }}>
+                <p className={styles.emptyStateText}>
                   No active batches found. Receive GRN or Quick Add stock to see data here.
                 </p>
               ) : (
                 <table className={styles.classicTable}>
                   <thead>
                     <tr>
-                      <th>Date Received</th>
-                      <th>Original Qty</th>
-                      <th>Current Qty</th>
-                      <th>Cost Price</th>
-                      <th>Selling Price</th>
+                      <th className={styles.colDate}>Date Received</th>
+                      <th className={styles.colQtySm}>Orig Qty</th>
+                      <th className={styles.colQtySm}>Cur Qty</th>
+                      <th className={styles.colCost}>Cost Price</th>
+                      <th className={styles.colSell}>Selling Price</th>
                     </tr>
                   </thead>
                   <tbody>
                     {productBatches.map((b, i) => (
                       <tr key={i}>
-                        <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                        <td className={styles.cellDate}>
                           {new Date(b.ReceivedDate).toLocaleDateString()}
                         </td>
-                        <td>{b.InitialQuantity}</td>
-                        <td style={{ fontWeight: 900, color: 'var(--brand-primary)' }}>
-                          {b.RemainingQuantity}
-                        </td>
-                        <td style={{ color: 'var(--text-muted)' }}>Rs {b.CostPrice.toFixed(2)}</td>
-                        <td style={{ color: 'var(--action-success)', fontWeight: 800 }}>
-                          Rs {b.SellingPrice.toFixed(2)}
-                        </td>
+                        <td className={styles.cellMuted}>{b.InitialQuantity}</td>
+                        <td className={styles.qtyPrimary}>{b.RemainingQuantity}</td>
+                        <td className={styles.cellMuted}>Rs {b.CostPrice.toFixed(2)}</td>
+                        <td className={styles.priceSuccess}>Rs {b.SellingPrice.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>

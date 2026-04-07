@@ -95,7 +95,8 @@ export default function SystemBackups() {
     <div className={styles.container}>
       <div className={styles.mainPanel}>
         <div className={styles.panelHeader}>
-          <h2 className={styles.pageTitle}>System Preferences & Data Vault</h2>
+          {/* 🚀 Replaced with Global Title Class */}
+          <h2 className="pos-page-title">System Preferences & Data Vault</h2>
         </div>
 
         <div className={styles.panelBody}>
@@ -110,12 +111,11 @@ export default function SystemBackups() {
                 </div>
               </div>
               <div className={styles.cardBody}>
-                <div style={{ display: 'flex', gap: '15px' }}>
+                <div className={styles.printerRow}>
                   <select
-                    className="pos-input"
+                    className={`pos-input ${styles.printerSelect}`}
                     value={selectedPrinter}
                     onChange={(e) => setSelectedPrinter(e.target.value)}
-                    style={{ flex: 1 }}
                   >
                     <option value="">-- Select a Printer --</option>
                     {printers.map((p, idx) => (
@@ -124,14 +124,13 @@ export default function SystemBackups() {
                       </option>
                     ))}
                   </select>
-                  <button className="pos-btn neutral" onClick={loadPrinters} style={{ gap: '8px' }}>
+                  <button className={`pos-btn neutral ${styles.refreshBtn}`} onClick={loadPrinters}>
                     <RiRefreshLine size={18} /> Refresh
                   </button>
                 </div>
                 <button
-                  className="pos-btn success"
+                  className={`pos-btn success ${styles.savePrinterBtn}`}
                   onClick={handleSavePrinter}
-                  style={{ width: '100%', marginTop: '20px', fontWeight: 700 }}
                 >
                   SAVE POS PRINTER
                 </button>
@@ -147,24 +146,22 @@ export default function SystemBackups() {
                   <p>Securely backup or restore your financial data.</p>
                 </div>
               </div>
-              <div className={styles.cardBody} style={{ display: 'flex', gap: '15px' }}>
+              <div className={`${styles.cardBody} ${styles.cardBodyFlex}`}>
                 <button
-                  className="pos-btn neutral"
+                  className={`pos-btn neutral ${styles.vaultBtn}`}
                   onClick={handleBackup}
                   disabled={isProcessing}
-                  style={{ flex: 1, height: '100px', flexDirection: 'column', gap: '8px' }}
                 >
                   <RiDownloadCloud2Line size={32} color="#0284c7" />
-                  <span style={{ fontWeight: 700 }}>EXPORT BACKUP</span>
+                  <span className={styles.vaultBtnText}>EXPORT BACKUP</span>
                 </button>
                 <button
-                  className="pos-btn neutral"
+                  className={`pos-btn neutral ${styles.vaultBtn}`}
                   onClick={handleRestore}
                   disabled={isProcessing}
-                  style={{ flex: 1, height: '100px', flexDirection: 'column', gap: '8px' }}
                 >
                   <RiUploadCloud2Line size={32} color="#64748b" />
-                  <span style={{ fontWeight: 700 }}>RESTORE DATA</span>
+                  <span className={styles.vaultBtnText}>RESTORE DATA</span>
                 </button>
               </div>
             </div>
@@ -174,22 +171,15 @@ export default function SystemBackups() {
               <div className={styles.cardHeader}>
                 <RiAlertLine className={styles.headerIcon} color="#dc2626" />
                 <div>
-                  <h3 style={{ color: '#dc2626' }}>DANGER ZONE: Factory Reset</h3>
+                  <h3 className={styles.dangerTitle}>DANGER ZONE: Factory Reset</h3>
                   <p>Permanently wipe all data. Only Admin remains.</p>
                 </div>
               </div>
               <div className={styles.cardBody}>
                 {!showResetConfirm ? (
                   <button
-                    className="pos-btn danger"
+                    className={`pos-btn danger ${styles.dangerBtnOutline}`}
                     onClick={() => setShowResetConfirm(true)}
-                    style={{
-                      width: '100%',
-                      background: 'white',
-                      color: '#dc2626',
-                      border: '1px solid #dc2626',
-                      fontWeight: 700
-                    }}
                   >
                     INITIATE FACTORY RESET
                   </button>
@@ -200,24 +190,21 @@ export default function SystemBackups() {
                     </label>
                     <input
                       type="text"
-                      className="pos-input"
-                      style={{ textAlign: 'center', fontWeight: 900, color: '#dc2626' }}
+                      className={`pos-input ${styles.dangerInput}`}
                       value={resetText}
                       onChange={(e) => setResetText(e.target.value)}
                     />
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                    <div className={styles.confirmActions}>
                       <button
-                        className="pos-btn neutral"
+                        className={`pos-btn neutral ${styles.flexBtn}`}
                         onClick={() => setShowResetConfirm(false)}
-                        style={{ flex: 1 }}
                       >
                         CANCEL
                       </button>
                       <button
-                        className="pos-btn danger"
+                        className={`pos-btn danger ${styles.flexBtn}`}
                         onClick={handleFactoryReset}
                         disabled={resetText !== 'DELETE ALL DATA'}
-                        style={{ flex: 1 }}
                       >
                         CONFIRM PURGE
                       </button>

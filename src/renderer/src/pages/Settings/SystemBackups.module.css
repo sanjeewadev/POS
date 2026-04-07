@@ -25,14 +25,6 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
-.pageTitle {
-  font-size: 22px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
 .panelBody {
   flex: 1;
   padding: 30px;
@@ -82,9 +74,62 @@
   padding: 20px;
 }
 
+.cardBodyFlex {
+  display: flex;
+  gap: 15px;
+}
+
+/* ── Printer Section Styles ── */
+.printerRow {
+  display: flex;
+  gap: 15px;
+}
+
+.printerSelect {
+  flex: 1;
+}
+
+.refreshBtn {
+  gap: 8px;
+}
+
+.savePrinterBtn {
+  width: 100%;
+  margin-top: 20px;
+  font-weight: 700;
+}
+
+/* ── Database Vault Styles ── */
+.vaultBtn {
+  flex: 1;
+  height: 100px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vaultBtnText {
+  font-weight: 700;
+}
+
 /* ── Danger Style ── */
 .dangerCard {
   border: 1px solid #fee2e2;
+}
+
+.dangerTitle {
+  color: #dc2626;
+}
+
+.dangerBtnOutline {
+  width: 100%;
+  background: white;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+  font-weight: 700;
+}
+
+.dangerBtnOutline:hover {
+  background: #fef2f2;
 }
 
 .resetConfirmBox {
@@ -99,6 +144,22 @@
   font-size: 13px;
   margin-bottom: 8px;
   color: #475569;
+}
+
+.dangerInput {
+  text-align: center;
+  font-weight: 900;
+  color: #dc2626;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.flexBtn {
+  flex: 1;
 }
 
 /* Custom Scrollbar */

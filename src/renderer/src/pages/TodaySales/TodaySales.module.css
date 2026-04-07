@@ -1,0 +1,307 @@
+/* src/renderer/src/pages/Reports/TodaySales.module.css */
+
+.container {
+  display: flex;
+  height: 100%;
+  padding: 8px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.mainPanel {
+  background: #ffffff;
+  width: 100%;
+  height: 100%;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panelHeader {
+  padding: 20px 30px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pageTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.panelBody {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+
+/* --- Financial Banner --- */
+.summaryBanner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.statBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.statLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statValueMain {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0f172a;
+}
+.statValue {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.statValueCredit {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ea580c;
+}
+.statValueDanger {
+  font-size: 20px;
+  font-weight: 800;
+  color: #e11d48;
+}
+
+/* --- Search & Actions --- */
+.actionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.searchWrapper {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.searchWrapper input {
+  padding-left: 40px !important;
+}
+
+/* --- Table --- */
+.tableWrapper {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.classicTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.classicTable th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  border-bottom: 2px solid #e2e8f0;
+  text-align: left;
+  z-index: 10;
+}
+
+.classicTable td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.receiptIdCell {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #0284c7;
+}
+
+.voidedRow {
+  background: #fff1f2;
+  opacity: 0.8;
+}
+
+/* --- Badges --- */
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.statusPaid {
+  background: #dcfce7;
+  color: #15803d;
+}
+.statusUnpaid {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.statusPartial {
+  background: #fef3c7;
+  color: #b45309;
+}
+.statusVoid {
+  background: #f1f5f9;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.cashBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.creditBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+  background: #fff7ed;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #ffedd5;
+}
+
+/* --- Modal --- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalBoxView {
+  background: #fff;
+  width: 90%;
+  max-width: 950px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalSubHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.modalBody {
+  padding: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modalSummaryBox {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.summaryRight {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.summaryLine {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 14px;
+}
+.paidLine {
+  color: #16a34a;
+  font-size: 16px;
+  font-weight: 800;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+.balanceLine {
+  color: #e11d48;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.savingsTag {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.modalFooter {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

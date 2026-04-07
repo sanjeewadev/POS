@@ -31,97 +31,107 @@ export function getAllProducts() {
 }
 
 export function addProduct(product: any) {
-  const db = getDb()
+  try {
+    const db = getDb()
 
-  // Clean up user inputs for the new retail features
-  const safePrintName = product.PrintName?.trim() || null
-  const validQtyType = product.QuantityType === 'kg' ? 'kg' : 'quantity'
+    // 1. Sanitize and prepare the payload
+    const payload = {
+      Name: product.Name,
+      PrintName: product.PrintName?.trim() || null,
+      Barcode: product.Barcode?.trim() || null,
+      Description: product.Description || '',
+      Unit: product.Unit || 'Pcs',
+      QuantityType: product.QuantityType === 'kg' ? 'kg' : 'quantity',
+      CategoryId: product.CategoryId,
+      BuyingPrice: product.BuyingPrice || 0,
+      SellingPrice: product.SellingPrice || 0,
+      DiscountLimit: product.DiscountLimit || 0,
+      Quantity: product.Quantity || 0,
+      IsActive: 1
+    }
 
-  // Safely handle empty barcodes so we don't trigger the UNIQUE constraint error
-  if (product.Barcode && product.Barcode.trim() !== '') {
-    return db
-      .prepare(
-        `
+    // 2. Use bulletproof Named Parameters (@FieldName)
+    const stmt = db.prepare(`
       INSERT INTO Products (
         Name, PrintName, Barcode, Description, Unit, QuantityType, 
         CategoryId, BuyingPrice, SellingPrice, DiscountLimit, Quantity, IsActive
+      ) VALUES (
+        @Name, @PrintName, @Barcode, @Description, @Unit, @QuantityType, 
+        @CategoryId, @BuyingPrice, @SellingPrice, @DiscountLimit, @Quantity, @IsActive
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `
-      )
-      .run(
-        product.Name,
-        safePrintName,
-        product.Barcode.trim(),
-        product.Description,
-        product.Unit,
-        validQtyType,
-        product.CategoryId,
-        product.BuyingPrice || 0,
-        product.SellingPrice || 0,
-        product.DiscountLimit || 0,
-        product.Quantity || 0
-      )
-  } else {
-    // Insert without barcode
-    return db
-      .prepare(
-        `
-      INSERT INTO Products (
-        Name, PrintName, Description, Unit, QuantityType, 
-        CategoryId, BuyingPrice, SellingPrice, DiscountLimit, Quantity, IsActive
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `
-      )
-      .run(
-        product.Name,
-        safePrintName,
-        product.Description,
-        product.Unit,
-        validQtyType,
-        product.CategoryId,
-        product.BuyingPrice || 0,
-        product.SellingPrice || 0,
-        product.DiscountLimit || 0,
-        product.Quantity || 0
-      )
+    `)
+
+    const info = stmt.run(payload)
+    return { success: true, id: info.lastInsertRowid }
+  } catch (error: any) {
+    console.error('Failed to add product:', error)
+    throw error // Sends error back to React UI
   }
 }
 
 export function updateProduct(product: any) {
-  const validQtyType = product.QuantityType === 'kg' ? 'kg' : 'quantity'
+  try {
+    const db = getDb()
 
-  return getDb()
-    .prepare(
-      `
-    UPDATE Products 
-    SET Name = ?, PrintName = ?, Barcode = ?, Description = ?, Unit = ?, 
-        QuantityType = ?, CategoryId = ?, BuyingPrice = ?, SellingPrice = ?, DiscountLimit = ?
-    WHERE Id = ?
-  `
-    )
-    .run(
-      product.Name,
-      product.PrintName?.trim() || null,
-      product.Barcode?.trim() || null,
-      product.Description,
-      product.Unit,
-      validQtyType,
-      product.CategoryId,
-      product.BuyingPrice || 0,
-      product.SellingPrice || 0,
-      product.DiscountLimit || 0,
-      product.Id
-    )
+    // 1. Sanitize and prepare the payload
+    const payload = {
+      Id: product.Id,
+      Name: product.Name,
+      PrintName: product.PrintName?.trim() || null,
+      Barcode: product.Barcode?.trim() || null,
+      Description: product.Description || '',
+      Unit: product.Unit || 'Pcs',
+      QuantityType: product.QuantityType === 'kg' ? 'kg' : 'quantity',
+      CategoryId: product.CategoryId,
+      BuyingPrice: product.BuyingPrice || 0,
+      SellingPrice: product.SellingPrice || 0,
+      DiscountLimit: product.DiscountLimit || 0
+    }
+
+    // 2. Use bulletproof Named Parameters
+    const stmt = db.prepare(`
+      UPDATE Products SET
+        Name = @Name,
+        PrintName = @PrintName,
+        Barcode = @Barcode,
+        Description = @Description,
+        Unit = @Unit,
+        QuantityType = @QuantityType,
+        CategoryId = @CategoryId,
+        BuyingPrice = @BuyingPrice,
+        SellingPrice = @SellingPrice,
+        DiscountLimit = @DiscountLimit
+      WHERE Id = @Id
+    `)
+
+    stmt.run(payload)
+    return { success: true }
+  } catch (error: any) {
+    console.error('Failed to update product:', error)
+    throw error
+  }
 }
 
-// 🚀 NEW: Move product to the "Recycle Bin"
+// 🚀 Move product to the "Recycle Bin" (Soft Delete)
 export function softDeleteProduct(id: number) {
-  return getDb().prepare('UPDATE Products SET IsActive = 0 WHERE Id = ?').run(id)
+  try {
+    const db = getDb()
+    db.prepare('UPDATE Products SET IsActive = 0 WHERE Id = ?').run(id)
+    return { success: true }
+  } catch (error: any) {
+    console.error('Failed to soft delete product:', error)
+    throw error
+  }
 }
 
-// 🚀 NEW: Restore a product from the "Recycle Bin"
+// 🚀 Restore a product from the "Recycle Bin"
 export function restoreProduct(id: number) {
-  return getDb().prepare('UPDATE Products SET IsActive = 1 WHERE Id = ?').run(id)
+  try {
+    const db = getDb()
+    db.prepare('UPDATE Products SET IsActive = 1 WHERE Id = ?').run(id)
+    return { success: true }
+  } catch (error: any) {
+    console.error('Failed to restore product:', error)
+    throw error
+  }
 }

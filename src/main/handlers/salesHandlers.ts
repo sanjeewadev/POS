@@ -16,6 +16,7 @@ export function registerSalesHandlers() {
   ipcMain.handle('get-product-adjustments', (_, productId) =>
     stockRepo.getProductAdjustments(productId)
   )
+  ipcMain.handle('update-batch-pricing', (_, payload) => stockRepo.updateBatchPricing(payload))
 
   // Voids & Returns Engine
   ipcMain.handle('void-receipt', (_, id) => stockRepo.voidReceipt(id))

@@ -8,19 +8,16 @@ export default function AdjustStock() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
 
-  // Left Sidebar State
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null)
 
-  // Active Product State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [activeBatches, setActiveBatches] = useState<any[]>([])
   const [adjustmentHistory, setAdjustmentHistory] = useState<any[]>([])
 
-  // Form State
   const [selectedBatchId, setSelectedBatchId] = useState('')
   const [qtyToRemove, setQtyToRemove] = useState('')
-  const [reason, setReason] = useState('0') // 0 = Correction, 1 = Lost
+  const [reason, setReason] = useState('0')
   const [note, setNote] = useState('')
 
   const loadBaseData = async () => {
@@ -83,7 +80,6 @@ export default function AdjustStock() {
       return
     }
 
-    // 🚀 NEW: Flawless decimal blocking using our new Database feature!
     const isWholeNumberOnly = selectedProduct.QuantityType === 'quantity'
     if (isWholeNumberOnly && qty % 1 !== 0) {
       Swal.fire(
@@ -185,8 +181,7 @@ export default function AdjustStock() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <select
-            className="pos-input"
-            style={{ marginTop: '10px' }}
+            className={`pos-input ${styles.categorySelect}`}
             value={selectedCatId || ''}
             onChange={(e) => setSelectedCatId(e.target.value ? parseInt(e.target.value) : null)}
           >
@@ -206,7 +201,7 @@ export default function AdjustStock() {
               className={`${styles.productCard} ${selectedProduct?.Id === p.Id ? styles.active : ''}`}
               onClick={() => handleSelectProduct(p)}
             >
-              <div>
+              <div className={styles.productCardContent}>
                 <div className={styles.prodName}>{p.Name}</div>
                 <div className={styles.prodCode}>{p.Barcode || 'N/A'}</div>
               </div>
@@ -216,9 +211,7 @@ export default function AdjustStock() {
             </div>
           ))}
           {displayedProducts.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No products found.
-            </div>
+            <div className={styles.emptyProductList}>No products found.</div>
           )}
         </div>
       </div>
@@ -227,55 +220,31 @@ export default function AdjustStock() {
       <div className={styles.mainArea}>
         {!selectedProduct ? (
           <div className={styles.emptyPanel}>
-            <h2>Select a product from the list to adjust stock.</h2>
+            <h2 className="pos-page-title">Select a product to adjust stock</h2>
           </div>
         ) : (
           <>
+            {/* Action Panel */}
             <div className={styles.panel}>
               <div className={styles.productHeader}>
                 <div>
-                  <h2 className={styles.productTitle}>{selectedProduct.Name}</h2>
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      color: 'var(--text-muted)',
-                      marginTop: '4px',
-                      fontWeight: 600
-                    }}
-                  >
+                  <h2 className="pos-page-title">{selectedProduct.Name}</h2>
+                  <div className={styles.productMeta}>
                     SKU: {selectedProduct.Barcode || 'N/A'} |{' '}
-                    {selectedProduct.QuantityType === 'kg' ? '⚖️ Weight' : '🔢 Whole Items'}
+                    {selectedProduct.QuantityType === 'kg' ? 'Weight' : 'Whole Items'}
                   </div>
                 </div>
-                <div
-                  style={{
-                    textAlign: 'right',
-                    background: 'var(--bg-main)',
-                    padding: '10px 20px',
-                    borderRadius: '8px'
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase'
-                    }}
-                  >
-                    Total System Stock
-                  </div>
-                  <div style={{ fontSize: '28px', fontWeight: 900, color: 'var(--brand-primary)' }}>
+                <div className={styles.totalStockBox}>
+                  <div className={styles.totalStockLabel}>Total System Stock</div>
+                  <div className={styles.totalStockValue}>
                     {selectedProduct.Quantity}{' '}
-                    <span style={{ fontSize: '16px', color: 'var(--text-muted)' }}>
-                      {selectedProduct.Unit}
-                    </span>
+                    <span className={styles.totalStockUnit}>{selectedProduct.Unit}</span>
                   </div>
                 </div>
               </div>
 
               <form onSubmit={handleAdjustStock} className={styles.formGrid}>
-                <div className={styles.formGroup} style={{ gridColumn: 'span 2' }}>
+                <div className={`${styles.formGroup} ${styles.colSpan2}`}>
                   <label>1. Select Batch to Reduce</label>
                   <select
                     className="pos-input"
@@ -296,7 +265,7 @@ export default function AdjustStock() {
 
                 <div className={styles.formGroup}>
                   <label>2. Qty to Remove</label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <div className={styles.inputGroup}>
                     <input
                       type="number"
                       step={selectedProduct.QuantityType === 'kg' ? '0.01' : '1'}
@@ -306,9 +275,7 @@ export default function AdjustStock() {
                       required
                       placeholder="0"
                     />
-                    <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-muted)' }}>
-                      {selectedProduct.Unit}
-                    </span>
+                    <span className={styles.unitSuffix}>{selectedProduct.Unit}</span>
                   </div>
                 </div>
 
@@ -324,12 +291,10 @@ export default function AdjustStock() {
                   </select>
                 </div>
 
-                <div className={styles.formGroup} style={{ gridColumn: 'span 3' }}>
+                <div className={`${styles.formGroup} ${styles.colSpan3}`}>
                   <label>
                     4. Explanation Note{' '}
-                    {reason === '1' && (
-                      <span style={{ color: 'var(--action-danger)' }}>(Required)</span>
-                    )}
+                    {reason === '1' && <span className={styles.requiredMark}>(Required)</span>}
                   </label>
                   <input
                     type="text"
@@ -347,84 +312,30 @@ export default function AdjustStock() {
 
                 <button
                   type="submit"
-                  className="pos-btn danger"
+                  className={`pos-btn danger ${styles.colSpan3}`}
                   disabled={!selectedBatchId || activeBatches.length === 0}
-                  style={{ gridColumn: 'span 3' }}
                 >
                   ⚠️ REMOVE STOCK
                 </button>
               </form>
             </div>
 
-            <div
-              className={styles.panel}
-              style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '15px'
-                }}
-              >
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: '16px',
-                    color: 'var(--text-dark)',
-                    textTransform: 'uppercase'
-                  }}
-                >
-                  Adjustment & Loss History
-                </h3>
+            {/* History Panel */}
+            <div className={`${styles.panel} ${styles.historyPanel}`}>
+              <div className={styles.historyHeader}>
+                <h3 className={styles.historyTitle}>Adjustment & Loss History</h3>
 
                 {adjustmentHistory.length > 0 && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '20px',
-                      background: '#fef2f2',
-                      padding: '10px',
-                      borderRadius: '8px',
-                      border: '1px solid #fca5a5'
-                    }}
-                  >
-                    <div style={{ textAlign: 'right' }}>
-                      <div
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          color: 'var(--text-muted)',
-                          textTransform: 'uppercase'
-                        }}
-                      >
-                        Total Units Lost
-                      </div>
-                      <div style={{ fontSize: '16px', fontWeight: 900, color: 'var(--text-dark)' }}>
+                  <div className={styles.kpiBox}>
+                    <div className={styles.kpiItem}>
+                      <div className={styles.kpiLabel}>Total Units Lost</div>
+                      <div className={styles.kpiValueDark}>
                         {totalUnitsLost.toFixed(2)} {selectedProduct.Unit}
                       </div>
                     </div>
-                    <div
-                      style={{
-                        textAlign: 'right',
-                        paddingLeft: '20px',
-                        borderLeft: '1px solid #fca5a5'
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 800,
-                          color: 'var(--text-muted)',
-                          textTransform: 'uppercase'
-                        }}
-                      >
-                        Financial Loss
-                      </div>
-                      <div
-                        style={{ fontSize: '16px', fontWeight: 900, color: 'var(--action-danger)' }}
-                      >
+                    <div className={styles.kpiDivider}>
+                      <div className={styles.kpiLabel}>Financial Loss</div>
+                      <div className={styles.kpiValueDanger}>
                         Rs {totalFinancialLoss.toFixed(2)}
                       </div>
                     </div>
@@ -432,135 +343,43 @@ export default function AdjustStock() {
                 )}
               </div>
 
-              <div
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px'
-                }}
-              >
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead
-                    style={{
-                      position: 'sticky',
-                      top: 0,
-                      backgroundColor: 'var(--bg-main)',
-                      zIndex: 1
-                    }}
-                  >
+              <div className={styles.tableWrapper}>
+                <table className={styles.classicTable}>
+                  <thead>
                     <tr>
-                      <th style={{ padding: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                        DATE
-                      </th>
-                      <th style={{ padding: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                        TYPE
-                      </th>
-                      <th
-                        style={{
-                          padding: '12px',
-                          fontSize: '12px',
-                          color: 'var(--text-muted)',
-                          textAlign: 'center'
-                        }}
-                      >
-                        QTY REMOVED
-                      </th>
-                      <th
-                        style={{
-                          padding: '12px',
-                          fontSize: '12px',
-                          color: 'var(--text-muted)',
-                          textAlign: 'right'
-                        }}
-                      >
-                        FINANCIAL VALUE
-                      </th>
-                      <th style={{ padding: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                        NOTE
-                      </th>
+                      <th className={styles.colDate}>DATE</th>
+                      <th className={styles.colType}>TYPE</th>
+                      <th className={styles.colQtyCenter}>QTY REMOVED</th>
+                      <th className={styles.colFinancial}>FINANCIAL VALUE</th>
+                      <th className={styles.colNote}>NOTE</th>
                     </tr>
                   </thead>
                   <tbody>
                     {adjustmentHistory.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={5}
-                          style={{
-                            textAlign: 'center',
-                            padding: '40px',
-                            color: 'var(--text-muted)',
-                            fontWeight: 600
-                          }}
-                        >
+                        <td colSpan={5} className={styles.emptyTableState}>
                           No manual adjustments recorded for this product.
                         </td>
                       </tr>
                     ) : (
                       adjustmentHistory.map((adj: any) => (
-                        <tr key={adj.Id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                          <td
-                            style={{
-                              padding: '12px',
-                              color: 'var(--text-muted)',
-                              fontSize: '13px'
-                            }}
-                          >
-                            {new Date(adj.Date).toLocaleString()}
-                          </td>
-                          <td style={{ padding: '12px' }}>
+                        <tr key={adj.Id}>
+                          <td className={styles.cellDate}>{new Date(adj.Date).toLocaleString()}</td>
+                          <td>
                             <span
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '11px',
-                                fontWeight: 800,
-                                textTransform: 'uppercase',
-                                backgroundColor: adj.Reason === 1 ? '#fef2f2' : '#fffbeb',
-                                color: adj.Reason === 1 ? '#dc2626' : '#d97706'
-                              }}
+                              className={`${styles.typeBadge} ${adj.Reason === 1 ? styles.typeDanger : styles.typeWarning}`}
                             >
                               {adj.Reason === 0 ? 'Correction' : 'Lost / Damaged'}
                             </span>
                           </td>
-                          <td
-                            style={{
-                              padding: '12px',
-                              fontWeight: 900,
-                              color: 'var(--text-dark)',
-                              textAlign: 'center'
-                            }}
-                          >
+                          <td className={styles.cellQtyDarkCenter}>
                             - {adj.Quantity}{' '}
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                color: 'var(--text-muted)',
-                                fontWeight: 'normal'
-                              }}
-                            >
-                              {selectedProduct.Unit}
-                            </span>
+                            <span className={styles.unitSpanSm}>{selectedProduct.Unit}</span>
                           </td>
-                          <td
-                            style={{
-                              padding: '12px',
-                              fontWeight: 800,
-                              color: 'var(--action-danger)',
-                              textAlign: 'right'
-                            }}
-                          >
+                          <td className={styles.cellFinancialDanger}>
                             Rs {(adj.Quantity * adj.UnitCost).toFixed(2)}
                           </td>
-                          <td
-                            style={{
-                              padding: '12px',
-                              color: 'var(--text-muted)',
-                              fontSize: '13px'
-                            }}
-                          >
-                            {adj.Note}
-                          </td>
+                          <td className={styles.cellNote}>{adj.Note}</td>
                         </tr>
                       ))
                     )}

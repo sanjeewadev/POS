@@ -1,18 +1,10 @@
 // src/renderer/src/pages/Inventory/InventoryWorkspace.tsx
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../store/AuthContext'
-import {
-  RiSearchLine,
-  RiTruckLine,
-  RiScales3Line,
-  RiFoldersLine,
-  RiBuilding2Line
-} from 'react-icons/ri'
+import { RiSearchLine, RiScales3Line, RiFoldersLine } from 'react-icons/ri'
 import styles from './InventoryWorkspace.module.css'
 
 import ProductCatalog from './ProductCatalog'
-import SupplierManager from './SupplierManager'
-import StockInManager from './StockInManager'
 import CatalogManager from './CatalogManager'
 import AdjustStock from './AdjustStock'
 
@@ -23,7 +15,7 @@ export default function InventoryWorkspace() {
   const isAdmin = currentUser?.Role === 0 || currentUser?.Role === 1
 
   useEffect(() => {
-    if (!isAdmin && (activeTab === 'Catalog' || activeTab === 'Suppliers')) {
+    if (!isAdmin && activeTab === 'Catalog') {
       setActiveTab('Products')
     }
   }, [activeTab, isAdmin])
@@ -32,14 +24,10 @@ export default function InventoryWorkspace() {
     switch (activeTab) {
       case 'Products':
         return <ProductCatalog />
-      case 'StockIn':
-        return <StockInManager />
       case 'Adjustments':
         return <AdjustStock />
       case 'Catalog':
         return isAdmin ? <CatalogManager /> : null
-      case 'Suppliers':
-        return isAdmin ? <SupplierManager /> : null
       default:
         return null
     }
@@ -62,16 +50,7 @@ export default function InventoryWorkspace() {
             </div>
           </button>
 
-          <button
-            className={`${styles.navBtn} ${activeTab === 'StockIn' ? styles.active : ''}`}
-            onClick={() => setActiveTab('StockIn')}
-          >
-            <RiTruckLine className={styles.navIcon} />
-            <div className={styles.navText}>
-              <strong>Receive GRN</strong>
-              <span>Supplier Invoices</span>
-            </div>
-          </button>
+          {/* 🚀 REMOVED: The Receive GRN Button was here. Removed for V1.0 Simplicity. */}
 
           <button
             className={`${styles.navBtn} ${activeTab === 'Adjustments' ? styles.active : ''}`}
@@ -83,14 +62,7 @@ export default function InventoryWorkspace() {
               <span>Loss / Corrections</span>
             </div>
           </button>
-        </div>
-
-        {isAdmin && (
-          <div className={styles.navGroup}>
-            <div className={styles.groupLabel} style={{ color: 'var(--action-warning)' }}>
-              Manager Tools
-            </div>
-
+          {isAdmin && (
             <button
               className={`${styles.navBtn} ${activeTab === 'Catalog' ? styles.active : ''}`}
               onClick={() => setActiveTab('Catalog')}
@@ -101,19 +73,8 @@ export default function InventoryWorkspace() {
                 <span>Folders & Items</span>
               </div>
             </button>
-
-            <button
-              className={`${styles.navBtn} ${activeTab === 'Suppliers' ? styles.active : ''}`}
-              onClick={() => setActiveTab('Suppliers')}
-            >
-              <RiBuilding2Line className={styles.navIcon} />
-              <div className={styles.navText}>
-                <strong>Suppliers</strong>
-                <span>Vendor Profiles</span>
-              </div>
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </aside>
 
       <section className={styles.contentArea}>{renderContent()}</section>

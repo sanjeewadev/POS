@@ -11,12 +11,18 @@ import POSWorkspace from './pages/POS/POSWorkspace'
 import ReturnsCenter from './pages/Returns/ReturnsCenter'
 import InventoryWorkspace from './pages/Inventory/InventoryWorkspace'
 import ReportsWorkspace from './pages/Reports/ReportsWorkspace'
+import TodaySales from './pages/TodaySales/TodaySales'
 import SettingsWorkspace from './pages/Settings/SettingsWorkspace'
 
 function App() {
   // 1. ALL HOOKS MUST BE AT THE TOP
   const { currentUser } = useAuth()
   const [currentMode, setCurrentMode] = useState('POS')
+
+  // This function handles the quick access button click
+  const handleOpenTodaysSales = () => {
+    setCurrentMode('TodaySales')
+  }
 
   // 2. HELPER FUNCTIONS
   const renderWorkspace = () => {
@@ -29,6 +35,8 @@ function App() {
         return <InventoryWorkspace />
       case 'Reports':
         return <ReportsWorkspace />
+      case 'TodaySales': // 🚀 NEW: Add this case for full screen access
+        return <TodaySales />
       case 'Settings':
         // 🚀 RBAC: Strict protection for the Settings module
         if (currentUser?.Role !== 0 && currentUser?.Role !== 1) {
@@ -82,7 +90,11 @@ function App() {
       {!currentUser ? (
         <LoginView />
       ) : (
-        <AppLayout currentMode={currentMode} setMode={setCurrentMode}>
+        <AppLayout
+          currentMode={currentMode}
+          setMode={setCurrentMode}
+          onOpenTodaysSales={handleOpenTodaysSales}
+        >
           {renderWorkspace()}
         </AppLayout>
       )}

@@ -16,6 +16,10 @@ export function registerUserHandlers() {
     return await event.sender.getPrintersAsync()
   })
 
+  // 🚀 THE FIX: Registering the Shop Settings IPC Handlers
+  ipcMain.handle('get-settings', () => systemRepo.getSettings())
+  ipcMain.handle('update-settings', (_, settings) => systemRepo.updateSettings(settings))
+
   ipcMain.handle('export-database', async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
     const { canceled, filePath } = await dialog.showSaveDialog(window!, {

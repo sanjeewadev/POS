@@ -11,9 +11,15 @@ interface AppLayoutProps {
   children: React.ReactNode
   currentMode: string
   setMode: (mode: string) => void
+  onOpenTodaysSales: () => void // Register the prop
 }
 
-export default function AppLayout({ children, currentMode, setMode }: AppLayoutProps) {
+export default function AppLayout({
+  children,
+  currentMode,
+  setMode,
+  onOpenTodaysSales
+}: AppLayoutProps) {
   const { currentUser, login } = useAuth()
 
   const [isLocked, setIsLocked] = useState(false)
@@ -168,6 +174,7 @@ export default function AppLayout({ children, currentMode, setMode }: AppLayoutP
           onOpenDrawer={handleOpenDrawer}
           onLastReceipt={handleLastReceipt}
           onCalculator={() => setShowCalculator(true)}
+          onTodaysSales={onOpenTodaysSales}
           onLockRegister={() => setIsLocked(true)}
         />
         <main className={styles.contentArea}>{children}</main>

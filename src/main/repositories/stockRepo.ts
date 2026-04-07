@@ -162,37 +162,43 @@ export function receiveStock(movement: any) {
       .get(mov.ProductId)
     if (!product) throw new Error('Product not found.')
 
-    db.prepare('UPDATE Products SET Quantity = Quantity + ? WHERE Id = ?').run(
-      mov.Quantity,
-      mov.ProductId
-    )
+    const newSellingPrice = mov.SellingPrice !== undefined ? mov.SellingPrice : product.SellingPrice
+    const newDiscount = mov.Discount !== undefined ? mov.Discount : product.DiscountLimit
+
+    // 🚀 NEW: Grab the DiscountType from the frontend (defaults to percentage)
+    const newDiscountType = mov.DiscountType || 'percentage'
+
+    db.prepare(
+      'UPDATE Products SET Quantity = Quantity + ?, SellingPrice = ?, DiscountLimit = ? WHERE Id = ?'
+    ).run(mov.Quantity, newSellingPrice, newDiscount, mov.ProductId)
+
     db.prepare(
       `INSERT INTO StockMovements (Date, ProductId, Type, Quantity, UnitCost, UnitPrice, Reason, IsVoided) VALUES (?, ?, 1, ?, ?, ?, 0, 0)`
-    ).run(mov.Date, mov.ProductId, mov.Quantity, mov.UnitCost, product.SellingPrice)
+    ).run(mov.Date, mov.ProductId, mov.Quantity, mov.UnitCost, newSellingPrice)
 
     const rnd = Math.floor(Math.random() * 9)
-    const discountCode = `${rnd}${String(product.DiscountLimit).padStart(3, '0')}${rnd}`
+    const discountCode = `${rnd}${String(newDiscount).padStart(3, '0')}${rnd}`
 
-    // 🚀 NEW: Added default columns for DiscountType, StartDate, EndDate
+    // 🚀 FIXED: Now saving the exact DiscountType to the database!
     db.prepare(
       `
       INSERT INTO StockBatches (ProductId, InitialQuantity, RemainingQuantity, CostPrice, SellingPrice, Discount, DiscountType, DiscountStartDate, DiscountEndDate, DiscountCode, ReceivedDate) 
-      VALUES (?, ?, ?, ?, ?, ?, 'percentage', NULL, NULL, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)
     `
     ).run(
       mov.ProductId,
       mov.Quantity,
       mov.Quantity,
       mov.UnitCost,
-      product.SellingPrice,
-      product.DiscountLimit,
+      newSellingPrice,
+      newDiscount,
+      newDiscountType, // Extracted from payload
       discountCode,
       mov.Date
     )
   })
   receiveTxn(movement)
 }
-
 export function processGRN(payload: any) {
   const db = getDb()
   const grnTxn = db.transaction((data) => {
@@ -380,4 +386,33 @@ export function getProductAdjustments(productId: number) {
   return getDb()
     .prepare(`SELECT * FROM StockMovements WHERE ProductId = ? AND Type = 3 ORDER BY Date DESC`)
     .all(productId)
+}
+
+// 🚀 NEW: Update Pricing for a Specific Batch
+export function updateBatchPricing(payload: {
+  BatchId: number
+  SellingPrice: number
+  Discount: number
+  DiscountType: string
+}) {
+  const db = getDb()
+  try {
+    db.prepare(
+      `
+      UPDATE StockBatches 
+      SET SellingPrice = ?, Discount = ?, DiscountType = ? 
+      WHERE Id = ?
+    `
+    ).run(
+      payload.SellingPrice,
+      Math.max(0, payload.Discount),
+      payload.DiscountType,
+      payload.BatchId
+    )
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Failed to update batch pricing:', error)
+    throw new Error('Database Error: ' + error.message)
+  }
 }

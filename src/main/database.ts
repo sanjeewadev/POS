@@ -8,7 +8,7 @@ let db: Database.Database
 
 export function initDatabase(): Database.Database {
   // 1. Use the hidden Windows AppData folder for security
-  const appDataPath = path.join(app.getPath('appData'), 'HasithaInventory')
+  const appDataPath = path.join(app.getPath('appData'), 'pos')
 
   if (!fs.existsSync(appDataPath)) {
     fs.mkdirSync(appDataPath, { recursive: true })

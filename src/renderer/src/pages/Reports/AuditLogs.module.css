@@ -2,102 +2,334 @@
 
 .container {
   display: flex;
-  flex-direction: column;
   height: 100%;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-md);
-  background-color: var(--bg-main);
-}
-
-.topPanel {
-  background-color: var(--bg-panel);
-  border-radius: var(--radius-md);
-  padding: 25px;
-  box-shadow: var(--shadow-panel);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.panelTitle {
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--text-dark);
-  margin: 0;
-}
-
-.controlBar {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-.tabGroup {
-  display: flex;
-  gap: 10px;
+  padding: 8px;
+  background: var(--bg-main);
+  overflow: hidden;
 }
 
 .mainPanel {
-  flex: 1;
-  background-color: var(--bg-panel);
-  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  width: 100%;
+  height: 100%;
+  border: 1px solid #e2e8f0;
   box-shadow: var(--shadow-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+.panelHeader {
+  padding: 20px 30px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+  font-weight: 600;
+}
+
+.filterForm {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+.inputStack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.inputStack label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refreshBtn {
+  min-height: 48px;
+  gap: 8px;
+  padding: 0 20px;
+}
+
+.panelBody {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.controlBar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.searchWrapper {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 18px;
+}
+.searchInput {
+  padding-left: 42px !important;
+  height: 44px;
+}
+
+.tabGroup {
+  display: flex;
+  gap: 8px;
+}
+.filterBtn {
+  background: var(--bg-main);
+  border: 1px solid #e2e8f0;
+  padding: 0 16px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filterBtn:hover {
+  background: #e2e8f0;
+}
+
+.activeAll {
+  background: #0284c7;
+  color: white;
+  border-color: #0284c7;
+}
+.activeVoid {
+  background: #64748b;
+  color: white;
+  border-color: #64748b;
+}
+.activeReturn {
+  background: var(--action-warning);
+  color: white;
+  border-color: var(--action-warning);
+}
+.activeAdjust {
+  background: var(--action-danger);
+  color: white;
+  border-color: var(--action-danger);
+}
+
+.activeAll:hover {
+  background: #0369a1;
+}
+.activeVoid:hover {
+  background: #475569;
+}
+.activeReturn:hover {
+  background: #c2410c;
+}
+.activeAdjust:hover {
+  background: #be123c;
+}
+
+/* --- THE BULLETPROOF TABLE --- */
 .tableWrapper {
   flex: 1;
   overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
 }
 
-/* Use the standard table styles */
 .classicTable {
   width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
 }
+
+/* Locked Column Widths */
+.colDate {
+  width: 150px;
+}
+.colEvent {
+  width: 170px;
+}
+.colProduct {
+  width: auto;
+} /* Takes remaining space */
+.colRef {
+  width: 220px;
+}
+.colStock {
+  width: 140px;
+  text-align: center;
+}
+.colImpact {
+  width: 160px;
+  text-align: right;
+}
+
 .classicTable th {
   position: sticky;
   top: 0;
-  background-color: var(--bg-main);
-  padding: 15px;
-  font-size: 12px;
+  background: #f8fafc;
+  padding: 12px 16px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  z-index: 1;
-}
-.classicTable td {
-  padding: 15px;
   border-bottom: 1px solid #e2e8f0;
+  z-index: 10;
+  text-align: left;
+}
+
+.classicTable td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
 }
-.classicTable tr:hover {
+
+.classicTable tr:hover td {
   background-color: #f8fafc;
 }
 
-/* --- BADGES --- */
-.badge {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 900;
-  border: 1px solid transparent;
+.emptyState {
+  text-align: center;
+  padding: 60px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
+
+/* --- Table Cells --- */
+.cellDate {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cellProduct {
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.cellRef {
+  font-size: 12px;
+}
+
+.truncatedText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.noteText {
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellStock {
+  text-align: center;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.stockPositive {
+  color: var(--action-success);
+}
+.stockNegative {
+  color: var(--action-danger);
+}
+
+.unitText {
+  font-weight: 600;
+  font-size: 11px;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+.cellImpact {
+  text-align: right;
+}
+
+.impactLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.impactValue {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text-dark);
+}
+
+/* --- Badges --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .badgeVoid {
-  background-color: #f1f5f9;
-  color: #64748b;
-  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #475569;
 }
 .badgeReturn {
-  background-color: #fef3c7;
-  color: #b45309;
-  border-color: #fde68a;
+  background: #fff7ed;
+  color: #c2410c;
 }
 .badgeAdjust {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border-color: #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.receiptId {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #0284c7;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom Scrollbar */
+.tableWrapper::-webkit-scrollbar {
+  width: 6px;
+}
+.tableWrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
 }

@@ -1,6 +1,12 @@
 // src/renderer/src/pages/Reports/InventoryAlerts.tsx
 import { useState, useEffect } from 'react'
 import { Product } from '../../types/models'
+import {
+  RiAlertLine,
+  RiErrorWarningLine,
+  RiCheckboxCircleLine,
+  RiRefreshLine
+} from 'react-icons/ri'
 import styles from './InventoryAlerts.module.css'
 
 export default function InventoryAlerts() {
@@ -33,78 +39,83 @@ export default function InventoryAlerts() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.headerRow}>
-        <h2 className={styles.pageTitle}>INVENTORY ALERTS DASHBOARD</h2>
-        <button
-          className="pos-btn neutral"
-          onClick={loadData}
-          disabled={loading}
-          style={{ minHeight: '40px', padding: '10px 20px' }}
-        >
-          {loading ? '⏳ REFRESHING...' : '🔄 REFRESH ALERTS'}
-        </button>
-      </div>
-
-      <div className={styles.gridContainer}>
-        {/* --- LEFT PANEL: OUT OF STOCK (CRITICAL) --- */}
-        <div className={styles.alertPanel}>
-          <div className={`${styles.panelHeader} ${styles.dangerHeader}`}>
-            <span>🚨 OUT OF STOCK ({outOfStockItems.length})</span>
-          </div>
-
-          <div className={styles.listWrapper}>
-            {outOfStockItems.length === 0 ? (
-              <div className={styles.emptyState}>
-                <div className={styles.emptyIcon}>👍</div>
-                <h3>Looking Good!</h3>
-                <p>No active products are out of stock.</p>
-              </div>
-            ) : (
-              <div className={styles.cardGrid}>
-                {outOfStockItems.map((p) => (
-                  <div key={p.Id} className={`${styles.alertCard} ${styles.dangerCard}`}>
-                    <div className={styles.itemInfo}>
-                      <span className={styles.itemName}>{p.Name}</span>
-                      <span className={styles.itemCode}>CODE: {p.Barcode || 'N/A'}</span>
-                    </div>
-                    <div className={`${styles.statusBadge} ${styles.dangerBadge}`}>
-                      EMPTY (0 {p.Unit})
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      <div className={styles.mainPanel}>
+        <div className={styles.panelHeader}>
+          {/* 🚀 Applied Global Title */}
+          <h2 className="pos-page-title">Inventory Alerts Dashboard</h2>
+          <button
+            className={`pos-btn neutral ${styles.refreshBtn}`}
+            onClick={loadData}
+            disabled={loading}
+          >
+            <RiRefreshLine className={loading ? styles.spin : ''} />
+            {loading ? 'REFRESHING...' : 'REFRESH ALERTS'}
+          </button>
         </div>
 
-        {/* --- RIGHT PANEL: LOW STOCK (WARNING) --- */}
-        <div className={styles.alertPanel}>
-          <div className={`${styles.panelHeader} ${styles.warningHeader}`}>
-            <span>⚠️ LOW STOCK WARNINGS ({lowStockItems.length})</span>
-          </div>
+        <div className={styles.panelBody}>
+          <div className={styles.gridContainer}>
+            {/* --- LEFT PANEL: OUT OF STOCK --- */}
+            <div className={styles.alertColumn}>
+              <div className={`${styles.columnHeader} ${styles.dangerHeader}`}>
+                <RiErrorWarningLine size={20} />
+                <span>OUT OF STOCK ({outOfStockItems.length})</span>
+              </div>
 
-          <div className={styles.listWrapper}>
-            {lowStockItems.length === 0 ? (
-              <div className={styles.emptyState}>
-                <div className={styles.emptyIcon}>✅</div>
-                <h3>Well Stocked!</h3>
-                <p>No products are currently running low.</p>
-              </div>
-            ) : (
-              <div className={styles.cardGrid}>
-                {lowStockItems.map((p) => (
-                  <div key={p.Id} className={`${styles.alertCard} ${styles.warningCard}`}>
-                    <div className={styles.itemInfo}>
-                      <span className={styles.itemName}>{p.Name}</span>
-                      <span className={styles.itemCode}>CODE: {p.Barcode || 'N/A'}</span>
-                    </div>
-                    <div className={`${styles.statusBadge} ${styles.warningBadge}`}>
-                      ONLY {formatQty(p.Quantity)} {p.Unit} LEFT
-                    </div>
+              <div className={styles.listWrapper}>
+                {outOfStockItems.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <RiCheckboxCircleLine size={48} className={styles.emptyIconSuccess} />
+                    <h3>Looking Good!</h3>
+                    <p>No active products are out of stock.</p>
                   </div>
-                ))}
+                ) : (
+                  <div className={styles.cardGrid}>
+                    {outOfStockItems.map((p) => (
+                      <div key={p.Id} className={`${styles.alertCard} ${styles.dangerCard}`}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>{p.Name}</span>
+                          <span className={styles.itemCode}>CODE: {p.Barcode || 'N/A'}</span>
+                        </div>
+                        <div className={`${styles.statusBadge} ${styles.dangerBadge}`}>EMPTY</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* --- RIGHT PANEL: LOW STOCK --- */}
+            <div className={styles.alertColumn}>
+              <div className={`${styles.columnHeader} ${styles.warningHeader}`}>
+                <RiAlertLine size={20} />
+                <span>LOW STOCK WARNINGS ({lowStockItems.length})</span>
+              </div>
+
+              <div className={styles.listWrapper}>
+                {lowStockItems.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <RiCheckboxCircleLine size={48} className={styles.emptyIconSuccess} />
+                    <h3>Well Stocked!</h3>
+                    <p>No products are currently running low.</p>
+                  </div>
+                ) : (
+                  <div className={styles.cardGrid}>
+                    {lowStockItems.map((p) => (
+                      <div key={p.Id} className={`${styles.alertCard} ${styles.warningCard}`}>
+                        <div className={styles.itemInfo}>
+                          <span className={styles.itemName}>{p.Name}</span>
+                          <span className={styles.itemCode}>CODE: {p.Barcode || 'N/A'}</span>
+                        </div>
+                        <div className={`${styles.statusBadge} ${styles.warningBadge}`}>
+                          {formatQty(p.Quantity)} {p.Unit} LEFT
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

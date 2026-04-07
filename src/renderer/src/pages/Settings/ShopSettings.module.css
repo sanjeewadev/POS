@@ -4,7 +4,7 @@
   display: flex;
   height: 100%;
   padding: 8px;
-  background: #f1f5f9; /* Your signature background color */
+  background: #f1f5f9;
   overflow: hidden;
 }
 
@@ -23,14 +23,6 @@
 .panelHeader {
   padding: 24px 30px;
   border-bottom: 1px solid #f1f5f9;
-}
-
-.pageTitle {
-  font-size: 22px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-  letter-spacing: -0.01em;
 }
 
 .panelBody {
@@ -71,16 +63,22 @@
   gap: 8px;
 }
 
+.saveBtn {
+  height: 50px;
+  margin-top: 10px;
+  font-weight: 800;
+}
+
 /* --- RECEIPT PREVIEW (Right Side) --- */
 .previewPanel {
-  flex: 1.4; /* Increased from 1 to take more horizontal space */
+  flex: 1.4;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* Center the receipt vertically */
+  justify-content: center;
   padding: 40px 20px;
 }
 
@@ -93,12 +91,11 @@
   margin-bottom: 25px;
 }
 
-/* Increased width and padding for the "Thermal Paper" */
 .receiptPaper {
   background: white;
   width: 100%;
-  max-width: 400px; /* Increased from 300px to 400px */
-  padding: 45px 35px; /* More breathable internal space */
+  max-width: 400px;
+  padding: 45px 35px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
   font-family: 'Courier New', monospace;
   color: #1e293b;
@@ -111,7 +108,7 @@
 }
 
 .receiptShopName {
-  font-size: 22px; /* Bigger shop name */
+  font-size: 22px;
   font-weight: 900;
   margin: 0;
   text-transform: uppercase;
@@ -119,7 +116,7 @@
 
 .receiptAddress,
 .receiptPhone {
-  font-size: 14px; /* Increased from 11px */
+  font-size: 14px;
   font-weight: 600;
   margin-top: 5px;
 }
@@ -132,12 +129,11 @@
   font-size: 14px;
 }
 
-/* Universal font size bump for receipt body */
 .receiptMeta,
 .receiptTable,
 .receiptTotals,
 .receiptFooterText {
-  font-size: 14px; /* Increased from 11px for clarity */
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -156,8 +152,21 @@
   padding: 8px 0;
 }
 
+.textLeft {
+  text-align: left;
+}
+.textRight {
+  text-align: right;
+}
+
 .receiptTotals {
   margin-top: 5px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 900;
 }
 
 .receiptFooterText {

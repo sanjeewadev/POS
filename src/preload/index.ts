@@ -34,6 +34,7 @@ const api = {
   // --- STOCK & CHECKOUT ENGINE ---
   processSale: (txn: any, movs: any[]) => ipcRenderer.invoke('process-sale', txn, movs),
   receiveStock: (mov: any) => ipcRenderer.invoke('receive-stock', mov),
+  updateBatchPricing: (payload: any) => ipcRenderer.invoke('update-batch-pricing', payload),
   adjustStock: (adj: any) => ipcRenderer.invoke('adjust-stock', adj),
   getActiveBatches: () => ipcRenderer.invoke('get-active-batches'),
   getLowStockProducts: (threshold: number) => ipcRenderer.invoke('get-low-stock', threshold),
@@ -81,7 +82,10 @@ const api = {
   getPrinters: () => ipcRenderer.invoke('get-printers'),
   exportDatabase: () => ipcRenderer.invoke('export-database'),
   importDatabase: () => ipcRenderer.invoke('import-database'),
-  factoryReset: () => ipcRenderer.invoke('factory-reset')
+  factoryReset: () => ipcRenderer.invoke('factory-reset'),
+
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  updateSettings: (settings) => ipcRenderer.invoke('update-settings', settings)
 }
 
 // ==========================================

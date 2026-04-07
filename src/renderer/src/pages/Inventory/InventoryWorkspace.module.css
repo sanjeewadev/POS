@@ -9,7 +9,7 @@
 
 /* ── Inner Sidebar ── */
 .innerSidebar {
-  width: 260px;
+  width: 220px;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--sidebar-border);
   display: flex;

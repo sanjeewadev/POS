@@ -159,11 +159,11 @@ export default function UserManager() {
       {/* ── Left: User Table ── */}
       <div className={styles.leftPanel}>
         <div className={styles.panelHeader}>
-          <h2 className={styles.panelTitle}>System Accounts</h2>
+          {/* 🚀 Using Global Title Class */}
+          <h2 className="pos-page-title">System Accounts</h2>
           <input
             type="text"
-            className="pos-input"
-            style={{ width: '280px' }}
+            className={`pos-input ${styles.searchInput}`}
             placeholder="Search users by name or username..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -178,21 +178,13 @@ export default function UserManager() {
                 <th>Full Name</th>
                 <th>Role</th>
                 <th>Status</th>
-                <th style={{ textAlign: 'right', width: '110px' }}>Action</th>
+                <th className={styles.actionHead}>Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={5}
-                    style={{
-                      textAlign: 'center',
-                      padding: '60px 20px',
-                      color: '#64748b',
-                      fontSize: '14px'
-                    }}
-                  >
+                  <td colSpan={5} className={styles.emptyState}>
                     No users found. Try a different search term.
                   </td>
                 </tr>
@@ -209,53 +201,21 @@ export default function UserManager() {
                       <td className={styles.nameCell}>{u.FullName}</td>
                       <td>
                         <span
-                          className={styles.statusBadge}
-                          style={
-                            u.Role === 1
-                              ? {
-                                  background: '#fffbeb',
-                                  color: '#d97706',
-                                  border: '1px solid #fef3c7'
-                                }
-                              : {
-                                  background: '#f1f5f9',
-                                  color: '#475569',
-                                  border: '1px solid #e2e8f0'
-                                }
-                          }
+                          className={`${styles.statusBadge} ${u.Role === 1 ? styles.badgeAdmin : styles.badgeStaff}`}
                         >
                           {u.Role === 1 ? 'Administrator' : 'Staff'}
                         </span>
                       </td>
                       <td>
                         <span
-                          className={styles.statusBadge}
-                          style={
-                            active
-                              ? {
-                                  background: '#f0fdf4',
-                                  color: '#16a34a',
-                                  border: '1px solid #bbf7d0'
-                                }
-                              : {
-                                  background: '#fef2f2',
-                                  color: '#ef4444',
-                                  border: '1px solid #fecaca'
-                                }
-                          }
+                          className={`${styles.statusBadge} ${active ? styles.badgeActive : styles.badgeBlocked}`}
                         >
                           {active ? 'Active' : 'Blocked'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className={styles.actionCell}>
                         <button
-                          className={`pos-btn ${active ? 'danger' : 'success'}`}
-                          style={{
-                            minHeight: '38px',
-                            padding: '6px 18px',
-                            fontSize: '13px',
-                            fontWeight: 600
-                          }}
+                          className={`pos-btn ${active ? 'danger' : 'success'} ${styles.actionBtn}`}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleToggleBlock(u, active)
@@ -276,7 +236,10 @@ export default function UserManager() {
       {/* ── Right: Form ── */}
       <div className={styles.rightPanel}>
         <div className={styles.formHeader}>
-          <h2 className={styles.panelTitle} style={{ color: editingId ? '#d97706' : '#0f172a' }}>
+          {/* 🚀 Using Global Title Class */}
+          <h2
+            className={`pos-page-title ${editingId ? styles.formTitleEdit : styles.formTitleNew}`}
+          >
             {editingId ? 'Modify Account' : 'Create New Account'}
           </h2>
         </div>
@@ -348,19 +311,17 @@ export default function UserManager() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
+          <div className={styles.formActions}>
             <button
               type="button"
-              className="pos-btn neutral"
-              style={{ flex: 1, height: '48px', fontSize: '14px' }}
+              className={`pos-btn neutral ${styles.formBtnCancel}`}
               onClick={handleClear}
             >
               {editingId ? 'Cancel' : 'Clear Form'}
             </button>
             <button
               type="submit"
-              className={`pos-btn ${editingId ? 'warning' : 'success'}`}
-              style={{ flex: 2, height: '48px', fontSize: '14px', fontWeight: 600 }}
+              className={`pos-btn ${editingId ? 'warning' : 'success'} ${styles.formBtnSubmit}`}
             >
               {editingId ? 'Update Account' : 'Create Account'}
             </button>

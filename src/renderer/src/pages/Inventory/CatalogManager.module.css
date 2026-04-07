@@ -2,15 +2,15 @@
 
 .container {
   display: flex;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
   height: 100%;
+  padding: 8px;
 }
 
 /* --- LAYER 1: Left Panel (VS Code Tree) --- */
 .leftPanel {
   width: 300px;
   background: var(--bg-panel);
-  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-panel);
@@ -74,7 +74,6 @@
 .rightPanel {
   flex: 1;
   background: var(--bg-panel);
-  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-panel);
@@ -89,6 +88,17 @@
   border-bottom: 2px solid var(--bg-main);
 }
 
+.breadcrumbGroup {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.backBtn {
+  padding: 0 15px;
+  min-height: 40px;
+}
+
 .breadcrumb {
   font-size: 20px;
   color: var(--text-dark);
@@ -101,6 +111,22 @@
   font-size: 12px;
 }
 
+.actionGroup {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.searchInput {
+  width: 300px;
+  min-height: 40px;
+}
+
+.addBtn {
+  min-height: 40px;
+}
+
+/* --- THE TABLE --- */
 .tableWrapper {
   flex: 1;
   overflow-y: auto;
@@ -108,8 +134,25 @@
 
 .classicTable {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  user-select: text;
+  table-layout: fixed; /* 🚀 Bulletproof Layout */
 }
+
+/* Locked Column Widths */
+.colName {
+  width: auto;
+} /* Takes up remaining space */
+.colInfo {
+  width: 250px;
+}
+.colActions {
+  width: 220px;
+  text-align: right;
+}
+
 .classicTable th {
   background: var(--bg-main);
   padding: 15px 20px;
@@ -121,18 +164,67 @@
   position: sticky;
   top: 0;
   z-index: 1;
+  border-bottom: 1px solid #e2e8f0;
 }
+
 .classicTable td {
   padding: 15px 20px;
   border-bottom: 1px solid #e2e8f0;
   font-size: 14px;
   vertical-align: middle;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.classicTable tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* 🚀 Truncation for long names */
+.itemNameCell {
+  font-weight: 700;
+}
+
+.itemNameWrapper {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.truncatedText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rowIcon {
   font-size: 18px;
   margin-right: 10px;
   vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.itemMetaCell {
+  color: var(--text-muted);
+}
+
+.skuHighlight {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--brand-primary);
+  font-weight: 800;
+}
+
+.actionCell {
+  text-align: right;
+  display: flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.actionBtnSm {
+  min-height: 30px;
+  padding: 5px 15px;
+  font-size: 11px;
 }
 
 /* --- MODALS --- */
@@ -171,7 +263,7 @@
 .modalHeader {
   padding: 20px;
   background: #f8fafc;
-  border-bottom: 2px solid var(--bg-main);
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -184,8 +276,101 @@
 .modalFooter {
   padding: 20px;
   background: #f8fafc;
-  border-top: 2px solid var(--bg-main);
+  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* Modal Internals */
+.choiceGroup {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.choiceBtn {
+  padding: 30px;
+  flex: 1;
+  flex-direction: column;
+}
+
+.choiceIcon {
+  font-size: 32px;
+}
+
+.formGroup {
+  margin-bottom: 15px;
+}
+
+.formRow {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.formCol {
+  flex: 1;
+}
+
+.inputGroup {
+  display: flex;
+  gap: 5px;
+}
+
+.inputLabel {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.diceBtn {
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+/* Batch History Table */
+.tableTitle {
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.emptyStateText {
+  color: var(--text-muted);
+}
+
+.colDate {
+  width: 150px;
+}
+.colQtySm {
+  width: 100px;
+}
+.colCost {
+  width: 120px;
+}
+.colSell {
+  width: 120px;
+}
+
+.cellDate {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cellMuted {
+  color: var(--text-muted);
+}
+
+.qtyPrimary {
+  font-weight: 900;
+  color: var(--brand-primary);
+}
+
+.priceSuccess {
+  color: var(--action-success);
+  font-weight: 800;
 }

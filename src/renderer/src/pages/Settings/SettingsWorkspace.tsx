@@ -52,7 +52,6 @@ export default function SettingsWorkspace() {
         return <UserManager />
       case 'Shop':
         return <ShopSettings />
-
       case 'System':
         return <SystemBackups />
       default:

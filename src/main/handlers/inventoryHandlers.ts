@@ -21,5 +21,7 @@ export function registerInventoryHandlers() {
   ipcMain.handle('get-products', () => prodRepo.getAllProducts())
   ipcMain.handle('add-product', (_, prod) => prodRepo.addProduct(prod))
   ipcMain.handle('update-product', (_, prod) => prodRepo.updateProduct(prod))
-  ipcMain.handle('delete-product', (_, id) => prodRepo.deleteProduct(id))
+
+  // 🚀 THE FIX: Changed 'deleteProduct' to 'softDeleteProduct'
+  ipcMain.handle('delete-product', (_, id) => prodRepo.softDeleteProduct(id))
 }

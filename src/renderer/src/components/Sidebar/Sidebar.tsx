@@ -1,20 +1,28 @@
 // src/renderer/src/components/Sidebar/Sidebar.tsx
 import { useState, useEffect } from 'react'
 import styles from './Sidebar.module.css'
-import { RiMoneyDollarBoxLine, RiPrinterLine, RiCalculatorLine, RiLockLine } from 'react-icons/ri'
+import {
+  RiMoneyDollarBoxLine,
+  RiPrinterLine,
+  RiCalculatorLine,
+  RiLockLine,
+  RiHistoryLine
+} from 'react-icons/ri'
 
 interface SidebarProps {
   onOpenDrawer: () => void
   onLastReceipt: () => void
   onCalculator: () => void
   onLockRegister: () => void
+  onTodaysSales: () => void // Added this line
 }
 
 export default function Sidebar({
   onOpenDrawer,
   onLastReceipt,
   onCalculator,
-  onLockRegister
+  onLockRegister,
+  onTodaysSales // Added this line
 }: SidebarProps) {
   const [time, setTime] = useState(new Date())
 
@@ -26,6 +34,7 @@ export default function Sidebar({
   const actions = [
     { icon: <RiMoneyDollarBoxLine size={22} />, label: 'Open Drawer', onClick: onOpenDrawer },
     { icon: <RiPrinterLine size={22} />, label: 'Last Receipt', onClick: onLastReceipt },
+    { icon: <RiHistoryLine size={22} />, label: 'Todays Sales', onClick: onTodaysSales }, // Added this line
     { icon: <RiCalculatorLine size={22} />, label: 'Calculator', onClick: onCalculator }
   ]
 
