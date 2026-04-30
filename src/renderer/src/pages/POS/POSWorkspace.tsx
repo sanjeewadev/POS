@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import Swal from 'sweetalert2'
 import { Product } from '../../types/models'
+import { RiBankCardLine, RiMoneyDollarBoxLine, RiFlashlightFill } from 'react-icons/ri'
 import styles from './POSWorkspace.module.css'
 
 interface CartItem {
@@ -16,7 +17,7 @@ interface CartItem {
   maxDiscount: number
   availableStock: number
   unit: string
-  qtyType: string // 🚀 NEW: Weight support
+  qtyType: string
 }
 
 export default function POSWorkspace() {
@@ -29,12 +30,8 @@ export default function POSWorkspace() {
   const [batchModalProduct, setBatchModalProduct] = useState<Product | null>(null)
   const [availableBatches, setAvailableBatches] = useState<any[]>([])
 
-  const [checkoutMode, setCheckoutMode] = useState<'none' | 'cash' | 'credit'>('none')
-  const [customerName, setCustomerName] = useState('')
-
-  // 🚀 NEW: Cash Drawer Tracking
+  const [checkoutMode, setCheckoutMode] = useState<'none' | 'cash' | 'card'>('none')
   const [cashTendered, setCashTendered] = useState('')
-  const [downPayment, setDownPayment] = useState('')
 
   const [isProcessing, setIsProcessing] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -50,8 +47,23 @@ export default function POSWorkspace() {
 
   useEffect(() => {
     loadData()
-    searchRef.current?.focus() // Always focus the scanner input on load
+    searchRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (
+        checkoutMode === 'none' &&
+        !batchModalProduct &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        e.key.length === 1
+      ) {
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [checkoutMode, batchModalProduct])
 
   const displayedProducts = useMemo(() => {
     return products.filter((p) => {
@@ -61,7 +73,6 @@ export default function POSWorkspace() {
     })
   }, [products, searchQuery])
 
-  // 🚀 BARCODE SCANNER SUPPORT: If only 1 product matches, auto-add it!
   useEffect(() => {
     if (
       searchQuery &&
@@ -69,7 +80,7 @@ export default function POSWorkspace() {
       displayedProducts[0].Barcode === searchQuery
     ) {
       handleProductClick(displayedProducts[0])
-      setSearchQuery('') // Clear search instantly so next scan works
+      setSearchQuery('')
     }
   }, [searchQuery, displayedProducts])
 
@@ -124,7 +135,7 @@ export default function POSWorkspace() {
       uid: newUid,
       productId: product.Id,
       batchId: batch.Id,
-      name: product.PrintName || product.Name, // 🚀 NEW: Use PrintName for receipt layout!
+      name: product.PrintName || product.Name,
       unitPrice: batch.SellingPrice.toString(),
       originalPrice: batch.SellingPrice,
       buyPrice: batch.CostPrice,
@@ -153,7 +164,6 @@ export default function POSWorkspace() {
             Swal.fire('Stock Limit', `Only ${item.availableStock} left!`, 'warning')
             return item
           }
-          // 🚀 Decimal Validation
           if (item.qtyType === 'quantity' && numVal % 1 !== 0) {
             Swal.fire('Invalid Qty', `Cannot sell partial amounts of ${item.name}`, 'error')
             return item
@@ -185,14 +195,11 @@ export default function POSWorkspace() {
   }, 0)
   const grandTotal = subTotal - totalDiscount
 
-  // SECURITY CHECKS
   const hasLossItem = cartItems.some((item) => (parseFloat(item.unitPrice) || 0) < item.buyPrice)
   const hasZeroQty = cartItems.some((item) => (parseFloat(item.quantity) || 0) <= 0)
 
-  // 🚀 NEW: EXACT CHANGE MATH
   const tenderedNum = parseFloat(cashTendered) || 0
   const changeToGive = tenderedNum > grandTotal ? tenderedNum - grandTotal : 0
-  const balanceDue = Math.max(0, grandTotal - (parseFloat(downPayment) || 0))
 
   const handleProcessSale = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -201,10 +208,6 @@ export default function POSWorkspace() {
     if (hasLossItem) return Swal.fire('Sale Blocked', 'Items priced below cost!', 'error')
     if (hasZeroQty) return Swal.fire('Sale Blocked', 'Items have a quantity of 0!', 'error')
 
-    if (checkoutMode === 'credit' && !customerName.trim()) {
-      return Swal.fire('Required Field', 'Customer name is required for a credit sale!', 'warning')
-    }
-
     if (checkoutMode === 'cash' && tenderedNum < grandTotal) {
       return Swal.fire('Insufficient Cash', 'Cash tendered is less than the total amount.', 'error')
     }
@@ -212,77 +215,16 @@ export default function POSWorkspace() {
     setIsProcessing(true)
     try {
       const receiptId = `INV-${Date.now()}`
-      const isCredit = checkoutMode === 'credit'
-      const paidAmt = isCredit ? parseFloat(downPayment) || 0 : grandTotal
 
-      let status = 0
-      if (isCredit) {
-        if (paidAmt === 0) status = 1
-        else if (paidAmt < grandTotal) status = 2
-      }
-
-      // 🚀 NEW: Sending Exact Cash math to Database!
-      const transaction = {
-        ReceiptId: receiptId,
-        TransactionDate: new Date().toISOString(),
-        TotalAmount: grandTotal,
-        PaidAmount: paidAmt,
-        CashReceived: isCredit ? paidAmt : tenderedNum,
-        ChangeGiven: isCredit ? 0 : changeToGive,
-        IsCredit: isCredit ? 1 : 0,
-        CustomerName: isCredit ? customerName : 'Walk-in Customer',
-        Status: status
-      }
-
-      const movements = cartItems.map((item) => ({
-        ProductId: item.productId,
-        Quantity: parseFloat(item.quantity) || 0,
-        UnitCost: item.originalPrice,
-        UnitPrice: parseFloat(item.unitPrice) || 0,
-        StockBatchId: item.batchId,
-        Note: ''
-      }))
-
-      // @ts-ignore
-      await window.api.processCompleteSale(transaction, movements)
-
-      setCartItems([])
-      setSelectedCartUid(null)
-      setCheckoutMode('none')
-      setCustomerName('')
-      setDownPayment('')
-      setCashTendered('')
-      loadData()
-
-      Swal.fire({
-        title: '✅ Sale Successful!',
-        text: `Change to give: Rs ${changeToGive.toFixed(2)}`,
-        icon: 'success'
-      })
-      searchRef.current?.focus()
-    } catch (error: any) {
-      Swal.fire('Checkout Failed', error.message, 'error')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleFastCheckout = async () => {
-    if (cartItems.length === 0) return Swal.fire('Empty Cart', 'Cart is empty!', 'warning')
-    if (hasLossItem) return Swal.fire('Sale Blocked', 'Items priced below cost!', 'error')
-    if (hasZeroQty) return Swal.fire('Sale Blocked', 'Items have 0 quantity!', 'error')
-
-    setIsProcessing(true)
-    try {
-      const receiptId = `INV-${Date.now()}`
       const transaction = {
         ReceiptId: receiptId,
         TransactionDate: new Date().toISOString(),
         TotalAmount: grandTotal,
         PaidAmount: grandTotal,
-        CashReceived: grandTotal, // Exact amount assumed for fast checkout
-        ChangeGiven: 0,
+        CashReceived: checkoutMode === 'cash' ? tenderedNum : grandTotal,
+        ChangeGiven: checkoutMode === 'cash' ? changeToGive : 0,
         IsCredit: 0,
+        PaymentMethod: checkoutMode.toUpperCase(),
         CustomerName: 'Walk-in Customer',
         Status: 0
       }
@@ -301,15 +243,25 @@ export default function POSWorkspace() {
 
       setCartItems([])
       setSelectedCartUid(null)
+      setCheckoutMode('none')
+      setCashTendered('')
       loadData()
 
-      Swal.fire({
-        title: '✅ Fast Checkout Complete!',
-        text: `Receipt ID: ${receiptId}`,
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      })
+      if (checkoutMode === 'cash' && changeToGive > 0) {
+        Swal.fire({
+          title: '✅ Sale Successful!',
+          text: `Change to give: Rs ${changeToGive.toFixed(2)}`,
+          icon: 'success'
+        })
+      } else {
+        Swal.fire({
+          title: '✅ Sale Successful!',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        })
+      }
+
       searchRef.current?.focus()
     } catch (error: any) {
       Swal.fire('Checkout Failed', error.message, 'error')
@@ -318,13 +270,18 @@ export default function POSWorkspace() {
     }
   }
 
+  const handleFastCash = () => {
+    setCashTendered(grandTotal.toString())
+    setCheckoutMode('cash')
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
         {/* TOP LEFT: PRODUCT CATALOG GRID */}
         <div className={styles.gridPanel}>
           <div className={styles.gridHeader}>
-            <span style={{ fontSize: '20px', fontWeight: 900 }}>PRODUCTS CATALOG</span>
+            <span className={styles.gridTitle}>PRODUCTS CATALOG</span>
             <input
               ref={searchRef}
               type="text"
@@ -357,16 +314,7 @@ export default function POSWorkspace() {
               </button>
             ))}
             {displayedProducts.length === 0 && (
-              <div
-                style={{
-                  gridColumn: '1 / -1',
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: 'var(--text-muted)'
-                }}
-              >
-                No items found.
-              </div>
+              <div className={styles.emptyGridState}>No items found.</div>
             )}
           </div>
         </div>
@@ -375,20 +323,21 @@ export default function POSWorkspace() {
         {activeEditItem ? (
           <div className={styles.editPanelActive}>
             <div className={styles.editHeader}>
-              <div className={styles.editName}>
-                {activeEditItem.name}{' '}
-                <span style={{ fontSize: '15px', color: 'var(--text-muted)' }}>
+              <div className={styles.editNameWrapper}>
+                <span className={styles.editName} title={activeEditItem.name}>
+                  {activeEditItem.name}
+                </span>
+                <span className={styles.editStockMeta}>
                   | Stock: {activeEditItem.availableStock}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div className={styles.editHeaderRight}>
                 <div className={styles.editTotal}>
                   Rs {(activeQty * activeUnitPrice).toFixed(2)}
                 </div>
                 <button
-                  className="pos-btn neutral"
+                  className={`pos-btn neutral ${styles.closeEditBtn}`}
                   onClick={() => setSelectedCartUid(null)}
-                  style={{ padding: '10px 15px' }}
                 >
                   ✖
                 </button>
@@ -400,8 +349,7 @@ export default function POSWorkspace() {
                 <label className={styles.editLabel}>Quantity ({activeEditItem.unit})</label>
                 <div className={styles.qtyStepper}>
                   <button
-                    className="pos-btn neutral"
-                    style={{ fontSize: '24px', padding: '10px 20px' }}
+                    className={`pos-btn neutral ${styles.stepperBtn}`}
                     onClick={() =>
                       handleUpdateCart(
                         activeEditItem.uid,
@@ -415,16 +363,14 @@ export default function POSWorkspace() {
                   <input
                     type="number"
                     step={activeEditItem.qtyType === 'kg' ? '0.01' : '1'}
-                    className="pos-input"
+                    className={`pos-input ${styles.stepperInput}`}
                     value={activeEditItem.quantity}
                     onChange={(e) =>
                       handleUpdateCart(activeEditItem.uid, 'quantity', e.target.value)
                     }
-                    style={{ textAlign: 'center', fontSize: '24px', width: '120px' }}
                   />
                   <button
-                    className="pos-btn neutral"
-                    style={{ fontSize: '24px', padding: '10px 20px' }}
+                    className={`pos-btn neutral ${styles.stepperBtn}`}
                     onClick={() =>
                       handleUpdateCart(activeEditItem.uid, 'quantity', (activeQty + 1).toString())
                     }
@@ -437,94 +383,67 @@ export default function POSWorkspace() {
               <div className={styles.editInfoBox}>
                 <div className={styles.infoRow}>
                   Original Price:{' '}
-                  <span style={{ fontWeight: 900 }}>
+                  <span className={styles.infoValue}>
                     Rs {activeEditItem.originalPrice.toFixed(2)}
                   </span>
                 </div>
                 <div className={styles.infoRow}>
-                  Max Discount Allowable:{' '}
-                  <span style={{ fontWeight: 900, color: 'var(--action-warning)' }}>
+                  Max Discount:{' '}
+                  <span className={styles.infoValueWarning}>
                     Rs {activeEditItem.maxDiscount.toFixed(2)}
                   </span>
                 </div>
-
-                {activeEditItem.maxDiscount > 0 &&
-                  activeUnitPrice > activeEditItem.originalPrice - activeEditItem.maxDiscount && (
-                    <button
-                      className="pos-btn warning"
-                      onClick={() =>
-                        handleUpdateCart(
-                          activeEditItem.uid,
-                          'unitPrice',
-                          (activeEditItem.originalPrice - activeEditItem.maxDiscount).toString()
-                        )
-                      }
-                      style={{ width: '100%', marginTop: '10px' }}
-                    >
-                      ⚡ Apply Max Discount
-                    </button>
-                  )}
               </div>
 
               <div className={styles.priceWrapper}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-end',
-                    width: '100%',
-                    marginBottom: '8px'
-                  }}
-                >
-                  <label className={styles.editLabel} style={{ marginBottom: 0 }}>
-                    Unit Price
-                  </label>
+                <div className={styles.priceHeader}>
+                  <label className={styles.editLabel}>Unit Price</label>
                   {activeUnitPrice < activeEditItem.buyPrice ? (
-                    <span
-                      style={{ color: 'var(--action-danger)', fontWeight: 900, fontSize: '12px' }}
-                    >
+                    <span className={styles.priceWarningDanger}>
                       ⛔ BELOW COST (Rs {activeEditItem.buyPrice.toFixed(2)})!
                     </span>
                   ) : activeUnitPrice <
                     activeEditItem.originalPrice - activeEditItem.maxDiscount ? (
-                    <span
-                      style={{ color: 'var(--action-warning)', fontWeight: 900, fontSize: '12px' }}
-                    >
-                      ⚠️ OVER MAX DISCOUNT
-                    </span>
+                    <span className={styles.priceWarningOver}>⚠️ OVER MAX DISCOUNT</span>
                   ) : null}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-muted)' }}>
-                    Rs
-                  </span>
+
+                {/* 🚀 DISCOUNT BTN MOVED HERE */}
+                <div className={styles.priceInputWrapper}>
+                  <span className={styles.priceCurrency}>Rs</span>
                   <input
                     type="number"
                     step="0.01"
-                    className="pos-input"
+                    className={`pos-input ${styles.priceInputHuge}`}
                     value={activeEditItem.unitPrice}
                     onChange={(e) =>
                       handleUpdateCart(activeEditItem.uid, 'unitPrice', e.target.value)
                     }
-                    style={{ fontSize: '24px' }}
                   />
+                  {activeEditItem.maxDiscount > 0 &&
+                    activeUnitPrice > activeEditItem.originalPrice - activeEditItem.maxDiscount && (
+                      <button
+                        className={`pos-btn-sm warning ${styles.inlineDiscBtn}`}
+                        onClick={() =>
+                          handleUpdateCart(
+                            activeEditItem.uid,
+                            'unitPrice',
+                            (activeEditItem.originalPrice - activeEditItem.maxDiscount).toString()
+                          )
+                        }
+                        title={`Apply Max Discount (Rs ${activeEditItem.maxDiscount})`}
+                      >
+                        ⚡ MAX DISC
+                      </button>
+                    )}
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div
-            className={styles.editPanelActive}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-muted)',
-              border: '2px dashed #cbd5e1',
-              boxShadow: 'none'
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: '22px' }}>Current Order</h3>
-            <p style={{ margin: '5px 0 0 0', fontSize: '15px' }}>
+          <div className={styles.editPanelInactive}>
+            <h3 className={styles.inactiveTitle}>Current Order</h3>
+            <p className={styles.inactiveSubtitle}>
               Tap an item in the receipt to apply discounts or change quantities.
             </p>
           </div>
@@ -536,20 +455,16 @@ export default function POSWorkspace() {
       {/* ========================================= */}
       <div className={styles.rightColumn}>
         <div className={styles.cartHeader}>
-          <span style={{ fontSize: '18px', fontWeight: 900 }}>
-            Receipt{' '}
-            <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-              ({cartItems.length})
-            </span>
+          <span className={styles.cartTitle}>
+            Receipt <span className={styles.cartCount}>({cartItems.length})</span>
           </span>
           <button
-            className="pos-btn neutral"
+            className={`pos-btn neutral ${styles.clearBtn}`}
             onClick={() => {
               setCartItems([])
               setSelectedCartUid(null)
               searchRef.current?.focus()
             }}
-            style={{ padding: '10px 15px', minHeight: '40px', fontSize: '12px' }}
           >
             CLEAR
           </button>
@@ -557,16 +472,7 @@ export default function POSWorkspace() {
 
         <div className={styles.cartItemsArea}>
           {cartItems.length === 0 ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '40px',
-                color: 'var(--text-muted)',
-                fontWeight: 600
-              }}
-            >
-              Scan an item to begin.
-            </div>
+            <div className={styles.emptyCartState}>Scan an item to begin.</div>
           ) : (
             cartItems.map((item) => {
               const itemPrice = parseFloat(item.unitPrice) || 0
@@ -588,16 +494,7 @@ export default function POSWorkspace() {
                     </div>
                     {itemPrice < item.originalPrice && (
                       <div
-                        style={{
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          marginTop: '4px',
-                          color: isBelowCost
-                            ? 'var(--action-danger)'
-                            : isOverDiscount
-                              ? 'var(--action-warning)'
-                              : 'var(--brand-primary)'
-                        }}
+                        className={`${styles.cartItemDiscountMeta} ${isBelowCost ? styles.textDanger : isOverDiscount ? styles.textWarning : styles.textSuccess}`}
                       >
                         {isBelowCost
                           ? '⛔ LOSS'
@@ -612,8 +509,7 @@ export default function POSWorkspace() {
                       Rs {(itemQty * itemPrice).toFixed(2)}
                     </div>
                     <div
-                      className="pos-btn danger"
-                      style={{ minHeight: '35px', padding: '5px 10px' }}
+                      className={`pos-btn danger ${styles.removeCartBtn}`}
                       onClick={(e) => {
                         e.stopPropagation()
                         handleRemoveCartItem(item.uid)
@@ -630,34 +526,12 @@ export default function POSWorkspace() {
 
         <div className={styles.checkoutFooter}>
           {hasLossItem && (
-            <div
-              style={{
-                backgroundColor: '#fef2f2',
-                color: '#dc2626',
-                padding: '10px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 800,
-                textAlign: 'center',
-                marginBottom: '15px'
-              }}
-            >
+            <div className={`${styles.blockerAlert} ${styles.dangerAlert}`}>
               ⛔ SALE BLOCKED: Items priced below cost!
             </div>
           )}
           {hasZeroQty && (
-            <div
-              style={{
-                backgroundColor: '#fffbeb',
-                color: '#d97706',
-                padding: '10px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 800,
-                textAlign: 'center',
-                marginBottom: '15px'
-              }}
-            >
+            <div className={`${styles.blockerAlert} ${styles.warningAlert}`}>
               ⚠️ SALE BLOCKED: Quantity cannot be 0.
             </div>
           )}
@@ -666,17 +540,15 @@ export default function POSWorkspace() {
             <span>Subtotal</span>
             <span>Rs {subTotal.toFixed(2)}</span>
           </div>
-          <div className={`${styles.summaryRow} ${totalDiscount > 0 ? styles.discount : ''}`}>
+          <div className={`${styles.summaryRow} ${totalDiscount > 0 ? styles.discountText : ''}`}>
             <span>Discount</span>
             <span>
               {totalDiscount > 0 ? '-' : ''} Rs {totalDiscount.toFixed(2)}
             </span>
           </div>
           <div className={styles.summaryTotalRow}>
-            <span style={{ fontSize: '16px', fontWeight: 900 }}>GRAND TOTAL</span>
-            <span style={{ fontSize: '32px', fontWeight: 900, color: 'var(--brand-primary)' }}>
-              Rs {grandTotal.toFixed(2)}
-            </span>
+            <span className={styles.grandTotalLabel}>GRAND TOTAL</span>
+            <span className={styles.grandTotalValue}>Rs {grandTotal.toFixed(2)}</span>
           </div>
 
           <div className={styles.checkoutBtnGrid}>
@@ -688,24 +560,17 @@ export default function POSWorkspace() {
               }}
               disabled={hasLossItem || hasZeroQty}
             >
-              PAY (EXACT CHANGE)
+              <RiMoneyDollarBoxLine size={24} /> CASH
             </button>
             <button
               className="pos-btn warning"
               onClick={() => {
-                if (cartItems.length > 0) setCheckoutMode('credit')
+                if (cartItems.length > 0) setCheckoutMode('card')
                 else Swal.fire('Empty Cart', 'Cart is empty!', 'warning')
               }}
               disabled={hasLossItem || hasZeroQty}
             >
-              CREDIT SALE
-            </button>
-            <button
-              className="pos-btn neutral"
-              onClick={handleFastCheckout}
-              disabled={isProcessing || hasLossItem || hasZeroQty}
-            >
-              {isProcessing ? '...' : 'FAST CHECKOUT'}
+              <RiBankCardLine size={24} /> CARD
             </button>
           </div>
         </div>
@@ -718,37 +583,32 @@ export default function POSWorkspace() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
             <div className={styles.modalHeader}>
-              <h2 style={{ margin: 0, fontSize: '20px' }}>Select Batch</h2>
+              <h2 className="pos-page-title">Select Batch</h2>
               <button className="pos-btn neutral" onClick={() => setBatchModalProduct(null)}>
                 ✖
               </button>
             </div>
             <div className={styles.modalBody}>
-              <p>
+              <p className={styles.modalSubtitle}>
                 Multiple batches found for <b>{batchModalProduct.Name}</b>. Which one to sell?
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className={styles.batchList}>
                 {availableBatches.map((batch) => (
                   <button
                     key={batch.Id}
-                    className="pos-btn neutral"
-                    style={{ justifyContent: 'space-between', padding: '15px' }}
+                    className={`pos-btn neutral ${styles.batchBtn}`}
                     onClick={() => addToCart(batchModalProduct, batch)}
                   >
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-dark)' }}>
+                    <div className={styles.batchBtnLeft}>
+                      <div className={styles.batchSupplier}>
                         {batch.SupplierName || 'Stock Entry'}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <div className={styles.batchMeta}>
                         Stock: {batch.RemainingQuantity} | Rec:{' '}
                         {new Date(batch.ReceivedDate).toLocaleDateString()}
                       </div>
                     </div>
-                    <div
-                      style={{ fontSize: '20px', fontWeight: 900, color: 'var(--brand-primary)' }}
-                    >
-                      Rs {batch.SellingPrice.toFixed(2)}
-                    </div>
+                    <div className={styles.batchBtnRight}>Rs {batch.SellingPrice.toFixed(2)}</div>
                   </button>
                 ))}
               </div>
@@ -758,73 +618,34 @@ export default function POSWorkspace() {
       )}
 
       {/* ========================================= */}
-      {/* 🚀 NEW: CHECKOUT MODALS (CASH & CREDIT)   */}
+      {/* 🚀 CHECKOUT MODALS (CASH & CARD)          */}
       {/* ========================================= */}
       {checkoutMode !== 'none' && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalBox} style={{ maxWidth: '600px' }}>
+          <div className={`${styles.modalBox} ${styles.checkoutModal}`}>
             <div className={styles.modalHeader}>
-              <h2 style={{ margin: 0, fontSize: '24px' }}>
-                {checkoutMode === 'cash' ? 'Cash Checkout' : 'Credit Sale'}
+              <h2 className="pos-page-title">
+                {checkoutMode === 'cash' ? 'Cash Checkout' : 'Card Checkout'}
               </h2>
             </div>
 
             <form onSubmit={handleProcessSale} className={styles.modalBody}>
-              <div
-                style={{
-                  background: 'var(--bg-main)',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  textAlign: 'center',
-                  marginBottom: '20px'
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: 800,
-                    color: 'var(--text-muted)',
-                    textTransform: 'uppercase'
-                  }}
-                >
-                  Total Amount Due
-                </div>
-                <div style={{ fontSize: '48px', fontWeight: 900, color: 'var(--text-dark)' }}>
-                  Rs {grandTotal.toFixed(2)}
-                </div>
+              <div className={styles.totalDueBox}>
+                <div className={styles.totalDueLabel}>Total Amount Due</div>
+                <div className={styles.totalDueValue}>Rs {grandTotal.toFixed(2)}</div>
               </div>
 
+              {/* 💵 CASH WORKFLOW */}
               {checkoutMode === 'cash' && (
                 <>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 800,
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase'
-                      }}
-                    >
-                      Cash Handed by Customer
-                    </label>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '15px',
-                        marginTop: '10px'
-                      }}
-                    >
-                      <span
-                        style={{ fontSize: '28px', fontWeight: 900, color: 'var(--text-muted)' }}
-                      >
-                        Rs
-                      </span>
+                  <div className={styles.cashInputSection}>
+                    <label className={styles.inputLabel}>Cash Handed by Customer</label>
+                    <div className={styles.cashInputWrapper}>
+                      <span className={styles.cashCurrency}>Rs</span>
                       <input
                         type="number"
                         step="0.01"
-                        className="pos-input"
-                        style={{ fontSize: '32px', height: '70px', fontWeight: 900 }}
+                        className={`pos-input ${styles.cashInputHuge}`}
                         value={cashTendered}
                         onChange={(e) => setCashTendered(e.target.value)}
                         required
@@ -832,105 +653,61 @@ export default function POSWorkspace() {
                         placeholder="0.00"
                       />
                     </div>
+
+                    <div className={styles.quickBillsGrid}>
+                      <button
+                        type="button"
+                        className="pos-btn-sm neutral"
+                        onClick={() => setCashTendered(grandTotal.toString())}
+                      >
+                        Exact Amt
+                      </button>
+                      <button
+                        type="button"
+                        className="pos-btn-sm neutral"
+                        onClick={() => setCashTendered('1000')}
+                      >
+                        Rs 1000
+                      </button>
+                      <button
+                        type="button"
+                        className="pos-btn-sm neutral"
+                        onClick={() => setCashTendered('5000')}
+                      >
+                        Rs 5000
+                      </button>
+                    </div>
                   </div>
 
                   {tenderedNum > 0 && tenderedNum >= grandTotal && (
-                    <div
-                      style={{
-                        background: '#f0fdf4',
-                        border: '2px solid #16a34a',
-                        padding: '20px',
-                        borderRadius: '8px',
-                        textAlign: 'center',
-                        marginBottom: '20px'
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: '16px',
-                          fontWeight: 800,
-                          color: '#15803d',
-                          textTransform: 'uppercase'
-                        }}
-                      >
-                        Change to Return
-                      </div>
-                      <div style={{ fontSize: '42px', fontWeight: 900, color: '#16a34a' }}>
-                        Rs {changeToGive.toFixed(2)}
-                      </div>
+                    <div className={styles.changeDueBox}>
+                      <div className={styles.changeDueLabel}>Change to Return</div>
+                      <div className={styles.changeDueValue}>Rs {changeToGive.toFixed(2)}</div>
                     </div>
                   )}
                 </>
               )}
 
-              {checkoutMode === 'credit' && (
-                <>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label
-                      style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      Customer Name *
-                    </label>
-                    <input
-                      type="text"
-                      className="pos-input"
-                      style={{ height: '60px', fontSize: '20px' }}
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      required
-                      autoFocus
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label
-                      style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-muted)' }}
-                    >
-                      Initial Payment (Optional)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="pos-input"
-                      style={{ height: '60px', fontSize: '20px' }}
-                      value={downPayment}
-                      onChange={(e) => setDownPayment(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div
-                    style={{
-                      background: '#fffbeb',
-                      border: '2px solid #d97706',
-                      padding: '20px',
-                      borderRadius: '8px',
-                      textAlign: 'center',
-                      marginBottom: '20px'
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '16px',
-                        fontWeight: 800,
-                        color: '#b45309',
-                        textTransform: 'uppercase'
-                      }}
-                    >
-                      Remaining Debt
-                    </div>
-                    <div style={{ fontSize: '42px', fontWeight: 900, color: '#d97706' }}>
-                      Rs {balanceDue.toFixed(2)}
-                    </div>
-                  </div>
-                </>
+              {/* 💳 CARD WORKFLOW */}
+              {checkoutMode === 'card' && (
+                <div className={styles.cardProcessingSection}>
+                  <RiBankCardLine className={styles.cardPulsingIcon} />
+                  <h3 className={styles.cardInstruction}>Awaiting Terminal Verification...</h3>
+                  <p className={styles.cardSubText}>
+                    Please process the charge of <b>Rs {grandTotal.toFixed(2)}</b> on the physical
+                    card terminal.
+                  </p>
+                </div>
               )}
 
-              <div style={{ display: 'flex', gap: '15px' }}>
+              <div className={styles.checkoutActionGrid}>
                 <button
                   type="button"
                   className="pos-btn neutral"
-                  style={{ flex: 1 }}
-                  onClick={() => setCheckoutMode('none')}
+                  onClick={() => {
+                    setCheckoutMode('none')
+                    setCashTendered('')
+                  }}
                   disabled={isProcessing}
                 >
                   CANCEL
@@ -938,10 +715,13 @@ export default function POSWorkspace() {
                 <button
                   type="submit"
                   className="pos-btn success"
-                  style={{ flex: 2 }}
                   disabled={isProcessing || (checkoutMode === 'cash' && tenderedNum < grandTotal)}
                 >
-                  {isProcessing ? 'Processing...' : 'COMPLETE SALE'}
+                  {isProcessing
+                    ? 'PROCESSING...'
+                    : checkoutMode === 'card'
+                      ? '✅ PAYMENT SUCCESSFUL'
+                      : 'COMPLETE SALE'}
                 </button>
               </div>
             </form>

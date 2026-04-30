@@ -6,6 +6,7 @@
   gap: var(--spacing-lg);
   padding: var(--spacing-md);
   background-color: var(--bg-main);
+  overflow: hidden;
 }
 
 /* --- LEFT COLUMN: CATALOG & EDIT --- */
@@ -19,7 +20,7 @@
 
 /* Catalog Area */
 .gridPanel {
-  flex: 2;
+  flex: 1; /* 🚀 Grows to fill all freed up space */
   background-color: var(--bg-panel);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
@@ -36,6 +37,12 @@
   background-color: var(--bg-dark);
   color: var(--text-light);
   border-bottom: 2px solid #cbd5e1;
+}
+
+.gridTitle {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
 }
 
 .productsArea {
@@ -107,15 +114,46 @@
   background: #fef2f2;
 }
 
+.emptyGridState {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* Edit Panel (Bottom Left) */
 .editPanelActive {
-  flex: 1;
+  flex: none; /* 🚀 Shrinks to content, freeing up space for Catalog above */
   background-color: var(--bg-panel);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
   padding: 20px;
   display: flex;
   flex-direction: column;
+}
+
+.editPanelInactive {
+  flex: none;
+  background-color: var(--bg-panel);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  border: 2px dashed #cbd5e1;
+  padding: 40px 20px;
+}
+
+.inactiveTitle {
+  margin: 0;
+  font-size: 22px;
+}
+
+.inactiveSubtitle {
+  margin: 5px 0 0 0;
+  font-size: 15px;
 }
 
 .editHeader {
@@ -125,18 +163,48 @@
   margin-bottom: 20px;
   padding-bottom: 15px;
   border-bottom: 2px solid var(--bg-main);
+  gap: 15px;
+}
+
+/* 🚀 Prevents long product names from breaking layout */
+.editNameWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .editName {
   font-size: 24px;
   font-weight: 900;
   color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editStockMeta {
+  font-size: 15px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.editHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
 }
 
 .editTotal {
   font-size: 28px;
   font-weight: 900;
   color: var(--brand-primary);
+}
+
+.closeEditBtn {
+  padding: 10px 15px;
 }
 
 .editControls {
@@ -153,6 +221,18 @@
 .qtyStepper {
   display: flex;
   gap: 5px;
+}
+
+.stepperBtn {
+  font-size: 24px;
+  padding: 10px 20px;
+}
+
+.stepperInput {
+  text-align: center;
+  font-size: 24px;
+  width: 100px;
+  font-weight: 800;
 }
 
 .editLabel {
@@ -181,10 +261,69 @@
   margin-bottom: 4px;
 }
 
+.infoValue {
+  font-weight: 900;
+  color: var(--text-dark);
+}
+
+.infoValueWarning {
+  font-weight: 900;
+  color: var(--action-warning);
+}
+
 .priceWrapper {
   flex: 1.5;
   display: flex;
   flex-direction: column;
+}
+
+.priceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.priceHeader .editLabel {
+  margin-bottom: 0;
+}
+
+.priceWarningDanger {
+  color: var(--action-danger);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.priceWarningOver {
+  color: var(--action-warning);
+  font-weight: 900;
+  font-size: 12px;
+}
+
+/* 🚀 Discount button moved inside input wrapper */
+.priceInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.priceCurrency {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-muted);
+}
+
+.priceInputHuge {
+  font-size: 24px;
+  font-weight: 800;
+  width: 120px; /* Constrains width so button fits */
+}
+
+.inlineDiscBtn {
+  height: 48px;
+  padding: 0 15px;
+  flex-shrink: 0;
 }
 
 /* --- RIGHT COLUMN: CART --- */
@@ -208,10 +347,34 @@
   align-items: center;
 }
 
+.cartTitle {
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cartCount {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.clearBtn {
+  padding: 10px 15px;
+  min-height: 40px;
+  font-size: 12px;
+}
+
 .cartItemsArea {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
+}
+
+.emptyCartState {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .cartItemBtn {
@@ -261,6 +424,22 @@
   margin-top: 4px;
 }
 
+.cartItemDiscountMeta {
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.textDanger {
+  color: var(--action-danger);
+}
+.textWarning {
+  color: var(--action-warning);
+}
+.textSuccess {
+  color: var(--brand-primary);
+}
+
 .cartItemRight {
   display: flex;
   align-items: center;
@@ -273,11 +452,35 @@
   color: var(--brand-primary);
 }
 
+.removeCartBtn {
+  min-height: 35px;
+  padding: 5px 10px;
+}
+
 /* --- CHECKOUT FOOTER --- */
 .checkoutFooter {
   padding: 20px;
   background-color: #f8fafc;
   border-top: 2px solid var(--bg-main);
+}
+
+.blockerAlert {
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.dangerAlert {
+  background-color: #fef2f2;
+  color: var(--action-danger);
+}
+
+.warningAlert {
+  background-color: #fffbeb;
+  color: #d97706;
 }
 
 .summaryRow {
@@ -289,7 +492,7 @@
   margin-bottom: 10px;
 }
 
-.summaryRow.discount {
+.discountText {
   color: var(--action-warning);
 }
 
@@ -302,14 +505,25 @@
   margin-bottom: 20px;
 }
 
+.grandTotalLabel {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.grandTotalValue {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--brand-primary);
+}
+
 .checkoutBtnGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 10px;
 }
 
-.checkoutBtnGrid button:last-child {
-  grid-column: span 2;
+.checkoutBtnGrid button {
+  flex: 1;
+  font-size: 18px;
 }
 
 /* --- MODALS --- */
@@ -338,8 +552,12 @@
   overflow: hidden;
 }
 
+.checkoutModal {
+  max-width: 600px;
+}
+
 .modalHeader {
-  padding: 20px;
+  padding: 20px 24px;
   background-color: var(--bg-main);
   border-bottom: 2px solid #cbd5e1;
   display: flex;
@@ -348,5 +566,196 @@
 }
 
 .modalBody {
+  padding: 24px;
+}
+
+.modalSubtitle {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--text-dark);
+}
+
+/* Batch Modal Specifics */
+.batchList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.batchBtn {
+  justify-content: space-between;
+  padding: 15px;
+}
+
+.batchBtnLeft {
+  text-align: left;
+}
+
+.batchSupplier {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.batchMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.batchBtnRight {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--brand-primary);
+}
+
+/* --- Checkout Modals --- */
+.totalDueBox {
+  background: var(--bg-main);
   padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.totalDueLabel {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.totalDueValue {
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--text-dark);
+}
+
+.inputLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.cashInputSection {
+  margin-bottom: 20px;
+}
+
+.cashInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.cashCurrency {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--text-muted);
+}
+
+.cashInputHuge {
+  font-size: 32px;
+  height: 70px;
+  font-weight: 900;
+}
+
+.quickBillsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.changeDueBox {
+  background: #f0fdf4;
+  border: 2px solid #16a34a;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.changeDueLabel {
+  font-size: 16px;
+  font-weight: 800;
+  color: #15803d;
+  text-transform: uppercase;
+}
+
+.changeDueValue {
+  font-size: 42px;
+  font-weight: 900;
+  color: #16a34a;
+}
+
+/* Card Workflow */
+.cardProcessingSection {
+  text-align: center;
+  padding: 30px 10px;
+  margin-bottom: 20px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+.cardPulsingIcon {
+  font-size: 64px;
+  color: var(--brand-secondary);
+  animation: pulse 1.5s infinite ease-in-out;
+  margin-bottom: 15px;
+}
+
+.cardInstruction {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-dark);
+  margin: 0 0 10px 0;
+}
+
+.cardSubText {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.checkoutActionGrid {
+  display: flex;
+  gap: 15px;
+}
+
+.checkoutActionGrid button:first-child {
+  flex: 1;
+}
+
+.checkoutActionGrid button:last-child {
+  flex: 2;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Scrollbars */
+.productsArea::-webkit-scrollbar,
+.cartItemsArea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.productsArea::-webkit-scrollbar-thumb,
+.cartItemsArea::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
 }
