@@ -4,6 +4,7 @@ import Swal from 'sweetalert2'
 import { useAuth } from '../../store/AuthContext'
 import TopNavigationBar from '../../components/TopNavigationBar/TopNavigationBar'
 import Sidebar from '../../components/Sidebar/Sidebar'
+import CalculatorModal from '../../components/Calculator/CalculatorModal' // 🚀 The new component
 import styles from './AppLayout.module.css'
 import { RiLockLine } from 'react-icons/ri'
 
@@ -11,7 +12,7 @@ interface AppLayoutProps {
   children: React.ReactNode
   currentMode: string
   setMode: (mode: string) => void
-  onOpenTodaysSales: () => void // Register the prop
+  onOpenTodaysSales: () => void
 }
 
 export default function AppLayout({
@@ -22,11 +23,13 @@ export default function AppLayout({
 }: AppLayoutProps) {
   const { currentUser, login } = useAuth()
 
+  // State Management
   const [isLocked, setIsLocked] = useState(false)
   const [unlockPassword, setUnlockPassword] = useState('')
   const [isUnlocking, setIsUnlocking] = useState(false)
-  const [showCalculator, setShowCalculator] = useState(false)
-  const [calcDisplay, setCalcDisplay] = useState('0')
+
+  // 🚀 New state strictly for the Calculator Component
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
 
   const handleOpenDrawer = async () => {
     try {
@@ -77,23 +80,11 @@ export default function AppLayout({
     setIsUnlocking(false)
   }
 
-  const handleCalcInput = (val: string) => {
-    if (calcDisplay === '0' && val !== '.') setCalcDisplay(val)
-    else setCalcDisplay((prev) => prev + val)
-  }
-
-  const handleCalcEval = () => {
-    try {
-      const result = new Function('return ' + calcDisplay)()
-      setCalcDisplay(String(result))
-    } catch {
-      setCalcDisplay('Error')
-      setTimeout(() => setCalcDisplay('0'), 1000)
-    }
-  }
-
   return (
     <div className={styles.appWrapper}>
+      {/* 🚀 The New Calculator Component */}
+      {isCalculatorOpen && <CalculatorModal onClose={() => setIsCalculatorOpen(false)} />}
+
       {/* Lock Screen Overlay */}
       {isLocked && (
         <div className={styles.lockScreen}>
@@ -129,51 +120,13 @@ export default function AppLayout({
         </div>
       )}
 
-      {/* Calculator Modal */}
-      {showCalculator && (
-        <div className={styles.calcOverlay} onClick={() => setShowCalculator(false)}>
-          <div className={styles.calcBox} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.calcHeader}>
-              <span>Quick Calc</span>
-              <button
-                className="pos-btn danger"
-                style={{ minHeight: '30px', padding: '0 10px' }}
-                onClick={() => setShowCalculator(false)}
-              >
-                Close
-              </button>
-            </div>
-            <div className={styles.calcDisplay}>{calcDisplay}</div>
-            <div className={styles.calcGrid}>
-              {['7', '8', '9', '/', '4', '5', '6', '*', '1', '2', '3', '-', '0', '.', '=', '+'].map(
-                (btn) => (
-                  <button
-                    key={btn}
-                    className={styles.calcBtn}
-                    onClick={() => {
-                      if (btn === '=') handleCalcEval()
-                      else handleCalcInput(btn)
-                    }}
-                  >
-                    {btn}
-                  </button>
-                )
-              )}
-              <button className={styles.calcClearBtn} onClick={() => setCalcDisplay('0')}>
-                Clear
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <TopNavigationBar currentMode={currentMode} setMode={setMode} />
 
       <div className={styles.mainLayout}>
         <Sidebar
           onOpenDrawer={handleOpenDrawer}
           onLastReceipt={handleLastReceipt}
-          onCalculator={() => setShowCalculator(true)}
+          onCalculator={() => setIsCalculatorOpen(true)} // 🚀 Triggers the new state
           onTodaysSales={onOpenTodaysSales}
           onLockRegister={() => setIsLocked(true)}
         />

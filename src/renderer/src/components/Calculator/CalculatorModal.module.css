@@ -1,0 +1,176 @@
+/* src/renderer/src/components/Calculator/CalculatorModal.module.css */
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Overrides everything else */
+}
+
+.calculatorContainer {
+  background: var(--bg-panel);
+  width: 90%;
+  max-width: 360px;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  animation: popIn 0.2s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.closeBtn:hover {
+  background: #f1f5f9;
+  color: var(--action-danger);
+}
+
+.displayArea {
+  background: var(--bg-main);
+  border: 2px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 15px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 100px;
+}
+
+.equationText {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-height: 20px;
+  margin-bottom: 5px;
+}
+
+.mainDisplay {
+  font-size: 46px;
+  font-weight: 900;
+  color: var(--text-dark);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  text-align: right;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.bottomSection {
+  grid-column: span 4;
+  display: flex;
+  gap: 10px;
+}
+
+.numbersGrid {
+  flex: 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.btn {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-dark);
+  height: 70px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:active {
+  background: #e2e8f0;
+  transform: scale(0.95);
+}
+
+.btnZero {
+  grid-column: span 2;
+}
+
+.btnAction {
+  background: #eff6ff;
+  color: var(--brand-secondary);
+  border-color: #bfdbfe;
+  font-size: 32px;
+}
+
+.btnDanger {
+  color: var(--action-danger);
+  background: #fff1f2;
+  border-color: #fecaca;
+}
+
+.btnWarning {
+  color: var(--action-warning);
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.btnEquals {
+  flex: 1;
+  background: var(--brand-primary);
+  color: white;
+  border-color: var(--brand-primary);
+  height: 150px; /* Spans 2 rows */
+  font-size: 36px;
+}
+.btnEquals:active {
+  background: var(--brand-secondary);
+}
