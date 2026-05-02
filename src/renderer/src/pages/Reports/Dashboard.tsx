@@ -165,6 +165,7 @@ export default function Dashboard() {
                       iconType="circle"
                       wrapperStyle={{ paddingBottom: '30px', fontWeight: 700, fontSize: '13px' }}
                     />
+                    {/* Note: SVG Fills in Recharts often prefer strict Hex codes over CSS variables depending on rendering engine, so we keep standard hex here */}
                     <Bar
                       dataKey="sales"
                       name="Gross Revenue"

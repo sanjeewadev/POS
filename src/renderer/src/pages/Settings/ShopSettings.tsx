@@ -41,7 +41,6 @@ export default function ShopSettings() {
 
     setIsSaving(true)
     try {
-      // 🚀 THE FIX: Capitalized the keys to perfectly match systemRepo.ts!
       const payload = {
         ShopName: shopName,
         ShopAddress: shopAddress,
@@ -165,14 +164,27 @@ export default function ShopSettings() {
                 </table>
 
                 <div className={styles.receiptDivider}>--------------------------------</div>
+
+                {/* 🚀 UPGRADED: Realistic Subtotal and Discount block */}
                 <div className={styles.receiptTotals}>
-                  <div className={styles.totalRow}>
-                    <span>TOTAL</span>
+                  <div className={styles.subTotalRow}>
+                    <span>Subtotal</span>
                     <span>Rs 500.00</span>
                   </div>
+                  <div className={styles.discountRow}>
+                    <span>Discount</span>
+                    <span>- Rs 50.00</span>
+                  </div>
+                  <div className={styles.totalRow}>
+                    <span>TOTAL</span>
+                    <span>Rs 450.00</span>
+                  </div>
                 </div>
+
                 <div className={styles.receiptDivider}>--------------------------------</div>
-                <div className={styles.receiptFooterText}>{receiptFooter}</div>
+                <div className={styles.receiptFooterText}>
+                  {receiptFooter || 'Thank you for shopping!'}
+                </div>
               </div>
             </div>
           </div>

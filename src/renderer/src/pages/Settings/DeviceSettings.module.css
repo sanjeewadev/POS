@@ -1,0 +1,180 @@
+/* src/renderer/src/pages/Settings/DeviceSettings.module.css */
+
+.container {
+  display: flex;
+  height: 100%;
+  padding: 8px;
+  background: var(--bg-main);
+  overflow: hidden;
+}
+
+.mainPanel {
+  background: var(--bg-panel);
+  width: 100%;
+  height: 100%;
+  border: 1px solid #e2e8f0;
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panelHeader {
+  padding: 24px 30px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.panelBody {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.settingsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 800px;
+}
+
+.settingCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #edf2f7;
+  background: white;
+}
+
+.headerIcon {
+  font-size: 36px;
+  color: var(--brand-secondary);
+  flex-shrink: 0;
+}
+
+.headerText h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.headerText p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.cardBody {
+  padding: 24px;
+}
+
+.toggleWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statusBox {
+  display: flex;
+  align-items: center;
+}
+
+.statusActive {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--brand-primary);
+  background: #eff6ff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #bfdbfe;
+}
+
+.statusInactive {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+/* 🚀 Beautiful Custom iOS-style Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: '';
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background-color: var(--action-success);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--action-success);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+input:disabled + .slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Scrollbar */
+.panelBody::-webkit-scrollbar {
+  width: 6px;
+}
+.panelBody::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}

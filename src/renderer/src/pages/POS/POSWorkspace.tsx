@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import Swal from 'sweetalert2'
 import { Product } from '../../types/models'
-import { RiBankCardLine, RiMoneyDollarBoxLine, RiFlashlightFill } from 'react-icons/ri'
+import { RiBankCardLine, RiMoneyDollarBoxLine } from 'react-icons/ri'
+import TouchNumberInput from '../../components/TouchNumberInput/TouchNumberInput' // 🚀 The new Numpad Wrapper!
 import styles from './POSWorkspace.module.css'
 
 interface CartItem {
@@ -270,11 +271,6 @@ export default function POSWorkspace() {
     }
   }
 
-  const handleFastCash = () => {
-    setCashTendered(grandTotal.toString())
-    setCheckoutMode('cash')
-  }
-
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
@@ -360,14 +356,12 @@ export default function POSWorkspace() {
                   >
                     −
                   </button>
-                  <input
-                    type="number"
-                    step={activeEditItem.qtyType === 'kg' ? '0.01' : '1'}
+                  {/* 🚀 UPGRADED TO TOUCH NUMBER INPUT */}
+                  <TouchNumberInput
+                    isPosScreen={true}
                     className={`pos-input ${styles.stepperInput}`}
                     value={activeEditItem.quantity}
-                    onChange={(e) =>
-                      handleUpdateCart(activeEditItem.uid, 'quantity', e.target.value)
-                    }
+                    onChange={(val) => handleUpdateCart(activeEditItem.uid, 'quantity', val)}
                   />
                   <button
                     className={`pos-btn neutral ${styles.stepperBtn}`}
@@ -408,17 +402,14 @@ export default function POSWorkspace() {
                   ) : null}
                 </div>
 
-                {/* 🚀 DISCOUNT BTN MOVED HERE */}
                 <div className={styles.priceInputWrapper}>
                   <span className={styles.priceCurrency}>Rs</span>
-                  <input
-                    type="number"
-                    step="0.01"
+                  {/* 🚀 UPGRADED TO TOUCH NUMBER INPUT */}
+                  <TouchNumberInput
+                    isPosScreen={true}
                     className={`pos-input ${styles.priceInputHuge}`}
                     value={activeEditItem.unitPrice}
-                    onChange={(e) =>
-                      handleUpdateCart(activeEditItem.uid, 'unitPrice', e.target.value)
-                    }
+                    onChange={(val) => handleUpdateCart(activeEditItem.uid, 'unitPrice', val)}
                   />
                   {activeEditItem.maxDiscount > 0 &&
                     activeUnitPrice > activeEditItem.originalPrice - activeEditItem.maxDiscount && (
@@ -583,28 +574,33 @@ export default function POSWorkspace() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
             <div className={styles.modalHeader}>
-              <h2 className="pos-page-title">Select Batch</h2>
-              <button className="pos-btn neutral" onClick={() => setBatchModalProduct(null)}>
+              <div>
+                <h2 className="pos-page-title">Select Batch</h2>
+                <p className={styles.modalSubtitle}>
+                  Multiple batches found for <b>{batchModalProduct.Name}</b>. Which one to sell?
+                </p>
+              </div>
+              <button
+                className={`pos-btn-sm neutral ${styles.modalCloseIcon}`}
+                onClick={() => setBatchModalProduct(null)}
+              >
                 ✖
               </button>
             </div>
             <div className={styles.modalBody}>
-              <p className={styles.modalSubtitle}>
-                Multiple batches found for <b>{batchModalProduct.Name}</b>. Which one to sell?
-              </p>
               <div className={styles.batchList}>
                 {availableBatches.map((batch) => (
                   <button
                     key={batch.Id}
-                    className={`pos-btn neutral ${styles.batchBtn}`}
+                    className={styles.batchSelectCard}
                     onClick={() => addToCart(batchModalProduct, batch)}
                   >
                     <div className={styles.batchBtnLeft}>
                       <div className={styles.batchSupplier}>
-                        {batch.SupplierName || 'Stock Entry'}
+                        {batch.SupplierName || 'STOCK ENTRY'}
                       </div>
                       <div className={styles.batchMeta}>
-                        Stock: {batch.RemainingQuantity} | Rec:{' '}
+                        STOCK: {batch.RemainingQuantity} | REC:{' '}
                         {new Date(batch.ReceivedDate).toLocaleDateString()}
                       </div>
                     </div>
@@ -618,7 +614,7 @@ export default function POSWorkspace() {
       )}
 
       {/* ========================================= */}
-      {/* 🚀 CHECKOUT MODALS (CASH & CARD)          */}
+      {/* CHECKOUT MODALS (CASH & CARD)             */}
       {/* ========================================= */}
       {checkoutMode !== 'none' && (
         <div className={styles.modalOverlay}>
@@ -642,14 +638,12 @@ export default function POSWorkspace() {
                     <label className={styles.inputLabel}>Cash Handed by Customer</label>
                     <div className={styles.cashInputWrapper}>
                       <span className={styles.cashCurrency}>Rs</span>
-                      <input
-                        type="number"
-                        step="0.01"
+                      {/* 🚀 UPGRADED TO TOUCH NUMBER INPUT */}
+                      <TouchNumberInput
+                        isPosScreen={true}
                         className={`pos-input ${styles.cashInputHuge}`}
                         value={cashTendered}
-                        onChange={(e) => setCashTendered(e.target.value)}
-                        required
-                        autoFocus
+                        onChange={(val) => setCashTendered(val)}
                         placeholder="0.00"
                       />
                     </div>

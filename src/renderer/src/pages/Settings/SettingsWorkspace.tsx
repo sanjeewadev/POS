@@ -1,11 +1,12 @@
 // src/renderer/src/pages/Settings/SettingsWorkspace.tsx
 import { useState } from 'react'
 import styles from './SettingsWorkspace.module.css'
-import { RiStore2Line, RiTeamLine, RiDatabase2Line } from 'react-icons/ri'
+import { RiStore2Line, RiTeamLine, RiDatabase2Line, RiTabletLine } from 'react-icons/ri' // 🚀 Added Tablet Icon
 
 import UserManager from './UserManager'
 import SystemBackups from './SystemBackups'
 import ShopSettings from './ShopSettings'
+import DeviceSettings from './DeviceSettings' // 🚀 The new page we are about to build!
 
 const NAV_ITEMS = [
   {
@@ -16,6 +17,13 @@ const NAV_ITEMS = [
         label: 'Shop Details',
         sub: 'Name, Receipt, Address',
         icon: <RiStore2Line size={18} />
+      },
+      // 🚀 NEW: Device & UI Settings Tab
+      {
+        key: 'Device',
+        label: 'Device & UI',
+        sub: 'Touch Numpad & Layout',
+        icon: <RiTabletLine size={18} />
       }
     ]
   },
@@ -54,6 +62,8 @@ export default function SettingsWorkspace() {
         return <ShopSettings />
       case 'System':
         return <SystemBackups />
+      case 'Device': // 🚀 New Route
+        return <DeviceSettings />
       default:
         return null
     }

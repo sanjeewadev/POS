@@ -1,7 +1,8 @@
 // src/renderer/src/pages/Inventory/ProductCatalog.tsx
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Swal from 'sweetalert2'
 import { Category, Product } from '../../types/models'
+import TouchNumberInput from '../../components/TouchNumberInput/TouchNumberInput' // 🚀 The new Numpad Wrapper!
 import styles from './ProductCatalog.module.css'
 
 export default function ProductCatalog() {
@@ -26,6 +27,8 @@ export default function ProductCatalog() {
   const [editBatchSell, setEditBatchSell] = useState('')
   const [editBatchDiscount, setEditBatchDiscount] = useState('')
   const [editBatchDiscountType, setEditBatchDiscountType] = useState('percentage')
+
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const loadData = async () => {
     try {
@@ -283,6 +286,7 @@ export default function ProductCatalog() {
         <div className={styles.headerRow}>
           <h2 className="pos-page-title">LIVE CATALOG</h2>
           <input
+            ref={searchRef}
             type="text"
             className={`pos-input ${styles.searchInput}`}
             placeholder="Search Name or Barcode Scanner..."
@@ -319,7 +323,6 @@ export default function ProductCatalog() {
                   <tr key={product.Id}>
                     <td className={styles.barcodeCell}>{product.Barcode}</td>
                     <td>
-                      {/* 🚀 THE FIX: Text Truncation wrappers for long names */}
                       <div className={styles.productNameWrapper}>
                         <div className={styles.productName} title={product.Name}>
                           {product.Name}
@@ -385,12 +388,11 @@ export default function ProductCatalog() {
                 <div className={styles.formCol}>
                   <label className={styles.inputLabel}>Qty Received</label>
                   <div className={styles.inputGroup}>
-                    <input
-                      type="number"
-                      step={quickAddProduct.QuantityType === 'kg' ? '0.01' : '1'}
+                    {/* 🚀 UPGRADED: Touch Number Input */}
+                    <TouchNumberInput
                       className="pos-input"
                       value={quickAddQty}
-                      onChange={(e) => setQuickAddQty(e.target.value)}
+                      onChange={(val) => setQuickAddQty(val)}
                       required
                       autoFocus
                     />
@@ -402,12 +404,11 @@ export default function ProductCatalog() {
                   <label className={styles.inputLabel}>Supplier Unit Cost</label>
                   <div className={styles.inputGroup}>
                     <span className={styles.inputPrefix}>Rs</span>
-                    <input
-                      type="number"
-                      step="0.01"
+                    {/* 🚀 UPGRADED: Touch Number Input */}
+                    <TouchNumberInput
                       className="pos-input"
                       value={quickAddCost}
-                      onChange={(e) => setQuickAddCost(e.target.value)}
+                      onChange={(val) => setQuickAddCost(val)}
                       required
                     />
                   </div>
@@ -421,12 +422,11 @@ export default function ProductCatalog() {
                   </label>
                   <div className={styles.inputGroup}>
                     <span className={styles.inputPrefix}>Rs</span>
-                    <input
-                      type="number"
-                      step="0.01"
+                    {/* 🚀 UPGRADED: Touch Number Input */}
+                    <TouchNumberInput
                       className={`pos-input ${styles.successInput}`}
                       value={quickAddSell}
-                      onChange={(e) => setQuickAddSell(e.target.value)}
+                      onChange={(val) => setQuickAddSell(val)}
                       required
                     />
                   </div>
@@ -445,13 +445,11 @@ export default function ProductCatalog() {
                       <option value="percentage">%</option>
                       <option value="amount">Rs</option>
                     </select>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
+                    {/* 🚀 UPGRADED: Touch Number Input */}
+                    <TouchNumberInput
                       className="pos-input"
                       value={quickAddDiscount}
-                      onChange={(e) => setQuickAddDiscount(e.target.value)}
+                      onChange={(val) => setQuickAddDiscount(val)}
                       placeholder={quickAddDiscountType === 'percentage' ? 'e.g. 10' : 'e.g. 50.00'}
                     />
                   </div>
@@ -585,7 +583,7 @@ export default function ProductCatalog() {
               <div className={styles.lockedCostBox}>
                 <div className={styles.inputLabel}>Locked Buying Cost</div>
                 <div className={styles.cellDarkBoldLg}>
-                  Rs {(editingBatch.CostPrice || 0).toFixed(2)}
+                  Rs {(editingBatch.CostCostPrice || editingBatch.CostPrice || 0).toFixed(2)}
                 </div>
                 <div className={styles.lockedCostNote}>
                   * Cost price is permanently locked to protect historical profit reports.
@@ -598,12 +596,11 @@ export default function ProductCatalog() {
                 </label>
                 <div className={styles.inputGroup}>
                   <span className={styles.inputPrefix}>Rs</span>
-                  <input
-                    type="number"
-                    step="0.01"
+                  {/* 🚀 UPGRADED: Touch Number Input */}
+                  <TouchNumberInput
                     className={`pos-input ${styles.successInput}`}
                     value={editBatchSell}
-                    onChange={(e) => setEditBatchSell(e.target.value)}
+                    onChange={(val) => setEditBatchSell(val)}
                     required
                     autoFocus
                   />
@@ -623,13 +620,11 @@ export default function ProductCatalog() {
                     <option value="percentage">%</option>
                     <option value="amount">Rs</option>
                   </select>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  {/* 🚀 UPGRADED: Touch Number Input */}
+                  <TouchNumberInput
                     className="pos-input"
                     value={editBatchDiscount}
-                    onChange={(e) => setEditBatchDiscount(e.target.value)}
+                    onChange={(val) => setEditBatchDiscount(val)}
                   />
                 </div>
               </div>

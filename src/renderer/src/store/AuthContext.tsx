@@ -1,5 +1,5 @@
 // src/renderer/src/store/AuthContext.tsx
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { User } from '../types/models'
 
 // SHA-256 Hashing converted to Base64
@@ -17,6 +17,12 @@ interface AuthContextType {
   login: (username: string, pass: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   hasPermission: (permission: string) => boolean
+
+  // 🚀 NEW: Touch Numpad Global State & Controllers
+  posNumpadEnabled: boolean
+  globalNumpadEnabled: boolean
+  togglePosNumpad: (enabled: boolean) => Promise<void>
+  toggleGlobalNumpad: (enabled: boolean) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,17 +30,58 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
 
-  // 🚀 THE GHOST FOCUS KILLER
+  // 🚀 NEW: Numpad State (Defaults to false until loaded from DB)
+  const [posNumpadEnabled, setPosNumpadEnabled] = useState(false)
+  const [globalNumpadEnabled, setGlobalNumpadEnabled] = useState(false)
+
+  // 🚀 NEW: Load Interface Settings on App Startup
+  useEffect(() => {
+    const loadInterfaceSettings = async () => {
+      try {
+        // @ts-ignore
+        const data = await window.api.getSettings()
+        if (data) {
+          // Convert SQLite 1/0 to boolean
+          setPosNumpadEnabled(data.EnablePosNumpad === 1)
+          setGlobalNumpadEnabled(data.EnableGlobalNumpad === 1)
+        }
+      } catch (error) {
+        console.error('Failed to load interface settings:', error)
+      }
+    }
+    loadInterfaceSettings()
+  }, [])
+
+  // 🚀 NEW: Functions to update Numpad state and save to DB
+  const togglePosNumpad = async (enabled: boolean) => {
+    setPosNumpadEnabled(enabled)
+    try {
+      // @ts-ignore
+      await window.api.updateSettings({ EnablePosNumpad: enabled ? 1 : 0 })
+    } catch (err) {
+      console.error('Failed to save POS Numpad setting:', err)
+    }
+  }
+
+  const toggleGlobalNumpad = async (enabled: boolean) => {
+    setGlobalNumpadEnabled(enabled)
+    try {
+      // @ts-ignore
+      await window.api.updateSettings({ EnableGlobalNumpad: enabled ? 1 : 0 })
+    } catch (err) {
+      console.error('Failed to save Global Numpad setting:', err)
+    }
+  }
+
+  // THE GHOST FOCUS KILLER
   const releaseGhostFocus = () => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-    // 🗑️ REMOVED THE IPC SIGNAL TO PREVENT WINDOWS FROM LOCKING THE KEYBOARD
   }
 
   const login = async (username: string, pass: string) => {
     try {
-      // 🚀 Drop the keyboard focus immediately before we start checking credentials
       releaseGhostFocus()
 
       const cleanUsername = username.trim()
@@ -79,7 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
-    // 🚀 Drop the keyboard focus right before destroying the POS screen
     releaseGhostFocus()
     setCurrentUser(null)
   }
@@ -94,7 +140,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, hasPermission }}>
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        login,
+        logout,
+        hasPermission,
+        posNumpadEnabled,
+        globalNumpadEnabled,
+        togglePosNumpad,
+        toggleGlobalNumpad
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

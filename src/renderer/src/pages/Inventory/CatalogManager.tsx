@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Swal from 'sweetalert2'
 import { Category, Product } from '../../types/models'
+import TouchNumberInput from '../../components/TouchNumberInput/TouchNumberInput' // 🚀 The new Numpad Wrapper!
 import styles from './CatalogManager.module.css'
 
 export default function CatalogManager() {
@@ -563,11 +564,11 @@ export default function CatalogManager() {
                     <div className={styles.formCol}>
                       <label className={styles.inputLabel}>BARCODE / SKU</label>
                       <div className={styles.inputGroup}>
-                        <input
-                          type="text"
+                        {/* 🚀 UPGRADED TO TOUCH NUMBER INPUT */}
+                        <TouchNumberInput
                           className="pos-input"
                           value={newBarcode}
-                          onChange={(e) => setNewBarcode(e.target.value)}
+                          onChange={(val) => setNewBarcode(val)}
                           placeholder="Scan or Generate..."
                         />
                         <button
@@ -716,11 +717,11 @@ export default function CatalogManager() {
                   <div className={styles.formCol}>
                     <label className={styles.inputLabel}>BARCODE / SKU</label>
                     <div className={styles.inputGroup}>
-                      <input
-                        type="text"
+                      {/* 🚀 UPGRADED TO TOUCH NUMBER INPUT */}
+                      <TouchNumberInput
                         className="pos-input"
                         value={editBarcode}
-                        onChange={(e) => setEditBarcode(e.target.value)}
+                        onChange={(val) => setEditBarcode(val)}
                         required
                       />
                       <button

@@ -95,7 +95,7 @@ export default function SystemBackups() {
     <div className={styles.container}>
       <div className={styles.mainPanel}>
         <div className={styles.panelHeader}>
-          {/* 🚀 Replaced with Global Title Class */}
+          {/* 🚀 Applied Global Title */}
           <h2 className="pos-page-title">System Preferences & Data Vault</h2>
         </div>
 
@@ -152,7 +152,7 @@ export default function SystemBackups() {
                   onClick={handleBackup}
                   disabled={isProcessing}
                 >
-                  <RiDownloadCloud2Line size={32} color="#0284c7" />
+                  <RiDownloadCloud2Line size={32} color="var(--brand-primary)" />
                   <span className={styles.vaultBtnText}>EXPORT BACKUP</span>
                 </button>
                 <button
@@ -160,7 +160,7 @@ export default function SystemBackups() {
                   onClick={handleRestore}
                   disabled={isProcessing}
                 >
-                  <RiUploadCloud2Line size={32} color="#64748b" />
+                  <RiUploadCloud2Line size={32} color="var(--text-muted)" />
                   <span className={styles.vaultBtnText}>RESTORE DATA</span>
                 </button>
               </div>
@@ -169,7 +169,7 @@ export default function SystemBackups() {
             {/* MODULE 3: DANGER ZONE */}
             <div className={`${styles.card} ${styles.dangerCard}`}>
               <div className={styles.cardHeader}>
-                <RiAlertLine className={styles.headerIcon} color="#dc2626" />
+                <RiAlertLine className={styles.headerIcon} color="var(--action-danger)" />
                 <div>
                   <h3 className={styles.dangerTitle}>DANGER ZONE: Factory Reset</h3>
                   <p>Permanently wipe all data. Only Admin remains.</p>

@@ -11,9 +11,8 @@ const STAFF_PERMISSIONS = [
   'ViewProducts',
   'InventoryAlerts',
   'TodaySales',
-  'SalesHistory',
-  'CreditAccounts'
-].join(',')
+  'SalesHistory'
+].join(',') // Removed CreditAccounts from defaults
 
 async function hashPassword(password: string): Promise<string> {
   if (!password) return ''
@@ -98,14 +97,14 @@ export default function UserManager() {
       if (editingId) {
         // @ts-ignore
         await window.api.updateUser(payload)
-        Swal.fire({ title: 'Updated!', icon: 'success', timer: 1500 })
+        Swal.fire({ title: 'Updated!', icon: 'success', timer: 1500, showConfirmButton: false })
       } else {
         const isDuplicate = users.some((u) => u.Username.toLowerCase() === safeUsername)
         if (isDuplicate)
           return Swal.fire('Duplicate', `Username '${safeUsername}' is taken.`, 'error')
         // @ts-ignore
         await window.api.addUser(payload)
-        Swal.fire({ title: 'Created!', icon: 'success', timer: 1500 })
+        Swal.fire({ title: 'Created!', icon: 'success', timer: 1500, showConfirmButton: false })
       }
       handleClear()
       loadUsers()
@@ -137,11 +136,13 @@ export default function UserManager() {
         await window.api.updateUser(payload)
         loadUsers()
         if (editingId === u.Id) handleClear()
-        Swal.fire(
-          'Success',
-          `User ${currentStatus ? 'blocked' : 'unblocked'} successfully.`,
-          'success'
-        )
+        Swal.fire({
+          title: 'Success',
+          text: `User ${currentStatus ? 'blocked' : 'unblocked'} successfully.`,
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        })
       } catch (err: any) {
         Swal.fire('Error', `Error updating status: ${err.message}`, 'error')
       }
@@ -174,11 +175,11 @@ export default function UserManager() {
           <table className={styles.classicTable}>
             <thead>
               <tr>
-                <th>Username</th>
-                <th>Full Name</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th className={styles.actionHead}>Action</th>
+                <th className={styles.colUsername}>Username</th>
+                <th className={styles.colName}>Full Name</th>
+                <th className={styles.colRole}>Role</th>
+                <th className={styles.colStatus}>Status</th>
+                <th className={styles.textRight}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -198,7 +199,9 @@ export default function UserManager() {
                       className={editingId === u.Id ? styles.selectedRow : ''}
                     >
                       <td className={styles.usernameCell}>{u.Username}</td>
-                      <td className={styles.nameCell}>{u.FullName}</td>
+                      <td className={styles.nameCell}>
+                        <div className={styles.truncate}>{u.FullName}</div>
+                      </td>
                       <td>
                         <span
                           className={`${styles.statusBadge} ${u.Role === 1 ? styles.badgeAdmin : styles.badgeStaff}`}
@@ -213,15 +216,16 @@ export default function UserManager() {
                           {active ? 'Active' : 'Blocked'}
                         </span>
                       </td>
-                      <td className={styles.actionCell}>
+                      <td className={styles.textRight}>
+                        {/* 🚀 Updated to pos-btn-sm */}
                         <button
-                          className={`pos-btn ${active ? 'danger' : 'success'} ${styles.actionBtn}`}
+                          className={`pos-btn-sm ${active ? 'danger' : 'success'}`}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleToggleBlock(u, active)
                           }}
                         >
-                          {active ? 'Block' : 'Unblock'}
+                          {active ? 'BLOCK' : 'UNBLOCK'}
                         </button>
                       </td>
                     </tr>
@@ -307,7 +311,7 @@ export default function UserManager() {
             <p className={styles.infoText}>
               {role === 1
                 ? 'Administrators can access every module in the system.'
-                : 'Staff accounts are restricted to POS operations, returns, product view, alerts, sales reports, and credit ledger.'}
+                : 'Staff accounts are restricted to POS operations, returns, product view, alerts, and sales reports.'}
             </p>
           </div>
 
@@ -317,13 +321,13 @@ export default function UserManager() {
               className={`pos-btn neutral ${styles.formBtnCancel}`}
               onClick={handleClear}
             >
-              {editingId ? 'Cancel' : 'Clear Form'}
+              {editingId ? 'CANCEL' : 'CLEAR FORM'}
             </button>
             <button
               type="submit"
               className={`pos-btn ${editingId ? 'warning' : 'success'} ${styles.formBtnSubmit}`}
             >
-              {editingId ? 'Update Account' : 'Create Account'}
+              {editingId ? 'UPDATE ACCOUNT' : 'CREATE ACCOUNT'}
             </button>
           </div>
         </form>

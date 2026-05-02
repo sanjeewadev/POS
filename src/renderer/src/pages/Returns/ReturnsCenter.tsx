@@ -10,6 +10,7 @@ import {
   RiInformationLine,
   RiCheckboxCircleLine
 } from 'react-icons/ri'
+import TouchNumberInput from '../../components/TouchNumberInput/TouchNumberInput' // 🚀 The new Numpad Wrapper!
 import styles from './ReturnsCenter.module.css'
 
 interface ReturnItem {
@@ -172,7 +173,7 @@ export default function ReturnsCenter() {
         <div className={styles.panelBody}>
           {!bill ? (
             <div className={styles.emptyState}>
-              <RiBillLine size={64} color="#e2e8f0" />
+              <RiBillLine size={64} color="var(--text-muted)" />
               <h3>No Bill Selected</h3>
               <p>Search for a valid receipt ID to start the return process.</p>
             </div>
@@ -245,12 +246,12 @@ export default function ReturnsCenter() {
                             {maxReturnable}
                           </td>
                           <td>
-                            <input
-                              type="number"
+                            {/* 🚀 UPGRADED: Touch Number Input */}
+                            <TouchNumberInput
                               className="pos-input"
                               style={{ textAlign: 'center', fontWeight: 900, height: '40px' }}
                               value={item.QtyToReturn}
-                              onChange={(e) => handleQtyChange(idx, e.target.value)}
+                              onChange={(val) => handleQtyChange(idx, val)}
                               disabled={isDone || bill.Status === 3}
                               placeholder="0"
                             />

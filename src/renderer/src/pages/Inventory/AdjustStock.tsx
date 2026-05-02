@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Swal from 'sweetalert2'
 import { Product, Category } from '../../types/models'
+import TouchNumberInput from '../../components/TouchNumberInput/TouchNumberInput' // 🚀 The new Numpad Wrapper!
 import styles from './AdjustStock.module.css'
 
 export default function AdjustStock() {
@@ -266,12 +267,11 @@ export default function AdjustStock() {
                 <div className={styles.formGroup}>
                   <label>2. Qty to Remove</label>
                   <div className={styles.inputGroup}>
-                    <input
-                      type="number"
-                      step={selectedProduct.QuantityType === 'kg' ? '0.01' : '1'}
+                    {/* 🚀 UPGRADED: Touch Number Input */}
+                    <TouchNumberInput
                       className="pos-input"
                       value={qtyToRemove}
-                      onChange={(e) => setQtyToRemove(e.target.value)}
+                      onChange={(val) => setQtyToRemove(val)}
                       required
                       placeholder="0"
                     />

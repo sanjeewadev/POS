@@ -1,0 +1,150 @@
+/* src/renderer/src/components/TouchNumberInput/TouchNumberInput.module.css */
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Overrides everything else */
+}
+
+.numpadContainer {
+  background: var(--bg-panel);
+  width: 90%;
+  max-width: 380px;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.closeBtn:hover {
+  background: #f1f5f9;
+  color: var(--text-dark);
+}
+
+.displayArea {
+  background: var(--bg-main);
+  border: 2px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--text-dark);
+  text-align: right;
+  padding: 15px 20px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.numpadGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.numBtn {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-dark);
+  height: 70px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.numBtn:active {
+  background: #e2e8f0;
+  transform: scale(0.95);
+}
+
+/* Make the 'C' Clear button distinct */
+.numBtn:nth-child(10) {
+  color: var(--action-danger);
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 70px;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+  border: none;
+  transition: all 0.1s ease;
+}
+
+.actionBtn:active {
+  transform: scale(0.97);
+}
+
+.backspaceBtn {
+  background: #f1f5f9;
+  color: var(--text-dark);
+}
+
+.confirmBtn {
+  background: var(--brand-primary);
+  color: white;
+}

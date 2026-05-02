@@ -4,17 +4,17 @@
   display: flex;
   height: 100%;
   padding: 8px;
-  background: #f1f5f9;
+  background: var(--bg-main);
   overflow: hidden;
 }
 
 /* ── The White Main Box ── */
 .mainPanel {
-  background: #ffffff;
+  background: var(--bg-panel);
   width: 100%;
   height: 100%;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -57,7 +57,7 @@
 .formGroup label {
   font-size: 13px;
   font-weight: 700;
-  color: #475569;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -91,13 +91,14 @@
   margin-bottom: 25px;
 }
 
+/* Receipt paper keeps hardcoded colors to mimic physical paper */
 .receiptPaper {
   background: white;
   width: 100%;
-  max-width: 400px;
+  max-width: 350px;
   padding: 45px 35px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
-  font-family: 'Courier New', monospace;
+  font-family: 'Courier New', 'Fira Code', monospace;
   color: #1e293b;
   border-radius: 2px;
 }
@@ -161,12 +162,24 @@
 
 .receiptTotals {
   margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subTotalRow,
+.discountRow {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
 }
 
 .totalRow {
   display: flex;
   justify-content: space-between;
   font-weight: 900;
+  font-size: 16px;
+  margin-top: 5px;
 }
 
 .receiptFooterText {
@@ -182,7 +195,7 @@
   align-items: center;
   height: 100%;
   font-weight: 800;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 /* Custom Scrollbar for the white panel */

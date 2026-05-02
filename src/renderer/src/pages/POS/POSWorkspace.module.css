@@ -20,7 +20,7 @@
 
 /* Catalog Area */
 .gridPanel {
-  flex: 1; /* 🚀 Grows to fill all freed up space */
+  flex: 1; /* Grows to fill all freed up space */
   background-color: var(--bg-panel);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
@@ -124,7 +124,7 @@
 
 /* Edit Panel (Bottom Left) */
 .editPanelActive {
-  flex: none; /* 🚀 Shrinks to content, freeing up space for Catalog above */
+  flex: none; /* Shrinks to content */
   background-color: var(--bg-panel);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-panel);
@@ -166,7 +166,6 @@
   gap: 15px;
 }
 
-/* 🚀 Prevents long product names from breaking layout */
 .editNameWrapper {
   display: flex;
   align-items: baseline;
@@ -301,7 +300,6 @@
   font-size: 12px;
 }
 
-/* 🚀 Discount button moved inside input wrapper */
 .priceInputWrapper {
   display: flex;
   align-items: center;
@@ -317,7 +315,7 @@
 .priceInputHuge {
   font-size: 24px;
   font-weight: 800;
-  width: 120px; /* Constrains width so button fits */
+  width: 120px;
 }
 
 .inlineDiscBtn {
@@ -562,50 +560,87 @@
   border-bottom: 2px solid #cbd5e1;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start; /* Keeps the X at the top if the title wraps */
+}
+
+.modalCloseIcon {
+  font-size: 16px;
+  padding: 0 12px;
+  min-height: 32px;
 }
 
 .modalBody {
   padding: 24px;
 }
 
+/* 🚀 Updated subtitle to look like the rest of the app's modal subheaders */
 .modalSubtitle {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: var(--text-dark);
+  margin-top: 6px;
+  margin-bottom: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 /* Batch Modal Specifics */
 .batchList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 5px;
 }
 
-.batchBtn {
+.batchSelectCard {
+  display: flex;
   justify-content: space-between;
-  padding: 15px;
-}
-
-.batchBtnLeft {
+  align-items: center;
+  width: 100%;
+  padding: 16px 20px;
+  background-color: #f8fafc;
+  border: 2px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
   text-align: left;
 }
 
+.batchSelectCard:hover {
+  background-color: #eff6ff;
+  border-color: var(--brand-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.batchSelectCard:active {
+  transform: translateY(0);
+}
+
+.batchBtnLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .batchSupplier {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 900;
   color: var(--text-dark);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .batchMeta {
   font-size: 12px;
+  font-weight: 700;
   color: var(--text-muted);
 }
 
 .batchBtnRight {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
-  color: var(--brand-primary);
+  color: var(--text-dark);
 }
 
 /* --- Checkout Modals --- */
@@ -750,12 +785,14 @@
 
 /* Scrollbars */
 .productsArea::-webkit-scrollbar,
-.cartItemsArea::-webkit-scrollbar {
+.cartItemsArea::-webkit-scrollbar,
+.batchList::-webkit-scrollbar {
   width: 6px;
 }
 
 .productsArea::-webkit-scrollbar-thumb,
-.cartItemsArea::-webkit-scrollbar-thumb {
+.cartItemsArea::-webkit-scrollbar-thumb,
+.batchList::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 10px;
 }
