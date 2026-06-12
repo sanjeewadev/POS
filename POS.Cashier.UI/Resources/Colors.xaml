@@ -1,0 +1,62 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Global Background Colors -->
+    <SolidColorBrush x:Key="MainBgBrush" Color="#005A60" />
+    <SolidColorBrush x:Key="HeaderBgBrush" Color="#004040" />
+    <SolidColorBrush x:Key="InfoPanelBgBrush" Color="#5DBCD2" />
+    <SolidColorBrush x:Key="TotalsPanelBgBrush" Color="#3399FF" />
+
+    <!-- POS Button Colors -->
+    <SolidColorBrush x:Key="SystemBtnBrush" Color="#800080" />
+    <!-- Deep Purple for Reports/System -->
+    <SolidColorBrush x:Key="ActionBtnBrush" Color="#00699e" />
+    <!-- Blue for Items/Modifiers -->
+    <SolidColorBrush x:Key="NumpadBtnBrush" Color="#000080" />
+    <!-- Dark Blue for Numbers -->
+
+    <!-- Action Specific Colors -->
+    <SolidColorBrush x:Key="CancelBtnBrush" Color="#DC2626" />
+    <SolidColorBrush x:Key="CashBtnBrush" Color="#228B22" />
+    <SolidColorBrush x:Key="PluBtnBrush" Color="#9966CC" />
+    <SolidColorBrush x:Key="SubTotalBtnBrush" Color="#CD5C5C" />
+
+    <!-- Payment & Special Option Colors -->
+    <SolidColorBrush x:Key="PaymentOrangeBrush" Color="#FFB84D" />
+    <SolidColorBrush x:Key="PaymentDarkOrangeBrush" Color="#FF9900" />
+    <SolidColorBrush x:Key="ExpressBtnBrush" Color="#228B22" />
+    <SolidColorBrush x:Key="LoyaltyBgBrush" Color="Black" />
+
+    <!-- ========================================== -->
+    <!-- NEW: Text, Borders & Popup Colors          -->
+    <!-- ========================================== -->
+
+    <!-- Popup Backgrounds -->
+    <SolidColorBrush x:Key="PopupBgBrush" Color="#F4F4F4" />
+    <!-- Light Gray for Card/Cash Tabs -->
+    <SolidColorBrush x:Key="DisabledBgBrush" Color="#E0E0E0" />
+    <!-- Gray for Read-Only Boxes -->
+
+    <!-- Text Colors -->
+    <SolidColorBrush x:Key="TextLightBrush" Color="#FFFFFF" />
+    <!-- White Text -->
+    <SolidColorBrush x:Key="TextDarkBrush" Color="#333333" />
+    <!-- Dark Gray Text -->
+    <SolidColorBrush x:Key="TextBlackBrush" Color="#222222" />
+    <!-- Almost Black Text -->
+
+    <!-- Accent Text Colors -->
+    <SolidColorBrush x:Key="TextDangerBrush" Color="#8B0000" />
+    <!-- Dark Red for Total Due -->
+    <SolidColorBrush x:Key="TextHighlightBrush" Color="#00699e" />
+    <!-- Blue for Amount Tendered (matches ActionBtn) -->
+    <SolidColorBrush x:Key="TextBalanceBrush" Color="#DC2626" />
+    <!-- Bright Red for Balance -->
+    <SolidColorBrush x:Key="TextInactiveBrush" Color="#888888" />
+    <!-- Gray for Inactive Tabs -->
+
+    <!-- Borders -->
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#222222" />
+    <!-- Standard Button Border -->
+
+</ResourceDictionary>

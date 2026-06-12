@@ -1,0 +1,111 @@
+﻿<Window x:Class="POS.BackOffice.UI.Views.Layout.ManagementShellView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="KUMARA ARCADE - KOTTAWA (KT)" Height="768" Width="1024"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="#E5E5E5">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Menu Grid.Row="0" Background="#F0F0F0" BorderBrush="DarkGray" BorderThickness="0,0,0,1" Padding="2,2" VerticalAlignment="Center">
+
+            <MenuItem Header="_File">
+                <MenuItem Header="Final Account Format Setting" />
+                <MenuItem Header="Cheque Printer Margin Setting" />
+                <MenuItem Header="Item Upload To Scale" />
+                <MenuItem Header="Day-End Update" />
+                <Separator />
+                <MenuItem Header="Backup" />
+                <MenuItem Header="Exit" />
+            </MenuItem>
+
+            <MenuItem Header="_Dashboard" Command="{Binding NavigateToDashboardCommand}" />
+
+            <MenuItem Header="Inventory _Setup">
+                <MenuItem Header="Categories" Command="{Binding NavigateToCategoryCommand}" />
+                <MenuItem Header="Sub-Categories" Command="{Binding NavigateToSubCategoryCommand}" />
+                <MenuItem Header="Item Properties" Command="{Binding NavigateToItemPropertyCommand}" />
+                <MenuItem Header="Units of Measure" Command="{Binding NavigateToUnitOfMeasureCommand}" />
+                <MenuItem Header="Suppliers" Command="{Binding NavigateToSupplierCommand}" />
+                <MenuItem Header="Item Master" Command="{Binding NavigateToItemMasterCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="Inventory _Operation">
+                <MenuItem Header="Stock Adjustment" Command="{Binding NavigateToStockAdjustmentCommand}" />
+                <MenuItem Header="Stock Balance" Command="{Binding NavigateToStockBalanceCommand}" />
+                <MenuItem Header="Goods Received Note (GRN)" Command="{Binding NavigateToGoodsReceivedNoteCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="_Purchasing">
+                <MenuItem Header="Purchase Order" Command="{Binding NavigateToPurchaseOrderCommand}" />
+                <MenuItem Header="Supplier Return" Command="{Binding NavigateToSupplierReturnCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="_Sales">
+                <MenuItem Header="Customer Return" Command="{Binding NavigateToCustomerReturnCommand}" />
+                <MenuItem Header="Daily Sales Audit" Command="{Binding NavigateToDailySalesAuditCommand}" />
+                <MenuItem Header="Quotation" Command="{Binding NavigateToQuotationCommand}" />
+                <MenuItem Header="Receipt" Command="{Binding NavigateToReceiptCommand}" />
+                <MenuItem Header="Wholesale Invoice" Command="{Binding NavigateToWholesaleInvoiceCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="_CRM">
+                <MenuItem Header="Customer Ledger" Command="{Binding NavigateToCustomerLedgerCommand}" />
+                <MenuItem Header="Customer Master" Command="{Binding NavigateToCustomerMasterCommand}" />
+                <MenuItem Header="Gift Voucher" Command="{Binding NavigateToGiftVoucherCommand}" />
+                <MenuItem Header="Loyalty Rewards" Command="{Binding NavigateToLoyaltyRewardsCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="_Finance">
+                <MenuItem Header="Bank Deposit" Command="{Binding NavigateToBankDepositCommand}" />
+                <MenuItem Header="Cash Book" Command="{Binding NavigateToCashBookCommand}" />
+                <MenuItem Header="Payment Voucher" Command="{Binding NavigateToPaymentVoucherCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="_Reports">
+                <MenuItem Header="Audit Log" Command="{Binding NavigateToAuditLogCommand}" />
+                <MenuItem Header="Inventory Report" Command="{Binding NavigateToInventoryReportCommand}" />
+                <MenuItem Header="Sales Report" Command="{Binding NavigateToSalesReportCommand}" />
+                <MenuItem Header="Supplier Report" Command="{Binding NavigateToSupplierReportCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="_Admin">
+                <MenuItem Header="Access Control" Command="{Binding NavigateToAccessControlCommand}" />
+                <MenuItem Header="POS Hardware Settings" Command="{Binding NavigateToPosHardwareSettingsCommand}" />
+                <MenuItem Header="Store Configuration" Command="{Binding NavigateToStoreConfigurationCommand}" />
+                <MenuItem Header="User Management" Command="{Binding NavigateToUserManagementCommand}" />
+            </MenuItem>
+
+        </Menu>
+
+        <Grid Grid.Row="1">
+            <ContentControl Background="#DED9CD" x:Name="MainContentHost" Content="{Binding CurrentPage}" />
+        </Grid>
+
+        <StatusBar Grid.Row="2" Background="#E5E5E5" BorderBrush="DarkGray" BorderThickness="0,1,0,0" Padding="0" Height="45">
+
+            <StatusBarItem Padding="0" HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                <Border Background="#EAA3C8" Width="220" BorderBrush="DarkGray" BorderThickness="0,0,1,0">
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="Admin" FontSize="11" Foreground="#333333" HorizontalAlignment="Center"/>
+                        <TextBlock Text="2026-06-06 11:55:00" FontSize="11" Foreground="#333333" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </StatusBarItem>
+
+            <StatusBarItem VerticalAlignment="Bottom" Margin="10,0,0,5">
+                <TextBlock Text="Ver: B4:04:24" Foreground="#666666" FontSize="11"/>
+            </StatusBarItem>
+
+        </StatusBar>
+    </Grid>
+</Window>

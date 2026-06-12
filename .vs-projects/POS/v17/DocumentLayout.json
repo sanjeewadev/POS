@@ -1,0 +1,1595 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\itempropertyview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\itempropertyview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\itemmasterview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\itemmasterview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\purchasing\\purchaseorderview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\purchasing\\purchaseorderview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\grnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\grnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\categoryview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\categoryview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\unitofmeasureview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\unitofmeasureview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\stockbalanceview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\stockbalanceview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\locationtransferview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\locationtransferview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\sales\\wholesaleinvoiceview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\sales\\wholesaleinvoiceview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\sales\\receiptview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\sales\\receiptview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\sales\\quotationview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\sales\\quotationview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\sales\\customerreturnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\sales\\customerreturnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\sales\\dailysalesauditview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\sales\\dailysalesauditview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\reports\\inventoryreportview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\reports\\inventoryreportview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\reports\\auditlogview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\reports\\auditlogview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\finance\\bankdepositview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\finance\\bankdepositview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\finance\\paymentvoucherview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\finance\\paymentvoucherview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\finance\\expensevoucherview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\finance\\expensevoucherview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\finance\\cashbookview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\finance\\cashbookview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\crm\\customerledgerview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\crm\\customerledgerview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\crm\\customermasterview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\crm\\customermasterview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\crm\\loyaltyrewardsview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\crm\\loyaltyrewardsview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\crm\\giftvoucherview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\crm\\giftvoucherview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\admin\\accesscontrolview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\admin\\accesscontrolview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\admin\\poshardwaresettingsview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\admin\\poshardwaresettingsview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\admin\\storeconfigurationview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\admin\\storeconfigurationview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\admin\\usermanagementview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\admin\\usermanagementview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\usermanagementview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\usermanagementview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\supplierreturnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\supplierreturnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\purchaseorderview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\purchaseorderview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\grnview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\grnview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\barcodeprinterview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\barcodeprinterview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\supplierview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\supplierview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\subcategoryview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\subcategoryview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\perchasorederviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\perchasorederviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\layout\\managementshellview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\layout\\managementshellview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\itemmasterviewmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\itemmasterviewmodels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\grnviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\grnviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\itempropertyviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\itempropertyviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\layout\\managementshellview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\layout\\managementshellview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\itemmasterview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\itemmasterview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\supplierreturnview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\supplierreturnview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\supplierviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\supplierviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\viewmodelbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\viewmodelbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\loginviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\loginviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\categoryviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\categoryviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\viewmodels\\salesviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\viewmodels\\salesviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\viewmodels\\loginviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\viewmodels\\loginviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\views\\loginview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\views\\loginview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\views\\salesview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\views\\salesview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\dialogs\\cashmovementdialogview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\dialogs\\cashmovementdialogview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\viewmodels\\subcategoryviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\viewmodels\\subcategoryviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\layout\\loginview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\layout\\loginview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\supplierview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\supplierview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\itempropertyview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\itempropertyview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventorypages\\subcategoryview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventorypages\\subcategoryview.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\converters\\inversebooleanconverter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\converters\\inversebooleanconverter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\purchasing\\supplierreturnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\purchasing\\supplierreturnview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\reports\\supplierreportview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\reports\\supplierreportview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\reports\\salesreportview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\reports\\salesreportview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\inventoryoperations\\stockadjustmentview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\inventoryoperations\\stockadjustmentview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\views\\pages\\dashboardview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\views\\pages\\dashboardview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.backoffice.ui\\resources\\colors.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{E15FD615-15F5-355C-DB21-4D1B48810BA4}|POS.BackOffice.UI\\POS.BackOffice.UI.csproj|solutionrelative:pos.backoffice.ui\\resources\\colors.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|c:\\users\\sanjeewa\\dev\\myprojects\\pos\\pos.cashier.ui\\views\\salesview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{78B7B86F-A292-A98B-EF95-00748465E855}|POS.Cashier.UI\\POS.Cashier.UI.csproj|solutionrelative:pos.cashier.ui\\views\\salesview.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Data\\AppDbContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Data\\AppDbContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\GrnRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Repositories\\GrnRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\GrnDetail.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\GrnDetail.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\GrnHeader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\GrnHeader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Supplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\Supplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\ItemRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Repositories\\ItemRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Item.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\Item.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Enums\\UserRole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Enums\\UserRole.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Enums\\TransationType.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Enums\\TransationType.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Sync\\CloudSyncWorker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Sync\\CloudSyncWorker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\SupplierRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Repositories\\SupplierRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\SubCategoryRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Repositories\\SubCategoryRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\CategoryRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Repositories\\CategoryRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\AttributeValueRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Repositories\\AttributeValueRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\AttributeGroupRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Repositories\\AttributeGroupRepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AttributeGroup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\AttributeGroup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\User.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\User.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\SyncOutbox.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\SyncOutbox.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\SubCategory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\SubCategory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\StockBatch.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\StockBatch.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Shift.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\Shift.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\InvoiceItem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\InvoiceItem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Invoice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\Invoice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\InventoryTransaction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\InventoryTransaction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Expense.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\Expense.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Creditor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\Creditor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\CreditLedger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\CreditLedger.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\Category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AuditLog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\AuditLog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AttributeValue.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:POS.Domain\\Models\\AttributeValue.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 6,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{fbcae063-e2c0-4ab1-a516-996ea3dafb72}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ItemMasterView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-10T13:14:17.402Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ItemPropertyView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T10:59:38.539Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "LocationTransferView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\LocationTransferView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\LocationTransferView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\LocationTransferView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\LocationTransferView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T14:40:39.889Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "GrnView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T14:37:57.645Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "StockBalanceView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockBalanceView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockBalanceView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockBalanceView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockBalanceView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T14:44:31.749Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "App.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\App.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\App.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\App.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\App.xaml.cs",
+              "ViewState": "AgIAABgAAAAAAAAAAAAQwCcAAAAzAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T13:01:07.25Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "PurchaseOrderView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Purchasing\\PurchaseOrderView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Purchasing\\PurchaseOrderView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Purchasing\\PurchaseOrderView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Purchasing\\PurchaseOrderView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-11T12:00:31.151Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "CategoryView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\CategoryView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\CategoryView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\CategoryView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\CategoryView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T10:47:05.761Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "UnitOfMeasureView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\UnitOfMeasureView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\UnitOfMeasureView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\UnitOfMeasureView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\UnitOfMeasureView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T10:51:17.623Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "WholesaleInvoiceView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\WholesaleInvoiceView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Sales\\WholesaleInvoiceView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\WholesaleInvoiceView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Sales\\WholesaleInvoiceView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:06:02.337Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "ReceiptView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\ReceiptView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Sales\\ReceiptView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\ReceiptView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Sales\\ReceiptView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:08:53.711Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "QuotationView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\QuotationView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Sales\\QuotationView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\QuotationView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Sales\\QuotationView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:05:09.78Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "CustomerReturnView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\CustomerReturnView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Sales\\CustomerReturnView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\CustomerReturnView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Sales\\CustomerReturnView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:07:58.928Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "DailySalesAuditView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\DailySalesAuditView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Sales\\DailySalesAuditView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Sales\\DailySalesAuditView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Sales\\DailySalesAuditView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:10:10.264Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "InventoryReportView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\InventoryReportView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Reports\\InventoryReportView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\InventoryReportView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Reports\\InventoryReportView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:12:47.749Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "AuditLogView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\AuditLogView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Reports\\AuditLogView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\AuditLogView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Reports\\AuditLogView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:16:31.322Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "BankDepositView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\BankDepositView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Finance\\BankDepositView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\BankDepositView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Finance\\BankDepositView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T00:54:13.316Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "PaymentVoucherView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\PaymentVoucherView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Finance\\PaymentVoucherView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\PaymentVoucherView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Finance\\PaymentVoucherView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-11T16:24:51.438Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "ExpenseVoucherView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\ExpenseVoucherView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Finance\\ExpenseVoucherView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\ExpenseVoucherView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Finance\\ExpenseVoucherView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:22:38.51Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "CashBookView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\CashBookView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Finance\\CashBookView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Finance\\CashBookView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Finance\\CashBookView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T00:54:53.436Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "CustomerLedgerView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerLedgerView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerLedgerView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerLedgerView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerLedgerView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T05:10:10.956Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "CustomerMasterView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerMasterView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerMasterView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerMasterView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Crm\\CustomerMasterView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:00:01.62Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "LoyaltyRewardsView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\LoyaltyRewardsView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Crm\\LoyaltyRewardsView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\LoyaltyRewardsView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Crm\\LoyaltyRewardsView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T05:11:01.798Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "GiftVoucherView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\GiftVoucherView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Crm\\GiftVoucherView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Crm\\GiftVoucherView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Crm\\GiftVoucherView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:02:00.556Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "AccessControlView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\AccessControlView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Admin\\AccessControlView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\AccessControlView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Admin\\AccessControlView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T01:08:07.903Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "PosHardwareSettingsView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\PosHardwareSettingsView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Admin\\PosHardwareSettingsView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\PosHardwareSettingsView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Admin\\PosHardwareSettingsView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-11T16:23:46.088Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "StoreConfigurationView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\StoreConfigurationView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Admin\\StoreConfigurationView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\StoreConfigurationView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Admin\\StoreConfigurationView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T01:08:48.635Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "UserManagementView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\UserManagementView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Admin\\UserManagementView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Admin\\UserManagementView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Admin\\UserManagementView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T01:06:36.316Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "SupplierReturnView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T14:39:08.697Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "UserManagementView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\UserManagementView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\UserManagementView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\UserManagementView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\UserManagementView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T02:45:43.073Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 30,
+              "Title": "PurchaseOrderView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\PurchaseOrderView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\PurchaseOrderView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\PurchaseOrderView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\PurchaseOrderView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T14:37:21.09Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 31,
+              "Title": "GrnView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\GrnView.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T06:43:58.824Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 32,
+              "Title": "BarcodePrinterView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\BarcodePrinterView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\BarcodePrinterView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\BarcodePrinterView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\BarcodePrinterView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T06:36:22.328Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 33,
+              "Title": "SupplierView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T10:52:24.904Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 34,
+              "Title": "SubCategoryView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T10:49:54.481Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 35,
+              "Title": "App.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\App.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\App.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\App.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\App.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-10T13:00:19.836Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 36,
+              "Title": "PerchasOrederViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\PerchasOrederViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\PerchasOrederViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\PerchasOrederViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\PerchasOrederViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T15:09:31.451Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 37,
+              "Title": "MainViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\MainViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\MainViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\MainViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\MainViewModel.cs",
+              "ViewState": "AgIAAE8AAAAAAAAAAAAowGUAAABVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:47:56.895Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 38,
+              "Title": "ManagementShellView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-11T06:35:12.237Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 39,
+              "Title": "ItemMasterViewModels.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\ItemMasterViewModels.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\ItemMasterViewModels.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\ItemMasterViewModels.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\ItemMasterViewModels.cs",
+              "ViewState": "AgIAAN8AAAAAAAAAAAAwwOoAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:46:30.66Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 40,
+              "Title": "GrnViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\GrnViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\GrnViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\GrnViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\GrnViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAD0BAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T06:11:49.472Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 41,
+              "Title": "ItemPropertyViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\ItemPropertyViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\ItemPropertyViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\ItemPropertyViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\ItemPropertyViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADgAAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:47:48.236Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 42,
+              "Title": "ManagementShellView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Layout\\ManagementShellView.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T06:36:16.509Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 43,
+              "Title": "ItemMasterView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemMasterView.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T13:20:44.695Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 44,
+              "Title": "SupplierReturnView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\SupplierReturnView.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T06:56:31.573Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 45,
+              "Title": "SupplierViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\SupplierViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\SupplierViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\SupplierViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\SupplierViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADgAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:48:03.917Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 71,
+              "Title": "AppDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Data\\AppDbContext.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Data\\AppDbContext.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Data\\AppDbContext.cs",
+              "RelativeToolTip": "POS.Domain\\Data\\AppDbContext.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAYwBQAAAAuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:56:33.533Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 46,
+              "Title": "ViewModelBase.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\ViewModelBase.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\ViewModelBase.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\ViewModelBase.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\ViewModelBase.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:48:10.172Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 72,
+              "Title": "GrnRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\GrnRepository.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Repositories\\GrnRepository.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\GrnRepository.cs",
+              "RelativeToolTip": "POS.Domain\\Repositories\\GrnRepository.cs",
+              "ViewState": "AgIAACoAAAAAAAAAAAAAwEQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T06:13:46.609Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 73,
+              "Title": "GrnDetail.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\GrnDetail.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\GrnDetail.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\GrnDetail.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\GrnDetail.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T06:07:27.777Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 74,
+              "Title": "GrnHeader.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\GrnHeader.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\GrnHeader.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\GrnHeader.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\GrnHeader.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAxwDAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T06:07:07.867Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 47,
+              "Title": "LoginViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\LoginViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\LoginViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\LoginViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\LoginViewModel.cs",
+              "ViewState": "AgIAAD8AAAAAAAAAAAAAAAUAAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:47:52.131Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 75,
+              "Title": "Supplier.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Supplier.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\Supplier.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Supplier.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\Supplier.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T12:41:59.853Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 76,
+              "Title": "ItemRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\ItemRepository.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Repositories\\ItemRepository.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\ItemRepository.cs",
+              "RelativeToolTip": "POS.Domain\\Repositories\\ItemRepository.cs",
+              "ViewState": "AgIAAC4AAAAAAAAAAAAYwDAAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:44:55.915Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 77,
+              "Title": "Item.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Item.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\Item.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Item.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\Item.cs",
+              "ViewState": "AgIAABoAAAAAAAAAAAAAwEAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:44:07.607Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 48,
+              "Title": "CategoryViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\CategoryViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\CategoryViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\CategoryViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\CategoryViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:47:30.201Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 49,
+              "Title": "SalesViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\ViewModels\\SalesViewModel.cs",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\ViewModels\\SalesViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\ViewModels\\SalesViewModel.cs",
+              "RelativeToolTip": "POS.Cashier.UI\\ViewModels\\SalesViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:25:13.953Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 53,
+              "Title": "App.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\App.xaml.cs",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\App.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\App.xaml.cs",
+              "RelativeToolTip": "POS.Cashier.UI\\App.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:03:55.956Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 52,
+              "Title": "SalesView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Views\\SalesView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\Views\\SalesView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Views\\SalesView.xaml.cs",
+              "RelativeToolTip": "POS.Cashier.UI\\Views\\SalesView.xaml.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABAAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-05T02:48:23.135Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 51,
+              "Title": "LoginView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Views\\LoginView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\Views\\LoginView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Views\\LoginView.xaml.cs",
+              "RelativeToolTip": "POS.Cashier.UI\\Views\\LoginView.xaml.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:08:34.246Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 50,
+              "Title": "LoginViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\ViewModels\\LoginViewModel.cs",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\ViewModels\\LoginViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\ViewModels\\LoginViewModel.cs",
+              "RelativeToolTip": "POS.Cashier.UI\\ViewModels\\LoginViewModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:20:24.171Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 55,
+              "Title": "CashMovementDialogView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Dialogs\\CashMovementDialogView.xaml",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\Dialogs\\CashMovementDialogView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Dialogs\\CashMovementDialogView.xaml",
+              "RelativeToolTip": "POS.Cashier.UI\\Dialogs\\CashMovementDialogView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-11T05:03:41.806Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 54,
+              "Title": "AssemblyInfo.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\AssemblyInfo.cs",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\AssemblyInfo.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\AssemblyInfo.cs",
+              "RelativeToolTip": "POS.Cashier.UI\\AssemblyInfo.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T05:02:10.269Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 78,
+              "Title": "UserRole.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Enums\\UserRole.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Enums\\UserRole.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Enums\\UserRole.cs",
+              "RelativeToolTip": "POS.Domain\\Enums\\UserRole.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:26:15.054Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 79,
+              "Title": "TransationType.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Enums\\TransationType.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Enums\\TransationType.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Enums\\TransationType.cs",
+              "RelativeToolTip": "POS.Domain\\Enums\\TransationType.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:25:51.953Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 80,
+              "Title": "CloudSyncWorker.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Sync\\CloudSyncWorker.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Sync\\CloudSyncWorker.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Sync\\CloudSyncWorker.cs",
+              "RelativeToolTip": "POS.Domain\\Sync\\CloudSyncWorker.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:32:29.76Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 81,
+              "Title": "SupplierRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\SupplierRepository.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Repositories\\SupplierRepository.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\SupplierRepository.cs",
+              "RelativeToolTip": "POS.Domain\\Repositories\\SupplierRepository.cs",
+              "ViewState": "AgIAADkAAAAAAAAAAAAAAA4AAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:32:23.964Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 56,
+              "Title": "App.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\App.xaml",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\App.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\App.xaml",
+              "RelativeToolTip": "POS.Cashier.UI\\App.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-11T04:57:41.363Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 82,
+              "Title": "SubCategoryRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\SubCategoryRepository.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Repositories\\SubCategoryRepository.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\SubCategoryRepository.cs",
+              "RelativeToolTip": "POS.Domain\\Repositories\\SubCategoryRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:32:18.476Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 83,
+              "Title": "CategoryRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\CategoryRepository.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Repositories\\CategoryRepository.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\CategoryRepository.cs",
+              "RelativeToolTip": "POS.Domain\\Repositories\\CategoryRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:32:14.086Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 84,
+              "Title": "AttributeValueRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\AttributeValueRepository.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Repositories\\AttributeValueRepository.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\AttributeValueRepository.cs",
+              "RelativeToolTip": "POS.Domain\\Repositories\\AttributeValueRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:32:09.064Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 85,
+              "Title": "AttributeGroupRepository.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\AttributeGroupRepository.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Repositories\\AttributeGroupRepository.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Repositories\\AttributeGroupRepository.cs",
+              "RelativeToolTip": "POS.Domain\\Repositories\\AttributeGroupRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:31:53.068Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 86,
+              "Title": "AttributeGroup.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AttributeGroup.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\AttributeGroup.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AttributeGroup.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\AttributeGroup.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T11:57:05.041Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 57,
+              "Title": "SubCategoryViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\SubCategoryViewModel.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\ViewModels\\SubCategoryViewModel.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\ViewModels\\SubCategoryViewModel.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\ViewModels\\SubCategoryViewModel.cs",
+              "ViewState": "AgIAAI4AAAAAAAAAAAAwwKEAAABLAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-11T04:48:00.517Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 58,
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\MainWindow.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\MainWindow.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\MainWindow.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T11:02:28.649Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 87,
+              "Title": "User.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\User.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\User.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\User.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\User.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAZAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:29:05.926Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 88,
+              "Title": "SyncOutbox.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\SyncOutbox.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\SyncOutbox.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\SyncOutbox.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\SyncOutbox.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:29:29.843Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 89,
+              "Title": "SubCategory.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\SubCategory.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\SubCategory.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\SubCategory.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\SubCategory.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-07T02:00:05.707Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 90,
+              "Title": "StockBatch.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\StockBatch.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\StockBatch.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\StockBatch.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\StockBatch.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:28:03.058Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 91,
+              "Title": "Shift.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Shift.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\Shift.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Shift.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\Shift.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T12:03:04.924Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 92,
+              "Title": "InvoiceItem.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\InvoiceItem.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\InvoiceItem.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\InvoiceItem.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\InvoiceItem.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:28:55.019Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 93,
+              "Title": "Invoice.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Invoice.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\Invoice.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Invoice.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\Invoice.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:28:40.137Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 94,
+              "Title": "InventoryTransaction.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\InventoryTransaction.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\InventoryTransaction.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\InventoryTransaction.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\InventoryTransaction.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:28:21.569Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 95,
+              "Title": "Expense.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Expense.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\Expense.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Expense.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\Expense.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T12:03:22.544Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 96,
+              "Title": "Creditor.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Creditor.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\Creditor.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Creditor.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\Creditor.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:59:22.099Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 97,
+              "Title": "CreditLedger.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\CreditLedger.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\CreditLedger.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\CreditLedger.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\CreditLedger.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:59:52.248Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 98,
+              "Title": "Category.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Category.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\Category.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\Category.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\Category.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:27:09.425Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 99,
+              "Title": "AuditLog.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AuditLog.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\AuditLog.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AuditLog.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\AuditLog.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-31T11:29:17.219Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 100,
+              "Title": "AttributeValue.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AttributeValue.cs",
+              "RelativeDocumentMoniker": "POS.Domain\\Models\\AttributeValue.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Domain\\Models\\AttributeValue.cs",
+              "RelativeToolTip": "POS.Domain\\Models\\AttributeValue.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T12:00:43.969Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 59,
+              "Title": "LoginView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Layout\\LoginView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Layout\\LoginView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Layout\\LoginView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Layout\\LoginView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T02:45:17.868Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 60,
+              "Title": "SupplierView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SupplierView.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T12:34:39.109Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 61,
+              "Title": "ItemPropertyView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\ItemPropertyView.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T11:37:34.46Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 62,
+              "Title": "SubCategoryView.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryPages\\SubCategoryView.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T08:24:52.415Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 63,
+              "Title": "InverseBooleanConverter.cs",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Converters\\InverseBooleanConverter.cs",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Converters\\InverseBooleanConverter.cs",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Converters\\InverseBooleanConverter.cs",
+              "RelativeToolTip": "POS.BackOffice.UI\\Converters\\InverseBooleanConverter.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-06T06:07:54.267Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 64,
+              "Title": "SupplierReturnView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Purchasing\\SupplierReturnView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Purchasing\\SupplierReturnView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Purchasing\\SupplierReturnView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Purchasing\\SupplierReturnView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-06T02:11:29.06Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 65,
+              "Title": "SupplierReportView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\SupplierReportView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Reports\\SupplierReportView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\SupplierReportView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Reports\\SupplierReportView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:15:05.45Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 66,
+              "Title": "SalesReportView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\SalesReportView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\Reports\\SalesReportView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\Reports\\SalesReportView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\Reports\\SalesReportView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T23:14:05.128Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 67,
+              "Title": "StockAdjustmentView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockAdjustmentView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockAdjustmentView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockAdjustmentView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\InventoryOperations\\StockAdjustmentView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T14:42:44.047Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 68,
+              "Title": "DashboardView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\DashboardView.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Views\\Pages\\DashboardView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Views\\Pages\\DashboardView.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Views\\Pages\\DashboardView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T04:52:49.24Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 69,
+              "Title": "Colors.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Resources\\Colors.xaml",
+              "RelativeDocumentMoniker": "POS.BackOffice.UI\\Resources\\Colors.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\Resources\\Colors.xaml",
+              "RelativeToolTip": "POS.BackOffice.UI\\Resources\\Colors.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T04:35:53.333Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 70,
+              "Title": "SalesView.xaml",
+              "DocumentMoniker": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Views\\SalesView.xaml",
+              "RelativeDocumentMoniker": "POS.Cashier.UI\\Views\\SalesView.xaml",
+              "ToolTip": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Cashier.UI\\Views\\SalesView.xaml",
+              "RelativeToolTip": "POS.Cashier.UI\\Views\\SalesView.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-06-05T02:48:25.405Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,273 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.GiftVoucherView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="850" d:DesignWidth="1250"
+             Background="#F5F5F5">
+
+    <UserControl.Resources>
+        <!-- Standard Button Style -->
+        <Style TargetType="Button" x:Key="StandardBtn">
+            <Setter Property="Background" Value="#2B3C38"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3B524E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Generate Action Button (Blue) -->
+        <Style TargetType="Button" x:Key="GenerateBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#2B5B84"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1C3F5E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Activate Action Button (Green) -->
+        <Style TargetType="Button" x:Key="ActivateBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#28A745"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#218838"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Standard Input Style -->
+        <Style TargetType="Control" x:Key="StandardInput">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Height" Value="30"/>
+        </Style>
+
+        <!-- Group Box Border Style -->
+        <Style TargetType="Border" x:Key="GroupBoxBorder">
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <!-- Group Header Text Style -->
+        <Style TargetType="TextBlock" x:Key="GroupHeader">
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <!-- Left Column: Generation & Activation Controls -->
+            <ColumnDefinition Width="380"/>
+            <!-- Right Column: Tracking Ledger Grid -->
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ========================================== -->
+        <!-- LEFT PANEL: GENERATION & ISSUANCE          -->
+        <!-- ========================================== -->
+        <StackPanel Grid.Column="0" Margin="0,0,20,0">
+
+            <!-- ZONE 1: Batch Generation (The Factory) -->
+            <Border Style="{StaticResource GroupBoxBorder}" Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock Text="1. Generate Voucher Batch" Style="{StaticResource GroupHeader}" Foreground="#2B5B84"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Prefix (Optional)" Foreground="#666666" Margin="0,0,0,5"/>
+                            <TextBox x:Name="txtPrefix" Style="{StaticResource StandardInput}" ToolTip="e.g., NY2026"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Face Value (Rs.) *" Foreground="#666666" Margin="0,0,0,5"/>
+                            <TextBox x:Name="txtFaceValue" Style="{StaticResource StandardInput}" HorizontalContentAlignment="Right" Text="0.00"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Qty to Generate *" Foreground="#666666" Margin="0,0,0,5"/>
+                            <TextBox x:Name="txtQuantity" Style="{StaticResource StandardInput}" HorizontalContentAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Validity (Months) *" Foreground="#666666" Margin="0,0,0,5"/>
+                            <TextBox x:Name="txtValidity" Style="{StaticResource StandardInput}" HorizontalContentAlignment="Center" Text="12"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Button x:Name="btnGenerateBatch" Content="Generate Inactive Batch" Style="{StaticResource GenerateBtn}" Margin="0,10,0,0" ToolTip="Creates codes in database. Does NOT make them spendable."/>
+                </StackPanel>
+            </Border>
+
+            <!-- ZONE 2: Issuance & Activation (The Checkout) -->
+            <Border Style="{StaticResource GroupBoxBorder}" Background="#F4FAF6" BorderBrush="#C3E6CB">
+                <StackPanel>
+                    <TextBlock Text="2. Activation &amp; Issuance" Style="{StaticResource GroupHeader}" Foreground="#28A745"/>
+
+                    <TextBlock Text="Scan Serial Number *" Foreground="#333333" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtScanSerial" Style="{StaticResource StandardInput}" Background="#FFFFE0" ToolTip="Scan the physical card barcode here"/>
+
+                    <TextBlock Text="Link to Customer (Optional)" Foreground="#666666" Margin="0,0,0,5"/>
+                    <ComboBox x:Name="cmbCustomer" Style="{StaticResource StandardInput}" IsEditable="True" ToolTip="Search by mobile number or name"/>
+
+                    <TextBlock Text="Payment Received Via *" Foreground="#666666" Margin="0,0,0,5"/>
+                    <ComboBox x:Name="cmbPaymentMethod" Style="{StaticResource StandardInput}">
+                        <ComboBoxItem Content="Cash"/>
+                        <ComboBoxItem Content="Credit Card"/>
+                        <ComboBoxItem Content="Bank Transfer"/>
+                        <ComboBoxItem Content="Complimentary / PR"/>
+                    </ComboBox>
+
+                    <Button x:Name="btnActivate" Content="Activate &amp; Issue Voucher" Style="{StaticResource ActivateBtn}" Margin="0,10,0,0" ToolTip="Marks voucher as paid and starts the expiry countdown"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Summary Status Snippet -->
+            <Border Background="#E2EBE9" BorderBrush="#B2D1C9" BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel>
+                    <TextBlock Text="Total Active Liability" Foreground="#2B3C38" FontSize="12" Margin="0,0,0,5"/>
+                    <TextBlock x:Name="txtTotalLiability" Text="Rs. 0.00" FontWeight="Bold" FontSize="22" Foreground="#2B3C38" ToolTip="Total value of all unspent, active vouchers"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+
+        <!-- ========================================== -->
+        <!-- RIGHT PANEL: TRACKING LEDGER (GRID)        -->
+        <!-- ========================================== -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- Search & Filters -->
+                <RowDefinition Height="*"/>
+                <!-- DataGrid -->
+            </Grid.RowDefinitions>
+
+            <!-- Search and Filter Bar -->
+            <Border Grid.Row="0" Style="{StaticResource GroupBoxBorder}" Padding="10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="150"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" Foreground="#666666" Margin="0,0,10,0"/>
+                    <TextBox Grid.Column="1" x:Name="txtSearchLedger" Style="{StaticResource StandardInput}" Margin="0" ToolTip="Search by Serial No or Customer"/>
+
+                    <TextBlock Grid.Column="3" Text="Status Filter:" VerticalAlignment="Center" Foreground="#666666" Margin="0,0,10,0"/>
+                    <ComboBox Grid.Column="4" x:Name="cmbStatusFilter" Style="{StaticResource StandardInput}" Margin="0">
+                        <ComboBoxItem Content="All Vouchers" IsSelected="True"/>
+                        <ComboBoxItem Content="Inactive (Unsold)"/>
+                        <ComboBoxItem Content="Active (Spendable)"/>
+                        <ComboBoxItem Content="Redeemed (Spent)"/>
+                        <ComboBoxItem Content="Expired / Void"/>
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <!-- ZONE 3: Voucher Tracking Grid -->
+            <Border Grid.Row="1" Style="{StaticResource GroupBoxBorder}" Padding="0">
+                <DataGrid x:Name="dgVouchers" 
+                          AutoGenerateColumns="False" 
+                          CanUserAddRows="False" 
+                          CanUserDeleteRows="False" 
+                          IsReadOnly="True" 
+                          HeadersVisibility="Column" 
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#EEEEEE"
+                          BorderThickness="0"
+                          RowHeight="40"
+                          Background="Transparent"
+                          SelectionMode="Single">
+
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#F8F8F8"/>
+                            <Setter Property="Foreground" Value="#333333"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="10,10"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                        </Style>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="10,0"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGrid.Resources>
+
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Serial No." Binding="{Binding SerialNumber}" Width="140" FontWeight="SemiBold"/>
+                        <DataGridTextColumn Header="Batch" Binding="{Binding BatchPrefix}" Width="80"/>
+
+                        <DataGridTextColumn Header="Face Value" Binding="{Binding FaceValue, StringFormat=N2}" Width="100">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Issue Date" Binding="{Binding IssueDate, StringFormat=dd/MM/yyyy}" Width="100"/>
+                        <DataGridTextColumn Header="Expiry Date" Binding="{Binding ExpiryDate, StringFormat=dd/MM/yyyy}" Width="100"/>
+                        <DataGridTextColumn Header="Customer Link" Binding="{Binding CustomerName}" Width="*"/>
+
+                        <!-- Action Column: Void Button -->
+                        <DataGridTemplateColumn Header="Action" Width="70">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Void" Background="#A94044" Foreground="White" BorderThickness="0" Cursor="Hand" Padding="5" FontWeight="Bold" ToolTip="Cancel a compromised or stolen active voucher"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

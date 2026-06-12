@@ -1,0 +1,266 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryPages.ItemPropertyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1200"
+             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+
+    <UserControl.Resources>
+        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Margin" Value="0,5,0,5"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="ClassicInput">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#CCCCCC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003333"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#007777"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Border" x:Key="ClassicGroupBox">
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+
+        <Style TargetType="DataGridCell" x:Key="BaseCell">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#005555"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
+                <StackPanel>
+                    <TextBlock Text="1. ATTRIBUTE DEFINITION" Style="{StaticResource HeaderLabel}" Margin="0,0,0,5"/>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Attribute Group *" Style="{StaticResource InlineLabel}"/>
+                        <ComboBox Grid.Column="1" 
+                                  ItemsSource="{Binding AttributeGroups}" 
+                                  SelectedItem="{Binding SelectedAttributeGroup, Mode=TwoWay}" 
+                                  DisplayMemberPath="GroupName" 
+                                  Style="{StaticResource ClassicCombo}" 
+                                  ToolTip="e.g., Color, Size, Storage"/>
+
+                        <Button Grid.Column="3" Content="+ Add" Command="{Binding AddGroupCommand}" Style="{StaticResource ClassicBtn}" Height="24" Padding="10,0"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Attribute Value *" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
+                        <TextBox Grid.Column="1" Text="{Binding ValueName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Background="#FFFFE0" FontWeight="Bold" ToolTip="e.g., Red, XL, 512GB"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Stretch">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="2. CATEGORY ASSIGNMENT" Style="{StaticResource HeaderLabel}" Foreground="#005500" Margin="0,0,0,5"/>
+                    <TextBlock Grid.Row="0" Text="(Select categories where this applies)" FontSize="10" Foreground="#666" HorizontalAlignment="Right" VerticalAlignment="Center" FontStyle="Italic"/>
+
+                    <Border Grid.Row="1" Background="White" BorderBrush="#808080" BorderThickness="1" Margin="0,5,0,0">
+                        <ListBox ItemsSource="{Binding Categories}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding CategoryName}" 
+                                              IsChecked="{Binding IsSelected, Mode=TwoWay}" 
+                                              Margin="5,4" 
+                                              Cursor="Hand" 
+                                              VerticalContentAlignment="Center"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="#003366" Padding="10" BorderBrush="#002244" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="ATTRIBUTE DATABASE" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
+
+                    <TextBox Grid.Column="1" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Height="28" Padding="5,0" Margin="0,0,15,0"/>
+
+                    <TextBlock Grid.Column="2" Text="Filter by Group:" Foreground="#A0C0E0" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox Grid.Column="3" 
+                              ItemsSource="{Binding AttributeGroups}" 
+                              SelectedItem="{Binding SelectedFilterGroup, Mode=TwoWay}" 
+                              DisplayMemberPath="GroupName" 
+                              Style="{StaticResource ClassicCombo}" Height="28" Margin="0,0,15,0"/>
+
+                    <Button Grid.Column="4" Content="SEARCH &amp; REFRESH" Style="{StaticResource ClassicBtn}" Height="28" Padding="15,0"/>
+                </Grid>
+            </Border>
+
+            <DataGrid Grid.Row="1" x:Name="dgProperties" ItemsSource="{Binding AttributeValues}" SelectedItem="{Binding SelectedAttributeValue, Mode=TwoWay}" 
+                      AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
+                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
+                      RowHeight="26" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1,0,1,1" 
+                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#E0E0E0"/>
+                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Padding" Value="5"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                    </Style>
+                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Attribute Group" Binding="{Binding AttributeGroup.GroupName}" Width="160" IsReadOnly="True" FontWeight="SemiBold" Foreground="#003366"/>
+                    <DataGridTextColumn Header="Attribute Value" Binding="{Binding ValueName}" Width="*" IsReadOnly="True" FontWeight="Bold"/>
+
+                    <DataGridCheckBoxColumn Header="Status (Deactivated)" Binding="{Binding IsDeactivated}" Width="130">
+                        <DataGridCheckBoxColumn.ElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="IsHitTestVisible" Value="False"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.ElementStyle>
+                    </DataGridCheckBoxColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Grid Grid.Row="2" Margin="0,5,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource ClassicGroupBox}" Margin="0" VerticalAlignment="Stretch">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="3. SETTINGS" Style="{StaticResource HeaderLabel}" Foreground="DarkRed" Margin="0,0,0,5"/>
+                        <WrapPanel Orientation="Horizontal">
+                            <CheckBox Content="Deactivate Attribute" IsChecked="{Binding IsDeactivated, Mode=TwoWay}" FontWeight="Bold" Foreground="DarkRed" Margin="0,0,10,0"/>
+                        </WrapPanel>
+                        <TextBlock Text="(Deactivated attributes hide from the Item Master property list)" FontSize="10" Foreground="#888" Margin="0,5,0,0" FontStyle="Italic"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Background="#E8E8E8" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" VerticalAlignment="Stretch">
+                    <Grid VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="DarkRed" BorderBrush="DarkRed" Padding="15,0" Height="30"/>
+
+                        <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0" Padding="15,0" Height="30"/>
+                        <Button Grid.Column="3" Content="💾 SAVE ATTRIBUTE" Command="{Binding SaveCommand}" Style="{StaticResource ActionBtn}" Padding="20,0" Height="30" FontSize="13"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

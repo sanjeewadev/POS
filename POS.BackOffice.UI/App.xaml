@@ -1,0 +1,47 @@
+﻿<Application x:Class="POS.BackOffice.UI.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             
+             xmlns:viewmodels="clr-namespace:POS.BackOffice.UI.ViewModels"
+             
+             xmlns:pages="clr-namespace:POS.BackOffice.UI.Views.Pages"
+             xmlns:inventorypages="clr-namespace:POS.BackOffice.UI.Views.Pages.InventoryPages"
+             xmlns:inventoryoperations="clr-namespace:POS.BackOffice.UI.Views.Pages.InventoryOperations"
+             xmlns:converters="clr-namespace:POS.BackOffice.UI.Converters"
+             Startup="Application_Startup">
+
+    <Application.Resources>
+
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+
+        <DataTemplate DataType="{x:Type viewmodels:CategoryViewModel}">
+            <inventorypages:CategoryView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:SubCategoryViewModel}">
+            <inventorypages:SubCategoryView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:ItemPropertyViewModel}">
+            <inventorypages:ItemPropertyView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:SupplierViewModel}">
+            <inventorypages:SupplierView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:ItemMasterViewModel}">
+            <inventorypages:ItemMasterView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
+            <inventoryoperations:GrnView />
+        </DataTemplate>
+
+
+        <!--<DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
+            <Purchasing:PurchaseOrderView />
+        </DataTemplate>-->
+
+    </Application.Resources>
+</Application>

@@ -1,0 +1,332 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.BarcodePrinterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="950" d:DesignWidth="1350"
+             Background="#F5F5F5">
+
+    <UserControl.Resources>
+        <Style TargetType="Button" x:Key="StandardBtn">
+            <Setter Property="Background" Value="#2B3C38"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3B524E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="PrintBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#1E7E34"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#155D27"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#2B5B84"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1C3F5E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="OutlineBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#2B5B84"/>
+            <Setter Property="BorderBrush" Value="#2B5B84"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E2EDF8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Control" x:Key="StandardInput">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Height" Value="30"/>
+        </Style>
+
+        <Style TargetType="Border" x:Key="GroupBoxBorder">
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="GroupHeader">
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Barcode &amp; Shelf Label Generation Utility" FontSize="22" FontWeight="Bold" Foreground="#333333"/>
+            <TextBlock Text="Generate and dispatch thermal price tags directly to hardware printers." FontSize="12" Foreground="#666666" Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.5*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Style="{StaticResource GroupBoxBorder}">
+                    <StackPanel>
+                        <TextBlock Text="1. Item Intake Mode" Style="{StaticResource GroupHeader}" Foreground="#2B5B84"/>
+
+                        <TabControl Background="Transparent" BorderThickness="0">
+                            <TabControl.Resources>
+                                <Style TargetType="TabItem">
+                                    <Setter Property="Padding" Value="15,8"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Foreground" Value="#666666"/>
+                                    <Setter Property="Background" Value="#F8F8F8"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Foreground" Value="#2B5B84"/>
+                                            <Setter Property="Background" Value="#E2EDF8"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TabControl.Resources>
+
+                            <TabItem Header="📄 Link to Document (GRN)">
+                                <Grid Margin="0,15,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Select Recent Goods Received Note (GRN)" Foreground="#333333" Margin="0,0,0,5"/>
+                                        <ComboBox x:Name="cmbGRN" Style="{StaticResource StandardInput}" Margin="0">
+                                            <ComboBoxItem Content="GRN-260607-001 (Unilever Sri Lanka)" IsSelected="True"/>
+                                            <ComboBoxItem Content="GRN-260606-042 (Samsung Electronics)"/>
+                                        </ComboBox>
+                                        <TextBlock Text="Auto-populates queue with exactly the quantities received." FontSize="11" Foreground="#1E7E34" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Load GRN Items" Style="{StaticResource ActionBtn}" Margin="10,0,0,15" Height="30" VerticalAlignment="Bottom"/>
+                                </Grid>
+                            </TabItem>
+
+                            <TabItem Header="🔍 Manual Item Lookup">
+                                <Grid Margin="0,15,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                        <TextBlock Text="Search Item / Barcode" Foreground="#333333" Margin="0,0,0,5"/>
+                                        <TextBox x:Name="txtItemSearch" Style="{StaticResource StandardInput}" Margin="0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                        <TextBlock Text="Qty" Foreground="#333333" Margin="0,0,0,5" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="txtManualQty" Style="{StaticResource StandardInput}" Text="1" HorizontalContentAlignment="Center" Margin="0"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Content="Add Item" Style="{StaticResource StandardBtn}" Background="#666666" Margin="0,0,0,0" Height="30" VerticalAlignment="Bottom"/>
+                                </Grid>
+                            </TabItem>
+                        </TabControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1" Style="{StaticResource GroupBoxBorder}" Padding="0" Margin="0">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Background="#F8F8F8" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1" Padding="15">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Current Print Queue" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center"/>
+                                <TextBlock Text="(Editable Quantities)" Foreground="#666666" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <DataGrid x:Name="dgPrintQueue" 
+                                  AutoGenerateColumns="False" 
+                                  CanUserAddRows="False" 
+                                  CanUserDeleteRows="False" 
+                                  HeadersVisibility="Column" 
+                                  GridLinesVisibility="Horizontal"
+                                  HorizontalGridLinesBrush="#EEEEEE"
+                                  BorderThickness="0"
+                                  RowHeight="42"
+                                  Background="Transparent">
+
+                            <DataGrid.Resources>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#F8F8F8"/>
+                                    <Setter Property="Foreground" Value="#333333"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Padding" Value="10"/>
+                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                    <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                                </Style>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="Padding" Value="10,0"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                </Style>
+                            </DataGrid.Resources>
+
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="110" IsReadOnly="True" Foreground="#666666"/>
+                                <DataGridTextColumn Header="Product Description" Binding="{Binding ProductName}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
+
+                                <DataGridTextColumn Header="Retail Price (Rs.)" Binding="{Binding RetailPrice, StringFormat=N2}" Width="120" IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            <Setter Property="Foreground" Value="#2B5B84"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <DataGridTemplateColumn Header="Print Qty *" Width="100">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding PrintQty, UpdateSourceTrigger=PropertyChanged}" 
+                                                     Background="#FFFFE0" BorderBrush="#CCCCCC" BorderThickness="1" 
+                                                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center" 
+                                                     Padding="5" FontWeight="Bold"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="Drop" Width="60">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="X" Background="#A94044" Foreground="White" BorderThickness="0" Cursor="Hand" Width="25" Height="25" FontWeight="Bold"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Style="{StaticResource GroupBoxBorder}">
+                    <StackPanel>
+                        <TextBlock Text="2. Printer &amp; Template Configuration" Style="{StaticResource GroupHeader}" Foreground="#6F42C1"/>
+
+                        <TextBlock Text="Target Hardware Printer *" Foreground="#333333" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="cmbPrinters" Style="{StaticResource StandardInput}">
+                            <ComboBoxItem Content="Zebra ZD421 (COM4)" IsSelected="True"/>
+                            <ComboBoxItem Content="TSC TE244 (USB01)"/>
+                            <ComboBoxItem Content="Export to PDF (A4 Sticker Sheet)"/>
+                        </ComboBox>
+
+                        <TextBlock Text="Media / Label Size Format *" Foreground="#333333" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="cmbLabelSize" Style="{StaticResource StandardInput}">
+                            <ComboBoxItem Content="Single Column (50mm x 25mm)" IsSelected="True"/>
+                            <ComboBoxItem Content="Dual Column (32mm x 19mm)"/>
+                            <ComboBoxItem Content="Shelf Edge Tag (100mm x 40mm)"/>
+                        </ComboBox>
+
+                        <Border Background="#F9F5FF" BorderBrush="#E5D6FA" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,5,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Label Content Toggles" FontWeight="SemiBold" Foreground="#6F42C1" Margin="0,0,0,10"/>
+                                <CheckBox Content="Print Company Name Header" IsChecked="True" Margin="0,0,0,8" Foreground="#333333"/>
+                                <CheckBox Content="Print Retail Selling Price (Rs.)" IsChecked="True" Margin="0,0,0,8" Foreground="#333333" FontWeight="Bold"/>
+                                <CheckBox Content="Print Item Code Text (Below Barcode)" IsChecked="True" Margin="0,0,0,8" Foreground="#333333"/>
+                                <CheckBox Content="Print Expiry Date (If Applicable)" IsChecked="False" Foreground="#333333"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1" Style="{StaticResource GroupBoxBorder}" Margin="0" Background="#E2EDF8" BorderBrush="#B6D4FE">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="3. Live Template Preview" Style="{StaticResource GroupHeader}" Foreground="#2B5B84" HorizontalAlignment="Center"/>
+
+                        <Border Background="White" BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="4" 
+                                Width="240" Height="140" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" Direction="320" ShadowDepth="4" BlurRadius="10" Opacity="0.15"/>
+                            </Border.Effect>
+
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="KUMARA ARCADE" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#333333"/>
+
+                                <TextBlock Grid.Row="1" Text="Wireless Mouse M185" FontSize="11" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="#666666"/>
+
+                                <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5">
+                                    <TextBlock Text="||||||| | ||||| || ||| ||||" FontFamily="Consolas" FontSize="20" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="ITM-991042" FontSize="9" HorizontalAlignment="Center" Foreground="#333333" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="3" Text="Rs. 3,500.00" FontSize="16" FontWeight="ExtraBold" HorizontalAlignment="Right" Foreground="#333333"/>
+                            </Grid>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#DDDDDD" BorderThickness="0,1,0,0" Padding="20" Margin="-20,15,-20,-20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Background="#F4FAF6" Margin="15,8" MinWidth="250">
+                    <TextBlock Text="Total Labels to Generate:" Foreground="#333333" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="452" FontWeight="Bold" FontSize="18" Foreground="#1E7E34" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Clear Print Queue" Style="{StaticResource OutlineBtn}" Background="White" Foreground="#A94044" BorderBrush="#A94044" Width="140"/>
+                    <Button Content="DISPATCH TO PRINTER" Style="{StaticResource PrintBtn}" Width="220" Margin="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
