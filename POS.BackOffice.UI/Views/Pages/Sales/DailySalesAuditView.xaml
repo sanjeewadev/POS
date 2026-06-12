@@ -1,0 +1,295 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Sales.DailySalesAuditView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="850" d:DesignWidth="1250"
+             Background="#F5F5F5">
+
+    <UserControl.Resources>
+        <!-- Standard Button Style -->
+        <Style TargetType="Button" x:Key="StandardBtn">
+            <Setter Property="Background" Value="#2B3C38"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3B524E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Close Day Action Button (Warning Red) -->
+        <Style TargetType="Button" x:Key="CloseDayBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#A94044"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#C25357"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Print Action Button (Blue) -->
+        <Style TargetType="Button" x:Key="PrintBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#2B5B84"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1C3F5E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Standard Input Style -->
+        <Style TargetType="Control" x:Key="StandardInput">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Height" Value="30"/>
+        </Style>
+
+        <!-- Group Box Border Style -->
+        <Style TargetType="Border" x:Key="GroupBoxBorder">
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Header (Audit Parameters) -->
+            <RowDefinition Height="*"/>
+            <!-- Main Dashboard (Reconciliation & Exceptions) -->
+            <RowDefinition Height="Auto"/>
+            <!-- Footer (Sign-off & Finalization) -->
+        </Grid.RowDefinitions>
+
+        <!-- ========================================== -->
+        <!-- ZONE 1: AUDIT PARAMETERS (THE FILTER)      -->
+        <!-- ========================================== -->
+        <Border Grid.Row="0" Style="{StaticResource GroupBoxBorder}" Margin="0,0,0,15">
+            <StackPanel>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Daily Sales Audit (End of Day / Z-Read)" FontSize="20" FontWeight="SemiBold" Foreground="#333333"/>
+
+                    <!-- Status Badge -->
+                    <Border Grid.Column="1" Background="#E2EDF8" BorderBrush="#B6D4FE" BorderThickness="1" CornerRadius="4" Padding="10,5">
+                        <TextBlock Text="Day Status: OPEN" FontWeight="Bold" Foreground="#2B5B84"/>
+                    </Border>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Audit Date *" Foreground="#666666" Margin="0,0,0,5"/>
+                        <DatePicker x:Name="dpAuditDate" Style="{StaticResource StandardInput}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Location / Branch *" Foreground="#666666" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="cmbLocation" Style="{StaticResource StandardInput}" DisplayMemberPath="LocationName" SelectedValuePath="Id"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="Terminal / Register *" Foreground="#666666" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="cmbTerminal" Style="{StaticResource StandardInput}">
+                            <ComboBoxItem Content="All Terminals" IsSelected="True"/>
+                            <ComboBoxItem Content="Main Till 01"/>
+                            <ComboBoxItem Content="Main Till 02"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="6">
+                        <TextBlock Text="Cashier ID" Foreground="#666666" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="cmbCashier" Style="{StaticResource StandardInput}" DisplayMemberPath="Name" SelectedValuePath="Id"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="8" x:Name="btnGenerateReport" Content="Load System Data" Style="{StaticResource StandardBtn}" Background="#2B5B84" Margin="0" VerticalAlignment="Bottom" Height="30" Width="130"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- ZONE 2 & 3: RECONCILIATION & EXCEPTIONS    -->
+        <!-- ========================================== -->
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <!-- Reconciliation Grid -->
+                <ColumnDefinition Width="15"/>
+                <ColumnDefinition Width="1*"/>
+                <!-- Exceptions Dashboard -->
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT PANEL: The Reconciliation Dashboard (The Money) -->
+            <Border Grid.Column="0" Style="{StaticResource GroupBoxBorder}" Padding="0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="#F4FAF6" BorderBrush="#C3E6CB" BorderThickness="0,0,0,1" Padding="15,10">
+                        <TextBlock Text="Cash Drawer Reconciliation (Expected vs. Actual)" FontWeight="SemiBold" Foreground="#28A745"/>
+                    </Border>
+
+                    <DataGrid x:Name="dgReconciliation" 
+                              AutoGenerateColumns="False" 
+                              CanUserAddRows="False" 
+                              CanUserDeleteRows="False" 
+                              HeadersVisibility="Column" 
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="#EEEEEE"
+                              BorderThickness="0"
+                              RowHeight="45"
+                              Background="Transparent">
+
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#FFFFFF"/>
+                                <Setter Property="Foreground" Value="#666666"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Padding" Value="15,10"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Padding" Value="15,0"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            </Style>
+                        </DataGrid.Resources>
+
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Payment Type" Binding="{Binding PaymentType}" Width="150" IsReadOnly="True" FontWeight="SemiBold"/>
+
+                            <DataGridTextColumn Header="System Expected" Binding="{Binding SystemExpected, StringFormat=N2}" Width="140" IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                        <Setter Property="Foreground" Value="#666666"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- THE ONLY EDITABLE COLUMN (The Physical Count) -->
+                            <DataGridTemplateColumn Header="Actual Counted" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding ActualCounted, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Background="#FFFFE0" BorderBrush="#CCCCCC" BorderThickness="1" 
+                                                 HorizontalContentAlignment="Right" VerticalContentAlignment="Center" 
+                                                 Padding="5" FontWeight="Bold" Foreground="#333333" ToolTip="Enter the physical money counted from the drawer"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Variance (Auto Calculated) -->
+                            <DataGridTextColumn Header="Variance (Short/Over)" Binding="{Binding Variance, StringFormat=N2}" Width="*" IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <!-- Red if short, Green if Over/Balanced. Managed via ValueConverters in real code. -->
+                                        <Setter Property="Foreground" Value="#A94044"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+
+            <!-- RIGHT PANEL: Exception & Fraud Monitoring -->
+            <Border Grid.Column="2" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15">
+                <StackPanel>
+                    <TextBlock Text="Exception &amp; Fraud Tracking" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,15"/>
+
+                    <!-- Stat Block 1 -->
+                    <Border Background="#FFF3CD" BorderBrush="#FFEEBA" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Total Voided Invoices" Foreground="#856404" FontSize="12"/>
+                            <TextBlock x:Name="txtTotalVoids" Text="Rs. 0.00 (0 items)" FontWeight="Bold" FontSize="18" Foreground="#856404"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Stat Block 2 -->
+                    <Border Background="#FDF3F3" BorderBrush="#F5C6CB" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Total Customer Returns" Foreground="#A94044" FontSize="12"/>
+                            <TextBlock x:Name="txtTotalReturns" Text="Rs. 0.00 (0 items)" FontWeight="Bold" FontSize="18" Foreground="#A94044"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Stat Block 3 -->
+                    <Border Background="#E2EDF8" BorderBrush="#B6D4FE" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Total Manual Discounts Given" Foreground="#2B5B84" FontSize="12"/>
+                            <TextBlock x:Name="txtTotalDiscounts" Text="Rs. 0.00" FontWeight="Bold" FontSize="18" Foreground="#2B5B84"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="No-Sale Drawer Opens:" Foreground="#666666" Margin="0,10,0,5"/>
+                    <TextBlock x:Name="txtDrawerOpens" Text="0 Times" FontWeight="Bold" Foreground="#333333" FontSize="14"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ========================================== -->
+        <!-- ZONE 4: FOOTER (SIGN-OFF & FINALIZATION)   -->
+        <!-- ========================================== -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Authorization Block -->
+            <Border Grid.Column="0" Background="#F8F8F8" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,20,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Variance Explanation / Manager Notes:" Foreground="#666666" FontSize="12" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtManagerNotes" Height="45" TextWrapping="Wrap" AcceptsReturn="True" BorderBrush="#CCCCCC" BorderThickness="1" Padding="5" ToolTip="Mandatory if Variance is not 0.00"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <TextBlock Text="Authorizing Manager PIN *" Foreground="#A94044" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,5"/>
+                        <PasswordBox x:Name="pwdManagerPin" Height="30" Padding="5" BorderBrush="#CCCCCC" BorderThickness="1" HorizontalContentAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                <Button Content="Print Z-Report" Style="{StaticResource PrintBtn}" Width="130"/>
+                <Button Content="CLOSE DAY (LOCK DATA)" Style="{StaticResource CloseDayBtn}" Width="200" Margin="0" ToolTip="Warning: This permanently locks all transactions for this date."/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

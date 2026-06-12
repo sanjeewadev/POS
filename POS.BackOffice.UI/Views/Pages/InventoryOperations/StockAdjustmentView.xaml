@@ -1,0 +1,292 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.StockAdjustmentView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="850" d:DesignWidth="1250"
+             Background="#F5F5F5">
+
+    <UserControl.Resources>
+        <Style TargetType="Button" x:Key="StandardBtn">
+            <Setter Property="Background" Value="#2B3C38"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3B524E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="PostBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#D97706"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#B45309"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="DeleteBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#A94044"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#C25357"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Control" x:Key="StandardInput">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Height" Value="30"/>
+        </Style>
+
+        <Style TargetType="Border" x:Key="GroupBoxBorder">
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource GroupBoxBorder}" Margin="0,0,0,15">
+            <StackPanel>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Stock Adjustment (Physical Inventory Correction)" FontSize="20" FontWeight="SemiBold" Foreground="#D97706"/>
+
+                    <Border Grid.Column="1" Background="#FFF3CD" BorderBrush="#FFEEBA" BorderThickness="1" CornerRadius="4" Padding="10,5">
+                        <TextBlock Text="Status: DRAFT" FontWeight="Bold" Foreground="#856404"/>
+                    </Border>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Location (Where is the stock?) *" Foreground="#A94044" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="cmbLocation" Style="{StaticResource StandardInput}" DisplayMemberPath="LocationName" SelectedValuePath="Id" ToolTip="You must select a location to adjust stock"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Authorized / Checked By *" Foreground="#666666" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtAuthorizedBy" Style="{StaticResource StandardInput}" MaxLength="100" ToolTip="Required for P&amp;L accountability"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="Adjustment Date *" Foreground="#666666" Margin="0,0,0,5"/>
+                        <DatePicker x:Name="dpAdjustmentDate" Style="{StaticResource StandardInput}"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="General Reference / Reason for Audit" Foreground="#666666" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtReference" Style="{StaticResource StandardInput}" MaxLength="200" ToolTip="e.g., Monthly Store Audit, Roof Leak Damage"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Adjustment No." Foreground="#666666" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtAdjustmentNo" Style="{StaticResource StandardInput}" Background="#EEEEEE" IsReadOnly="True" Text="[Auto-Generated]"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Background="#FFF8EB" BorderBrush="#FDE0A6" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2.5*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Scan / Search Product" Foreground="#333333" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <ComboBox x:Name="cmbProductSearch" Style="{StaticResource StandardInput}" IsEditable="True" Margin="0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="System Stock" Foreground="#333333" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtSystemStock" Style="{StaticResource StandardInput}" HorizontalContentAlignment="Center" Background="#EEEEEE" IsReadOnly="True" Margin="0" Text="0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="Reason Code *" Foreground="#D97706" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <ComboBox x:Name="cmbReasonCode" Style="{StaticResource StandardInput}" Margin="0">
+                        <ComboBoxItem Content="Damaged / Broken"/>
+                        <ComboBoxItem Content="Expired / Spoiled"/>
+                        <ComboBoxItem Content="Stolen / Missing"/>
+                        <ComboBoxItem Content="Found Stock (+ve)"/>
+                        <ComboBoxItem Content="Data Entry Error"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="6">
+                    <TextBlock Text="Actual Qty *" Foreground="#28A745" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtActualQty" Style="{StaticResource StandardInput}" HorizontalContentAlignment="Center" Background="#FFFFE0" Margin="0" ToolTip="Enter the physical count on the shelf"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="8">
+                    <TextBlock Text="Variance (+/-)" Foreground="#A94044" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtVariance" Style="{StaticResource StandardInput}" HorizontalContentAlignment="Center" Background="#F8F8F8" IsReadOnly="True" Margin="0" ToolTip="System Qty vs Actual Qty"/>
+                </StackPanel>
+
+                <Button Grid.Column="10" x:Name="btnAddItem" Content="Add Item" Style="{StaticResource StandardBtn}" Background="#D97706" Margin="0" VerticalAlignment="Bottom" Height="30" Width="100"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource GroupBoxBorder}" Padding="0" Margin="0,0,0,15">
+            <DataGrid x:Name="dgAdjustmentLines" 
+                      AutoGenerateColumns="False" 
+                      CanUserAddRows="False" 
+                      CanUserDeleteRows="False" 
+                      HeadersVisibility="Column" 
+                      GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="#EEEEEE"
+                      BorderThickness="0"
+                      RowHeight="40"
+                      Background="Transparent">
+
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#F8F8F8"/>
+                        <Setter Property="Foreground" Value="#333333"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Padding" Value="15,10"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                        <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                    </Style>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Padding" Value="15,0"/>
+                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                    </Style>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="110" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Reason" Binding="{Binding ReasonCode}" Width="150" IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Sys Qty" Binding="{Binding SystemQty}" Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Actual Qty" Binding="{Binding ActualQty}" Width="90">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Foreground" Value="#28A745"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Variance" Binding="{Binding VarianceQty}" Width="90">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Cost Impact (Rs.)" Binding="{Binding CostImpact, StringFormat=N2}" Width="140" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTemplateColumn Header="Del" Width="60">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="X" Background="#A94044" Foreground="White" BorderThickness="0" Cursor="Hand" Width="25" Height="25" FontWeight="Bold"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="#FFF8EB" BorderBrush="#FDE0A6" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,20,0" HorizontalAlignment="Left" MinWidth="400">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Audit Notes:" Foreground="#666666" FontSize="12" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtRemarks" Height="40" TextWrapping="Wrap" AcceptsReturn="True" BorderBrush="#CCCCCC" BorderThickness="1" Padding="5"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <TextBlock Text="TOTAL NET IMPACT:" Foreground="#D97706" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
+                        <TextBlock x:Name="txtTotalImpact" Text="Rs. 0.00" FontWeight="Bold" FontSize="26" Foreground="#333333" HorizontalAlignment="Right" ToolTip="Negative value means loss of company money"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Clear Form" Style="{StaticResource StandardBtn}" Background="#777777" Width="100"/>
+                <Button Content="Save Draft" Style="{StaticResource StandardBtn}" Width="110"/>
+                <Button Content="POST ADJUSTMENT" Style="{StaticResource PostBtn}" Width="170" Margin="0" ToolTip="Warning: This instantly updates physical stock levels and posts to P&amp;L"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>
