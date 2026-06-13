@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
@@ -8,7 +9,6 @@ namespace POS.Core.Repositories
 {
     public class CategoryRepository
     {
-        // 1. Inject the Factory, NOT the raw DbContext!
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         public CategoryRepository(IDbContextFactory<AppDbContext> contextFactory)
@@ -16,38 +16,51 @@ namespace POS.Core.Repositories
             _contextFactory = contextFactory;
         }
 
-        public async Task<IEnumerable<Category>> GetAllAsync()
+        // Search logic now happens inside SQL Server/SQLite, not in system RAM.
+        public async Task<IEnumerable<Category>> GetAllAsync(string searchTerm = "")
         {
-            // The 'using' keyword safely opens and destroys the SQLite connection
-            using var context = _contextFactory.CreateDbContext();
+            using var context = await _contextFactory.CreateDbContextAsync();
 
-            // AsNoTracking makes reading data incredibly fast
-            return await context.Categories.AsNoTracking().ToListAsync();
+            var query = context.Categories.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                // Converts to a highly efficient SQL LIKE query
+                query = query.Where(c =>
+                    c.CategoryCode.Contains(searchTerm) ||
+                    c.CategoryName.Contains(searchTerm));
+            }
+
+            return await query.ToListAsync();
         }
 
-        public async Task<Category?> GetByIdAsync(int id)
+        // CRITICAL SECURITY: Checks if a code exists before saving
+        public async Task<bool> IsCodeUniqueAsync(string code, int currentCategoryId = 0)
         {
-            using var context = _contextFactory.CreateDbContext();
-            return await context.Categories.FindAsync(id);
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            return !await context.Categories.AnyAsync(c =>
+                c.CategoryCode.ToLower() == code.ToLower() &&
+                c.Id != currentCategoryId);
         }
 
         public async Task AddAsync(Category category)
         {
-            using var context = _contextFactory.CreateDbContext();
+            using var context = await _contextFactory.CreateDbContextAsync();
             await context.Categories.AddAsync(category);
             await context.SaveChangesAsync();
         }
 
         public async Task UpdateAsync(Category category)
         {
-            using var context = _contextFactory.CreateDbContext();
+            using var context = await _contextFactory.CreateDbContextAsync();
             context.Categories.Update(category);
             await context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
-            using var context = _contextFactory.CreateDbContext();
+            using var context = await _contextFactory.CreateDbContextAsync();
             var category = await context.Categories.FindAsync(id);
             if (category != null)
             {

@@ -156,8 +156,8 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryOperations {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/inventoryoperations/purchaseord" +
-                    "erview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/inventoryoperations/purchaseorderview.xa" +
+                    "ml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\InventoryOperations\PurchaseOrderView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

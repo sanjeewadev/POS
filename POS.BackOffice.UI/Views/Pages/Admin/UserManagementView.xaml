@@ -4,332 +4,287 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="850" d:DesignWidth="1250"
-             Background="#F5F5F5">
+             d:DesignHeight="850" d:DesignWidth="1400"
+             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
 
     <UserControl.Resources>
-        <!-- Standard Button Style -->
-        <Style TargetType="Button" x:Key="StandardBtn">
-            <Setter Property="Background" Value="#2B3C38"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3B524E"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Save/Update Button (Green) -->
-        <Style TargetType="Button" x:Key="SaveBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#28A745"/>
+        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#218838"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
         </Style>
 
-        <!-- Generate Key Action Button (Blue) -->
-        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#2B5B84"/>
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="ClassicInput">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="PasswordBox" x:Key="ClassicPassword">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1C3F5E"/>
+                    <Setter Property="Background" Value="#CCCCCC"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <!-- Standard Input Style -->
-        <Style TargetType="Control" x:Key="StandardInput">
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Height" Value="30"/>
+        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003333"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#007777"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <!-- Group Box Border Style -->
-        <Style TargetType="Border" x:Key="GroupBoxBorder">
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+        <Style TargetType="Border" x:Key="ClassicGroupBox">
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style TargetType="DataGridCell" x:Key="BaseCell">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#005555"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20">
-        <!-- Main Layout: Master (Left) and Detail Form (Right) -->
+    <Grid Margin="5">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1.2*"/>
-            <!-- Staff Directory -->
-            <ColumnDefinition Width="20"/>
-            <!-- Spacer -->
-            <ColumnDefinition Width="1.5*"/>
-            <!-- User Profile Form -->
+            <ColumnDefinition Width="480"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ========================================== -->
-        <!-- ZONE 1: STAFF DIRECTORY (LEFT PANEL)       -->
-        <!-- ========================================== -->
-        <Border Grid.Column="0" Style="{StaticResource GroupBoxBorder}" Padding="0">
-            <DockPanel>
-                <!-- Directory Header & Filters -->
-                <Border DockPanel.Dock="Top" Background="#F8F8F8" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1" Padding="15">
-                    <StackPanel>
-                        <TextBlock Text="Staff Directory" FontSize="18" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,15"/>
+        <Border Grid.Column="0" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="1. STAFF DIRECTORY" Style="{StaticResource HeaderLabel}" Margin="0,0,0,10"/>
 
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Search Users" Foreground="#666666" Margin="0,0,0,5"/>
-                                <TextBox x:Name="txtSearch" Style="{StaticResource StandardInput}" ToolTip="Search by Name or Emp ID" Margin="0"/>
-                            </StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="120"/>
+                        </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Filter by Role" Foreground="#666666" Margin="0,0,0,5"/>
-                                <ComboBox x:Name="cmbFilterRole" Style="{StaticResource StandardInput}" Margin="0">
-                                    <ComboBoxItem Content="All Roles" IsSelected="True"/>
-                                    <ComboBoxItem Content="Store Manager"/>
-                                    <ComboBoxItem Content="Cashier"/>
-                                    <ComboBoxItem Content="Accountant"/>
-                                </ComboBox>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                        <TextBlock Text="Search:" Style="{StaticResource InlineLabel}"/>
+                        <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Margin="0,0,10,0"/>
 
-                <!-- Directory Grid -->
-                <DataGrid x:Name="dgUsers" 
-                          AutoGenerateColumns="False" 
-                          CanUserAddRows="False" 
-                          CanUserDeleteRows="False" 
-                          IsReadOnly="True"
-                          HeadersVisibility="Column" 
-                          GridLinesVisibility="Horizontal"
-                          HorizontalGridLinesBrush="#EEEEEE"
-                          BorderThickness="0"
-                          RowHeight="40"
-                          Background="Transparent"
-                          SelectionMode="Single">
+                        <TextBlock Grid.Column="2" Text="Role:" Style="{StaticResource InlineLabel}"/>
+                        <ComboBox Grid.Column="3" SelectedItem="{Binding SelectedFilterRole}" ItemsSource="{Binding FilterRoles}" Style="{StaticResource ClassicCombo}"/>
+                    </Grid>
+                </StackPanel>
 
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" 
+                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+                          HeadersVisibility="Column" GridLinesVisibility="All" 
+                          HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
+                          RowHeight="26" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
+                          SelectionMode="Single" AlternatingRowBackground="#F9F9F9" Margin="0,5,0,0">
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#FFFFFF"/>
-                            <Setter Property="Foreground" Value="#666666"/>
+                            <Setter Property="Background" Value="#E0E0E0"/>
+                            <Setter Property="Foreground" Value="Black"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="Padding" Value="10"/>
-                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                            <Setter Property="Padding" Value="5"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            <Setter Property="BorderBrush" Value="#A0A0A0"/>
                         </Style>
-                        <Style TargetType="DataGridCell">
-                            <Setter Property="Padding" Value="10,0"/>
-                            <Setter Property="VerticalContentAlignment" Value="Center"/>
-                        </Style>
+                        <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                     </DataGrid.Resources>
-
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Employee Name" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                        <DataGridTextColumn Header="Role" Binding="{Binding RoleName}" Width="120" Foreground="#2B5B84"/>
-
-                        <!-- Status Indicator Column -->
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90">
+                        <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100" Foreground="#003366"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                    <!-- Converters would handle making 'Suspended' red, 'Active' green in C# -->
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-            </DockPanel>
+            </Grid>
         </Border>
 
-        <!-- ========================================== -->
-        <!-- ZONES 2-5: USER MANAGEMENT FORM (RIGHT)    -->
-        <!-- ========================================== -->
-        <Border Grid.Column="2" Style="{StaticResource GroupBoxBorder}">
+        <Border Grid.Column="2" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Stretch">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <!-- Header -->
                     <RowDefinition Height="*"/>
-                    <!-- Scrollable Form Area -->
                     <RowDefinition Height="Auto"/>
-                    <!-- Footer Actions -->
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Identity &amp; Access Control Form" FontSize="18" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,20"/>
+                <TextBlock Grid.Row="0" Text="2. IDENTITY &amp; ACCESS CONTROL" Style="{StaticResource HeaderLabel}" Margin="0,0,0,10"/>
 
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,5,0">
                     <StackPanel>
 
-                        <!-- ZONE 2: Identity & Contact -->
-                        <Border Background="#F8F8F8" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,15">
+                        <TextBlock Text="HUMAN RESOURCES DATA" FontSize="10" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
+                        <Border Background="#F8F8F8" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="1. Human Resources Data" FontWeight="SemiBold" Foreground="#2B5B84" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="15"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="First Name *" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding FirstName}" Style="{StaticResource ClassicInput}"/>
+
+                                    <TextBlock Grid.Column="3" Text="Last Name *" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="4" Text="{Binding LastName}" Style="{StaticResource ClassicInput}"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="15"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Employee ID:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding EmployeeId}" Style="{StaticResource ClassicInput}" Background="#EEEEEE"/>
+
+                                    <TextBlock Grid.Column="3" Text="Mobile:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="4" Text="{Binding Mobile}" Style="{StaticResource ClassicInput}"/>
+                                </Grid>
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Email Address *" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding Email}" Style="{StaticResource ClassicInput}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="SYSTEM AUTHENTICATION KEYS" FontSize="10" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
+                        <Border Background="#F0F8FF" BorderBrush="#005555" BorderThickness="1" Padding="10" Margin="0,0,0,10">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="15"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Username *" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding Username}" Style="{StaticResource ClassicInput}" FontWeight="Bold"/>
+
+                                    <TextBlock Grid.Column="3" Text="Password:" Style="{StaticResource InlineLabel}"/>
+                                    <PasswordBox Grid.Column="4" x:Name="pwdBox" Style="{StaticResource ClassicPassword}" ToolTip="Leave blank to keep existing password"/>
+                                </Grid>
+
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
                                         <ColumnDefinition Width="120"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="First Name *" Foreground="#333333" Margin="0,0,0,5"/>
-                                        <TextBox x:Name="txtFirstName" Style="{StaticResource StandardInput}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Last Name *" Foreground="#333333" Margin="0,0,0,5"/>
-                                        <TextBox x:Name="txtLastName" Style="{StaticResource StandardInput}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="4">
-                                        <TextBlock Text="Employee ID" Foreground="#666666" Margin="0,0,0,5"/>
-                                        <TextBox x:Name="txtEmpId" Style="{StaticResource StandardInput}" Background="#EEEEEE"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="15"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Retail POS PIN *" Style="{StaticResource InlineLabel}" Foreground="#A94044"/>
+                                    <PasswordBox Grid.Column="1" x:Name="pinBox" Style="{StaticResource ClassicPassword}" Background="#FFFFE0" MaxLength="6" HorizontalContentAlignment="Center" FontWeight="Bold"/>
 
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Email Address (For Alerts/Recovery) *" Foreground="#333333" Margin="0,0,0,5"/>
-                                        <TextBox x:Name="txtEmail" Style="{StaticResource StandardInput}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Mobile Number" Foreground="#666666" Margin="0,0,0,5"/>
-                                        <TextBox x:Name="txtMobile" Style="{StaticResource StandardInput}"/>
-                                    </StackPanel>
+                                    <CheckBox Grid.Column="3" IsChecked="{Binding ForcePasswordReset}" Content="Force password reset on next login" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#003366"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
 
-                        <!-- ZONE 3: Authentication & Security -->
-                        <Border Background="#FFF8EB" BorderBrush="#FDE0A6" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,15">
-                            <StackPanel>
-                                <TextBlock Text="2. System Authentication Keys" FontWeight="SemiBold" Foreground="#D97706" Margin="0,0,0,10"/>
+                        <TextBlock Text="AUTHORIZATION &amp; LIFECYCLE" FontSize="10" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
+                        <Border Background="#F4FAF6" BorderBrush="#3D8B40" BorderThickness="1" Padding="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
-                                        <ColumnDefinition Width="140"/>
-                                    </Grid.ColumnDefinitions>
+                                <TextBlock Text="Security Role *" Style="{StaticResource InlineLabel}"/>
+                                <ComboBox Grid.Column="1" SelectedItem="{Binding SelectedRole}" ItemsSource="{Binding AvailableRoles}" Style="{StaticResource ClassicCombo}"/>
 
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="System Username *" Foreground="#333333" Margin="0,0,0,5"/>
-                                        <TextBox x:Name="txtUsername" Style="{StaticResource StandardInput}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Login Password" Foreground="#333333" Margin="0,0,0,5"/>
-                                        <PasswordBox x:Name="pwdLogin" Style="{StaticResource StandardInput}" ToolTip="Leave blank to keep existing password"/>
-                                    </StackPanel>
-
-                                    <Button Grid.Column="4" Content="Auto-Generate" Style="{StaticResource ActionBtn}" Margin="0,0,0,10" VerticalAlignment="Bottom" Height="30" ToolTip="Generates a secure password and emails it to the user"/>
-                                </Grid>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="20"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- ENTERPRISE FEATURE: POS PIN -->
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Retail POS PIN *" Foreground="#A94044" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                        <PasswordBox x:Name="pwdPosPin" Style="{StaticResource StandardInput}" Width="120" HorizontalContentAlignment="Center" Background="#FDF3F3" MaxLength="6" ToolTip="4 or 6-digit PIN used for rapid till unlocking at the front counter"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,10,0,0">
-                                        <CheckBox x:Name="chkForcePasswordReset" Content="Force password reset on next login" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
-                                        <TextBlock Text="User will be required to choose a new password immediately upon their next successful login." Foreground="#888888" FontSize="11" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
+                                <TextBlock Grid.Column="3" Text="Account Status *" Style="{StaticResource InlineLabel}" Foreground="#A94044"/>
+                                <ComboBox Grid.Column="4" SelectedItem="{Binding StatusText}" ItemsSource="{Binding AccountStatuses}" Style="{StaticResource ClassicCombo}" Background="#FFFFE0" ToolTip="Select 'Suspended' to revoke access"/>
+                            </Grid>
                         </Border>
 
-                        <!-- ZONE 4 & 5: Authorization & Lifecycle -->
-                        <Border Background="#F4FAF6" BorderBrush="#C3E6CB" BorderThickness="1" CornerRadius="4" Padding="15">
-                            <StackPanel>
-                                <TextBlock Text="3. Authorization &amp; Lifecycle" FontWeight="SemiBold" Foreground="#28A745" Margin="0,0,0,10"/>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Security Role *" Foreground="#333333" Margin="0,0,0,5"/>
-                                        <ComboBox x:Name="cmbAssignRole" Style="{StaticResource StandardInput}">
-                                            <ComboBoxItem Content="Super Admin"/>
-                                            <ComboBoxItem Content="Store Manager"/>
-                                            <ComboBoxItem Content="Junior Cashier" IsSelected="True"/>
-                                            <ComboBoxItem Content="Accountant"/>
-                                        </ComboBox>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Branch Assignment *" Foreground="#333333" Margin="0,0,0,5"/>
-                                        <ComboBox x:Name="cmbAssignBranch" Style="{StaticResource StandardInput}">
-                                            <ComboBoxItem Content="All Branches (Global)"/>
-                                            <ComboBoxItem Content="Main Store" IsSelected="True"/>
-                                            <ComboBoxItem Content="Warehouse"/>
-                                        </ComboBox>
-                                    </StackPanel>
-
-                                    <!-- CRITICAL ARCHITECTURE: No Delete Button, Only Status Suspension -->
-                                    <StackPanel Grid.Column="4">
-                                        <TextBlock Text="Account Status *" Foreground="#A94044" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                        <ComboBox x:Name="cmbAccountStatus" Style="{StaticResource StandardInput}" Background="#FFFFE0" ToolTip="Select 'Suspended' to revoke access while preserving their historical audit data">
-                                            <ComboBoxItem Content="ACTIVE (Can Login)" IsSelected="True"/>
-                                            <ComboBoxItem Content="SUSPENDED (Revoked)"/>
-                                        </ComboBox>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- Footer Actions -->
-                <Border Grid.Row="2" BorderBrush="#DDDDDD" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="0,10,0,0">
+                <Border Grid.Row="2" Background="#D4D0C8" BorderBrush="#A0A0A0" BorderThickness="1" Margin="0,5,0,0" Padding="10">
                     <Grid>
-                        <TextBlock Text="Changes apply immediately." Foreground="#666666" VerticalAlignment="Center" FontStyle="Italic"/>
+                        <TextBlock Text="* Requires Admin authorization to modify Roles." Foreground="#555" FontStyle="Italic" VerticalAlignment="Center"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button x:Name="btnClear" Content="Clear Form" Style="{StaticResource StandardBtn}" Background="#777777" Width="100"/>
-                            <Button x:Name="btnSaveUser" Content="SAVE / UPDATE USER" Style="{StaticResource SaveBtn}" Width="200" Margin="0"/>
+                            <Button Content="Clear Form" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Height="34" Margin="0,0,10,0"/>
+
+                            <Button Content="SAVE / UPDATE USER" Click="BtnSaveUser_Click" Style="{StaticResource ActionBtn}" Height="34" Padding="20,0"/>
+
                         </StackPanel>
                     </Grid>
                 </Border>

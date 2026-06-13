@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using POS.Core.Data;
 using POS.Core.Models;
+using POS.Core.Data;
 
 namespace POS.Core.Repositories
 {
@@ -15,54 +17,79 @@ namespace POS.Core.Repositories
             _contextFactory = contextFactory;
         }
 
-        public async Task PostGrnAsync(GrnHeader grnHeader)
+        // Fetch suppliers for the dropdown
+        public async Task<IEnumerable<Supplier>> GetActiveSuppliersAsync()
         {
-            // 1. Create the Micro-Connection
-            using var context = _contextFactory.CreateDbContext();
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Suppliers.Where(s => !s.IsDeactivated).AsNoTracking().ToListAsync();
+        }
 
-            // 2. Open the Secure Transaction Bubble
+        // --- ATOMIC POSTING ENGINE ---
+        public async Task PostGrnAsync(GrnHeader header, List<GrnLine> lines)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Start the unbreakable transaction
             using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
-                // STEP A: Save the GRN Document
-                // EF Core is smart enough to save the Header, grab the new ID, 
-                // and automatically apply it to all the attached GrnDetails!
-                await context.GrnHeaders.AddAsync(grnHeader);
+                // 1. Finalize and Save the GRN Header
+                header.Status = "Posted";
+                header.CreatedAt = DateTime.Now;
+                await context.GrnHeaders.AddAsync(header);
+                await context.SaveChangesAsync(); // Saves to generate the Header ID
 
-                // STEP B: Update the Item Master Prices
-                foreach (var detail in grnHeader.GrnDetails)
+                // 2. Process Lines, Inventory, and Costs
+                foreach (var line in lines)
                 {
-                    var item = await context.Items.FindAsync(detail.ItemId);
-                    if (item != null)
+                    line.GrnHeaderId = header.Id;
+                    await context.GrnLines.AddAsync(line);
+
+                    // 3. Update the Item Master Variant
+                    var variant = await context.ItemVariants.FindAsync(line.ItemVariantId);
+                    if (variant != null)
                     {
-                        // Overwrite the old cost price with the new supplier cost
-                        item.CostPrice = detail.UnitCost;
+                        // Update Selling Prices based on the new GRN inputs
+                        variant.CostPrice = line.LandedCost;
+                        variant.RetailPrice = line.RetailPrice;
+                        variant.WholesalePrice = line.WholesalePrice;
+                        variant.MinimumPrice = line.MinimumPrice;
 
-                        // If the manager typed a new retail selling price in the grid, update it
-                        if (detail.RetailPrice > 0)
-                        {
-                            item.RetailPrice = detail.RetailPrice;
-                        }
+                        // Calculate new Moving Average Cost 
+                        // Formula: ((OldQty * OldAvgCost) + (NewQty * LandedCost)) / TotalQty
+                        // Note: Requires fetching current stock from your StockLedger table
+                        // variant.AverageCost = ... (Implementation depends on your specific Ledger structure)
 
-                        // NOTE: If you create a 'StockLedger' table later to track physical quantities,
-                        // you will add the stock increase logic right here!
-
-                        context.Items.Update(item);
+                        context.ItemVariants.Update(variant);
                     }
+
+                    // 4. Update the Physical Stock Ledger
+                    // Here you would insert a record into an InventoryTransaction table:
+                    // context.InventoryLedgers.Add(new InventoryLedger { VariantId = line.ItemVariantId, Qty = line.ReceivedQty + line.FocQty, Type = "IN-GRN" ... });
                 }
 
-                // STEP C: Push all changes to the database safely
-                await context.SaveChangesAsync();
+                // 5. Hit the Accounts Payable (Supplier Ledger)
+                var supplier = await context.Suppliers.FindAsync(header.SupplierId);
+                if (supplier != null)
+                {
+                    // Increase the debt we owe this supplier
+                    supplier.CurrentBalance += header.NetPayable;
+                    context.Suppliers.Update(supplier);
 
-                // STEP D: The power didn't go out. Lock it in permanently!
+                    // Log this debt in the Supplier Statement/Ledger
+                    // context.SupplierLedgers.Add(new SupplierLedger { SupplierId = supplier.Id, Type = "GRN", ChargeAmount = header.NetPayable ... });
+                }
+
+                // 6. Commit all changes simultaneously
+                await context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (Exception)
             {
-                // If anything fails, destroy the bubble. Roll back ALL changes.
+                // If ANYTHING fails, wipe the database changes to prevent corruption
                 await transaction.RollbackAsync();
-                throw; // Send the error back to the ViewModel to alert the user
+                throw;
             }
         }
     }

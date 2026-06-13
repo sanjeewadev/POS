@@ -7,12 +7,12 @@
              xmlns:pages="clr-namespace:POS.BackOffice.UI.Views.Pages"
              xmlns:inventorypages="clr-namespace:POS.BackOffice.UI.Views.Pages.InventoryPages"
              xmlns:inventoryoperations="clr-namespace:POS.BackOffice.UI.Views.Pages.InventoryOperations"
-             xmlns:converters="clr-namespace:POS.BackOffice.UI.Converters"
+             xmlns:purchasing="clr-namespace:POS.BackOffice.UI.Views.Pages.Purchasing"
+             xmlns:admin="clr-namespace:POS.BackOffice.UI.Views.Pages.Admin"
+             
              Startup="Application_Startup">
 
     <Application.Resources>
-
-        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
 
         <DataTemplate DataType="{x:Type viewmodels:CategoryViewModel}">
             <inventorypages:CategoryView />
@@ -34,14 +34,33 @@
             <inventorypages:ItemMasterView />
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type viewmodels:UnitOfMeasureViewModel}">
+            <inventorypages:UnitOfMeasureView />
+        </DataTemplate>
+
         <DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
             <inventoryoperations:GrnView />
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type viewmodels:StockAdjustmentViewModel}">
+            <inventoryoperations:StockAdjustmentView />
+        </DataTemplate>
 
-        <!--<DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
-            <Purchasing:PurchaseOrderView />
-        </DataTemplate>-->
+        <DataTemplate DataType="{x:Type viewmodels:StockBalanceViewModel}">
+            <inventoryoperations:StockBalanceView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:SupplierReturnViewModel}">
+            <inventoryoperations:SupplierReturnView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderViewModel}">
+            <purchasing:PurchaseOrderView />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type viewmodels:UserManagementViewModel}">
+            <admin:UserManagementView />
+        </DataTemplate>
 
     </Application.Resources>
 </Application>

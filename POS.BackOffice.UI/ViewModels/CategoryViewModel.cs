@@ -1,9 +1,10 @@
-﻿using System.Collections.ObjectModel;
-using System.Linq;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -20,7 +21,7 @@ namespace POS.BackOffice.UI.ViewModels
         private string _categoryName = string.Empty;
 
         [ObservableProperty]
-        private bool _isActive = true;
+        private bool _isDeactivated = false;
 
         [ObservableProperty]
         private string _searchText = string.Empty;
@@ -33,63 +34,87 @@ namespace POS.BackOffice.UI.ViewModels
         public CategoryViewModel(CategoryRepository categoryRepository)
         {
             _categoryRepository = categoryRepository;
-
-            // Fire-and-forget data loading. The UI draws instantly, data fills in a millisecond later.
             _ = LoadDataAsync();
         }
 
         [RelayCommand]
         private async Task LoadDataAsync()
         {
-            Categories.Clear();
-            var data = await _categoryRepository.GetAllAsync();
-
-            // Simple Search Filter
-            if (!string.IsNullOrWhiteSpace(SearchText))
+            try
             {
-                data = data.Where(c =>
-                    (c.CategoryName != null && c.CategoryName.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase)) ||
-                    (c.CategoryCode != null && c.CategoryCode.Contains(SearchText, System.StringComparison.OrdinalIgnoreCase)));
-            }
+                Categories.Clear();
+                // Pass the search text directly to the database repository
+                var data = await _categoryRepository.GetAllAsync(SearchText);
 
-            foreach (var item in data)
-            {
-                Categories.Add(item);
+                foreach (var item in data)
+                {
+                    Categories.Add(item);
+                }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load categories: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
+        private async Task SearchAsync()
+        {
+            await LoadDataAsync();
         }
 
         [RelayCommand]
         private async Task SaveAsync()
         {
+            // 1. Basic Validation
             if (string.IsNullOrWhiteSpace(CategoryCode) || string.IsNullOrWhiteSpace(CategoryName))
             {
-                MessageBox.Show("Category Code and Name are required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Category Code and Name are required fields.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (SelectedCategory == null)
+            try
             {
-                // Create New
-                var newCategory = new Category
-                {
-                    CategoryCode = this.CategoryCode,
-                    CategoryName = this.CategoryName,
-                    IsActive = this.IsActive
-                };
-                await _categoryRepository.AddAsync(newCategory);
-            }
-            else
-            {
-                // Update Existing
-                SelectedCategory.CategoryCode = this.CategoryCode;
-                SelectedCategory.CategoryName = this.CategoryName;
-                SelectedCategory.IsActive = this.IsActive;
-                await _categoryRepository.UpdateAsync(SelectedCategory);
-            }
+                // 2. Duplicate Check Validation
+                int currentId = SelectedCategory?.Id ?? 0;
+                bool isUnique = await _categoryRepository.IsCodeUniqueAsync(CategoryCode, currentId);
 
-            await LoadDataAsync();
-            Clear();
-            MessageBox.Show("Category saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (!isUnique)
+                {
+                    MessageBox.Show($"The Category Code '{CategoryCode}' is already in use. Please enter a unique code.", "Duplicate Entry", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 3. Save or Update
+                if (SelectedCategory == null)
+                {
+                    var newCategory = new Category
+                    {
+                        CategoryCode = this.CategoryCode.Trim().ToUpper(), // Standardize codes to uppercase
+                        CategoryName = this.CategoryName.Trim(),
+                        IsDeactivated = this.IsDeactivated,
+                        CreatedAt = DateTime.Now
+                    };
+                    await _categoryRepository.AddAsync(newCategory);
+                }
+                else
+                {
+                    SelectedCategory.CategoryCode = this.CategoryCode.Trim().ToUpper();
+                    SelectedCategory.CategoryName = this.CategoryName.Trim();
+                    SelectedCategory.IsDeactivated = this.IsDeactivated;
+
+                    await _categoryRepository.UpdateAsync(SelectedCategory);
+                }
+
+                // 4. Reset UI
+                await LoadDataAsync();
+                Clear();
+                MessageBox.Show("Category saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred while saving: {ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]
@@ -97,7 +122,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             CategoryCode = string.Empty;
             CategoryName = string.Empty;
-            IsActive = true;
+            IsDeactivated = false;
             SelectedCategory = null;
         }
 
@@ -106,27 +131,44 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedCategory == null) return;
 
-            var result = MessageBox.Show($"Are you sure you want to delete {SelectedCategory.CategoryName}?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var result = MessageBox.Show($"Are you sure you want to permanently delete '{SelectedCategory.CategoryName}'?",
+                                         "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
             if (result == MessageBoxResult.Yes)
             {
-                await _categoryRepository.DeleteAsync(SelectedCategory.Id);
-                await LoadDataAsync();
-                Clear();
+                try
+                {
+                    await _categoryRepository.DeleteAsync(SelectedCategory.Id);
+                    await LoadDataAsync();
+                    Clear();
+                }
+                catch (DbUpdateException)
+                {
+                    // Defensive Architecture: Catching Foreign Key Violations
+                    MessageBox.Show("This category cannot be deleted because it is currently linked to items in your inventory. \n\nPlease Deactivate it instead.",
+                                    "Deletion Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"An error occurred while deleting: {ex.Message}", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
+        // Real-time search filter (fires when typing)
         partial void OnSearchTextChanged(string value)
         {
             _ = LoadDataAsync();
         }
 
+        // Fills the text boxes when a user clicks a row in the DataGrid
         partial void OnSelectedCategoryChanged(Category? value)
         {
             if (value != null)
             {
                 CategoryCode = value.CategoryCode ?? string.Empty;
                 CategoryName = value.CategoryName ?? string.Empty;
-                IsActive = value.IsActive;
+                IsDeactivated = value.IsDeactivated;
             }
         }
     }

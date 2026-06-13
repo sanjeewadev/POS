@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,216 +10,194 @@ using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    // ==========================================
-    // THE LIVE GRID LINE WRAPPER
-    // ==========================================
-    // This allows the grid cells to instantly trigger math updates when typed in
-    public partial class GrnLineItem : ObservableObject
+    public partial class GrnViewModel : ViewModelBase
     {
-        public int ItemId { get; set; }
-        public string ItemCode { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-
-        [ObservableProperty] private int _receivedQty = 1;
-        [ObservableProperty] private int _focQty = 0;
-        [ObservableProperty] private decimal _unitCost = 0;
-        [ObservableProperty] private decimal _lineDiscount = 0;
-        [ObservableProperty] private bool _isTaxable = false;
-
-        // Constants for business rules (e.g., 18% VAT)
-        private const decimal VAT_RATE = 0.18m;
-
-        // Auto-calculated Line Properties
-        public decimal LineTax => IsTaxable ? ((ReceivedQty * UnitCost) - LineDiscount) * VAT_RATE : 0;
-        public decimal LineTotal => (ReceivedQty * UnitCost) - LineDiscount + LineTax;
-
-        // When any of the core numbers change, we notify the UI that the Total also changed
-        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
-        {
-            base.OnPropertyChanged(e);
-            if (e.PropertyName == nameof(ReceivedQty) ||
-                e.PropertyName == nameof(UnitCost) ||
-                e.PropertyName == nameof(LineDiscount) ||
-                e.PropertyName == nameof(IsTaxable))
-            {
-                OnPropertyChanged(nameof(LineTax));
-                OnPropertyChanged(nameof(LineTotal));
-            }
-        }
-    }
-
-    // ==========================================
-    // THE MAIN GRN VIEW MODEL
-    // ==========================================
-    public partial class GrnViewModel : ObservableObject
-    {
-        private readonly SupplierRepository _supplierRepository;
-        private readonly ItemRepository _itemRepository;
         private readonly GrnRepository _grnRepository;
 
-        // --- Header Properties ---
-        [ObservableProperty] private string _documentStatus = "DRAFT / RECEIVING";
-        [ObservableProperty] private ObservableCollection<Supplier> _suppliers = new();
+        // --- ZONE 1: HEADER & SUPPLIER ---
         [ObservableProperty] private Supplier? _selectedSupplier;
         [ObservableProperty] private string _supplierInvoiceNo = string.Empty;
+        [ObservableProperty] private DateTime _invoiceDate = DateTime.Now;
         [ObservableProperty] private DateTime _receivedDate = DateTime.Now;
-        [ObservableProperty] private DateTime _dueDate = DateTime.Now;
-
-        // --- Scanner Properties ---
-        [ObservableProperty] private string _barcodeSearchInput = string.Empty;
-        [ObservableProperty] private string _quickQtyInput = "1";
-        [ObservableProperty] private string _quickCostInput = "0";
-
-        // --- The DataGrid ---
-        public ObservableCollection<GrnLineItem> GrnLines { get; set; } = new();
-
-        // --- Footer Properties ---
+        [ObservableProperty] private DateTime _dueDate = DateTime.Now.AddDays(30);
+        [ObservableProperty] private string _documentStatus = "DRAFT";
         [ObservableProperty] private string _remarks = string.Empty;
-        [ObservableProperty] private decimal _globalBillDiscount = 0;
-        [ObservableProperty] private decimal _freightAmount = 0;
 
-        // Calculated Footer Totals
-        [ObservableProperty] private decimal _subtotal = 0;
-        [ObservableProperty] private decimal _totalDiscountAmount = 0;
-        [ObservableProperty] private decimal _totalTaxAmount = 0;
-        [ObservableProperty] private decimal _netPayable = 0;
+        // --- ZONE 3: ENTRY MODES ---
+        [ObservableProperty] private string _scanBarcode = string.Empty;
+        [ObservableProperty] private string _matrixBatchNo = string.Empty;
+        [ObservableProperty] private DateTime _matrixExpiryDate = DateTime.Now.AddYears(1);
 
-        public GrnViewModel(SupplierRepository supplierRepository, ItemRepository itemRepository, GrnRepository grnRepository)
+        // --- FINANCIAL TOTALS ---
+        [ObservableProperty] private decimal _subtotal = 0m;
+        [ObservableProperty] private decimal _totalDiscountAmount = 0m;
+        [ObservableProperty] private decimal _globalBillDiscount = 0m;
+        [ObservableProperty] private decimal _freightAmount = 0m;
+        [ObservableProperty] private decimal _netPayable = 0m;
+
+        // --- COLLECTIONS ---
+        public ObservableCollection<Supplier> Suppliers { get; set; } = new();
+        public ObservableCollection<GrnLine> GrnLines { get; set; } = new();
+
+        // This holds the variants of a selected parent item for Rapid Grid Entry
+        public ObservableCollection<GrnLine> ActiveMatrixVariants { get; set; } = new();
+
+        [ObservableProperty] private GrnLine? _selectedLine;
+
+        public GrnViewModel(GrnRepository grnRepository)
         {
-            _supplierRepository = supplierRepository;
-            _itemRepository = itemRepository;
             _grnRepository = grnRepository;
-
-            // Wire up the spreadsheet logic!
-            GrnLines.CollectionChanged += GrnLines_CollectionChanged;
-
             _ = InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
-            // One-Shot Loading for Suppliers
-            var supps = await _supplierRepository.GetAllAsync();
-            Suppliers = new ObservableCollection<Supplier>(supps.Where(s => s.IsActive));
+            var suppliers = await _grnRepository.GetActiveSuppliersAsync();
+            foreach (var sup in suppliers) Suppliers.Add(sup);
         }
 
-        // ==========================================
-        // AUTO-TRIGGERS (The Smart Logic)
-        // ==========================================
+        // --- THE FINANCIAL ENGINE: Dynamic Recalculation ---
 
-        // When Supplier changes, automatically calculate the Due Date!
-        partial void OnSelectedSupplierChanged(Supplier? value)
+        // Triggers automatically when Freight or Global Discount changes in the UI
+        partial void OnFreightAmountChanged(decimal value) => RecalculateTotals();
+        partial void OnGlobalBillDiscountChanged(decimal value) => RecalculateTotals();
+
+        private void RecalculateTotals()
         {
-            if (value != null)
+            if (!GrnLines.Any())
             {
-                DueDate = ReceivedDate.AddDays(value.DefaultCreditDays);
-            }
-        }
-
-        // When Global Discount or Freight changes, recalculate everything
-        partial void OnGlobalBillDiscountChanged(decimal value) => CalculateGrandTotals();
-        partial void OnFreightAmountChanged(decimal value) => CalculateGrandTotals();
-
-        // ==========================================
-        // SPREADSHEET WIRING
-        // ==========================================
-
-        private void GrnLines_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            // If items are added, listen to them for cell changes
-            if (e.NewItems != null)
-            {
-                foreach (GrnLineItem item in e.NewItems)
-                {
-                    item.PropertyChanged += GridCell_Changed;
-                }
-            }
-            // If items are removed, stop listening
-            if (e.OldItems != null)
-            {
-                foreach (GrnLineItem item in e.OldItems)
-                {
-                    item.PropertyChanged -= GridCell_Changed;
-                }
-            }
-            CalculateGrandTotals();
-        }
-
-        private void GridCell_Changed(object? sender, PropertyChangedEventArgs e)
-        {
-            // Only recalculate if a number that affects the total changes
-            if (e.PropertyName == nameof(GrnLineItem.LineTotal))
-            {
-                CalculateGrandTotals();
-            }
-        }
-
-        private void CalculateGrandTotals()
-        {
-            // 1. Sum up the exact line values
-            Subtotal = GrnLines.Sum(x => x.ReceivedQty * x.UnitCost);
-
-            decimal sumOfLineDiscounts = GrnLines.Sum(x => x.LineDiscount);
-            TotalDiscountAmount = sumOfLineDiscounts + GlobalBillDiscount;
-
-            TotalTaxAmount = GrnLines.Sum(x => x.LineTax);
-
-            // 2. Net Payable = (Subtotal - Discounts) + Freight + Taxes
-            NetPayable = (Subtotal - TotalDiscountAmount) + FreightAmount + TotalTaxAmount;
-        }
-
-        // ==========================================
-        // COMMANDS
-        // ==========================================
-
-        [RelayCommand]
-        private async Task AddItemAsync()
-        {
-            if (string.IsNullOrWhiteSpace(BarcodeSearchInput)) return;
-
-            // Use our lightning-fast repository to find the item
-            var allItems = await _itemRepository.GetAllAsync();
-            var matchedItem = allItems.FirstOrDefault(i =>
-                i.Barcode == BarcodeSearchInput || i.ItemCode == BarcodeSearchInput);
-
-            if (matchedItem == null)
-            {
-                MessageBox.Show("Item not found in Master Database.", "Scan Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                BarcodeSearchInput = string.Empty;
+                Subtotal = 0;
+                TotalDiscountAmount = 0;
+                NetPayable = 0;
                 return;
             }
 
-            // Parse inputs safely
-            int.TryParse(QuickQtyInput, out int parsedQty);
-            decimal.TryParse(QuickCostInput, out decimal parsedCost);
+            // 1. Calculate Base Subtotal
+            Subtotal = GrnLines.Sum(l => l.LineTotal);
+            decimal lineDiscounts = GrnLines.Sum(l => l.LineDiscount);
 
-            // If they didn't type a cost, use the default cost from Item Master
-            decimal finalCost = parsedCost > 0 ? parsedCost : matchedItem.CostPrice;
+            TotalDiscountAmount = lineDiscounts + GlobalBillDiscount;
+            NetPayable = Subtotal - GlobalBillDiscount + FreightAmount;
 
-            var newLine = new GrnLineItem
+            // 2. Recalculate Landed Cost for every item (Proportional Value Distribution)
+            // If you pay Rs. 1000 in freight, the most expensive items absorb a higher % of that freight
+            decimal totalBaseValue = GrnLines.Sum(l => l.UnitCost * l.ReceivedQty);
+
+            if (totalBaseValue > 0)
             {
-                ItemId = matchedItem.Id,
-                ItemCode = matchedItem.ItemCode,
-                Description = matchedItem.Description,
-                ReceivedQty = parsedQty > 0 ? parsedQty : 1,
-                UnitCost = finalCost,
-                IsTaxable = false // Defaults to false, user can check the box in the grid
-            };
+                foreach (var line in GrnLines)
+                {
+                    decimal lineBaseValue = line.UnitCost * line.ReceivedQty;
+                    decimal weightPercentage = lineBaseValue / totalBaseValue;
 
-            GrnLines.Add(newLine);
+                    decimal allocatedFreight = FreightAmount * weightPercentage;
+                    decimal allocatedGlobalDisc = GlobalBillDiscount * weightPercentage;
 
-            // Reset scanner for the next item
-            BarcodeSearchInput = string.Empty;
-            QuickQtyInput = "1";
-            QuickCostInput = "0";
+                    // Line Landed Total = (UnitCost * Qty) + Allocated Freight - Allocated Global Disc
+                    decimal landedLineTotal = lineBaseValue + allocatedFreight - allocatedGlobalDisc;
+
+                    // Divide by physical quantity to get per-unit Landed Cost
+                    decimal totalPhysicalQty = line.ReceivedQty + line.FocQty; // Include FOC if amortizing
+
+                    if (totalPhysicalQty > 0)
+                    {
+                        line.LandedCost = Math.Round(landedLineTotal / totalPhysicalQty, 2);
+                    }
+                }
+            }
         }
 
+        // --- GRID ACTIONS ---
+
         [RelayCommand]
-        private void RemoveLine(GrnLineItem line)
+        private void RemoveLine(GrnLine line)
         {
             if (line != null)
             {
                 GrnLines.Remove(line);
+                RecalculateTotals();
+            }
+        }
+
+        [RelayCommand]
+        private void AddMatrix()
+        {
+            // Moves items from the Rapid Entry grid down into the main GRN ledger
+            var itemsToAdd = ActiveMatrixVariants.Where(v => v.ReceivedQty > 0 || v.FocQty > 0).ToList();
+
+            if (!itemsToAdd.Any())
+            {
+                MessageBox.Show("Please enter a Received Qty for at least one matrix variant.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            foreach (var item in itemsToAdd)
+            {
+                // Calculate individual line total before adding
+                item.LineTotal = (item.ReceivedQty * item.UnitCost) - item.LineDiscount;
+
+                GrnLines.Add(item);
+            }
+
+            ActiveMatrixVariants.Clear();
+            RecalculateTotals();
+        }
+
+        // --- POSTING EXECUTION ---
+
+        [RelayCommand]
+        private async Task PostGrnAsync()
+        {
+            if (SelectedSupplier == null)
+            {
+                MessageBox.Show("Please select a Supplier.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(SupplierInvoiceNo))
+            {
+                MessageBox.Show("Supplier Invoice Number is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!GrnLines.Any())
+            {
+                MessageBox.Show("Cannot post an empty GRN. Please add items.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var result = MessageBox.Show($"Post GRN for Rs. {NetPayable:N2}? \nThis will irreversibly update Inventory and Supplier Ledgers.",
+                                         "Confirm Post", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    var header = new GrnHeader
+                    {
+                        GrnNumber = $"GRN-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}", // Auto-generate
+                        SupplierId = SelectedSupplier.Id,
+                        SupplierInvoiceNo = this.SupplierInvoiceNo.Trim(),
+                        InvoiceDate = this.InvoiceDate,
+                        ReceivedDate = this.ReceivedDate,
+                        DueDate = this.DueDate,
+                        Remarks = this.Remarks.Trim(),
+                        Subtotal = this.Subtotal,
+                        GlobalBillDiscount = this.GlobalBillDiscount,
+                        FreightAmount = this.FreightAmount,
+                        TotalDiscountAmount = this.TotalDiscountAmount,
+                        NetPayable = this.NetPayable
+                    };
+
+                    await _grnRepository.PostGrnAsync(header, GrnLines.ToList());
+
+                    MessageBox.Show($"GRN Posted Successfully! \nInventory and Accounts Payable Updated.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    Clear();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"CRITICAL ERROR: Transaction Rolled Back. \n\n{ex.Message}", "System Protection", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -230,89 +207,16 @@ namespace POS.BackOffice.UI.ViewModels
             SelectedSupplier = null;
             SupplierInvoiceNo = string.Empty;
             Remarks = string.Empty;
-            GrnLines.Clear();
+            ScanBarcode = string.Empty;
+
             GlobalBillDiscount = 0;
             FreightAmount = 0;
-            DocumentStatus = "DRAFT / RECEIVING";
-        }
 
-        [RelayCommand]
-        private void SaveDraft()
-        {
-            MessageBox.Show("Draft saved locally. Stock has not been updated.", "Draft Mode", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+            GrnLines.Clear();
+            ActiveMatrixVariants.Clear();
+            RecalculateTotals();
 
-        [RelayCommand]
-        private async Task PostGrnAsync()
-        {
-            // 1. Strict Validation
-            if (SelectedSupplier == null)
-            {
-                MessageBox.Show("Please select a Supplier.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(SupplierInvoiceNo))
-            {
-                MessageBox.Show("Please enter the Supplier Invoice Number.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            if (GrnLines.Count == 0)
-            {
-                MessageBox.Show("You cannot post an empty GRN.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var confirm = MessageBox.Show($"Post this GRN?\nTotal Debt: Rs. {NetPayable:N2}\n\nThis will lock the document and update item costs.", "Confirm Post", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (confirm != MessageBoxResult.Yes) return;
-
-            try
-            {
-                // 2. Map the UI Data to the Database Entity (GrnHeader)
-                var newGrn = new GrnHeader
-                {
-                    // We use a timestamp for the internal GRN Number
-                    GrnNumber = "GRN" + DateTime.Now.ToString("yyMMddHHmmss"),
-                    SupplierInvoiceNo = this.SupplierInvoiceNo,
-                    SupplierId = SelectedSupplier.Id,
-                    ReceivedDate = this.ReceivedDate,
-                    DueDate = this.DueDate,
-                    Remarks = this.Remarks,
-                    Status = "POSTED",
-
-                    Subtotal = this.Subtotal,
-                    BillDiscountAmount = this.GlobalBillDiscount,
-                    FreightAmount = this.FreightAmount,
-                    TaxAmount = this.TotalTaxAmount,
-                    NetPayable = this.NetPayable
-                };
-
-                // 3. Map the Grid Rows (GrnLineItem) to the Database Entities (GrnDetail)
-                foreach (var line in GrnLines)
-                {
-                    newGrn.GrnDetails.Add(new GrnDetail
-                    {
-                        ItemId = line.ItemId,
-                        ReceivedQty = line.ReceivedQty,
-                        FocQty = line.FocQty,
-                        UnitCost = line.UnitCost,
-                        IsTaxable = line.IsTaxable,
-                        LineTaxAmount = line.LineTax,
-                        LineDiscount = line.LineDiscount,
-                        LineTotal = line.LineTotal
-                    });
-                }
-
-                // 4. Send it to the Engine!
-                await _grnRepository.PostGrnAsync(newGrn);
-
-                // 5. Success
-                MessageBox.Show($"GRN Posted Successfully!\nReference: {newGrn.GrnNumber}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                Clear(); // Reset the UI for the next truck delivery
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"CRITICAL ERROR: Transaction Rolled Back.\n\nDetails: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            DocumentStatus = "DRAFT";
         }
     }
 }
