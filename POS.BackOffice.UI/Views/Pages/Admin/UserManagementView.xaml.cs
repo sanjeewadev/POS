@@ -1,28 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using POS.BackOffice.UI.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace POS.BackOffice.UI.Views.Pages.Admin
 {
-    /// <summary>
-    /// Interaction logic for UserManagementView.xaml
-    /// </summary>
     public partial class UserManagementView : UserControl
     {
         public UserManagementView()
         {
             InitializeComponent();
+        }
+
+        private async void BtnSaveUser_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is UserManagementViewModel viewModel)
+            {
+                // Extract plain text securely right before passing it to the logic engine
+                string password = pwdBox.Password;
+                string pin = pinBox.Password;
+
+                await viewModel.ExecuteSaveAsync(password, pin);
+
+                // Wipe the UI boxes from memory after processing
+                pwdBox.Clear();
+                pinBox.Clear();
+            }
         }
     }
 }

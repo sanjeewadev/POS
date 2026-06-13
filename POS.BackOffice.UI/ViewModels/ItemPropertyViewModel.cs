@@ -1,32 +1,38 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    // Helper wrapper class to power the Category Checkbox List
-    public partial class SelectableCategory : ObservableObject
+    // -----------------------------------------------------------
+    // UI WRAPPER: Required for CheckBox Binding in the ListBox
+    // -----------------------------------------------------------
+    public partial class CategorySelectionWrapper : ObservableObject
     {
-        public int Id { get; set; }
+        public int CategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
 
         [ObservableProperty]
         private bool _isSelected;
     }
 
+    // -----------------------------------------------------------
+    // MAIN VIEW MODEL
+    // -----------------------------------------------------------
     public partial class ItemPropertyViewModel : ViewModelBase
     {
+        private readonly AttributeRepository _attributeRepository;
         private readonly CategoryRepository _categoryRepository;
-        private readonly AttributeGroupRepository _attributeGroupRepository;
-        private readonly AttributeValueRepository _attributeValueRepository;
 
-        // --- Form Binding Properties ---
+        // --- Form Fields ---
         [ObservableProperty]
         private AttributeGroup? _selectedAttributeGroup;
 
@@ -34,63 +40,45 @@ namespace POS.BackOffice.UI.ViewModels
         private string _valueName = string.Empty;
 
         [ObservableProperty]
-        private bool _isActive = true;
+        private bool _isDeactivated = false;
 
         [ObservableProperty]
         private AttributeValue? _selectedAttributeValue;
 
-        // --- Filter Properties ---
+        // --- Filter Fields ---
         [ObservableProperty]
         private string _searchText = string.Empty;
 
         [ObservableProperty]
         private AttributeGroup? _selectedFilterGroup;
 
-        // --- UI Collections ---
+        // --- Collections ---
         public ObservableCollection<AttributeGroup> AttributeGroups { get; set; } = new();
         public ObservableCollection<AttributeValue> AttributeValues { get; set; } = new();
-        public ObservableCollection<SelectableCategory> Categories { get; set; } = new();
 
-        public ItemPropertyViewModel(
-            CategoryRepository categoryRepository,
-            AttributeGroupRepository attributeGroupRepository,
-            AttributeValueRepository attributeValueRepository)
+        // The wrapped list for the UI CheckBoxes
+        public ObservableCollection<CategorySelectionWrapper> Categories { get; set; } = new();
+
+        public ItemPropertyViewModel(AttributeRepository attributeRepository, CategoryRepository categoryRepository)
         {
+            _attributeRepository = attributeRepository;
             _categoryRepository = categoryRepository;
-            _attributeGroupRepository = attributeGroupRepository;
-            _attributeValueRepository = attributeValueRepository;
-
             _ = InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
-            await LoadCategoriesChecklistAsync();
-            await LoadAttributeGroupsAsync();
-            await LoadAttributeValuesAsync();
+            await LoadGroupsAsync();
+            await LoadCategoriesForCheckboxesAsync();
+            await LoadValuesAsync();
         }
 
-        private async Task LoadCategoriesChecklistAsync()
-        {
-            Categories.Clear();
-            var databaseCategories = (await _categoryRepository.GetAllAsync()).Where(c => c.IsActive);
-            foreach (var cat in databaseCategories)
-            {
-                Categories.Add(new SelectableCategory
-                {
-                    Id = cat.Id,
-                    CategoryName = cat.CategoryName,
-                    IsSelected = false
-                });
-            }
-        }
-
-        private async Task LoadAttributeGroupsAsync()
+        private async Task LoadGroupsAsync()
         {
             AttributeGroups.Clear();
-            var groups = await _attributeGroupRepository.GetGroupsWithCategoriesAsync();
+            var groups = await _attributeRepository.GetAllGroupsAsync();
 
-            // Inject a clearing node for the filter panel
+            // For the filter dropdown
             AttributeGroups.Add(new AttributeGroup { Id = 0, GroupName = "-- ALL GROUPS --" });
 
             foreach (var g in groups)
@@ -99,56 +87,54 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        [RelayCommand]
-        private async Task LoadAttributeValuesAsync()
+        private async Task LoadCategoriesForCheckboxesAsync()
         {
-            AttributeValues.Clear();
+            Categories.Clear();
+            var activeCategories = (await _categoryRepository.GetAllAsync()).Where(c => !c.IsDeactivated);
 
-            // 1. Database level filtering by Group Context
-            var data = (SelectedFilterGroup != null && SelectedFilterGroup.Id != 0)
-                ? await _attributeValueRepository.GetValuesByGroupIdAsync(SelectedFilterGroup.Id)
-                : await _attributeValueRepository.GetAllAsync();
-
-            // 2. UI evaluation level filtering by text parameter strings
-            if (!string.IsNullOrWhiteSpace(SearchText))
+            foreach (var cat in activeCategories)
             {
-                data = data.Where(v => v.ValueName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                                       v.AttributeGroup.GroupName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
-            }
-
-            foreach (var val in data)
-            {
-                AttributeValues.Add(val);
+                Categories.Add(new CategorySelectionWrapper
+                {
+                    CategoryId = cat.Id,
+                    CategoryName = cat.CategoryName,
+                    IsSelected = false
+                });
             }
         }
 
         [RelayCommand]
+        private async Task LoadValuesAsync()
+        {
+            AttributeValues.Clear();
+            int? filterGroupId = (SelectedFilterGroup != null && SelectedFilterGroup.Id != 0) ? SelectedFilterGroup.Id : null;
+
+            var data = await _attributeRepository.GetAllValuesFilteredAsync(filterGroupId, SearchText);
+
+            foreach (var item in data)
+            {
+                AttributeValues.Add(item);
+            }
+        }
+
+        [RelayCommand]
+        private async Task SearchAsync()
+        {
+            await LoadValuesAsync();
+        }
+
+        // --- THE ADD GROUP POPUP (Simulated) ---
+        [RelayCommand]
         private async Task AddGroupAsync()
         {
-            // Simple prompt strategy to handle new category group classifications inline safely
-            string groupName = Microsoft.VisualBasic.Interaction.InputBox(
-                "Enter new Attribute Group Name (e.g., RAM, Storage, Fabric):",
-                "Create Attribute Group", "");
+            // TODO: Replace this MessageBox with a custom popup window (e.g. InputDialog) to get text
+            MessageBox.Show("Open your custom 'Add Group' text input window here. \nThen call: \nvar newGroup = await _attributeRepository.AddGroupAsync(userInput);", "Action Required", MessageBoxButton.OK, MessageBoxImage.Information);
 
-            if (string.IsNullOrWhiteSpace(groupName)) return;
-
-            var newGroup = new AttributeGroup
-            {
-                GroupName = groupName.Trim(),
-                IsActive = true
-            };
-
-            try
-            {
-                await _attributeGroupRepository.AddAsync(newGroup);
-                await LoadAttributeGroupsAsync();
-                SelectedAttributeGroup = AttributeGroups.FirstOrDefault(g => g.GroupName == newGroup.GroupName);
-                MessageBox.Show($"Group '{groupName}' configured successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to save group context parameters: {ex.Message}", "Database Exception", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            // Example Logic once you have the text:
+            // string userInput = "New Size Format"; // From your custom popup
+            // var newGroup = await _attributeRepository.AddGroupAsync(userInput);
+            // await LoadGroupsAsync();
+            // SelectedAttributeGroup = AttributeGroups.FirstOrDefault(g => g.Id == newGroup.Id);
         }
 
         [RelayCommand]
@@ -156,59 +142,57 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedAttributeGroup == null || SelectedAttributeGroup.Id == 0)
             {
-                MessageBox.Show("Please select or create an Attribute Group parent context.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please select an Attribute Group.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(ValueName))
             {
-                MessageBox.Show("Attribute specification entry string is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Extract checkboxes state inside the wrapper entity back into domain objects
-            var selectedCategoriesList = Categories.Where(c => c.IsSelected).Select(c => new Category { Id = c.Id, CategoryName = c.CategoryName }).ToList();
-
-            if (!selectedCategoriesList.Any())
-            {
-                MessageBox.Show("Please assign this attribute profile configuration to at least one category mapping target.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Attribute Value is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                // Update Many-to-Many entity targets linked to the Parent Group structure
-                SelectedAttributeGroup.Categories = selectedCategoriesList;
-                await _attributeGroupRepository.UpdateAsync(SelectedAttributeGroup);
+                int currentId = SelectedAttributeValue?.Id ?? 0;
+                bool isUnique = await _attributeRepository.IsValueUniqueAsync(ValueName, SelectedAttributeGroup.Id, currentId);
 
+                if (!isUnique)
+                {
+                    MessageBox.Show($"The value '{ValueName}' already exists in the '{SelectedAttributeGroup.GroupName}' group.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // 1. Save the Value
                 if (SelectedAttributeValue == null)
                 {
-                    // Create child parameter structure
                     var newValue = new AttributeValue
                     {
                         AttributeGroupId = SelectedAttributeGroup.Id,
                         ValueName = this.ValueName.Trim(),
-                        IsActive = this.IsActive
+                        IsDeactivated = this.IsDeactivated
                     };
-                    await _attributeValueRepository.AddAsync(newValue);
+                    await _attributeRepository.AddValueAsync(newValue);
                 }
                 else
                 {
-                    // Update target parameter context mapping indexes
                     SelectedAttributeValue.AttributeGroupId = SelectedAttributeGroup.Id;
                     SelectedAttributeValue.ValueName = this.ValueName.Trim();
-                    SelectedAttributeValue.IsActive = this.IsActive;
-                    await _attributeValueRepository.UpdateAsync(SelectedAttributeValue);
+                    SelectedAttributeValue.IsDeactivated = this.IsDeactivated;
+                    await _attributeRepository.UpdateValueAsync(SelectedAttributeValue);
                 }
 
-                await LoadAttributeValuesAsync();
-                await LoadAttributeGroupsAsync(); // Synchronize group context array states
+                // 2. Sync the Many-to-Many Category Checkboxes
+                var checkedCategoryIds = Categories.Where(c => c.IsSelected).Select(c => c.CategoryId).ToList();
+                await _attributeRepository.SyncGroupToCategoriesAsync(SelectedAttributeGroup.Id, checkedCategoryIds);
+
+                await LoadValuesAsync();
                 Clear();
-                MessageBox.Show("Operational parameters saved securely.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Attribute saved and categories synchronized successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error handling transaction boundaries: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Database Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -217,9 +201,10 @@ namespace POS.BackOffice.UI.ViewModels
         {
             SelectedAttributeGroup = null;
             ValueName = string.Empty;
-            IsActive = true;
+            IsDeactivated = false;
             SelectedAttributeValue = null;
 
+            // Untick all checkboxes
             foreach (var cat in Categories)
             {
                 cat.IsSelected = false;
@@ -231,45 +216,68 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedAttributeValue == null) return;
 
-            var choice = MessageBox.Show($"Soft-delete '{SelectedAttributeValue.ValueName}' tracking matrix safely from historical configurations?",
-                "System Confirmation Alert", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-            if (choice == MessageBoxResult.Yes)
+            var result = MessageBox.Show($"Delete the attribute value '{SelectedAttributeValue.ValueName}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result == MessageBoxResult.Yes)
             {
-                await _attributeValueRepository.SoftDeleteAsync(SelectedAttributeValue.Id);
-                await LoadAttributeValuesAsync();
-                Clear();
+                try
+                {
+                    await _attributeRepository.DeleteValueAsync(SelectedAttributeValue.Id);
+                    await LoadValuesAsync();
+                    Clear();
+                }
+                catch (DbUpdateException)
+                {
+                    MessageBox.Show("Cannot delete this value because items in your inventory currently use it. Please Deactivate it instead.", "Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
-        // --- Auto-Triggers ---
+        // --- AUTO-TRIGGERS ---
 
         partial void OnSearchTextChanged(string value)
         {
-            _ = LoadAttributeValuesAsync();
+            _ = LoadValuesAsync();
         }
 
         partial void OnSelectedFilterGroupChanged(AttributeGroup? value)
         {
-            _ = LoadAttributeValuesAsync();
+            _ = LoadValuesAsync();
         }
 
+        // When a user selects a value in the Grid, populate the form
         partial void OnSelectedAttributeValueChanged(AttributeValue? value)
         {
             if (value != null)
             {
-                // Load parent form properties
                 SelectedAttributeGroup = AttributeGroups.FirstOrDefault(g => g.Id == value.AttributeGroupId);
-                ValueName = value.ValueName;
-                IsActive = value.IsActive;
+                ValueName = value.ValueName ?? string.Empty;
+                IsDeactivated = value.IsDeactivated;
+            }
+        }
 
-                // Sync checkbox mapping selections cleanly using tracking maps 
-                if (SelectedAttributeGroup != null)
+        // MAGICAL SYNC: When a Group is selected, query the DB and tick the corresponding Category boxes
+        partial void OnSelectedAttributeGroupChanged(AttributeGroup? value)
+        {
+            if (value != null && value.Id != 0)
+            {
+                _ = SyncCheckboxesToSelectedGroupAsync(value.Id);
+            }
+        }
+
+        private async Task SyncCheckboxesToSelectedGroupAsync(int groupId)
+        {
+            // Untick all
+            foreach (var cat in Categories) { cat.IsSelected = false; }
+
+            // Get assigned IDs from database
+            var assignedIds = await _attributeRepository.GetAssignedCategoryIdsForGroupAsync(groupId);
+
+            // Tick the matching ones
+            foreach (var cat in Categories)
+            {
+                if (assignedIds.Contains(cat.CategoryId))
                 {
-                    foreach (var cat in Categories)
-                    {
-                        cat.IsSelected = SelectedAttributeGroup.Categories.Any(c => c.Id == cat.Id);
-                    }
+                    cat.IsSelected = true;
                 }
             }
         }

@@ -4,29 +4,61 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="850" d:DesignWidth="1300"
-             Background="#F5F5F5">
+             d:DesignHeight="850" d:DesignWidth="1400"
+             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
 
     <UserControl.Resources>
-        <!-- Standard Button Style -->
-        <Style TargetType="Button" x:Key="StandardBtn">
-            <Setter Property="Background" Value="#2B3C38"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
+        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Margin" Value="0,5,0,10"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="ClassicInput">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3B524E"/>
+                    <Setter Property="Background" Value="#CCCCCC"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <!-- Excel Export Button (Green) -->
-        <Style TargetType="Button" x:Key="ExcelBtn" BasedOn="{StaticResource StandardBtn}">
+        <Style TargetType="Button" x:Key="ExcelBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#28A745"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#1E7E34"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#218838"/>
@@ -34,227 +66,166 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Print Button (Blue) -->
-        <Style TargetType="Button" x:Key="PrintBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#2B5B84"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+        <Style TargetType="Border" x:Key="ClassicGroupBox">
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+
+        <Style TargetType="DataGridCell" x:Key="BaseCell">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1C3F5E"/>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#005555"/>
+                    <Setter Property="Foreground" Value="White"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <!-- Standard Input Style -->
-        <Style TargetType="Control" x:Key="StandardInput">
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Height" Value="30"/>
+        <Style TargetType="DataGridCell" x:Key="FinancialCell" BasedOn="{StaticResource BaseCell}">
+            <Setter Property="Background" Value="#F8F8F8"/>
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <!-- Group Box Border Style -->
-        <Style TargetType="Border" x:Key="GroupBoxBorder">
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Background" Value="White"/>
+        <Style TargetType="DataGridCell" x:Key="WarningCell" BasedOn="{StaticResource BaseCell}">
+            <Setter Property="Foreground" Value="DarkRed"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="CenterElement" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="CenterBoldGreenElement" BasedOn="{StaticResource CenterElement}">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#005500"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="RightElement" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="RightBlueElement" BasedOn="{StaticResource RightElement}">
+            <Setter Property="Foreground" Value="#003366"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="RightGreenElement" BasedOn="{StaticResource RightElement}">
+            <Setter Property="Foreground" Value="#005500"/>
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Advanced Filtering Engine -->
             <RowDefinition Height="*"/>
-            <!-- Inventory Data Grid -->
             <RowDefinition Height="Auto"/>
-            <!-- Financial Footer & Actions -->
         </Grid.RowDefinitions>
 
-        <!-- ========================================== -->
-        <!-- ZONE 1: ADVANCED FILTERING ENGINE          -->
-        <!-- ========================================== -->
-        <Border Grid.Row="0" Style="{StaticResource GroupBoxBorder}" Margin="0,0,0,15">
+        <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,5">
             <StackPanel>
-                <TextBlock Text="Stock Balance &amp; Inventory Valuation" FontSize="20" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,15"/>
+                <TextBlock Text="STOCK BALANCE &amp; INVENTORY VALUATION" Style="{StaticResource HeaderLabel}"/>
 
-                <Grid>
+                <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2.5*"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="2*"/>
                         <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="2*"/>
                         <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Search (Item Code / Name)" Foreground="#666666" Margin="0,0,0,5"/>
-                        <TextBox x:Name="txtSearch" Style="{StaticResource StandardInput}"/>
+                        <TextBlock Text="Search (Item Code / Name):" Style="{StaticResource InlineLabel}"/>
+                        <TextBox x:Name="txtSearch" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2">
-                        <TextBlock Text="Filter by Location" Foreground="#666666" Margin="0,0,0,5"/>
-                        <ComboBox x:Name="cmbLocation" Style="{StaticResource StandardInput}" DisplayMemberPath="LocationName" SelectedValuePath="Id"/>
+                        <TextBlock Text="Category:" Style="{StaticResource InlineLabel}"/>
+                        <ComboBox x:Name="cmbCategory" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" DisplayMemberPath="CategoryName" Style="{StaticResource ClassicCombo}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="4">
-                        <TextBlock Text="Filter by Category" Foreground="#666666" Margin="0,0,0,5"/>
-                        <ComboBox x:Name="cmbCategory" Style="{StaticResource StandardInput}" DisplayMemberPath="CategoryName" SelectedValuePath="Id"/>
+                        <TextBlock Text="Supplier:" Style="{StaticResource InlineLabel}"/>
+                        <ComboBox x:Name="cmbSupplier" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" DisplayMemberPath="CompanyName" Style="{StaticResource ClassicCombo}"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="6">
-                        <TextBlock Text="Filter by Supplier" Foreground="#666666" Margin="0,0,0,5"/>
-                        <ComboBox x:Name="cmbSupplier" Style="{StaticResource StandardInput}" DisplayMemberPath="CompanyName" SelectedValuePath="Id"/>
-                    </StackPanel>
-
-                    <Button Grid.Column="8" x:Name="btnRefresh" Content="Refresh Data" Style="{StaticResource StandardBtn}" Margin="0" VerticalAlignment="Bottom" Height="30" Width="100"/>
+                    <Button Grid.Column="6" Content="SEARCH &amp; REFRESH" Command="{Binding RefreshCommand}" Style="{StaticResource ClassicBtn}" Height="24" VerticalAlignment="Bottom"/>
                 </Grid>
 
-                <WrapPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <CheckBox x:Name="chkHideZero" Content="Hide Zero Stock Items" IsChecked="True" Foreground="#333333" Cursor="Hand" Margin="0,0,25,0" ToolTip="Removes out-of-stock items from the view"/>
-                    <CheckBox x:Name="chkNegativeOnly" Content="Show Negative Stock Only" IsChecked="False" Foreground="#A94044" FontWeight="SemiBold" Cursor="Hand" ToolTip="Audit tool to find items that sold below 0"/>
+                <WrapPanel Orientation="Horizontal">
+                    <CheckBox x:Name="chkHideZero" Content="Hide Zero Stock Items" IsChecked="{Binding HideZeroStock}" Foreground="#333" FontWeight="SemiBold" Margin="0,0,25,0" ToolTip="Removes out-of-stock items from the view"/>
+                    <CheckBox x:Name="chkNegativeOnly" Content="Show Negative Stock Only" IsChecked="{Binding ShowNegativeOnly}" Foreground="DarkRed" FontWeight="Bold" ToolTip="Audit tool to find items that sold below 0"/>
                 </WrapPanel>
             </StackPanel>
         </Border>
 
-        <!-- ========================================== -->
-        <!-- ZONE 2: INVENTORY GRID (REPORTING VIEW)    -->
-        <!-- ========================================== -->
-        <Border Grid.Row="1" Style="{StaticResource GroupBoxBorder}" Padding="0" Margin="0,0,0,15">
-            <DataGrid x:Name="dgStockBalance" 
-                      AutoGenerateColumns="False" 
-                      CanUserAddRows="False" 
-                      CanUserDeleteRows="False" 
-                      IsReadOnly="True"
-                      HeadersVisibility="Column" 
-                      GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#EEEEEE"
-                      BorderThickness="0"
-                      RowHeight="35"
-                      Background="Transparent"
-                      SelectionMode="Single">
+        <Border Grid.Row="1" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" Margin="0,0,0,5">
+            <DataGrid x:Name="dgStockBalance" ItemsSource="{Binding StockBalances}" SelectedItem="{Binding SelectedItem}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
+                      HeadersVisibility="Column" GridLinesVisibility="All" 
+                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
+                      RowHeight="26" Background="White" BorderThickness="0" 
+                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#F8F8F8"/>
-                        <Setter Property="Foreground" Value="#333333"/>
+                        <Setter Property="Background" Value="#E0E0E0"/>
+                        <Setter Property="Foreground" Value="Black"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Padding" Value="10,8"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                        <Setter Property="Padding" Value="5"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
                     </Style>
-                    <Style TargetType="DataGridCell">
-                        <Setter Property="Padding" Value="10,0"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="DataGridCell">
-                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
-                                        <ContentPresenter VerticalAlignment="Center"/>
-                                    </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E2EBE9"/>
-                                <Setter Property="Foreground" Value="Black"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
+                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                 </DataGrid.Resources>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="100"/>
-                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2.5*"/>
-                    <DataGridTextColumn Header="Location" Binding="{Binding LocationName}" Width="1.5*"/>
-                    <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="70"/>
+                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="85" Foreground="#666"/>
+                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="120" Foreground="#444"/>
+                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="50"/>
 
-                    <DataGridTextColumn Header="Qty On Hand" Binding="{Binding QtyOnHand}" Width="110">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Foreground" Value="#2B5B84"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Qty On Hand" Binding="{Binding QtyOnHand}" Width="90" ElementStyle="{StaticResource CenterBoldGreenElement}"/>
 
-                    <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCost, StringFormat=N2}" Width="100">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCost, StringFormat=N2}" Width="85" Foreground="#666" ElementStyle="{StaticResource RightElement}"/>
 
-                    <DataGridTextColumn Header="Total Cost Value" Binding="{Binding TotalCostValue, StringFormat=N2}" Width="130">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Foreground" Value="#2B3C38"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Total Cost Value" Binding="{Binding TotalCostValue, StringFormat=N2}" Width="120" CellStyle="{StaticResource FinancialCell}" ElementStyle="{StaticResource RightBlueElement}"/>
 
-                    <DataGridTextColumn Header="Unit Retail" Binding="{Binding UnitRetail, StringFormat=N2}" Width="100">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Unit Retail" Binding="{Binding UnitRetail, StringFormat=N2}" Width="85" Foreground="#666" ElementStyle="{StaticResource RightElement}"/>
 
-                    <DataGridTextColumn Header="Total Retail Value" Binding="{Binding TotalRetailValue, StringFormat=N2}" Width="140">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Foreground" Value="#2B5B84"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Total Retail Value" Binding="{Binding TotalRetailValue, StringFormat=N2}" Width="120" CellStyle="{StaticResource FinancialCell}" ElementStyle="{StaticResource RightGreenElement}"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
 
-        <!-- ========================================== -->
-        <!-- ZONE 3: FINANCIAL FOOTER & ACTIONS         -->
-        <!-- ========================================== -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
-                <!-- Counters -->
                 <ColumnDefinition Width="*"/>
-                <!-- Financials -->
                 <ColumnDefinition Width="Auto"/>
-                <!-- Actions -->
             </Grid.ColumnDefinitions>
 
-            <!-- Basic Counters -->
-            <Border Grid.Column="0" Background="#F8F8F8" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15,10" Margin="0,0,15,0">
+            <Border Grid.Column="0" Style="{StaticResource ClassicGroupBox}" Margin="0,0,5,0" Padding="15,10">
                 <StackPanel VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                        <TextBlock Text="Total Line Items: " Foreground="#666666" FontSize="13"/>
-                        <TextBlock x:Name="txtTotalItems" Text="0" FontWeight="Bold" Foreground="#333333" FontSize="14"/>
+                        <TextBlock Text="Total Line Items: " Foreground="#555" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding TotalLineItems}" FontWeight="Bold" Foreground="#000" FontSize="13"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Total Physical Qty: " Foreground="#666666" FontSize="13"/>
-                        <TextBlock x:Name="txtTotalQty" Text="0" FontWeight="Bold" Foreground="#2B5B84" FontSize="14"/>
+                        <TextBlock Text="Total Physical Qty: " Foreground="#555" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding TotalPhysicalQty}" FontWeight="Bold" Foreground="#005500" FontSize="13"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- Financial Valuation -->
-            <Border Grid.Column="1" Background="#E2EBE9" BorderBrush="#B2D1C9" BorderThickness="1" CornerRadius="4" Padding="20,10" Margin="0,0,15,0">
+            <Border Grid.Column="1" Background="#E0FFFF" BorderBrush="#005555" BorderThickness="1" Padding="20,10" Margin="0,0,5,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -262,27 +233,27 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
-                        <TextBlock Text="Total Inventory Asset Value (Cost):" Foreground="#2B3C38" FontSize="12"/>
-                        <TextBlock x:Name="txtTotalCostValuation" Text="Rs. 0.00" FontWeight="Bold" FontSize="22" Foreground="#2B3C38"/>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="TOTAL INVENTORY ASSET VALUE (COST):" Foreground="#003366" FontSize="11" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding TotalAssetValue, StringFormat=Rs. \{0:N2\}}" FontWeight="Bold" FontSize="22" Foreground="#003366" HorizontalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Divider Line -->
-                    <Border Grid.Column="1" Background="#B2D1C9" Margin="0,5"/>
+                    <Rectangle Grid.Column="1" Fill="#005555" Margin="0,5"/>
 
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="20,0,0,0">
-                        <TextBlock Text="Projected Revenue Value (Retail):" Foreground="#2B5B84" FontSize="12"/>
-                        <TextBlock x:Name="txtTotalRetailValuation" Text="Rs. 0.00" FontWeight="Bold" FontSize="22" Foreground="#2B5B84"/>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="PROJECTED REVENUE VALUE (RETAIL):" Foreground="#005500" FontSize="11" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ProjectedRevenue, StringFormat=Rs. \{0:N2\}}" FontWeight="Bold" FontSize="22" Foreground="#005500" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- Action Buttons -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Clear Filters" Style="{StaticResource StandardBtn}" Background="#777777" Width="110"/>
-                <Button Content="Export to Excel" Style="{StaticResource ExcelBtn}" Width="140"/>
-                <Button Content="Print Report" Style="{StaticResource PrintBtn}" Width="130" Margin="0"/>
-            </StackPanel>
+            <Border Grid.Column="2" Style="{StaticResource ClassicGroupBox}" Margin="0" Padding="10">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" Style="{StaticResource ClassicBtn}" Height="34" Margin="0,0,10,0"/>
+                    <Button Content="🖨️ Print Report" Command="{Binding PrintReportCommand}" Style="{StaticResource ClassicBtn}" Height="34" Margin="0,0,10,0"/>
+                    <Button Content="🟩 Export to Excel" Command="{Binding ExportExcelCommand}" Style="{StaticResource ExcelBtn}" Height="34" Padding="20,0"/>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

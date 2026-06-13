@@ -67,6 +67,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS.Cashier.UI.AssemblyInfoInputs.cache
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS.Cashier.UI.AssemblyInfo.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS.Cashier.UI.csproj.CoreCompileInputs.cache
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS.Cashier.UI.sourcelink.json
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS.Cash.B1167255.Up2Date
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS.Cashier.UI.dll
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\refint\POS.Cashier.UI.dll

@@ -1,49 +1,55 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace POS.Core.Models
 {
     public class GrnHeader
     {
-        [Key]
         public int Id { get; set; }
 
-        // --- Core Identity ---
         [Required]
-        [MaxLength(50)]
-        public string GrnNumber { get; set; } = string.Empty; // e.g., GRN-260611-0001
+        [MaxLength(20)]
+        public string GrnNumber { get; set; } = string.Empty; // e.g., GRN-2024-0001
 
+        // Optional Link to a Purchase Order
+        public int? PurchaseOrderId { get; set; }
+
+        // Foreign Key to Supplier
         [Required]
-        [MaxLength(50)]
-        public string SupplierInvoiceNo { get; set; } = string.Empty; // The physical paper bill number
-
-        [MaxLength(50)]
-        public string? ReferencePoNo { get; set; } // Nullable if Direct Intake
-
-        // --- Relationships ---
         public int SupplierId { get; set; }
-        [ForeignKey("SupplierId")]
-        public virtual Supplier? Supplier { get; set; }
+        public Supplier Supplier { get; set; } = null!;
 
-        // --- Dates & Rules ---
+        [Required]
+        [MaxLength(50)]
+        public string SupplierInvoiceNo { get; set; } = string.Empty;
+
+        public DateTime InvoiceDate { get; set; } = DateTime.Now;
         public DateTime ReceivedDate { get; set; } = DateTime.Now;
-        public DateTime DueDate { get; set; } // ReceivedDate + Supplier.DefaultCreditDays
+        public DateTime DueDate { get; set; } = DateTime.Now.AddDays(30);
+
+        public int CreditDays { get; set; } = 30;
 
         [MaxLength(500)]
-        public string? Remarks { get; set; }
+        public string Remarks { get; set; } = string.Empty;
 
-        public string Status { get; set; } = "DRAFT"; // DRAFT or POSTED
+        // --- GLOBAL FINANCIALS ---
+        public decimal Subtotal { get; set; } = 0m;
+        public decimal GlobalBillDiscount { get; set; } = 0m;
+        public decimal FreightAmount { get; set; } = 0m;
+        public decimal TotalDiscountAmount { get; set; } = 0m; // Sum of line discounts + global discount
+        public decimal NetPayable { get; set; } = 0m; // The actual amount added to Supplier Ledger
 
-        // --- Financial Totals (The Footer) ---
-        public decimal Subtotal { get; set; }
-        public decimal BillDiscountAmount { get; set; }
-        public decimal FreightAmount { get; set; } // Landed Cost
-        public decimal TaxAmount { get; set; }     // VAT/Taxes
-        public decimal NetPayable { get; set; }    // The final debt to supplier
+        // Document Status (e.g., Draft, Posted, Canceled)
+        [MaxLength(20)]
+        public string Status { get; set; } = "Draft";
 
-        // --- Navigation Property for the Grid ---
-        public virtual ICollection<GrnDetail> GrnDetails { get; set; } = new List<GrnDetail>();
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [MaxLength(50)]
+        public string CreatedBy { get; set; } = string.Empty; // User who processed the GRN
+
+        // Navigation: One GRN contains Many Items
+        public ICollection<GrnLine> GrnLines { get; set; } = new List<GrnLine>();
     }
 }

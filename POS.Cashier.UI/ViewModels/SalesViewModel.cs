@@ -1,92 +1,109 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.Cashier.UI.Models;
+using POS.Core.Repositories; // Your existing Back Office repositories!
 
 namespace POS.Cashier.UI.ViewModels
 {
-    // A simple wrapper class for the DataGrid rows
-    public partial class CartItem : ObservableObject
-    {
-        public int ProductId { get; set; }
-        public string ProductName { get; set; } = string.Empty;
-
-        [ObservableProperty]
-        private int _quantity;
-
-        [ObservableProperty]
-        private decimal _unitPrice;
-
-        public decimal TotalPrice => Quantity * UnitPrice;
-
-        // Automatically update the TotalPrice if Qty or Price changes
-        protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            base.OnPropertyChanged(e);
-            if (e.PropertyName == nameof(Quantity) || e.PropertyName == nameof(UnitPrice))
-            {
-                OnPropertyChanged(nameof(TotalPrice));
-            }
-        }
-    }
-
     public partial class SalesViewModel : ObservableObject
     {
-        // The list that binds to your CartDataGrid
-        public ObservableCollection<CartItem> CartItems { get; set; } = new();
+        private readonly ItemMasterRepository _itemRepository;
 
-        [ObservableProperty]
-        private decimal _subtotal;
+        // --- THE CART ---
+        public ObservableCollection<CartItem> Cart { get; } = new();
 
-        [ObservableProperty]
-        private decimal _taxAmount;
+        // --- THE TOTALS PANEL BINDINGS ---
+        [ObservableProperty] private decimal _netValue = 0.00m;
+        [ObservableProperty] private decimal _totalDiscount = 0.00m;
+        [ObservableProperty] private int _totalItems = 0;
+        [ObservableProperty] private int _totalPieces = 0;
 
-        [ObservableProperty]
-        private decimal _grandTotal;
-
-        [ObservableProperty]
-        private string _barcodeInput = string.Empty;
-
-        public SalesViewModel()
+        public SalesViewModel(ItemMasterRepository itemRepository)
         {
-            // Listen for changes in the cart to update totals
-            CartItems.CollectionChanged += (s, e) => CalculateTotals();
+            _itemRepository = itemRepository;
+
+            // Listen to the cart: Whenever an item is added or removed, recalculate the massive red numbers
+            Cart.CollectionChanged += (s, e) => RecalculateTotals();
         }
 
-        // Simulates scanning a barcode or typing a code and hitting Enter
-        [RelayCommand]
-        private void AddItemToCart()
+        // ==========================================
+        // THE GHOST SCANNER RECEIVER
+        // ==========================================
+        public async Task ProcessBarcodeAsync(string barcode)
         {
-            if (string.IsNullOrWhiteSpace(BarcodeInput)) return;
+            if (string.IsNullOrWhiteSpace(barcode)) return;
 
-            // TODO: In the future, this will query POS.Core.Repositories.ItemRepository
-            // For now, we just add a dummy item to test the UI!
-            var newItem = new CartItem
+            // 1. Check if the item is already in the cart
+            var existingItem = Cart.FirstOrDefault(c => c.Barcode == barcode);
+
+            if (existingItem != null)
             {
-                ProductId = 1,
-                ProductName = "Test Item (" + BarcodeInput + ")",
-                Quantity = 1,
-                UnitPrice = 15.00m
-            };
+                // Just bump the quantity and the UI will auto-update!
+                existingItem.Quantity++;
+                RecalculateTotals();
+                return;
+            }
 
-            CartItems.Add(newItem);
+            // 2. It's a new item! Ask your existing Back Office database for it.
+            try
+            {
+                // NOTE: Make sure your ItemRepository has a method like GetItemByBarcodeAsync!
+                var dbItem = await _itemRepository.GetItemByBarcodeAsync(barcode);
 
-            // Clear the search box instantly for the next scan
-            BarcodeInput = string.Empty;
+                if (dbItem == null)
+                {
+                    MessageBox.Show($"Unrecognized Barcode: {barcode}", "Item Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (dbItem.TotalStockOnHand <= 0)
+                {
+                    // Optional warning: You can allow negative sales, or block them based on your GRN logic
+                    MessageBox.Show("Warning: This item has 0 stock in the system.", "Low Stock", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+
+                // 3. Add it to the Cashier's Cart
+                // 3. Add it to the Cashier's Cart
+                Cart.Add(new CartItem
+                {
+                    ItemId = dbItem.Id,
+                    Barcode = dbItem.SkuCode, // The scanned code
+
+                    // Pull the name from the Parent matrix
+                    Description = dbItem.ItemParent?.ItemName ?? "Unknown Item",
+
+                    UnitPrice = dbItem.RetailPrice, // Assuming your Variant model has RetailPrice
+                    Quantity = 1
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Database Error: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        public void CalculateTotals()
+        // ==========================================
+        // MATH ENGINE
+        // ==========================================
+        public void RecalculateTotals()
         {
-            Subtotal = CartItems.Sum(x => x.TotalPrice);
-            TaxAmount = Subtotal * 0.08m; // Assuming 8% tax for example
-            GrandTotal = Subtotal + TaxAmount;
+            NetValue = Cart.Sum(c => c.LineAmount);
+            TotalItems = Cart.Count;
+            TotalPieces = Cart.Sum(c => c.Quantity);
+
+            // If you add discount logic later, calculate the difference here
+            TotalDiscount = Cart.Sum(c => (c.UnitPrice * c.Quantity) - c.LineAmount);
         }
 
         [RelayCommand]
         private void ClearCart()
         {
-            CartItems.Clear();
-            CalculateTotals();
+            Cart.Clear();
         }
     }
 }

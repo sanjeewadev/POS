@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using POS.Cashier.UI.ViewModels; // FIXED: Pointing to the Cashier's OWN Brain!
 
 namespace POS.Cashier.UI.Views
 {
@@ -10,13 +9,9 @@ namespace POS.Cashier.UI.Views
             InitializeComponent();
         }
 
-        // This method securely passes the password to the ViewModel as the user types it
-        private void txtPassword_PasswordChanged(object sender, RoutedEventArgs e)
-        {
-            if (this.DataContext is LoginViewModel vm)
-            {
-                vm.Password = txtPassword.Password;
-            }
-        }
+        // SECURITY ENHANCEMENT: 
+        // The txtPassword_PasswordChanged event has been completely removed.
+        // Memory vulnerabilities are eliminated by passing the secure PasswordBox 
+        // directly to the ViewModel upon command execution.
     }
 }

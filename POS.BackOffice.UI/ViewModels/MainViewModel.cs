@@ -1,8 +1,7 @@
 ﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using POS.Core.Models;
-using POS.Core.Repositories;
 using POS.Core.Enums;
 
 namespace POS.BackOffice.UI.ViewModels
@@ -27,7 +26,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // We INJECT the factory into the MainViewModel so it can build other pages
+        // We INJECT the factory into the MainViewModel so it can build other pages safely
         public MainViewModel(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
@@ -36,7 +35,10 @@ namespace POS.BackOffice.UI.ViewModels
 
         private void LoadLoginScreen()
         {
-            var loginVM = new LoginViewModel();
+            // CRITICAL FIX: Do not use 'new LoginViewModel()'. 
+            // Ask the DI Container to build it so it automatically injects the AuthService.
+            var loginVM = _serviceProvider.GetRequiredService<LoginViewModel>();
+
             loginVM.LoginSuccessful += HandleSuccessfulLogin;
             CurrentPage = loginVM;
         }
@@ -45,7 +47,14 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (role == UserRole.Admin)
             {
-                NavigateToCategory();
+                // Default landing page after a successful login
+                NavigateToItemMaster();
+            }
+            else
+            {
+                // If a Cashier logs into the BackOffice by mistake, lock them out or redirect them.
+                // For now, we will route them to Item Master, but you can restrict this later.
+                NavigateToItemMaster();
             }
         }
 
@@ -54,83 +63,76 @@ namespace POS.BackOffice.UI.ViewModels
         // ==========================================
 
         [RelayCommand]
-        private void NavigateToCategory()
-        {
-            // Ask the factory to build the page safely
-            CurrentPage = _serviceProvider.GetService(typeof(CategoryViewModel));
-        }
+        private void NavigateToCategory() => CurrentPage = _serviceProvider.GetRequiredService<CategoryViewModel>();
 
         [RelayCommand]
-        private void NavigateToSubCategory()
-        {
-            CurrentPage = _serviceProvider.GetService(typeof(SubCategoryViewModel));
-        }
+        private void NavigateToSubCategory() => CurrentPage = _serviceProvider.GetRequiredService<SubCategoryViewModel>();
 
         [RelayCommand]
-        private void NavigateToItemProperty()
-        {
-            CurrentPage = _serviceProvider.GetService(typeof(ItemPropertyViewModel));
-        }
+        private void NavigateToItemProperty() => CurrentPage = _serviceProvider.GetRequiredService<ItemPropertyViewModel>();
 
         [RelayCommand]
-        private void NavigateToSupplier()
-        {
-            CurrentPage = _serviceProvider.GetService(typeof(SupplierViewModel));
-        }
+        private void NavigateToSupplier() => CurrentPage = _serviceProvider.GetRequiredService<SupplierViewModel>();
+
+        [RelayCommand]
+        private void NavigateToUnitOfMeasure() => CurrentPage = _serviceProvider.GetRequiredService<UnitOfMeasureViewModel>();
+
+        [RelayCommand]
+        private void NavigateToItemMaster() => CurrentPage = _serviceProvider.GetRequiredService<ItemMasterViewModel>();
 
         // ==========================================
-        // TOP MENU NAVIGATION COMMANDS (Pending)
+        // INVENTORY & PROCUREMENT COMMANDS (Active)
         // ==========================================
 
         [RelayCommand]
-        private void NavigateToItemMaster() {
-
-            CurrentPage = _serviceProvider.GetService(typeof(ItemMasterViewModel));
-        }
+        private void NavigateToGoodsReceivedNote() => CurrentPage = _serviceProvider.GetRequiredService<GrnViewModel>();
 
         [RelayCommand]
-        private void NavigateToGoodsReceivedNote()
-        {
-
-            CurrentPage = _serviceProvider.GetService(typeof(GrnViewModel));
-        }
-
-        //[RelayCommand]
-        //private void NavigatetoPurchaseOrder()
-        //{ 
-        
-        //    CurrentPage = _serviceProvider.GetService(typeof(PerchasOrederViewModel))
-        //}
+        private void NavigateToPurchaseOrder() => CurrentPage = _serviceProvider.GetRequiredService<PurchaseOrderViewModel>();
 
         [RelayCommand]
-        private void NavigateToUnitOfMeasure() { }
+        private void NavigateToStockBalance() => CurrentPage = _serviceProvider.GetRequiredService<StockBalanceViewModel>();
+
+        [RelayCommand]
+        private void NavigateToStockAdjustment() => CurrentPage = _serviceProvider.GetRequiredService<StockAdjustmentViewModel>();
+
+        [RelayCommand]
+        private void NavigateToSupplierReturn() => CurrentPage = _serviceProvider.GetRequiredService<SupplierReturnViewModel>();
+
+        // ==========================================
+        // SECURITY & ADMIN COMMANDS (Active)
+        // ==========================================
+
+        [RelayCommand]
+        private void NavigateToUserManagement() => CurrentPage = _serviceProvider.GetRequiredService<UserManagementViewModel>();
+
 
         // ==========================================
         // LEFT SIDEBAR QUICK LAUNCH COMMANDS
         // ==========================================
 
         [RelayCommand]
-        private void NavigateToInventorySetup() => NavigateToCategory();
+        private void NavigateToInventorySetup() => NavigateToItemMaster();
 
         [RelayCommand]
-        private void NavigateToInventoryOperations() { }
+        private void NavigateToInventoryOperations() => NavigateToGoodsReceivedNote();
 
         [RelayCommand]
-        private void NavigateToPurchasing() { }
+        private void NavigateToPurchasing() => NavigateToPurchaseOrder();
 
         [RelayCommand]
-        private void NavigateToSales() { }
+        private void NavigateToSales() { } // Placeholder for future CRM/Sales dashboard
 
         [RelayCommand]
-        private void NavigateToCrm() { }
+        private void NavigateToCrm() { } // Placeholder for future Customer dashboard
 
         [RelayCommand]
         private void NavigateToFinance() { }
 
         [RelayCommand]
-        private void NavigateToReports() { }
+        private void NavigateToReports() => NavigateToStockBalance();
 
         [RelayCommand]
-        private void NavigateToAdmin() { }
+        private void NavigateToAdmin() => NavigateToUserManagement();
     }
 }

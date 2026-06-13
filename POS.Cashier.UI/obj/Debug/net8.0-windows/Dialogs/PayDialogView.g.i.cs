@@ -140,7 +140,7 @@ namespace POS.Cashier.UI.Dialogs {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;V1.0.0.0;component/dialogs/paydialogview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;component/dialogs/paydialogview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Dialogs\PayDialogView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

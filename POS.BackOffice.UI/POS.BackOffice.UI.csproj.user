@@ -2,10 +2,10 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup />
   <ItemGroup>
-    <Compile Update="Views\Layout\LoginView.xaml.cs">
+    <Compile Update="Views\Layout\ManagementShellView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Layout\ManagementShellView.xaml.cs">
+    <Compile Update="Views\LoginWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Admin\AccessControlView.xaml.cs">
@@ -47,16 +47,13 @@
     <Compile Update="Views\Pages\Finance\PaymentVoucherView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Pages\Financials\SupplierLedgerView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Pages\InventoryOperations\BarcodePrinterView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\InventoryOperations\GrnView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\InventoryOperations\LocationTransferView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\InventoryOperations\PurchaseOrderView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\InventoryOperations\StockAdjustmentView.xaml.cs">
@@ -89,9 +86,6 @@
     <Compile Update="Views\Pages\Purchasing\PurchaseOrderView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Purchasing\SupplierReturnView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Update="Views\Pages\Reports\AuditLogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -117,9 +111,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Sales\WholesaleInvoiceView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\UserManagementView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
