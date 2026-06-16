@@ -10,9 +10,8 @@ namespace POS.Core.Models
 
         [Required]
         [MaxLength(20)]
-        public string PoNumber { get; set; } = string.Empty; // e.g., PO-2026-0045
+        public string PoNumber { get; set; } = string.Empty;
 
-        // Foreign Key to Supplier
         [Required]
         public int SupplierId { get; set; }
         public Supplier Supplier { get; set; } = null!;
@@ -32,19 +31,21 @@ namespace POS.Core.Models
         public decimal Subtotal { get; set; } = 0m;
         public decimal GlobalBillDiscount { get; set; } = 0m;
         public decimal TotalTaxAmount { get; set; } = 0m;
-        public decimal TotalDiscountAmount { get; set; } = 0m; // Sum of line discounts + global discount
-        public decimal NetPayable { get; set; } = 0m; // Expected final value
+        public decimal TotalDiscountAmount { get; set; } = 0m;
+        public decimal NetPayable { get; set; } = 0m;
+
+        // CRITICAL UPDATE: Financial consistency with the GRN Module
+        public bool IsTaxInclusive { get; set; } = false;
 
         // Document Lifecycle: Draft -> Approved -> Partially Received -> Closed -> Canceled
         [MaxLength(30)]
         public string Status { get; set; } = "Draft";
 
         [MaxLength(50)]
-        public string CreatedBy { get; set; } = string.Empty; // Requisitioner
+        public string CreatedBy { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Navigation: One PO contains Many Requested Items
         public ICollection<PoLine> PoLines { get; set; } = new List<PoLine>();
     }
 }

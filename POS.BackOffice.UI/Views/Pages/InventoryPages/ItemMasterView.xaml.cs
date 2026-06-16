@@ -1,4 +1,6 @@
 ﻿using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.InventoryPages
 {
@@ -8,8 +10,11 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryPages
         {
             InitializeComponent();
 
-            // NO DataContext = new ... here! 
-            // App.xaml and the Dependency Injection Factory handle it automatically.
+            // INJECT THE BRAIN: Connect the UI to the ViewModel via the DI Container
+            if (App.Services != null)
+            {
+                this.DataContext = App.Services.GetRequiredService<ItemMasterViewModel>();
+            }
         }
     }
 }

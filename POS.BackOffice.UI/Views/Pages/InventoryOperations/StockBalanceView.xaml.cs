@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,6 +25,10 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
         public StockBalanceView()
         {
             InitializeComponent();
+            if (App.Services != null)
+            {
+                this.DataContext = App.Services.GetRequiredService<StockBalanceViewModel>();
+            }
         }
     }
 }

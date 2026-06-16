@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
 
 namespace POS.Core.Data
@@ -10,7 +11,6 @@ namespace POS.Core.Data
 
         // --- CORE MASTERS ---
         public DbSet<User> Users { get; set; }
-        public DbSet<Item> Items { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<SubCategory> SubCategories { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
@@ -22,19 +22,45 @@ namespace POS.Core.Data
         public DbSet<ItemParent> ItemParents { get; set; }
         public DbSet<ItemVariant> ItemVariants { get; set; }
         public DbSet<ItemPropertyMapping> ItemPropertyMappings { get; set; }
-
-        // FIXED: Changed to 'UnitsOfMeasure' to perfectly match the UI bindings
         public DbSet<UnitOfMeasure> UnitsOfMeasure { get; set; }
+        public DbSet<ItemBatch> ItemBatches { get; set; }
 
-        // --- PROCUREMENT & TRANSACTIONS ---
+        // --- ENTERPRISE LEDGERS ---
+        public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
+        public DbSet<SupplierLedger> SupplierLedgers { get; set; }
+        public DbSet<DocumentSequence> DocumentSequences { get; set; }
+
+        // --- PROCUREMENT & TRANSACTIONS (B2B) ---
         public DbSet<GrnHeader> GrnHeaders { get; set; }
         public DbSet<GrnLine> GrnLines { get; set; }
         public DbSet<PoHeader> PoHeaders { get; set; }
         public DbSet<PoLine> PoLines { get; set; }
-        public DbSet<ReturnHeader> ReturnHeaders { get; set; }
+        public DbSet<ReturnHeader> ReturnHeaders { get; set; } // Supplier Returns
         public DbSet<ReturnLine> ReturnLines { get; set; }
         public DbSet<StockAdjustmentHeader> StockAdjustmentHeaders { get; set; }
         public DbSet<StockAdjustmentLine> StockAdjustmentLines { get; set; }
+
+        // --- CRM & CUSTOMER FINANCE (NEW) ---
+        public DbSet<CustomerMaster> CustomerMasters { get; set; }
+        public DbSet<CustomerLedger> CustomerLedgers { get; set; }
+
+        // --- LOYALTY & PROMOTIONS ENGINE (NEW) ---
+        public DbSet<PromoRule> PromoRules { get; set; }
+        public DbSet<PromoCondition> PromoConditions { get; set; }
+        public DbSet<PromoReward> PromoRewards { get; set; }
+
+        // --- CASHIER & SALES ENGINE ---
+        public DbSet<SalesHeader> SalesHeaders { get; set; }
+        public DbSet<SalesLine> SalesLines { get; set; }
+        public DbSet<CustomerReturnHeader> CustomerReturnHeaders { get; set; } // Customer Refunds
+        public DbSet<CustomerReturnLine> CustomerReturnLines { get; set; }
+
+        // --- CASHIER & SALES ENGINE ---
+        public DbSet<SalesPayment> SalesPayments { get; set; } // <--- ADD THIS LINE
+
+        // --- SHIFT & SECURITY ---
+        public DbSet<ShiftSession> ShiftSessions { get; set; }
+        public DbSet<CashMovement> CashMovements { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -43,13 +69,10 @@ namespace POS.Core.Data
                 string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 string dbFolder = System.IO.Path.Combine(appData, "POS");
                 string dbPath = System.IO.Path.Combine(dbFolder, "pos_local.db");
-
-                // Now it uses the same shared path as your App!
                 optionsBuilder.UseSqlite($"Data Source={dbPath}");
             }
         }
 
-        // CRITICAL FOR MATRIX INVENTORY: Maps the Many-to-Many junction tables properly
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -59,16 +82,31 @@ namespace POS.Core.Data
                 .HasIndex(u => u.Username)
                 .IsUnique();
 
-            // ADD THIS BLOCK: Make Barcodes unique and Lightning Fast to search
-            modelBuilder.Entity<Item>()
-                .HasIndex(i => i.Barcode)
-                .IsUnique();
-
+            // Composite Key for Category to Attribute Group Mapping
             modelBuilder.Entity<CategoryAttributeGroup>()
                 .HasKey(c => new { c.CategoryId, c.AttributeGroupId });
 
+            // Composite Key for Variant Property Mapping DNA
             modelBuilder.Entity<ItemPropertyMapping>()
                 .HasKey(m => new { m.ItemVariantId, m.AttributeGroupId, m.AttributeValueId });
+
+            // Ensure Reference Documents are indexed for fast searching in ledgers
+            modelBuilder.Entity<InventoryTransaction>()
+                .HasIndex(i => i.ReferenceDocument);
+            modelBuilder.Entity<SupplierLedger>()
+                .HasIndex(s => s.ReferenceDocument);
+
+            // SEED DATA: Pre-load the GRN sequence so the system knows where to start counting
+            modelBuilder.Entity<DocumentSequence>().HasData(
+                new DocumentSequence { DocumentType = "GRN", Prefix = "GRN-", NextSequenceNumber = 1, PaddingLength = 5, UpdatedAt = DateTime.Now }
+            );
+
+            modelBuilder.Entity<CashMovement>()
+        .HasIndex(c => c.ReferenceVoucherNo)
+        .IsUnique();
+
+            modelBuilder.Entity<CashMovement>()
+                .HasIndex(c => c.Timestamp);
         }
     }
 }

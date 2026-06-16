@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.Core.Models;
+using POS.Cashier.UI.Views;
 using POS.Core.Services;
-using POS.Core.Enums;
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -13,83 +13,123 @@ namespace POS.Cashier.UI.ViewModels
     {
         private readonly AuthService _authService;
 
-        [ObservableProperty]
-        private string _username = string.Empty;
+        // The Action that triggers the App.xaml.cs routing
+        public event Action? LoginSuccessful;
 
-        [ObservableProperty]
-        private string _errorMessage = string.Empty;
+        // --- UI Bindings ---
+        [ObservableProperty] private string _username = string.Empty;
+        [ObservableProperty] private string _password = string.Empty;
+        [ObservableProperty] private string _errorMessage = string.Empty;
 
-        [ObservableProperty]
-        private bool _isProcessing = false;
+        // --- Security State Bindings ---
+        [ObservableProperty] private bool _isTerminalLocked = false;
+        [ObservableProperty] private string _lockoutMessage = "PLEASE LOG IN";
 
-        // The "Shout" that App.xaml.cs listens to!
-        public event Action<UserRole>? LoginSuccessful;
+        public bool HasOpenShift { get; private set; } = false;
+        private string _lockedCashierName = string.Empty;
 
         public LoginViewModel(AuthService authService)
         {
             _authService = authService;
         }
 
-        // CRITICAL FIX: The method now accepts the object parameter sent from XAML
-        [RelayCommand]
-        private async Task LoginAsync(object parameter)
+        // Called by App.xaml.cs on startup
+        public void InitializeShiftState(ShiftSession? activeShift)
         {
-            // Safely cast the parameter back into the PasswordBox UI element
-            if (parameter is not PasswordBox passwordBox || string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(passwordBox.Password))
+            if (activeShift != null && activeShift.Status == "Open")
             {
-                ErrorMessage = "Please enter both a username and a password.";
-                return;
+                HasOpenShift = true;
+                IsTerminalLocked = true;
+                _lockedCashierName = activeShift.CashierName;
+                LockoutMessage = $"TERMINAL LOCKED TO: {_lockedCashierName.ToUpper()}";
             }
-
-            IsProcessing = true;
-            ErrorMessage = string.Empty;
-
-            try
+            else
             {
-                // 1. Call the secure Database & PBKDF2 Hashing Engine using the direct PasswordBox value
-                var (success, message) = await _authService.LoginAsync(Username, passwordBox.Password);
-
-                if (success && _authService.CurrentUser != null)
-                {
-                    // Wipe the memory
-                    passwordBox.Clear();
-
-                    // 2. Map the database string Role to your UserRole Enum (Using the new simplified roles)
-                    UserRole role = MapRoleToEnum(_authService.CurrentUser.Role);
-
-                    // 3. Shout to App.xaml.cs to open the register!
-                    LoginSuccessful?.Invoke(role);
-                }
-                else
-                {
-                    // Access Denied
-                    ErrorMessage = message;
-                    passwordBox.Clear();
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = "A critical system error occurred during login.";
-                MessageBox.Show(ex.Message, "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsProcessing = false;
+                HasOpenShift = false;
+                IsTerminalLocked = false;
+                LockoutMessage = "PLEASE LOG IN";
             }
         }
 
-        /// <summary>
-        /// Safely translates the new simplified database string roles into the Enum.
-        /// </summary>
-        private UserRole MapRoleToEnum(string dbRole)
+        [RelayCommand]
+        public async Task LoginAsync()
         {
-            return dbRole switch
+            ErrorMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                "Super Admin" => UserRole.Admin, // Skeleton key
-                "Admin" => UserRole.Admin,       // Standard Admin
-                "Cashier" => UserRole.Cashier,   // Standard Cashier
-                _ => UserRole.Cashier            // Default fallback
-            };
+                ErrorMessage = "Username and password are required.";
+                return;
+            }
+
+            try
+            {
+                var (success, message) = await _authService.LoginAsync(Username, Password);
+
+                if (!success)
+                {
+                    ErrorMessage = message;
+                    return;
+                }
+
+                var user = _authService.CurrentUser;
+                if (user == null) return;
+
+                // ==============================================
+                // THE TERMINAL LOCKOUT LOGIC
+                // ==============================================
+                if (IsTerminalLocked)
+                {
+                    // 1. It's the SAME cashier returning -> Let them right in
+                    if (user.Username.Equals(_lockedCashierName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        LoginSuccessful?.Invoke();
+                        return;
+                    }
+
+                    // 2. It's a DIFFERENT person -> Show the aggressive red locked screen!
+                    var lockedWindow = new TerminalLockedView(_lockedCashierName);
+                    lockedWindow.ShowDialog();
+
+                    // 3. Did they click "Manager Override" on the red screen?
+                    if (lockedWindow.IsOverrideApproved)
+                    {
+                        if (user.Role == "Admin" || user.Role == "Manager" || user.Role == "Super Admin")
+                        {
+                            LoginSuccessful?.Invoke();
+                            return;
+                        }
+                        else
+                        {
+                            ErrorMessage = "OVERRIDE DENIED: You do not have Manager privileges.";
+                            _authService.Logout();
+                            return;
+                        }
+                    }
+
+                    _authService.Logout();
+                    return;
+                }
+
+                // ==============================================
+                // NORMAL LOGIN (Streamlined)
+                // ==============================================
+                // This routes directly to the Sales View. 
+                // A background process should generate the ShiftSession with 0 OpeningCash.
+                LoginSuccessful?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"System Error: {ex.Message}";
+                _authService.Logout();
+            }
+        }
+
+        public void ResetForm()
+        {
+            Password = string.Empty;
+            ErrorMessage = string.Empty;
+            _authService.Logout();
         }
     }
 }

@@ -1,19 +1,21 @@
-﻿using System;
-using System.Windows;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using POS.Core.Data;
-using POS.Core.Enums;
-using POS.Core.Repositories; // Access to the database repositories
-using POS.Core.Services;     // Access to the Security State Manager
+using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using POS.Cashier.UI.Views;
+using POS.Core.Data;
+using POS.Core.Enums;
+using POS.Core.Interfaces;
+using POS.Core.Models;
+using POS.Core.Repositories;
+using POS.Core.Services;
+using System;
+using System.Windows;
 
 namespace POS.Cashier.UI
 {
     public partial class App : System.Windows.Application
     {
-        // The Dependency Injection Factory for the Cashier App
         public static IServiceProvider? Services { get; private set; }
 
         public App()
@@ -25,38 +27,33 @@ namespace POS.Cashier.UI
         {
             var services = new ServiceCollection();
 
-            // ==========================================
-            // ENTERPRISE FIX: SHARED DATABASE PATH
-            // ==========================================
-            // This creates a permanent folder in Windows: C:\Users\Sanjeewa\AppData\Local\POS
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string dbFolder = System.IO.Path.Combine(appData, "POS");
-            System.IO.Directory.CreateDirectory(dbFolder); // Build the folder if it doesn't exist
+            System.IO.Directory.CreateDirectory(dbFolder);
             string dbPath = System.IO.Path.Combine(dbFolder, "pos_local.db");
 
-            // Tell Entity Framework to use this exact file
             services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));
 
-            // ==========================================
-            // 2. Core Repositories & Services
-            // ==========================================
+            // Core
             services.AddTransient<UserRepository>();
-
-            // CRITICAL FIX: Add the Item Master Repository so the Cashier can search barcodes
             services.AddTransient<ItemMasterRepository>();
-
-            // CRITICAL ARCHITECTURE: AuthService MUST be a Singleton so it 
-            // remembers who is logged in across the entire application lifecycle.
+            services.AddTransient<SalesRepository>();
+            services.AddTransient<TillRepository>();
             services.AddSingleton<AuthService>();
+            services.AddTransient<IReceiptPrintService, EscPosReceiptPrintService>();
 
-            // ==========================================
-            // 3. Cashier ViewModels
-            // ==========================================
+            // ViewModels
             services.AddTransient<LoginViewModel>();
-
-            // CRITICAL FIX: Uncommented the Sales Logic Engine so DI can inject the ItemMasterRepository!
             services.AddTransient<SalesViewModel>();
+            services.AddTransient<OpenCloseShiftViewModel>();
+
+
+            // Tells the app: When a UI asks for ICashMovementService, give it the CashMovementService logic.
+            services.AddTransient<ICashMovementService, POS.Services.CashMovementService>();
+
+            // Tells the app: When a UI asks for IReceiptPrinterService, use the real hardware.
+            services.AddSingleton<IReceiptPrinterService, POS.Hardware.Services.ReceiptPrinterService>();
 
             return services.BuildServiceProvider();
         }
@@ -64,46 +61,52 @@ namespace POS.Cashier.UI
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-
             if (Services == null) return;
 
-            // ==========================================
-            // DATABASE AUTO-BUILDER (Failsafe)
-            // ==========================================
+            // 1. Ensure DB exists
             var dbFactory = Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
             using (var context = dbFactory.CreateDbContext())
             {
                 context.Database.EnsureCreated();
             }
 
-            // 1. Ask the Factory to build the Login Brain (It auto-injects AuthService & DbContext!)
+            // 2. CHECK DATABASE FOR OPEN SHIFTS (The Alt+F4 Protection)
+            var tillRepo = Services.GetRequiredService<TillRepository>();
+            var activeShift = tillRepo.GetActiveShiftAsync("01").GetAwaiter().GetResult();
+
+            // 3. Setup Login ViewModel and pass the lock state
             var loginViewModel = Services.GetRequiredService<LoginViewModel>();
+            loginViewModel.InitializeShiftState(activeShift);
 
-            // 2. Create the Login Face (View) and connect the Brain
-            var loginWindow = new LoginView
+            var loginWindow = new LoginView { DataContext = loginViewModel };
+
+            // 4. The New Seamless Routing Logic
+            loginViewModel.LoginSuccessful += async () =>
             {
-                DataContext = loginViewModel
+                if (!loginViewModel.HasOpenShift)
+                {
+                    // Silently create the new shift in the background with Rs. 0
+                    var tillRepository = Services.GetRequiredService<TillRepository>();
+                    var authService = Services.GetRequiredService<AuthService>();
+                    string cashierName = authService.CurrentUser?.Username ?? "Unknown";
+
+                    await tillRepository.CreateNewShiftAsync("01", cashierName);
+                }
+
+                // Route directly to the Sales Screen without bothering the cashier!
+                LaunchMainPos(loginWindow);
             };
 
-            // 3. Listen for the "Shout" (The LoginSuccessful Event)
-            loginViewModel.LoginSuccessful += (UserRole role) =>
-            {
-                // Both Admins and Cashiers are allowed to open the register.
-                // Later, we will use the 'role' variable to hide/show specific admin buttons on the POS.
-
-                SalesView salesWindow = new SalesView();
-
-                // Make the Sales screen the official main window
-                this.MainWindow = salesWindow;
-                salesWindow.Show();
-
-                // CRITICAL: Destroy the Login window completely to free up RAM and prevent users from going "back" to it.
-                loginWindow.Close();
-            };
-
-            // 4. Boot up the application by showing the Login Screen first
             this.MainWindow = loginWindow;
             loginWindow.Show();
+        }
+
+        private void LaunchMainPos(Window oldLoginWindow)
+        {
+            SalesView salesWindow = new SalesView();
+            this.MainWindow = salesWindow;
+            salesWindow.Show();
+            oldLoginWindow.Close(); // Destroy the login window
         }
     }
 }

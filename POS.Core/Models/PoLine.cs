@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace POS.Core.Models
 {
@@ -7,28 +8,30 @@ namespace POS.Core.Models
     {
         public int Id { get; set; }
 
-        // Foreign Key to the Header
         public int PoHeaderId { get; set; }
         public PoHeader PoHeader { get; set; } = null!;
 
-        // Foreign Key to the exact Matrix Variant (e.g., "Linen Shirt - Blue - Large")
         [Required]
         public int ItemVariantId { get; set; }
         public ItemVariant ItemVariant { get; set; } = null!;
 
-        // Snapshot of UOM at the time of ordering
+        // --- UI HELPERS (Not saved to DB, just for the WPF DataGrid) ---
+        [NotMapped] public string ItemCode { get; set; } = string.Empty;
+        [NotMapped] public string VariantDescription { get; set; } = string.Empty;
+        [NotMapped] public string Description { get; set; } = string.Empty;
+        [NotMapped] public string Barcode { get; set; } = string.Empty;
+        [NotMapped] public decimal SOH { get; set; } = 0m; // Stock on Hand indicator
+
         [MaxLength(20)]
         public string Uom { get; set; } = string.Empty;
 
-        // --- QUANTITY TRACKING (The Bridge to GRN) ---
+        // --- QUANTITY TRACKING ---
         public decimal OrderQty { get; set; } = 0m;
 
-        // This is updated automatically in the background when a GRN is posted against this PO.
+        // Updated dynamically when a GRN links to this PO
         public decimal ReceivedQty { get; set; } = 0m;
 
         // --- ESTIMATED PRICING ---
-        // These are expected costs. They do NOT update the Item Master's true average cost yet.
-        // That only happens during the GRN phase when actual costs are finalized.
         public decimal ExpectedCost { get; set; } = 0m;
         public decimal LineDiscount { get; set; } = 0m;
 
@@ -36,6 +39,6 @@ namespace POS.Core.Models
         public string TaxCode { get; set; } = string.Empty;
         public decimal TaxAmount { get; set; } = 0m;
 
-        public decimal LineTotal { get; set; } = 0m; // (OrderQty * ExpectedCost) - LineDiscount + TaxAmount
+        public decimal LineTotal { get; set; } = 0m;
     }
 }

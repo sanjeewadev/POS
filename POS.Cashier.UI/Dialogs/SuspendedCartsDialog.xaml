@@ -1,0 +1,160 @@
+﻿<Window x:Class="POS.Cashier.UI.Views.Dialogs.SuspendedCartsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Suspended Carts" Height="650" Width="900"
+        WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize"
+        Background="#1E1E1E" FontFamily="Segoe UI, Arial">
+
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#444444"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="FlatTextBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#4B5563" BorderBrush="#111111" BorderThickness="0,0,0,2">
+            <TextBlock Text="SUSPENDED CARTS / RECALL" Foreground="White" FontSize="32" FontWeight="Heavy" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="15">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="80"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="#2B2B2B" BorderBrush="#444444" BorderThickness="1" Padding="15" Margin="0,0,0,15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="150"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="SEARCH HOLD ID / CUSTOMER:" Foreground="#AAAAAA" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <TextBox Grid.Column="1" Style="{StaticResource FlatTextBox}" Height="45" Text="{Binding SearchInput}"/>
+                    <Button Grid.Column="2" Background="#0056B3" Content="SEARCH" FontSize="18" Margin="10,0,0,0"/>
+                </Grid>
+            </Border>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding SuspendedCartsList}" SelectedItem="{Binding SelectedCart}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" 
+                      RowHeight="55" FontSize="18" Background="White" BorderBrush="#444444" BorderThickness="1" 
+                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#D0D0D0" Margin="0,0,0,15"
+                      SelectionMode="Single">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#111111"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="FontWeight" Value="Heavy"/>
+                        <Setter Property="Padding" Value="15,12"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="FontSize" Value="16"/>
+                    </Style>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#A9C6E2"/>
+                                <Setter Property="Foreground" Value="#002244"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="HOLD ID" Binding="{Binding HoldId}" Width="120" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="15,0,0,0"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="TIME SUSPENDED" Binding="{Binding SuspendedTime, StringFormat=hh:mm tt}" Width="180" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="15,0,0,0"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="CUSTOMER / REF" Binding="{Binding CustomerReference}" Width="*" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="15,0,0,0"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="ITEMS" Binding="{Binding TotalItems}" Width="100" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="TOTAL VALUE" Binding="{Binding TotalValue, StringFormat=Rs. \{0:N2\}}" Width="200" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                <Setter Property="Padding" Value="0,0,15,0"/>
+                                <Setter Property="FontWeight" Value="Heavy"/>
+                                <Setter Property="Foreground" Value="#8B0000"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" Background="#444444" Content="CANCEL" FontSize="22" Margin="0,0,5,0" Command="{Binding CancelCommand}"/>
+
+                <Button Grid.Column="1" Background="#DC3545" Content="DISCARD CART" FontSize="20" Margin="5,0,5,0" Command="{Binding DiscardCartCommand}"/>
+
+                <Button Grid.Column="2" Background="#28A745" Content="RECALL SELECTED CART" FontSize="28" FontWeight="Heavy" Margin="5,0,0,0" Command="{Binding RecallCartCommand}"/>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

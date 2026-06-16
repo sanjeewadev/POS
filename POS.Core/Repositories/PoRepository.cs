@@ -8,6 +8,18 @@ using POS.Core.Data;
 
 namespace POS.Core.Repositories
 {
+    // DTO for the new PO Management Dashboard
+    public class PoSummaryDto
+    {
+        public int PoHeaderId { get; set; }
+        public string PoNumber { get; set; } = string.Empty;
+        public string SupplierName { get; set; } = string.Empty;
+        public DateTime OrderDate { get; set; }
+        public DateTime ExpectedDate { get; set; }
+        public decimal NetPayable { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+    }
     public class PoRepository
     {
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
@@ -23,7 +35,6 @@ namespace POS.Core.Repositories
             return await context.Suppliers.Where(s => !s.IsDeactivated).AsNoTracking().ToListAsync();
         }
 
-        // Used by the GRN page to pull POs that haven't been fully received yet
         public async Task<IEnumerable<PoHeader>> GetOpenPurchaseOrdersAsync()
         {
             using var context = await _contextFactory.CreateDbContextAsync();
@@ -34,7 +45,7 @@ namespace POS.Core.Repositories
                                 .ToListAsync();
         }
 
-        // --- ATOMIC PO SAVING ENGINE ---
+        // --- ATOMIC PO SAVING ENGINE (ENTERPRISE UPGRADED) ---
         public async Task SavePurchaseOrderAsync(PoHeader header, List<PoLine> lines, bool isDraft)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
@@ -42,31 +53,83 @@ namespace POS.Core.Repositories
 
             try
             {
-                // 1. Finalize Header State
-                header.Status = isDraft ? "Draft" : "Approved";
-
+                // 1. CONCURRENCY LOCK: Get safe, sequential PO Number
                 if (header.Id == 0)
                 {
+                    var sequence = await context.DocumentSequences.FirstOrDefaultAsync(s => s.DocumentType == "PO");
+                    bool isNewSequence = false;
+
+                    if (sequence == null)
+                    {
+                        // Auto-create sequence if it doesn't exist yet
+                        sequence = new DocumentSequence { DocumentType = "PO", Prefix = "PO-", NextSequenceNumber = 1, PaddingLength = 5, UpdatedAt = DateTime.Now };
+                        isNewSequence = true;
+                    }
+
+                    header.PoNumber = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+
+                    sequence.NextSequenceNumber++;
+                    sequence.UpdatedAt = DateTime.Now;
+
+                    // CRITICAL FIX: Only Add if new, otherwise Update. Do not mix states.
+                    if (isNewSequence)
+                        await context.DocumentSequences.AddAsync(sequence);
+                    else
+                        context.DocumentSequences.Update(sequence);
+
+                    header.Status = isDraft ? "Draft" : "Approved";
                     header.CreatedAt = DateTime.Now;
                     await context.PoHeaders.AddAsync(header);
-                    await context.SaveChangesAsync(); // Generates Header ID
+                    await context.SaveChangesAsync();
                 }
                 else
                 {
+                    // Existing PO, just update header
+                    header.Status = isDraft ? "Draft" : "Approved";
                     context.PoHeaders.Update(header);
                     await context.SaveChangesAsync();
                 }
 
-                // 2. Wipe existing lines to rebuild cleanly (Standard practice for PO updates before GRN)
+                // 2. NON-DESTRUCTIVE LINE UPDATES
                 var existingLines = await context.PoLines.Where(l => l.PoHeaderId == header.Id).ToListAsync();
-                context.PoLines.RemoveRange(existingLines);
-                await context.SaveChangesAsync();
+                var incomingLineIds = lines.Select(l => l.Id).Where(id => id != 0).ToList();
 
-                // 3. Insert New Lines
+                // Check for lines that were removed in the UI
+                var linesToDelete = existingLines.Where(e => !incomingLineIds.Contains(e.Id)).ToList();
+                foreach (var lineToDelete in linesToDelete)
+                {
+                    // CRITICAL BLOCK: Protect received inventory from UI deletion
+                    if (lineToDelete.ReceivedQty > 0)
+                    {
+                        throw new Exception($"Cannot remove item (Variant ID: {lineToDelete.ItemVariantId}) because {lineToDelete.ReceivedQty} units have already been received by the warehouse.");
+                    }
+                    context.PoLines.Remove(lineToDelete);
+                }
+
+                // Insert or Update remaining lines safely
                 foreach (var line in lines)
                 {
-                    line.PoHeaderId = header.Id;
-                    await context.PoLines.AddAsync(line);
+                    if (line.Id == 0)
+                    {
+                        line.PoHeaderId = header.Id;
+                        await context.PoLines.AddAsync(line);
+                    }
+                    else
+                    {
+                        var existingLine = existingLines.FirstOrDefault(e => e.Id == line.Id);
+                        if (existingLine != null)
+                        {
+                            existingLine.OrderQty = line.OrderQty;
+                            existingLine.ExpectedCost = line.ExpectedCost;
+                            existingLine.LineDiscount = line.LineDiscount;
+                            existingLine.TaxCode = line.TaxCode;
+                            existingLine.TaxAmount = line.TaxAmount;
+                            existingLine.LineTotal = line.LineTotal;
+
+                            // NEVER OVERWRITE ReceivedQty HERE!
+                            context.PoLines.Update(existingLine);
+                        }
+                    }
                 }
 
                 await context.SaveChangesAsync();
@@ -77,6 +140,39 @@ namespace POS.Core.Repositories
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        // --- PO DASHBOARD ENGINE ---
+        public async Task<IEnumerable<PoSummaryDto>> GetPoSummariesAsync(string searchTerm = "")
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var query = context.PoHeaders.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var search = searchTerm.ToLower();
+                query = query.Where(p =>
+                    p.PoNumber.ToLower().Contains(search) ||
+                    p.Supplier.SupplierName.ToLower().Contains(search) ||
+                    p.Status.ToLower().Contains(search));
+            }
+
+            // Project directly into the lightweight DTO to save RAM and increase speed
+            return await query
+                .OrderByDescending(p => p.OrderDate)
+                .Select(p => new PoSummaryDto
+                {
+                    PoHeaderId = p.Id,
+                    PoNumber = p.PoNumber,
+                    SupplierName = p.Supplier.SupplierName,
+                    OrderDate = p.OrderDate,
+                    ExpectedDate = p.ExpectedDate,
+                    NetPayable = p.NetPayable,
+                    Status = p.Status,
+                    CreatedBy = p.CreatedBy
+                })
+                .ToListAsync();
         }
     }
 }

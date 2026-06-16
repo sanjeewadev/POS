@@ -2,6 +2,9 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup />
   <ItemGroup>
+    <Compile Update="Dialogs\InputDialogView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Layout\ManagementShellView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -11,10 +14,19 @@
     <Compile Update="Views\Pages\Admin\AccessControlView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Pages\Admin\CashMovementDashboardView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Pages\Admin\ExpressItemsAdminView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Pages\Admin\PosHardwareSettingsView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Admin\StoreConfigurationView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Pages\Admin\SuspendedTransactionsMonitorView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Admin\UserManagementView.xaml.cs">
@@ -29,7 +41,7 @@
     <Compile Update="Views\Pages\Crm\GiftVoucherView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Crm\LoyaltyRewardsView.xaml.cs">
+    <Compile Update="Views\Pages\Crm\LoyaltyPromotionsAdminView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\DashboardView.xaml.cs">
@@ -47,7 +59,7 @@
     <Compile Update="Views\Pages\Finance\PaymentVoucherView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Financials\SupplierLedgerView.xaml.cs">
+    <Compile Update="Views\Pages\InventoryOperations\BarcodeManagementView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\InventoryOperations\BarcodePrinterView.xaml.cs">
@@ -83,6 +95,9 @@
     <Compile Update="Views\Pages\InventoryPages\UnitOfMeasureView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Pages\Purchasing\PurchaseOrderDashboardView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Pages\Purchasing\PurchaseOrderView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -98,13 +113,16 @@
     <Compile Update="Views\Pages\Reports\SupplierReportView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Sales\CustomerReturnView.xaml.cs">
+    <Compile Update="Views\Pages\Sales\CustomerReturnsAuditView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Sales\DailySalesAuditView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Sales\QuotationView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Pages\Sales\ReceiptLedgerView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Sales\ReceiptView.xaml.cs">

@@ -13,6 +13,7 @@ namespace POS.Core.Models
         public int ItemParentId { get; set; }
         public ItemParent ItemParent { get; set; } = null!;
 
+
         [Required]
         [MaxLength(100)]
         public string SkuCode { get; set; } = string.Empty;
@@ -30,6 +31,7 @@ namespace POS.Core.Models
         public decimal WholesalePrice { get; set; } = 0m;
         public decimal MinimumPrice { get; set; } = 0m;
 
+        public decimal MaximumPrice { get; set; } = 0m;
         public int ReorderLevel { get; set; } = 0;
 
         public bool IsDeactivated { get; set; } = false;
@@ -43,5 +45,8 @@ namespace POS.Core.Models
 
         // Navigation: The specific attributes (Color: Red, Size: XL) this variant possesses
         public ICollection<ItemPropertyMapping> PropertyMappings { get; set; } = new List<ItemPropertyMapping>();
+
+        // Navigation: One Variant contains many distinct stock batches
+        public ICollection<ItemBatch> ItemBatches { get; set; } = new List<ItemBatch>();
     }
 }

@@ -25,17 +25,43 @@ namespace POS.Core.Repositories
 
             try
             {
-                // 1. Finalize Header State
-                header.Status = isDraft ? "Draft" : "Posted";
-
+                // 1. CONCURRENCY LOCK: Get safe, sequential ADJ Number
                 if (header.Id == 0)
                 {
+                    var sequence = await context.DocumentSequences.FirstOrDefaultAsync(s => s.DocumentType == "ADJ");
+                    bool isNewSequence = false;
+
+                    if (sequence == null)
+                    {
+                        sequence = new DocumentSequence { DocumentType = "ADJ", Prefix = "ADJ-", NextSequenceNumber = 1, PaddingLength = 5, UpdatedAt = DateTime.Now };
+                        isNewSequence = true;
+                    }
+
+                    header.AdjustmentNo = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+
+                    sequence.NextSequenceNumber++;
+                    sequence.UpdatedAt = DateTime.Now;
+
+                    if (isNewSequence)
+                        await context.DocumentSequences.AddAsync(sequence);
+                    else
+                        context.DocumentSequences.Update(sequence);
+
+                    header.Status = isDraft ? "Draft" : "Posted";
                     header.CreatedAt = DateTime.Now;
                     await context.StockAdjustmentHeaders.AddAsync(header);
-                    await context.SaveChangesAsync(); // Generates Header ID
+                    await context.SaveChangesAsync();
                 }
                 else
                 {
+                    // Existing Draft: Verify it hasn't been posted yet
+                    var existingHeader = await context.StockAdjustmentHeaders.AsNoTracking().FirstOrDefaultAsync(h => h.Id == header.Id);
+                    if (existingHeader != null && existingHeader.Status == "Posted")
+                    {
+                        throw new InvalidOperationException("CRITICAL: This Adjustment has already been posted to the P&L and cannot be modified.");
+                    }
+
+                    header.Status = isDraft ? "Draft" : "Posted";
                     context.StockAdjustmentHeaders.Update(header);
                     await context.SaveChangesAsync();
                 }
@@ -51,22 +77,32 @@ namespace POS.Core.Repositories
                     line.StockAdjustmentHeaderId = header.Id;
                     await context.StockAdjustmentLines.AddAsync(line);
 
-                    // 4. IF POSTING: Update the Physical Inventory Ledgers
+                    // 4. IF POSTING: Deduct Stock & Write to Immutable Ledger
                     if (!isDraft)
                     {
-                        // In a true ERP, you do not update a static number. You insert a ledger record 
-                        // representing the variance (+ or -) so the history is perfectly preserved.
+                        // Fetch the specific Batch Bucket
+                        var targetBatch = await context.ItemBatches.FirstOrDefaultAsync(b => b.Id == line.ItemBatchId);
+                        if (targetBatch == null)
+                            throw new Exception($"CRITICAL: Batch ID {line.ItemBatchId} could not be found in the database.");
 
-                        // Example Ledger Insertion:
-                        // var ledgerEntry = new InventoryLedger 
-                        // { 
-                        //     ItemVariantId = line.ItemVariantId, 
-                        //     QuantityChange = line.VarianceQty, 
-                        //     TransactionType = "ADJUSTMENT", 
-                        //     ReferenceNumber = header.AdjustmentNo,
-                        //     Date = DateTime.Now 
-                        // };
-                        // await context.InventoryLedgers.AddAsync(ledgerEntry);
+                        // Apply the variance to the physical bucket (+ or -)
+                        targetBatch.CurrentStock += line.VarianceQty;
+                        context.ItemBatches.Update(targetBatch);
+
+                        // Write to the global immutable P&L Ledger
+                        var ledgerEntry = new InventoryTransaction
+                        {
+                            ItemVariantId = targetBatch.ItemVariantId,
+                            TransactionDate = header.AdjustmentDate,
+                            TransactionType = "ADJUSTMENT",
+                            ReferenceDocument = header.AdjustmentNo,
+                            Quantity = line.VarianceQty,
+                            UnitCost = line.UnitCost,
+                            CreatedBy = header.AuthorizedBy,
+                            Remarks = $"Reason: {line.ReasonCode} | Batch: {targetBatch.BatchNo} | Ref: {header.Reference}"
+                        };
+
+                        await context.InventoryTransactions.AddAsync(ledgerEntry);
                     }
                 }
 

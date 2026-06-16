@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "POS.BackOffice.UI", "POS.Ba
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "POS.Core", "POS.Core\POS.Core.csproj", "{04871C49-73FD-0AFB-38AA-352C7E43ECFE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "POS.Hardware", "POS.Hardware\POS.Hardware.csproj", "{E9DD61AF-73CB-4B7F-8076-EE08F9D09A5B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{04871C49-73FD-0AFB-38AA-352C7E43ECFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04871C49-73FD-0AFB-38AA-352C7E43ECFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04871C49-73FD-0AFB-38AA-352C7E43ECFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9DD61AF-73CB-4B7F-8076-EE08F9D09A5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9DD61AF-73CB-4B7F-8076-EE08F9D09A5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9DD61AF-73CB-4B7F-8076-EE08F9D09A5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9DD61AF-73CB-4B7F-8076-EE08F9D09A5B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

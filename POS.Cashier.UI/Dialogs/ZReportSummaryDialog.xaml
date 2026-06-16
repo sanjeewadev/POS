@@ -1,0 +1,43 @@
+﻿<Window x:Class="POS.Cashier.UI.Views.Dialogs.ZReportSummaryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Z-Report Confirmation" Height="400" Width="400"
+        WindowStyle="None" WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Background="#F9FAFB" FontFamily="Segoe UI" Topmost="True">
+
+    <Border BorderBrush="#991B1B" BorderThickness="4" Padding="20">
+        <StackPanel>
+            <TextBlock Text="Z-REPORT: SHIFT CLOSURE" Foreground="#991B1B" FontSize="18" FontWeight="Heavy" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+            <TextBlock Text="Review financial variance before final print." Foreground="#4B5563" FontSize="12" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,0,0,25"/>
+
+            <Grid Margin="0,0,0,10">
+                <TextBlock Text="Expected System Cash:" FontSize="14" FontWeight="Bold" Foreground="#374151"/>
+                <TextBlock x:Name="ExpectedText" Text="Rs. 0.00" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right"/>
+            </Grid>
+
+            <Grid Margin="0,0,0,10">
+                <TextBlock Text="Actual Counted Cash:" FontSize="14" FontWeight="Bold" Foreground="#003366"/>
+                <TextBlock x:Name="CountedText" Text="Rs. 0.00" FontSize="16" FontWeight="Heavy" Foreground="#003366" HorizontalAlignment="Right"/>
+            </Grid>
+
+            <Rectangle Height="2" Fill="#D1D5DB" Margin="0,5,0,15"/>
+
+            <Grid Margin="0,0,0,30">
+                <TextBlock Text="CASH VARIANCE:" FontSize="16" FontWeight="Heavy" Foreground="#111827"/>
+                <TextBlock x:Name="VarianceText" Text="Rs. 0.00" FontSize="22" FontWeight="Heavy" HorizontalAlignment="Right"/>
+            </Grid>
+
+            <TextBlock Text="WARNING: Printing the Z-Report will permanently close this shift and log you out." Foreground="#DC2626" FontSize="11" FontWeight="Bold" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,15"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="GO BACK" Click="Cancel_Click" Background="#E5E7EB" Foreground="#374151" FontWeight="Bold" Height="45"/>
+                <Button Grid.Column="2" Content="PRINT &amp; CLOSE" Click="Confirm_Click" Background="#991B1B" Foreground="White" FontWeight="Heavy" Height="45"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

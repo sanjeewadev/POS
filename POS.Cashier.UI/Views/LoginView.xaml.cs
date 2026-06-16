@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using POS.Cashier.UI.ViewModels;
 
 namespace POS.Cashier.UI.Views
 {
@@ -9,9 +10,13 @@ namespace POS.Cashier.UI.Views
             InitializeComponent();
         }
 
-        // SECURITY ENHANCEMENT: 
-        // The txtPassword_PasswordChanged event has been completely removed.
-        // Memory vulnerabilities are eliminated by passing the secure PasswordBox 
-        // directly to the ViewModel upon command execution.
+        // ADD THIS METHOD: It manually pushes the password to the brain whenever you type
+        private void txtPassword_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is LoginViewModel viewModel)
+            {
+                viewModel.Password = txtPassword.Password;
+            }
+        }
     }
 }

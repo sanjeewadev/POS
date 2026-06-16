@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,7 +26,7 @@ namespace POS.BackOffice.UI.ViewModels
     // -----------------------------------------------------------
     // MAIN VIEW MODEL
     // -----------------------------------------------------------
-    public partial class ItemPropertyViewModel : ViewModelBase
+    public partial class ItemPropertyViewModel : ObservableObject
     {
         private readonly AttributeRepository _attributeRepository;
         private readonly CategoryRepository _categoryRepository;
@@ -63,6 +62,8 @@ namespace POS.BackOffice.UI.ViewModels
         {
             _attributeRepository = attributeRepository;
             _categoryRepository = categoryRepository;
+
+            // Fire up the data engine when the view loads
             _ = InitializeAsync();
         }
 
@@ -123,20 +124,45 @@ namespace POS.BackOffice.UI.ViewModels
             await LoadValuesAsync();
         }
 
-        // --- THE ADD GROUP POPUP (Simulated) ---
+        // ==========================================
+        // THE '+ ADD' DIALOG EXECUTION
+        // ==========================================
         [RelayCommand]
         private async Task AddGroupAsync()
         {
-            // TODO: Replace this MessageBox with a custom popup window (e.g. InputDialog) to get text
-            MessageBox.Show("Open your custom 'Add Group' text input window here. \nThen call: \nvar newGroup = await _attributeRepository.AddGroupAsync(userInput);", "Action Required", MessageBoxButton.OK, MessageBoxImage.Information);
+            // 1. Open the clean popup window we just built
+            var dialog = new POS.BackOffice.UI.Dialogs.InputDialogView(
+                title: "New Attribute Group",
+                prompt: "Enter Group Name (e.g., Color, Size, Storage):"
+            );
 
-            // Example Logic once you have the text:
-            // string userInput = "New Size Format"; // From your custom popup
-            // var newGroup = await _attributeRepository.AddGroupAsync(userInput);
-            // await LoadGroupsAsync();
-            // SelectedAttributeGroup = AttributeGroups.FirstOrDefault(g => g.Id == newGroup.Id);
+            // 2. Wait for the user to hit Save or Cancel
+            bool? result = dialog.ShowDialog();
+
+            // 3. If they hit Save and the text is valid
+            if (result == true && !string.IsNullOrWhiteSpace(dialog.InputText))
+            {
+                try
+                {
+                    // Save to SQLite
+                    var newGroup = await _attributeRepository.AddGroupAsync(dialog.InputText);
+
+                    // Refresh the ComboBoxes seamlessly
+                    await LoadGroupsAsync();
+
+                    // Auto-select the brand new group so the user can start typing values immediately
+                    SelectedAttributeGroup = AttributeGroups.FirstOrDefault(g => g.Id == newGroup.Id);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to save group: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
+        // ==========================================
+        // MATRIX SAVING ENGINE
+        // ==========================================
         [RelayCommand]
         private async Task SaveAsync()
         {
@@ -204,7 +230,7 @@ namespace POS.BackOffice.UI.ViewModels
             IsDeactivated = false;
             SelectedAttributeValue = null;
 
-            // Untick all checkboxes
+            // Untick all checkboxes safely
             foreach (var cat in Categories)
             {
                 cat.IsSelected = false;
@@ -232,7 +258,9 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // --- AUTO-TRIGGERS ---
+        // ==========================================
+        // UI AUTO-TRIGGERS
+        // ==========================================
 
         partial void OnSearchTextChanged(string value)
         {
