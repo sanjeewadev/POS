@@ -1,0 +1,117 @@
+﻿<Window x:Class="POS.Cashier.UI.Views.Dialogs.CashTenderDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cash Tender" Height="650" Width="900"
+        WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize"
+        Background="#1E1E1E" FontFamily="Segoe UI, Arial">
+
+    <Window.Resources>
+        <!-- Standard Flat Button Style matching SalesView -->
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#444444"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0" Background="#28A745" BorderBrush="#111111" BorderThickness="0,0,0,2">
+            <TextBlock Text="CASH PAYMENT" Foreground="White" FontSize="32" FontWeight="Heavy" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="5*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT SIDE: Math Engine -->
+            <Border Grid.Column="0" Background="#2B2B2B" BorderBrush="#444444" BorderThickness="1" Margin="0,0,10,0" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,30">
+                        <TextBlock Text="TOTAL DUE" Foreground="#AAAAAA" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding TotalDue, StringFormat=Rs. \{0:N2\}}" Foreground="White" FontSize="55" FontWeight="Heavy"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,0,0,30">
+                        <TextBlock Text="AMOUNT TENDERED" Foreground="#AAAAAA" FontSize="20" FontWeight="Bold"/>
+                        <Border Background="White" Padding="10" Margin="0,5,0,0" BorderBrush="#28A745" BorderThickness="3">
+                            <TextBlock Text="{Binding TenderedAmount, StringFormat=Rs. \{0\}}" Foreground="#111111" FontSize="60" FontWeight="Heavy" TextAlignment="Right"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Margin="0,0,0,20">
+                        <TextBlock Text="CHANGE DUE" Foreground="#AAAAAA" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ChangeAmount, StringFormat=Rs. \{0:N2\}}" Foreground="#FFC107" FontSize="65" FontWeight="Heavy"/>
+                    </StackPanel>
+
+                    <!-- Actions -->
+                    <Grid Grid.Row="3" Height="80">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Background="#DC3545" Content="CANCEL" FontSize="22" Margin="0,0,5,0" Command="{Binding CancelCommand}"/>
+                        <Button Grid.Column="1" Background="#28A745" Content="ACCEPT" FontSize="28" FontWeight="Heavy" Margin="5,0,0,0" Command="{Binding ProcessPaymentCommand}"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT SIDE: Numpad & Quick Cash -->
+            <Grid Grid.Column="1" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <UniformGrid Grid.Row="0" Columns="4" Rows="1" Height="80" Margin="0,0,0,10">
+                    <Button Background="#17A2B8" Content="Exact" FontSize="22"/>
+                    <Button Background="#0056B3" Content="1000" FontSize="24"/>
+                    <Button Background="#0056B3" Content="2000" FontSize="24"/>
+                    <Button Background="#0056B3" Content="5000" FontSize="24"/>
+                </UniformGrid>
+
+                <UniformGrid Grid.Row="1" Columns="3" Rows="4">
+                    <Button Background="#444444" Content="7" FontSize="40"/>
+                    <Button Background="#444444" Content="8" FontSize="40"/>
+                    <Button Background="#444444" Content="9" FontSize="40"/>
+                    <Button Background="#444444" Content="4" FontSize="40"/>
+                    <Button Background="#444444" Content="5" FontSize="40"/>
+                    <Button Background="#444444" Content="6" FontSize="40"/>
+                    <Button Background="#444444" Content="1" FontSize="40"/>
+                    <Button Background="#444444" Content="2" FontSize="40"/>
+                    <Button Background="#444444" Content="3" FontSize="40"/>
+                    <Button Background="#DC3545" Content="C" FontSize="40"/>
+                    <Button Background="#444444" Content="0" FontSize="40"/>
+                    <Button Background="#444444" Content="." FontSize="40"/>
+                </UniformGrid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

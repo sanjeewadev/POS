@@ -34,6 +34,7 @@ namespace POS.Core.Models
         public string Remarks { get; set; } = string.Empty;
 
         // --- GLOBAL FINANCIALS ---
+        public bool IsTaxInclusive { get; set; } = false;
         public decimal Subtotal { get; set; } = 0m;
         public decimal GlobalBillDiscount { get; set; } = 0m;
         public decimal FreightAmount { get; set; } = 0m;
@@ -45,6 +46,8 @@ namespace POS.Core.Models
         public string Status { get; set; } = "Draft";
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        // Add this directly above or below Subtotal
+
 
         [MaxLength(50)]
         public string CreatedBy { get; set; } = string.Empty; // User who processed the GRN

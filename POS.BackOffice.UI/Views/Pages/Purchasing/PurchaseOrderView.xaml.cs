@@ -1,28 +1,34 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.Purchasing
 {
-    /// <summary>
-    /// Interaction logic for PurchaseOrderView.xaml
-    /// </summary>
     public partial class PurchaseOrderView : UserControl
     {
         public PurchaseOrderView()
         {
             InitializeComponent();
+
+            if (App.Services != null)
+            {
+                this.DataContext = App.Services.GetRequiredService<PurchaseOrderViewModel>();
+            }
+        }
+
+        // Triggered the moment a user finishes editing a cell in the main DataGrid
+        private void DgPoLines_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (this.DataContext is PurchaseOrderViewModel viewModel)
+            {
+                // Delay by a fraction of a millisecond so the new text has time to bind to the PO Line model
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    viewModel.RecalculateTotals();
+                }), DispatcherPriority.Background);
+            }
         }
     }
 }

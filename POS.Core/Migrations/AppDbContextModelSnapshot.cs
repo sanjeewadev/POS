@@ -71,6 +71,58 @@ namespace POS.Core.Migrations
                     b.ToTable("AttributeValues");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("AuthorizedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MovementType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReasonCategory")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceVoucherNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShiftSessionId");
+
+                    b.ToTable("CashMovements");
+                });
+
             modelBuilder.Entity("POS.Core.Models.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -116,6 +168,255 @@ namespace POS.Core.Migrations
                     b.ToTable("CategoryAttributeGroups");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CustomerLedger", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("CreditAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CustomerMasterId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("DebitAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DocumentRef")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProcessedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerMasterId");
+
+                    b.ToTable("CustomerLedgers");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerMaster", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreditDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("CreditLimit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CurrentBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CustomerCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CustomerGroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CustomerType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCreditLocked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VatRegistrationNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerCode")
+                        .IsUnique();
+
+                    b.HasIndex("Phone");
+
+                    b.ToTable("CustomerMasters");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerReturnHeader", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AuthorizedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefundMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReturnNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalRefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReturnNo")
+                        .IsUnique();
+
+                    b.ToTable("CustomerReturnHeaders");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerReturnLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CustomerReturnHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("InventoryAction")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ItemDescription")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ItemVariantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("LineTotalRefund")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("QuantityReturned")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("RefundValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ReturnReason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerReturnHeaderId");
+
+                    b.ToTable("CustomerReturnLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.DocumentSequence", b =>
+                {
+                    b.Property<string>("DocumentType")
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("NextSequenceNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PaddingLength")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("DocumentType");
+
+                    b.ToTable("DocumentSequences");
+
+                    b.HasData(
+                        new
+                        {
+                            DocumentType = "GRN",
+                            NextSequenceNumber = 1,
+                            PaddingLength = 5,
+                            Prefix = "GRN-",
+                            UpdatedAt = new DateTime(2026, 6, 15, 18, 22, 1, 822, DateTimeKind.Local).AddTicks(3370)
+                        });
+                });
+
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
                 {
                     b.Property<int>("Id")
@@ -149,6 +450,9 @@ namespace POS.Core.Migrations
 
                     b.Property<DateTime>("InvoiceDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsTaxInclusive")
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal>("NetPayable")
                         .HasColumnType("TEXT");
@@ -262,18 +566,60 @@ namespace POS.Core.Migrations
                     b.ToTable("GrnLines");
                 });
 
-            modelBuilder.Entity("POS.Core.Models.Item", b =>
+            modelBuilder.Entity("POS.Core.Models.InventoryTransaction", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Barcode")
+                    b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Category")
+                    b.Property<int>("ItemVariantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceDocument")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemVariantId");
+
+                    b.HasIndex("ReferenceDocument");
+
+                    b.ToTable("InventoryTransactions");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.ItemBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
@@ -281,29 +627,32 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("CostPrice")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<decimal>("CurrentStock")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(100)
+                    b.Property<DateTime?>("ExpiryDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("IsDeactivated")
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemVariantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ReceivedDate")
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("RetailPrice")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("StockQuantity")
+                    b.Property<decimal>("WholesalePrice")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Barcode")
-                        .IsUnique();
+                    b.HasIndex("ItemVariantId");
 
-                    b.ToTable("Items");
+                    b.ToTable("ItemBatches");
                 });
 
             modelBuilder.Entity("POS.Core.Models.ItemParent", b =>
@@ -422,6 +771,9 @@ namespace POS.Core.Migrations
                     b.Property<int>("ItemParentId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("MaximumPrice")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("MinimumPrice")
                         .HasColumnType("TEXT");
 
@@ -473,6 +825,9 @@ namespace POS.Core.Migrations
 
                     b.Property<decimal>("GlobalBillDiscount")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsTaxInclusive")
+                        .HasColumnType("INTEGER");
 
                     b.Property<decimal>("NetPayable")
                         .HasColumnType("TEXT");
@@ -566,6 +921,92 @@ namespace POS.Core.Migrations
                     b.HasIndex("PoHeaderId");
 
                     b.ToTable("PoLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.PromoCondition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PromoRuleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TargetFamily")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetValue")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PromoRuleId");
+
+                    b.ToTable("PromoConditions");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.PromoReward", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PromoRuleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RewardType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("RewardValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PromoRuleId");
+
+                    b.ToTable("PromoRewards");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.PromoRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FamilyType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsStackable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RuleName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PromoRules");
                 });
 
             modelBuilder.Entity("POS.Core.Models.ReturnHeader", b =>
@@ -664,6 +1105,205 @@ namespace POS.Core.Migrations
                     b.ToTable("ReturnLines");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.SalesHeader", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("AmountTendered")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BalanceReturned")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("GrossTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("InvoiceNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsVoided")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("NetTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SalesHeaders");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.SalesLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("CostPrice")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsReturned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemBatchId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ItemDescription")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SalesHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemBatchId");
+
+                    b.HasIndex("SalesHeaderId");
+
+                    b.ToTable("SalesLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.SalesPayment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BankOrCardType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PaymentDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PaymentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SalesHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalesHeaderId");
+
+                    b.ToTable("SalesPayments");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.ShiftSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ActualCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ExpectedCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OpeningCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalCashSales")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Variance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShiftSessions");
+                });
+
             modelBuilder.Entity("POS.Core.Models.StockAdjustmentHeader", b =>
                 {
                     b.Property<int>("Id")
@@ -726,7 +1366,7 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("CostImpact")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("ItemVariantId")
+                    b.Property<int>("ItemBatchId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ReasonCode")
@@ -748,7 +1388,7 @@ namespace POS.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ItemVariantId");
+                    b.HasIndex("ItemBatchId");
 
                     b.HasIndex("StockAdjustmentHeaderId");
 
@@ -856,6 +1496,72 @@ namespace POS.Core.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Suppliers");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.SupplierLedger", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("BalanceAfterTransaction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ChargeAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("PaymentAmount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceDocument")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReferenceDocument");
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("SupplierLedgers");
                 });
 
             modelBuilder.Entity("POS.Core.Models.UnitOfMeasure", b =>
@@ -980,6 +1686,17 @@ namespace POS.Core.Migrations
                     b.Navigation("AttributeGroup");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
+                {
+                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
+                        .WithMany("CashMovements")
+                        .HasForeignKey("ShiftSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ShiftSession");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CategoryAttributeGroup", b =>
                 {
                     b.HasOne("POS.Core.Models.AttributeGroup", "AttributeGroup")
@@ -997,6 +1714,28 @@ namespace POS.Core.Migrations
                     b.Navigation("AttributeGroup");
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerLedger", b =>
+                {
+                    b.HasOne("POS.Core.Models.CustomerMaster", "CustomerMaster")
+                        .WithMany("LedgerEntries")
+                        .HasForeignKey("CustomerMasterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CustomerMaster");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerReturnLine", b =>
+                {
+                    b.HasOne("POS.Core.Models.CustomerReturnHeader", "CustomerReturnHeader")
+                        .WithMany("Lines")
+                        .HasForeignKey("CustomerReturnHeaderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CustomerReturnHeader");
                 });
 
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
@@ -1025,6 +1764,28 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("GrnHeader");
+
+                    b.Navigation("ItemVariant");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.InventoryTransaction", b =>
+                {
+                    b.HasOne("POS.Core.Models.ItemVariant", "ItemVariant")
+                        .WithMany()
+                        .HasForeignKey("ItemVariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ItemVariant");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.ItemBatch", b =>
+                {
+                    b.HasOne("POS.Core.Models.ItemVariant", "ItemVariant")
+                        .WithMany("ItemBatches")
+                        .HasForeignKey("ItemVariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("ItemVariant");
                 });
@@ -1114,6 +1875,28 @@ namespace POS.Core.Migrations
                     b.Navigation("PoHeader");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.PromoCondition", b =>
+                {
+                    b.HasOne("POS.Core.Models.PromoRule", "PromoRule")
+                        .WithMany("Conditions")
+                        .HasForeignKey("PromoRuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PromoRule");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.PromoReward", b =>
+                {
+                    b.HasOne("POS.Core.Models.PromoRule", "PromoRule")
+                        .WithMany("Rewards")
+                        .HasForeignKey("PromoRuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PromoRule");
+                });
+
             modelBuilder.Entity("POS.Core.Models.ReturnHeader", b =>
                 {
                     b.HasOne("POS.Core.Models.Supplier", "Supplier")
@@ -1144,11 +1927,41 @@ namespace POS.Core.Migrations
                     b.Navigation("ReturnHeader");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.SalesLine", b =>
+                {
+                    b.HasOne("POS.Core.Models.ItemBatch", "ItemBatch")
+                        .WithMany()
+                        .HasForeignKey("ItemBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("POS.Core.Models.SalesHeader", "SalesHeader")
+                        .WithMany("SalesLines")
+                        .HasForeignKey("SalesHeaderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ItemBatch");
+
+                    b.Navigation("SalesHeader");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.SalesPayment", b =>
+                {
+                    b.HasOne("POS.Core.Models.SalesHeader", "SalesHeader")
+                        .WithMany("SalesPayments")
+                        .HasForeignKey("SalesHeaderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalesHeader");
+                });
+
             modelBuilder.Entity("POS.Core.Models.StockAdjustmentLine", b =>
                 {
-                    b.HasOne("POS.Core.Models.ItemVariant", "ItemVariant")
+                    b.HasOne("POS.Core.Models.ItemBatch", "ItemBatch")
                         .WithMany()
-                        .HasForeignKey("ItemVariantId")
+                        .HasForeignKey("ItemBatchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1158,7 +1971,7 @@ namespace POS.Core.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ItemVariant");
+                    b.Navigation("ItemBatch");
 
                     b.Navigation("StockAdjustmentHeader");
                 });
@@ -1174,6 +1987,17 @@ namespace POS.Core.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.SupplierLedger", b =>
+                {
+                    b.HasOne("POS.Core.Models.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Supplier");
+                });
+
             modelBuilder.Entity("POS.Core.Models.AttributeGroup", b =>
                 {
                     b.Navigation("AttributeValues");
@@ -1184,6 +2008,16 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.Category", b =>
                 {
                     b.Navigation("AttributeGroups");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerMaster", b =>
+                {
+                    b.Navigation("LedgerEntries");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerReturnHeader", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
@@ -1198,6 +2032,8 @@ namespace POS.Core.Migrations
 
             modelBuilder.Entity("POS.Core.Models.ItemVariant", b =>
                 {
+                    b.Navigation("ItemBatches");
+
                     b.Navigation("PropertyMappings");
                 });
 
@@ -1206,9 +2042,28 @@ namespace POS.Core.Migrations
                     b.Navigation("PoLines");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.PromoRule", b =>
+                {
+                    b.Navigation("Conditions");
+
+                    b.Navigation("Rewards");
+                });
+
             modelBuilder.Entity("POS.Core.Models.ReturnHeader", b =>
                 {
                     b.Navigation("ReturnLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.SalesHeader", b =>
+                {
+                    b.Navigation("SalesLines");
+
+                    b.Navigation("SalesPayments");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.ShiftSession", b =>
+                {
+                    b.Navigation("CashMovements");
                 });
 
             modelBuilder.Entity("POS.Core.Models.StockAdjustmentHeader", b =>

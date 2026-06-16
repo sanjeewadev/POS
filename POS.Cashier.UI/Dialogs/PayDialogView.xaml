@@ -92,9 +92,12 @@
                 </Grid.RowDefinitions>
 
                 <!-- TABS (Cash / Card) -->
-                <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,15">
-                    <Button x:Name="CashTabBtn" Click="CashTabBtn_Click" Background="{StaticResource ActionBtnBrush}" Content="CASH" FontSize="20" Margin="0,0,5,0"/>
-                    <Button x:Name="CardTabBtn" Click="CardTabBtn_Click" Background="{StaticResource HeaderBgBrush}" Content="CARD" FontSize="20" Margin="5,0,0,0" Foreground="{StaticResource TextInactiveBrush}"/>
+                <UniformGrid Grid.Row="0" Columns="5" Margin="0,0,0,15">
+                    <Button x:Name="CashTabBtn" Click="CashTabBtn_Click" Background="{StaticResource ActionBtnBrush}" Content="CASH" FontSize="16" Margin="0,0,2,0"/>
+                    <Button x:Name="CardTabBtn" Click="CardTabBtn_Click" Background="{StaticResource HeaderBgBrush}" Content="CARD" FontSize="16" Margin="2,0" Foreground="{StaticResource TextInactiveBrush}"/>
+                    <Button x:Name="ChequeTabBtn" Click="ChequeTabBtn_Click" Background="{StaticResource HeaderBgBrush}" Content="CHEQUE" FontSize="16" Margin="2,0" Foreground="{StaticResource TextInactiveBrush}"/>
+                    <Button x:Name="CreditTabBtn" Click="CreditTabBtn_Click" Background="{StaticResource HeaderBgBrush}" Content="CREDIT" FontSize="16" Margin="2,0" Foreground="{StaticResource TextInactiveBrush}"/>
+                    <Button x:Name="VoucherTabBtn" Click="VoucherTabBtn_Click" Background="{StaticResource HeaderBgBrush}" Content="VOUCHER" FontSize="16" Margin="2,0,0,0" Foreground="{StaticResource TextInactiveBrush}"/>
                 </UniformGrid>
 
                 <!-- CASH PANEL (Visible) -->
@@ -151,6 +154,35 @@
                             <Button Background="White" Foreground="#CC0000" Content="MasterCard" FontSize="16"/>
                             <Button Background="White" Foreground="#0099FF" Content="AMEX" FontSize="18"/>
                         </UniformGrid>
+                    </StackPanel>
+                </Grid>
+                <Grid x:Name="ChequePanel" Grid.Row="1" Visibility="Collapsed">
+                    <StackPanel Margin="0,0,15,0">
+                        <TextBlock Text="Cheque Number" Foreground="{StaticResource TextDarkBrush}" FontSize="14" FontWeight="Bold"/>
+                        <TextBox x:Name="ChequeNoTxt" FontSize="24" Foreground="{StaticResource TextHighlightBrush}"/>
+                        <TextBlock Text="Bank Name" Foreground="{StaticResource TextDarkBrush}" FontSize="14" FontWeight="Bold" Margin="0,10,0,0"/>
+                        <TextBox x:Name="BankNameTxt" FontSize="24"/>
+                        <TextBlock Text="Cheque Amount" Foreground="{StaticResource TextDarkBrush}" FontSize="14" FontWeight="Bold" Margin="0,10,0,0"/>
+                        <TextBox x:Name="ChequeAmountTxt" Text="{Binding NetValue}" FontSize="36" TextAlignment="Right" Foreground="{StaticResource TextDangerBrush}"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid x:Name="CreditPanel" Grid.Row="1" Visibility="Collapsed">
+                    <StackPanel Margin="0,0,15,0">
+                        <TextBlock Text="Assign Debt to Customer:" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,20"/>
+                        <TextBlock Text="Customer Code / Phone" Foreground="{StaticResource TextDarkBrush}" FontSize="14" FontWeight="Bold"/>
+                        <TextBox x:Name="CreditCustomerTxt" FontSize="24"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="VERIFY CUSTOMER LIMIT" Height="50" FontSize="18" Margin="0,20,0,0"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid x:Name="VoucherPanel" Grid.Row="1" Visibility="Collapsed">
+                    <StackPanel Margin="0,0,15,0">
+                        <TextBlock Text="Scan or Type Voucher Code" Foreground="{StaticResource TextDarkBrush}" FontSize="14" FontWeight="Bold"/>
+                        <TextBox x:Name="VoucherCodeTxt" FontSize="24" Foreground="{StaticResource TextHighlightBrush}"/>
+                        <Button Background="{StaticResource ExpressBtnBrush}" Content="VALIDATE VOUCHER" Height="50" FontSize="18" Margin="0,20,0,20"/>
+                        <TextBlock Text="Voucher Balance Applied:" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextInactiveBrush}"/>
+                        <TextBlock x:Name="VoucherAppliedTxt" Text="Rs. 0.00" FontSize="36" FontWeight="Heavy" Foreground="{StaticResource TextDangerBrush}" TextAlignment="Right"/>
                     </StackPanel>
                 </Grid>
             </Grid>

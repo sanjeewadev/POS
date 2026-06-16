@@ -1,0 +1,299 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.BarcodeManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="850" d:DesignWidth="1400"
+             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+
+    <UserControl.Resources>
+        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Margin" Value="0,5,0,10"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+        <Style TargetType="TextBox" x:Key="ClassicInput">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#CCCCCC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003333"/>
+        </Style>
+        <Style TargetType="Button" x:Key="PrintBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#D97706"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#B45309"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style TargetType="Border" x:Key="ClassicGroupBox">
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+        <Style TargetType="DataGridCell" x:Key="BaseCell">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#005555"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="380"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}" Margin="0,0,0,5">
+                <StackPanel>
+                    <TextBlock Text="BARCODE MANAGEMENT &amp; ASSIGNMENT" Style="{StaticResource HeaderLabel}"/>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2.5*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Search (Item Code / Name / Barcode):" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding LoadDataCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Category:" Style="{StaticResource InlineLabel}"/>
+                            <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" DisplayMemberPath="CategoryName" Style="{StaticResource ClassicCombo}"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="4" Content="SEARCH" Command="{Binding LoadDataCommand}" Style="{StaticResource ClassicBtn}" Height="24" VerticalAlignment="Bottom"/>
+                    </Grid>
+
+                    <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <CheckBox Content="Show Active Items Only" IsChecked="{Binding ShowActiveOnly}" Foreground="#333" FontWeight="SemiBold" Margin="0,0,15,0"/>
+                        <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" Style="{StaticResource ClassicBtn}" Height="22" Padding="10,0"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1" Background="#E5E5E5" Padding="5" BorderBrush="#A0A0A0" BorderThickness="1,1,1,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Items Selected:" FontWeight="Bold" Foreground="#666" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding SelectedItemsCount}" FontWeight="Bold" Foreground="#005555" Margin="0,0,15,0"/>
+                        <TextBlock Text="Total Results:" FontWeight="Bold" Foreground="#666" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding TotalItemsCount}" FontWeight="Bold" Foreground="#000"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1" Content="⚡ AUTO-GENERATE SYSTEM SKUs FOR SELECTED" Command="{Binding AutoGenerateBarcodesCommand}" Style="{StaticResource ActionBtn}" Height="28" ToolTip="Assigns unique internal barcodes to selected items that are currently blank."/>
+                </Grid>
+            </Border>
+
+            <DataGrid Grid.Row="2" ItemsSource="{Binding BarcodeItems}" 
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="False"
+                      HeadersVisibility="Column" GridLinesVisibility="All" 
+                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
+                      RowHeight="30" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
+                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#E0E0E0"/>
+                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Padding" Value="5"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                    </Style>
+                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Width="45">
+                        <DataGridTemplateColumn.Header>
+                            <CheckBox IsChecked="{Binding DataContext.IsSelectAllChecked, RelativeSource={RelativeSource AncestorType=DataGrid}}" HorizontalAlignment="Center"/>
+                        </DataGridTemplateColumn.Header>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Command="{Binding DataContext.UpdateSelectedCountCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="100" IsReadOnly="True" Foreground="#666"/>
+                    <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Variant/Size" Binding="{Binding VariantDescription}" Width="110" IsReadOnly="True" Foreground="#555"/>
+                    <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="110" IsReadOnly="True"/>
+
+                    <DataGridTemplateColumn Header="Barcode (Scan / Type)" Width="180">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding Barcode, UpdateSourceTrigger=PropertyChanged}" Background="#FFFFE0" BorderThickness="0" VerticalContentAlignment="Center" FontWeight="Bold"/>
+                                    <Button Grid.Column="1" Content="💾" Command="{Binding DataContext.UpdateSingleBarcodeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Save manual override"/>
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <Border Grid.Column="2" Background="#E2EBE9" BorderBrush="#005555" BorderThickness="1" Padding="15">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="🖨️ PRINT COMMAND CENTER" FontSize="16" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+
+                <StackPanel Grid.Row="1" Margin="0,0,0,20">
+                    <TextBlock Text="1. Select Installed Printer:" Style="{StaticResource InlineLabel}" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding AvailablePrinters}" SelectedItem="{Binding SelectedPrinter}" Style="{StaticResource ClassicCombo}" FontWeight="Bold"/>
+                </StackPanel>
+
+                <Border Grid.Row="2" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" Margin="0,0,0,20">
+                    <StackPanel>
+                        <TextBlock Text="2. Label Settings:" FontWeight="Bold" Foreground="#444" Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Width (mm):" Style="{StaticResource InlineLabel}"/>
+                                <TextBox Text="{Binding PrintConfig.WidthMm}" Style="{StaticResource ClassicInput}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Height (mm):" Style="{StaticResource InlineLabel}"/>
+                                <TextBox Text="{Binding PrintConfig.HeightMm}" Style="{StaticResource ClassicInput}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Rectangle Height="1" Fill="#E0E0E0" Margin="0,5,0,10"/>
+
+                        <CheckBox Content="Print Store Name" IsChecked="{Binding PrintConfig.PrintStoreName}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding PrintConfig.StoreName}" IsEnabled="{Binding PrintConfig.PrintStoreName}" Style="{StaticResource ClassicInput}" Margin="20,0,0,10"/>
+
+                        <CheckBox Content="Print Item Name / Variant" IsChecked="{Binding PrintConfig.PrintItemName}" Margin="0,0,0,5"/>
+                        <CheckBox Content="Print Global Retail Price" IsChecked="{Binding PrintConfig.PrintPrice}" Margin="0,0,0,5"/>
+                        <CheckBox Content="Print Internal Item Code" IsChecked="{Binding PrintConfig.PrintItemCode}"/>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Grid.Row="3">
+                    <TextBlock Text="Label Layout Preview:" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
+                    <Border Background="White" BorderBrush="#000" BorderThickness="1" Width="180" Height="90" HorizontalAlignment="Center" Padding="5">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding PrintConfig.StoreName}" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center" Visibility="{Binding PrintConfig.PrintStoreName, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <TextBlock Text="Sample Item Name - L" FontSize="9" HorizontalAlignment="Center" Margin="0,2"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,2" Height="25">
+                                <Rectangle Width="2" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="4" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="1" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="3" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="2" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="1" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="4" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="2" Fill="Black" Margin="1,0"/>
+                                <Rectangle Width="3" Fill="Black" Margin="1,0"/>
+                            </StackPanel>
+
+                            <Grid>
+                                <TextBlock Text="ITM-001" FontSize="7" VerticalAlignment="Bottom" HorizontalAlignment="Left" Visibility="{Binding PrintConfig.PrintItemCode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <TextBlock Text="Rs. 1,500.00" FontSize="10" FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Right" Visibility="{Binding PrintConfig.PrintPrice, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Row="4" Margin="0,20,0,0">
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Labels per Item:" VerticalAlignment="Center" FontWeight="Bold" HorizontalAlignment="Right"/>
+                        <TextBox Grid.Column="2" Text="{Binding DefaultPrintQuantity, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" FontWeight="Bold" FontSize="16" HorizontalContentAlignment="Center"/>
+                    </Grid>
+
+                    <Button Content="🖨️ PRINT SELECTED LABELS" Command="{Binding PrintSelectedLabelsCommand}" Style="{StaticResource PrintBtn}" Height="50" Cursor="Hand" ToolTip="Sends the job directly to the Windows Spooler"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

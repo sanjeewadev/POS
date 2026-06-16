@@ -1,334 +1,324 @@
 ﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.CustomerMasterView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="950" d:DesignWidth="1250"
-             Background="#F5F5F5">
+             xmlns:System="clr-namespace:System;assembly=mscorlib"
+             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
 
     <UserControl.Resources>
-        <Style TargetType="Button" x:Key="StandardBtn">
-            <Setter Property="Background" Value="#2B3C38"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3B524E"/>
-                </Trigger>
-            </Style.Triggers>
+        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Margin" Value="0,5,0,5"/>
         </Style>
 
-        <Style TargetType="Button" x:Key="PointsBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#D97706"/>
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#B45309"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
 
-        <Style TargetType="Control" x:Key="StandardInput">
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="1"/>
+        <Style TargetType="TextBox" x:Key="ClassicInput">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Height" Value="30"/>
-        </Style>
-
-        <Style TargetType="Border" x:Key="GroupBoxBorder">
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Margin" Value="0,0,0,15"/>
-            <Setter Property="Background" Value="#FAFAFA"/>
+            <Setter Property="Background" Value="White"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="GroupHeader">
-            <Setter Property="Foreground" Value="#2B3C38"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#CCCCCC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003333"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#007777"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Border" x:Key="ClassicGroupBox">
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="420"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="2*"/>
+        </Grid.RowDefinitions>
 
-        <Border Grid.Column="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,20,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
-                <StackPanel>
-                    <TextBlock Text="Customer Master Profile" FontSize="18" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,15"/>
+        <Border Grid.Row="0" Background="#003366" Padding="10" BorderBrush="#002244" BorderThickness="1" Margin="0,0,0,5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                    <Border Background="#FFF8EB" BorderBrush="#FDE0A6" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,20">
-                        <StackPanel>
-                            <TextBlock Text="Customer Status &amp; KPIs" Foreground="#D97706" FontWeight="Bold" Margin="0,0,0,10"/>
+                <TextBlock Grid.Column="0" Text="CUSTOMER MASTER (CRM)" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,20,0" VerticalAlignment="Center"/>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="10"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Filter Type:" Foreground="#A0C0E0" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ComboBox SelectedItem="{Binding SelectedTypeFilter}" Style="{StaticResource ClassicCombo}" Width="120" Margin="0,0,15,0">
+                        <System:String>All Customers</System:String>
+                        <System:String>Retail</System:String>
+                        <System:String>Wholesale</System:String>
+                    </ComboBox>
 
-                                <StackPanel Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center">
-                                    <TextBlock Text="Tier" Foreground="#666666" FontSize="11" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="txtTierBadge" Text="Standard" FontWeight="Bold" FontSize="14" Foreground="#333333" HorizontalAlignment="Center"/>
-                                </StackPanel>
+                    <TextBlock Text="Search (Name/Phone):" Foreground="#A0C0E0" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Width="180" Margin="0,0,15,0"/>
 
-                                <StackPanel Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center">
-                                    <TextBlock Text="Points" Foreground="#666666" FontSize="11" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="txtPoints" Text="0" FontWeight="Bold" FontSize="18" Foreground="#D97706" HorizontalAlignment="Center"/>
-                                </StackPanel>
+                    <Button Content="[ F5 - REFRESH ]" Command="{Binding RefreshDataCommand}" Style="{StaticResource ClassicBtn}" Background="#D0E4F5" BorderBrush="#003366" Foreground="#003366" Height="24" Padding="10,0"/>
+                </WrapPanel>
 
-                                <StackPanel Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center">
-                                    <TextBlock Text="Life Spend" Foreground="#666666" FontSize="11" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="txtLifeSpend" Text="Rs. 0" FontWeight="Bold" FontSize="14" Foreground="#2B5B84" HorizontalAlignment="Center"/>
-                                </StackPanel>
-
-                                <Border Grid.Row="2" Grid.ColumnSpan="3" Background="#FDF3F3" BorderBrush="#F5C6CB" BorderThickness="1" CornerRadius="2" Padding="10,5">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock Text="Outstanding Debt:" Foreground="#A94044" FontSize="12" FontWeight="SemiBold" Margin="0,0,10,0"/>
-                                        <TextBlock x:Name="txtOutstandingDebt" Text="Rs. 0.00" Foreground="#A94044" FontSize="14" FontWeight="Bold"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource GroupBoxBorder}">
-                        <StackPanel>
-                            <TextBlock Text="1. Personal Details" Style="{StaticResource GroupHeader}"/>
-
-                            <TextBlock Text="Mobile Number (ID) *" Foreground="#2B5B84" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtMobile" Style="{StaticResource StandardInput}" MaxLength="15" Background="#F0F8FF" ToolTip="Used to identify the customer at the checkout"/>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="10"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="First Name *" Foreground="#666666" Margin="0,0,0,5"/>
-                                    <TextBox x:Name="txtFirstName" Style="{StaticResource StandardInput}"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Last Name" Foreground="#666666" Margin="0,0,0,5"/>
-                                    <TextBox x:Name="txtLastName" Style="{StaticResource StandardInput}"/>
-                                </StackPanel>
-                            </Grid>
-
-                            <TextBlock Text="Email Address" Foreground="#666666" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtEmail" Style="{StaticResource StandardInput}"/>
-
-                            <TextBlock Text="Date of Birth" Foreground="#666666" Margin="0,0,0,5"/>
-                            <DatePicker x:Name="dpDob" Style="{StaticResource StandardInput}" ToolTip="Used for automated birthday discounts"/>
-
-                            <TextBlock Text="Postal Address" Foreground="#666666" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtAddress" Style="{StaticResource StandardInput}" Height="60" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource GroupBoxBorder}">
-                        <StackPanel>
-                            <TextBlock Text="2. B2B Corporate Identity" Style="{StaticResource GroupHeader}" Foreground="#6F42C1"/>
-
-                            <TextBlock Text="Company / Trade Name" Foreground="#666666" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtCompanyName" Style="{StaticResource StandardInput}" ToolTip="Leave blank for standard retail customers"/>
-
-                            <TextBlock Text="Tax / VAT Registration No." Foreground="#666666" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtTaxNo" Style="{StaticResource StandardInput}" ToolTip="Required for commercial wholesale invoicing"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource GroupBoxBorder}" Background="#F4FAF6" BorderBrush="#C3E6CB">
-                        <StackPanel>
-                            <TextBlock Text="3. Financial Rules &amp; Pricing" Style="{StaticResource GroupHeader}" Foreground="#28A745"/>
-
-                            <TextBlock Text="Assigned Price Tier *" Foreground="#333333" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <ComboBox x:Name="cmbPriceTier" Style="{StaticResource StandardInput}" Background="#FFFFE0">
-                                <ComboBoxItem Content="Standard Retail" IsSelected="True"/>
-                                <ComboBoxItem Content="Wholesale Level 1 (Bulk)"/>
-                                <ComboBoxItem Content="Wholesale Level 2 (Distributor)"/>
-                                <ComboBoxItem Content="VIP / Staff Discount"/>
-                            </ComboBox>
-
-                            <TextBlock Text="Store Credit Limit (Rs.) *" Foreground="#A94044" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtCreditLimit" Style="{StaticResource StandardInput}" Text="0.00" HorizontalContentAlignment="Right" Background="#FDF3F3" ToolTip="Maximum allowed unpaid debt before the POS system blocks credit sales"/>
-                        </StackPanel>
-                    </Border>
-
-                    <CheckBox x:Name="chkIsActive" Content="Active Customer Account" IsChecked="True" Foreground="#333333" Cursor="Hand" Margin="0,0,0,20"/>
-
-                    <WrapPanel Orientation="Horizontal">
-                        <Button Content="Save Profile" Style="{StaticResource StandardBtn}" Background="#2B5B84" Width="100"/>
-                        <Button Content="Clear" Style="{StaticResource StandardBtn}" Width="80" Background="#777777"/>
-                        <Button Content="Adjust Points" Style="{StaticResource PointsBtn}" Width="120" ToolTip="Manually add or remove points (Manager Only)"/>
-                    </WrapPanel>
-                </StackPanel>
-            </ScrollViewer>
+                <Button Grid.Column="2" Content="+ NEW CUSTOMER" Command="{Binding AddNewCustomerCommand}" Style="{StaticResource ClassicBtn}" Background="#059669" Foreground="White" BorderBrush="#047857" Height="28"/>
+            </Grid>
         </Border>
 
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="1.5*"/>
-                <RowDefinition Height="15"/>
-                <RowDefinition Height="1*"/>
-            </Grid.RowDefinitions>
+        <DataGrid Grid.Row="1" ItemsSource="{Binding CustomersList}" SelectedItem="{Binding SelectedCustomer}" 
+                  AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
+                  HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
+                  RowHeight="26" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
+                  SelectionMode="Single" AlternatingRowBackground="#F9F9F9" IsReadOnly="True" Margin="0,0,0,5">
+            <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#E0E0E0"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="Padding" Value="5"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                    <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Code" Binding="{Binding CustomerCode}" Width="100" FontWeight="Bold"/>
+                <DataGridTextColumn Header="Customer / Company Name" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120"/>
+                <DataGridTextColumn Header="Type" Binding="{Binding CustomerType}" Width="100"/>
 
-            <Border Grid.Row="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,15">
-                <Grid>
+                <DataGridTextColumn Header="Credit Limit Rs." Binding="{Binding CreditLimit, StringFormat=N2}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="0,0,4,0"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Current Balance Rs." Binding="{Binding CurrentBalance, StringFormat=N2}" Width="130" FontWeight="Bold">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="0,0,4,0"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCreditLocked}" Value="True">
+                                    <Setter Property="Foreground" Value="#8B0000"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridCheckBoxColumn Header="Locked" Binding="{Binding IsCreditLocked}" Width="60">
+                    <DataGridCheckBoxColumn.ElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="IsHitTestVisible" Value="False"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.ElementStyle>
+                </DataGridCheckBoxColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Border Grid.Row="2" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Stretch" Padding="0">
+            <Grid IsEnabled="{Binding IsCustomerSelected}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="#E0E0E0" BorderBrush="#A0A0A0" BorderThickness="0,0,0,1" Padding="8,4">
+                    <TextBlock Text="SELECTED CUSTOMER PROFILE" Style="{StaticResource HeaderLabel}" Margin="0"/>
+                </Border>
+
+                <Grid Grid.Row="1" Margin="10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="15"/>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="300"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="Search Customers:" VerticalAlignment="Center" Foreground="#666666" Margin="0,0,10,0"/>
-                    <TextBox Grid.Column="1" x:Name="txtSearch" Padding="8,5" ToolTip="Search by Mobile, Name, Company, or Email..." Margin="0"/>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="1. DEMOGRAPHICS" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,10"/>
 
-                    <ComboBox Grid.Column="3" x:Name="cmbFilterTier" Padding="5" ToolTip="Filter by Price Tier">
-                        <ComboBoxItem Content="All Tiers" IsSelected="True"/>
-                        <ComboBoxItem Content="Standard Retail"/>
-                        <ComboBoxItem Content="Wholesale Level 1"/>
-                    </ComboBox>
-                </Grid>
-            </Border>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Account Code:" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputCustomerCode}" IsReadOnly="True" Style="{StaticResource ClassicInput}" Background="#E5E5E5" FontWeight="Bold"/>
+                        </Grid>
 
-            <Border Grid.Row="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
-                <DataGrid x:Name="dgCustomers" 
-                          AutoGenerateColumns="False" 
-                          CanUserAddRows="False" 
-                          CanUserDeleteRows="False" 
-                          IsReadOnly="True" 
-                          HeadersVisibility="Column" 
-                          GridLinesVisibility="Horizontal"
-                          HorizontalGridLinesBrush="#EEEEEE"
-                          BorderThickness="0"
-                          RowHeight="38"
-                          Background="Transparent"
-                          SelectionMode="Single">
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Full Name *" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputFullName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" FontWeight="Bold" Background="#FFFFE0"/>
+                        </Grid>
 
-                    <DataGrid.Resources>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#F8F8F8"/>
-                            <Setter Property="Foreground" Value="#333333"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="Padding" Value="10,8"/>
-                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                            <Setter Property="BorderBrush" Value="#DDDDDD"/>
-                        </Style>
-                        <Style TargetType="DataGridCell">
-                            <Setter Property="Padding" Value="10,0"/>
-                            <Setter Property="VerticalContentAlignment" Value="Center"/>
-                        </Style>
-                    </DataGrid.Resources>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Phone *" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputPhone}" Style="{StaticResource ClassicInput}" Background="#FFFFE0" Margin="0,0,5,0"/>
+                            <TextBlock Grid.Column="2" Text="Email:" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Grid.Column="3" Text="{Binding InputEmail}" Style="{StaticResource ClassicInput}"/>
+                        </Grid>
 
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Mobile No." Binding="{Binding Mobile}" Width="120" FontWeight="SemiBold"/>
-                        <DataGridTextColumn Header="Customer Name" Binding="{Binding FullName}" Width="160"/>
-                        <DataGridTextColumn Header="Company (B2B)" Binding="{Binding CompanyName}" Width="140" Foreground="#666666"/>
-                        <DataGridTextColumn Header="Price Tier" Binding="{Binding PriceTier}" Width="110" Foreground="#2B5B84"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Address:" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputAddress}" Style="{StaticResource ClassicInput}"/>
+                        </Grid>
 
-                        <DataGridTextColumn Header="Debt (Rs.)" Binding="{Binding OutstandingDebt, StringFormat=N2}" Width="100">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    <Setter Property="Foreground" Value="#A94044"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <Rectangle Height="1" Fill="#C0C0C0" Margin="0,5,0,10"/>
 
-                        <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="70">
-                            <DataGridCheckBoxColumn.ElementStyle>
-                                <Style TargetType="CheckBox">
-                                    <Setter Property="HorizontalAlignment" Value="Center"/>
-                                    <Setter Property="IsHitTestVisible" Value="False"/>
-                                </Style>
-                            </DataGridCheckBoxColumn.ElementStyle>
-                        </DataGridCheckBoxColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Border>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Company:" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputCompanyName}" Style="{StaticResource ClassicInput}" ToolTip="For Wholesale / B2B Clients"/>
+                        </Grid>
 
-            <Border Grid.Row="3" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
-                <DockPanel>
-                    <Border DockPanel.Dock="Top" Background="#E2EBE9" Padding="10">
-                        <TextBlock Text="Recent Purchase History (Selected Customer)" FontWeight="SemiBold" Foreground="#2B3C38"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="VAT/BR No:" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Grid.Column="1" Text="{Binding InputVatNumber}" Style="{StaticResource ClassicInput}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="1" Width="1" Fill="#A0A0A0" Margin="9,0"/>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="2. POS SETTINGS &amp; LOYALTY" FontWeight="Bold" Foreground="#005500" Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Customer Type *" Style="{StaticResource InlineLabel}"/>
+                            <ComboBox Grid.Column="1" SelectedItem="{Binding InputCustomerType}" Style="{StaticResource ClassicCombo}" FontWeight="Bold">
+                                <System:String>Retail</System:String>
+                                <System:String>Wholesale</System:String>
+                            </ComboBox>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Loyalty Group:" Style="{StaticResource InlineLabel}"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableLoyaltyGroups}" SelectedItem="{Binding InputLoyaltyGroup}" DisplayMemberPath="GroupName" Style="{StaticResource ClassicCombo}" ToolTip="Select a group to auto-apply discounts at checkout"/>
+                        </Grid>
+
+                        <Rectangle Height="1" Fill="#C0C0C0" Margin="0,5,0,15"/>
+
+                        <CheckBox Content="Account is Active (Can purchase items)" IsChecked="{Binding InputIsActive}" FontWeight="Bold" Foreground="#333" Margin="0,0,0,10"/>
+
+                        <Button Content="💾 SAVE CUSTOMER PROFILE" Command="{Binding SaveCustomerCommand}" Style="{StaticResource ActionBtn}" Height="35" Margin="0,20,0,0"/>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="3" Width="1" Fill="#A0A0A0" Margin="9,0"/>
+
+                    <Border Grid.Column="4" Background="#F8F8F8" BorderBrush="#C0C0C0" BorderThickness="1" Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="3. FINANCIAL CONTROLS" FontWeight="Bold" Foreground="#8B0000" Margin="0,0,0,15"/>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Credit Limit Rs." Style="{StaticResource InlineLabel}"/>
+                                <TextBox Grid.Column="1" Text="{Binding InputCreditLimit, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right" FontWeight="Bold"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Credit Terms:" Style="{StaticResource InlineLabel}"/>
+                                <TextBox Grid.Column="1" Text="{Binding InputCreditDays}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center" ToolTip="Number of days to pay"/>
+                            </Grid>
+
+                            <Rectangle Height="2" Fill="#A0A0A0" Margin="0,5,0,15"/>
+
+                            <TextBlock Text="CURRENT BALANCE:" FontSize="13" FontWeight="Bold" Foreground="#555" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                            <TextBlock Text="{Binding SelectedCustomer.CurrentBalance, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Heavy" Foreground="#8B0000" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                            <CheckBox Content="🚨 LOCK CREDIT ACCOUNT" IsChecked="{Binding InputIsCreditLocked}" FontWeight="Heavy" Foreground="#8B0000" ToolTip="Check this to instantly prevent cashier from finalizing any credit sales for this customer." Margin="0,0,0,15" HorizontalAlignment="Center">
+                                <CheckBox.LayoutTransform>
+                                    <ScaleTransform ScaleX="1.2" ScaleY="1.2"/>
+                                </CheckBox.LayoutTransform>
+                            </CheckBox>
+                        </StackPanel>
                     </Border>
-
-                    <DataGrid x:Name="dgPurchaseHistory" 
-                              AutoGenerateColumns="False" 
-                              CanUserAddRows="False" 
-                              CanUserDeleteRows="False" 
-                              IsReadOnly="True" 
-                              HeadersVisibility="Column" 
-                              GridLinesVisibility="Horizontal"
-                              HorizontalGridLinesBrush="#EEEEEE"
-                              BorderThickness="0"
-                              RowHeight="30"
-                              Background="Transparent">
-
-                        <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#FFFFFF"/>
-                                <Setter Property="Foreground" Value="#666666"/>
-                                <Setter Property="Padding" Value="10,5"/>
-                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                <Setter Property="BorderBrush" Value="#DDDDDD"/>
-                            </Style>
-                            <Style TargetType="DataGridCell">
-                                <Setter Property="Padding" Value="10,0"/>
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                            </Style>
-                        </DataGrid.Resources>
-
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding InvoiceDate, StringFormat=dd/MM/yyyy}" Width="100"/>
-                            <DataGridTextColumn Header="Invoice No." Binding="{Binding InvoiceNumber}" Width="120" FontWeight="SemiBold"/>
-                            <DataGridTextColumn Header="Location" Binding="{Binding LocationName}" Width="*"/>
-
-                            <DataGridTextColumn Header="Amount Spent" Binding="{Binding AmountSpent, StringFormat=N2}" Width="120">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Points Earned" Binding="{Binding PointsEarned}" Width="110">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        <Setter Property="Foreground" Value="#28A745"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </DockPanel>
-            </Border>
-        </Grid>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

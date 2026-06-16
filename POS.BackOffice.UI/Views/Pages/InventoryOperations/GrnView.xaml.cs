@@ -1,28 +1,34 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
 {
-    /// <summary>
-    /// Interaction logic for GrnView.xaml
-    /// </summary>
     public partial class GrnView : UserControl
     {
         public GrnView()
         {
             InitializeComponent();
+
+            if (App.Services != null)
+            {
+                this.DataContext = App.Services.GetRequiredService<GrnViewModel>();
+            }
+        }
+
+        // Triggered the moment a user finishes editing an Excel-style cell in the main DataGrid
+        private void DgGrnLines_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (this.DataContext is GrnViewModel viewModel)
+            {
+                // Delay the recalculation by a fraction of a millisecond so the new value has time to bind to the GrnLine model
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    viewModel.RecalculateTotals();
+                }), DispatcherPriority.Background);
+            }
         }
     }
 }

@@ -17,77 +17,146 @@ namespace POS.Core.Repositories
             _contextFactory = contextFactory;
         }
 
-        // Fetch suppliers for the dropdown
         public async Task<IEnumerable<Supplier>> GetActiveSuppliersAsync()
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             return await context.Suppliers.Where(s => !s.IsDeactivated).AsNoTracking().ToListAsync();
         }
 
-        // --- ATOMIC POSTING ENGINE ---
+        // --- ATOMIC POSTING ENGINE (HYBRID BATCH UPGRADED) ---
         public async Task PostGrnAsync(GrnHeader header, List<GrnLine> lines)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
-
-            // Start the unbreakable transaction
             using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
-                // 1. Finalize and Save the GRN Header
+                // 1. CONCURRENCY LOCK: Get safe, sequential GRN Number
+                var sequence = await context.DocumentSequences.FirstOrDefaultAsync(s => s.DocumentType == "GRN");
+                if (sequence == null)
+                    throw new Exception("CRITICAL: GRN Document Sequence not found in database.");
+
+                string grnNumber = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+
+                sequence.NextSequenceNumber++;
+                sequence.UpdatedAt = DateTime.Now;
+                context.DocumentSequences.Update(sequence);
+
+                // 2. Save Header
+                header.GrnNumber = grnNumber;
                 header.Status = "Posted";
                 header.CreatedAt = DateTime.Now;
                 await context.GrnHeaders.AddAsync(header);
-                await context.SaveChangesAsync(); // Saves to generate the Header ID
+                await context.SaveChangesAsync();
 
-                // 2. Process Lines, Inventory, and Costs
+                // 3. Process Lines, Inventory, MAC, and HYBRID BATCH BUCKETS
                 foreach (var line in lines)
                 {
                     line.GrnHeaderId = header.Id;
                     await context.GrnLines.AddAsync(line);
 
-                    // 3. Update the Item Master Variant
                     var variant = await context.ItemVariants.FindAsync(line.ItemVariantId);
                     if (variant != null)
                     {
-                        // Update Selling Prices based on the new GRN inputs
+                        var stockTransactions = await context.InventoryTransactions
+                            .Where(t => t.ItemVariantId == variant.Id)
+                            .Select(t => t.Quantity)
+                            .ToListAsync();
+
+                        decimal currentStock = stockTransactions.Sum();
+                        decimal totalPhysicalReceived = line.ReceivedQty + line.FocQty;
+                        decimal newTotalQty = currentStock + totalPhysicalReceived;
+
+                        // --- THE RETAIL MATH: MOVING AVERAGE COST (MAC) ---
+                        if (newTotalQty > 0)
+                        {
+                            decimal oldTotalValue = currentStock * variant.AverageCost;
+                            decimal newReceivedValue = totalPhysicalReceived * line.LandedCost;
+
+                            variant.AverageCost = Math.Round((oldTotalValue + newReceivedValue) / newTotalQty, 2);
+                        }
+
+                        // Update Global Selling Prices for fast retail flow
                         variant.CostPrice = line.LandedCost;
                         variant.RetailPrice = line.RetailPrice;
                         variant.WholesalePrice = line.WholesalePrice;
                         variant.MinimumPrice = line.MinimumPrice;
 
-                        // Calculate new Moving Average Cost 
-                        // Formula: ((OldQty * OldAvgCost) + (NewQty * LandedCost)) / TotalQty
-                        // Note: Requires fetching current stock from your StockLedger table
-                        // variant.AverageCost = ... (Implementation depends on your specific Ledger structure)
-
                         context.ItemVariants.Update(variant);
-                    }
 
-                    // 4. Update the Physical Stock Ledger
-                    // Here you would insert a record into an InventoryTransaction table:
-                    // context.InventoryLedgers.Add(new InventoryLedger { VariantId = line.ItemVariantId, Qty = line.ReceivedQty + line.FocQty, Type = "IN-GRN" ... });
+                        // --- NEW: THE BATCH BUCKET ENGINE ---
+                        // If user didn't type a batch, auto-generate one tied to this specific GRN receipt
+                        string targetBatchNo = string.IsNullOrWhiteSpace(line.BatchNo)
+                            ? $"SYS-{header.GrnNumber}"
+                            : line.BatchNo.Trim();
+
+                        var batchBucket = await context.ItemBatches
+                            .FirstOrDefaultAsync(b => b.ItemVariantId == variant.Id && b.BatchNo == targetBatchNo);
+
+                        if (batchBucket == null)
+                        {
+                            // Create a brand new bucket for this distinct batch
+                            batchBucket = new ItemBatch
+                            {
+                                ItemVariantId = variant.Id,
+                                BatchNo = targetBatchNo,
+                                ExpiryDate = line.ExpiryDate,
+                                ReceivedDate = header.ReceivedDate,
+                                CostPrice = line.LandedCost,
+                                RetailPrice = line.RetailPrice,
+                                WholesalePrice = line.WholesalePrice,
+                                CurrentStock = totalPhysicalReceived
+                            };
+                            await context.ItemBatches.AddAsync(batchBucket);
+                        }
+                        else
+                        {
+                            // If the supplier sent more of the exact same batch, just pour it in the existing bucket
+                            batchBucket.CurrentStock += totalPhysicalReceived;
+                            batchBucket.CostPrice = line.LandedCost; // Update to latest landed cost
+                            batchBucket.RetailPrice = line.RetailPrice;
+                            context.ItemBatches.Update(batchBucket);
+                        }
+
+                        // --- WRITE IMMUTABLE STOCK LEDGER ---
+                        var inventoryTx = new InventoryTransaction
+                        {
+                            ItemVariantId = variant.Id,
+                            TransactionDate = header.ReceivedDate,
+                            TransactionType = "GRN",
+                            ReferenceDocument = header.GrnNumber,
+                            Quantity = totalPhysicalReceived,
+                            UnitCost = line.LandedCost,
+                            CreatedBy = "System",
+                            Remarks = $"GRN Receipt via Invoice: {header.SupplierInvoiceNo} | Batch: {targetBatchNo}"
+                        };
+                        await context.InventoryTransactions.AddAsync(inventoryTx);
+                    }
                 }
 
-                // 5. Hit the Accounts Payable (Supplier Ledger)
+                // 4. Hit the Accounts Payable (Supplier Ledger)
                 var supplier = await context.Suppliers.FindAsync(header.SupplierId);
                 if (supplier != null)
                 {
-                    // Increase the debt we owe this supplier
-                    supplier.CurrentBalance += header.NetPayable;
-                    context.Suppliers.Update(supplier);
-
-                    // Log this debt in the Supplier Statement/Ledger
-                    // context.SupplierLedgers.Add(new SupplierLedger { SupplierId = supplier.Id, Type = "GRN", ChargeAmount = header.NetPayable ... });
+                    var supplierLedger = new SupplierLedger
+                    {
+                        SupplierId = supplier.Id,
+                        TransactionDate = header.ReceivedDate,
+                        TransactionType = "GRN",
+                        ReferenceDocument = header.GrnNumber,
+                        ChargeAmount = header.NetPayable,
+                        PaymentAmount = 0m,
+                        DueDate = header.DueDate,
+                        Remarks = $"Supplier Invoice: {header.SupplierInvoiceNo}"
+                    };
+                    await context.SupplierLedgers.AddAsync(supplierLedger);
                 }
 
-                // 6. Commit all changes simultaneously
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (Exception)
             {
-                // If ANYTHING fails, wipe the database changes to prevent corruption
                 await transaction.RollbackAsync();
                 throw;
             }

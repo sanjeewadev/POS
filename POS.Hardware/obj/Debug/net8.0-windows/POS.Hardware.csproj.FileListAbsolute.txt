@@ -1,0 +1,16 @@
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\bin\Debug\net8.0-windows\POS.Hardware.deps.json
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\bin\Debug\net8.0-windows\POS.Hardware.dll
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\bin\Debug\net8.0-windows\POS.Hardware.pdb
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\bin\Debug\net8.0-windows\POS.Core.dll
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\bin\Debug\net8.0-windows\POS.Core.pdb
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.csproj.AssemblyReference.cache
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.AssemblyInfoInputs.cache
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.AssemblyInfo.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.csproj.CoreCompileInputs.cache
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.sourcelink.json
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hard.39C38418.Up2Date
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.dll
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\refint\POS.Hardware.dll
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\POS.Hardware.pdb
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Hardware\obj\Debug\net8.0-windows\ref\POS.Hardware.dll

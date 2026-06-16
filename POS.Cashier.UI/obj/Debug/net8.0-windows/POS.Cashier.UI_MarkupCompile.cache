@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\App.xaml
-7-1095315620
+331220970013
 
-121956397898
-2182098571547
-Dialogs\CashMovementDialogView.xaml;Dialogs\ConfirmDialogView.xaml;Dialogs\PayDialogView.xaml;MainWindow.xaml;Resources\Colors.xaml;Views\LoginView.xaml;Views\SalesView.xaml;
+43-344723267
+220-1154373925
+Dialogs\AddFloatDialog.xaml;Dialogs\BatchSelectionDialog.xaml;Dialogs\CardAuthDialog.xaml;Dialogs\CashDenominationDialog.xaml;Dialogs\CashMovementDialogView.xaml;Dialogs\CashTenderDialog.xaml;Dialogs\ConfirmDialogView.xaml;Dialogs\CustomerAccountDialog.xaml;Dialogs\CustomerManagementDialog.xaml;Dialogs\CustomerSelectionDialog.xaml;Dialogs\DiscountDialog.xaml;Dialogs\DocumentTenderDialog.xaml;Dialogs\HoldRecallDialog.xaml;Dialogs\LockScreenView.xaml;Dialogs\ManagerAuthDialog.xaml;Dialogs\PayDialogView.xaml;Dialogs\PluSearchDialog.xaml;Dialogs\PriceDiscountDialog.xaml;Dialogs\PriceOverrideDialog.xaml;Dialogs\ProductSeekDialog.xaml;Dialogs\ReturnInvoiceDialog.xaml;Dialogs\ShiftMenuView.xaml;Dialogs\ShiftSummaryDialog.xaml;Dialogs\StockInquiryDialog.xaml;Dialogs\SuspendedCartsDialog.xaml;Dialogs\UnifiedCheckoutView.xaml;Dialogs\ZReportSummaryDialog.xaml;MainWindow.xaml;Resources\Colors.xaml;Views\LoginView.xaml;Views\OpenCloseShiftView.xaml;Views\SalesView.xaml;Views\TerminalLockedView.xaml;
 
 False
 

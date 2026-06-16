@@ -1,28 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+﻿using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.InventoryPages
 {
-    /// <summary>
-    /// Interaction logic for ItemPropertyView.xaml
-    /// </summary>
     public partial class ItemPropertyView : UserControl
     {
         public ItemPropertyView()
         {
             InitializeComponent();
+
+            // INJECT THE BRAIN: Connect the UI to the ViewModel via the DI Container
+            if (App.Services != null)
+            {
+                this.DataContext = App.Services.GetRequiredService<ItemPropertyViewModel>();
+            }
         }
     }
 }

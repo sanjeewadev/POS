@@ -87,5 +87,11 @@ namespace POS.Core.Repositories
                 await context.SaveChangesAsync();
             }
         }
+
+        public async Task<IEnumerable<SubCategory>> GetAllAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.SubCategories.AsNoTracking().ToListAsync();
+        }
     }
 }

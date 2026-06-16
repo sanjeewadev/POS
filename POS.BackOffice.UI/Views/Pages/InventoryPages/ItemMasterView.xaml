@@ -106,7 +106,9 @@
                         <TextBox Grid.Column="1" Text="{Binding CurrentItem.ItemCode}" Style="{StaticResource ClassicInput}" Background="#FFFFE0" FontWeight="Bold"/>
 
                         <TextBlock Grid.Column="3" Text="Category:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="4" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" DisplayMemberPath="Name" Style="{StaticResource ClassicCombo}"/>
+                        <ComboBox Grid.Column="4" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" 
+                                  DisplayMemberPath="CategoryName" TextSearch.TextPath="CategoryName"
+                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,4">
@@ -121,7 +123,9 @@
                         <TextBox Grid.Column="1" Text="{Binding CurrentItem.ItemName}" Style="{StaticResource ClassicInput}" FontWeight="Bold" ToolTip="e.g., Linen Casual Shirt"/>
 
                         <TextBlock Grid.Column="3" Text="Sub-Cat:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="4" ItemsSource="{Binding SubCategories}" SelectedItem="{Binding SelectedSubCategory}" DisplayMemberPath="Name" Style="{StaticResource ClassicCombo}"/>
+                        <ComboBox Grid.Column="4" ItemsSource="{Binding SubCategories}" SelectedItem="{Binding SelectedSubCategory}" 
+                                  DisplayMemberPath="SubCategoryName" TextSearch.TextPath="SubCategoryName"
+                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,4">
@@ -142,10 +146,12 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Base UOM *" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Uoms}" SelectedItem="{Binding SelectedUom}" DisplayMemberPath="Code" Style="{StaticResource ClassicCombo}"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding Uoms}" SelectedItem="{Binding SelectedUom}" 
+                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
 
                         <TextBlock Grid.Column="3" Text="Tax Code:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="4" ItemsSource="{Binding TaxCodes}" SelectedItem="{Binding SelectedTaxCode}" DisplayMemberPath="Code" Style="{StaticResource ClassicCombo}"/>
+                        <ComboBox Grid.Column="4" ItemsSource="{Binding TaxCodes}" SelectedItem="{Binding SelectedTaxCode}" 
+                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -162,15 +168,15 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Property:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding PropertyKeys}" SelectedItem="{Binding SelectedPropertyKey}" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding PropertyKeys}" SelectedItem="{Binding SelectedPropertyKey}" DisplayMemberPath="GroupName" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
 
                         <TextBlock Grid.Column="2" Text="Value:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="3" IsEditable="True" Text="{Binding PropertyValueInput}" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
+                        <ComboBox Grid.Column="3" ItemsSource="{Binding PropertyValues}" SelectedItem="{Binding PropertyValueInput}" DisplayMemberPath="ValueName" IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
 
                         <Button Grid.Column="4" Content="+ Add" Command="{Binding AddPropertyCommand}" Style="{StaticResource ClassicBtn}" Height="24" Padding="10,0"/>
                     </Grid>
 
-                    <ListBox ItemsSource="{Binding CurrentItem.DynamicProperties}" Height="45" BorderBrush="#A0A0A0" Background="White" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox ItemsSource="{Binding DynamicProperties}" Height="45" BorderBrush="#A0A0A0" Background="White" ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -251,19 +257,22 @@
                         <TextBlock Grid.Column="0" Text="Min Price:" Style="{StaticResource InlineLabel}"/>
                         <TextBox Grid.Column="1" Text="{Binding BulkMinimumPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
 
-                        <Border Grid.Column="3" Grid.ColumnSpan="2" Background="#E8E8E8" BorderBrush="#C0C0C0" BorderThickness="1" Padding="2">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <CheckBox Grid.Column="0" Content="Scale" IsChecked="{Binding BulkIsScaleItem}" VerticalAlignment="Center" FontSize="10"/>
-                                <CheckBox Grid.Column="1" Content="Batch" IsChecked="{Binding BulkHasBatchExpiry}" VerticalAlignment="Center" FontSize="10"/>
-                                <CheckBox Grid.Column="2" Content="Serial" IsChecked="{Binding BulkIsSerialized}" VerticalAlignment="Center" FontSize="10"/>
-                            </Grid>
-                        </Border>
+                        <TextBlock Grid.Column="3" Text="Max Price:" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
+                        <TextBox Grid.Column="4" Text="{Binding BulkMaximumPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
                     </Grid>
+
+                    <Border Background="#E8E8E8" BorderBrush="#C0C0C0" BorderThickness="1" Padding="4" Margin="0,0,0,4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <CheckBox Grid.Column="0" Content="Scale Item" IsChecked="{Binding BulkIsScaleItem}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                            <CheckBox Grid.Column="1" Content="Batch/Expiry" IsChecked="{Binding BulkHasBatchExpiry}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                            <CheckBox Grid.Column="2" Content="Serialized" IsChecked="{Binding BulkIsSerialized}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                        </Grid>
+                    </Border>
 
                     <Button Content="↓ BULK APPLY TO ALL VARIANTS" Command="{Binding ApplyBulkDefaultsCommand}" Style="{StaticResource ClassicBtn}" Height="26" Margin="0,2,0,0"/>
                 </StackPanel>
@@ -364,6 +373,14 @@
                             </DataGridTextColumn>
 
                             <DataGridTextColumn Header="Min Price" Binding="{Binding MinimumPrice, StringFormat=N2}" Width="90">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Max Price" Binding="{Binding MaximumPrice, StringFormat=N2}" Width="90">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="HorizontalAlignment" Value="Right"/>

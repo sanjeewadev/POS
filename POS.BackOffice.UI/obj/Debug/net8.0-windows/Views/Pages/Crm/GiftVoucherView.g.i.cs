@@ -156,7 +156,7 @@ namespace POS.BackOffice.UI.Views.Pages.Crm {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/crm/giftvoucherview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/crm/giftvoucherview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\Crm\GiftVoucherView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

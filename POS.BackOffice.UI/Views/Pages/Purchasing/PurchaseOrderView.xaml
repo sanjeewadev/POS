@@ -96,8 +96,8 @@
         <Style TargetType="DataGridCell" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#F5F5F5"/>
         </Style>
-        <Style TargetType="DataGridCell" x:Key="SohCell" BasedOn="{StaticResource BaseCell}">
-            <Setter Property="Background" Value="#F0FFF0"/>
+        <Style TargetType="DataGridCell" x:Key="EditableCell" BasedOn="{StaticResource BaseCell}">
+            <Setter Property="Background" Value="#FFFFE0"/>
         </Style>
     </UserControl.Resources>
 
@@ -124,7 +124,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Supplier *" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="1" IsEditable="True" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" DisplayMemberPath="CompanyName" Style="{StaticResource ClassicCombo}"/>
+                        <ComboBox Grid.Column="1" IsEditable="True" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" DisplayMemberPath="SupplierName" Style="{StaticResource ClassicCombo}"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,4">
@@ -182,7 +182,11 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Barcode:" Foreground="#DEFF9A" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1" Text="{Binding ScanBarcode}" Height="24" FontSize="12" FontWeight="Bold" ToolTip="Scan direct variant or standard item here"/>
+                                <TextBox Grid.Column="1" Text="{Binding ScanBarcode, UpdateSourceTrigger=PropertyChanged}" Height="24" FontSize="12" FontWeight="Bold" ToolTip="Scan direct variant or standard item here">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Enter" Command="{Binding AddItemCommand}" />
+                                    </TextBox.InputBindings>
+                                </TextBox>
                             </Grid>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -192,24 +196,28 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="Code:" Foreground="White" Style="{StaticResource InlineLabel}"/>
-                                <ComboBox Grid.Column="1" IsEditable="True" Height="24" Margin="0,0,10,0"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableItems}" SelectedItem="{Binding SelectedItem}" DisplayMemberPath="ItemCode" IsEditable="True" IsTextSearchEnabled="True" TextSearch.TextPath="ItemCode" Height="24" Margin="0,0,10,0"/>
 
                                 <TextBlock Grid.Column="2" Text="Name:" Foreground="White" Style="{StaticResource InlineLabel}"/>
-                                <ComboBox Grid.Column="3" IsEditable="True" Height="24" ToolTip="Select a standard item OR a Matrix Parent"/>
+                                <ComboBox Grid.Column="3" ItemsSource="{Binding AvailableItems}" SelectedItem="{Binding SelectedItem}" DisplayMemberPath="ItemName" IsEditable="True" IsTextSearchEnabled="True" TextSearch.TextPath="ItemName" Height="24" ToolTip="Select a standard item OR a Matrix Parent"/>
                             </Grid>
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="ORDER PARAMETERS" FontSize="10" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
-
                     <Border Background="#F0F8FF" BorderBrush="#005555" BorderThickness="1" Padding="8" Margin="0,0,0,8" Visibility="Visible">
                         <StackPanel>
-                            <TextBlock Text="⚡ MATRIX PURCHASING" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,5"/>
+                            <Grid Margin="0,0,5,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="⚡ MATRIX RAPID ENTRY (Tab to navigate)" FontWeight="Bold" Foreground="#003366" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Text="{Binding MatrixFilterText, UpdateSourceTrigger=PropertyChanged}" Width="150" Height="22" Padding="4,0" ToolTip="Filter variants..." Background="White" BorderBrush="#A0A0A0" BorderThickness="1"/>
+                            </Grid>
 
-                            <DataGrid Height="120" ItemsSource="{Binding ActiveMatrixVariants}" SelectedItem="{Binding SelectedMatrixVariant}"
-                                      AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                            <DataGrid Height="140" ItemsSource="{Binding ActiveMatrixVariants}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False"
                                       HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
-                                      RowHeight="24" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0"
+                                      RowHeight="26" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0"
                                       ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                       FrozenColumnCount="2" SelectionMode="Single">
                                 <DataGrid.Resources>
@@ -222,128 +230,37 @@
                                     </Style>
                                 </DataGrid.Resources>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="130" CellStyle="{StaticResource FrozenCell}"/>
-                                    <DataGridTextColumn Header="Current SOH" Binding="{Binding CurrentSOH}" Width="80" FontWeight="Bold" Foreground="#005500" CellStyle="{StaticResource SohCell}">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="150" IsReadOnly="True" CellStyle="{StaticResource FrozenCell}"/>
 
-                                    <DataGridTextColumn Header="Order Qty" Binding="{Binding OrderQty}" Width="80" FontWeight="Bold">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="Order Qty" Width="75">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBox Text="{Binding OrderQty, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center" FontWeight="Bold" Background="#E0FFFF" BorderThickness="0"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
 
-                                    <DataGridTextColumn Header="Exp. Cost Rs." Binding="{Binding ExpectedCost, StringFormat=N2}" Width="95">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="Exp. Cost Rs." Width="95">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBox Text="{Binding ExpectedCost, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" Background="#FFFFE0" BorderThickness="0"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <DataGridTemplateColumn Header="Line Disc" Width="70">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBox Text="{Binding LineDiscount, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" Foreground="DarkRed" Background="#FFFFE0" BorderThickness="0"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
 
-                            <Border Background="#FFF7ED" BorderBrush="#D97706" BorderThickness="1" Padding="6" Margin="0,4,0,8">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="55"/>
-                                        <ColumnDefinition Width="60"/>
-                                        <ColumnDefinition Width="40"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding SelectedMatrixVariant.VariantDescription}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FontWeight="Bold" Foreground="#333"/>
-
-                                    <TextBlock Grid.Column="1" Text="Ord Qty:" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,5,0" FontSize="11"/>
-                                    <TextBox Grid.Column="2" Text="{Binding SelectedMatrixVariant.OrderQty}" Style="{StaticResource ClassicInput}" FontWeight="Bold" Background="#E0FFFF" HorizontalContentAlignment="Center"/>
-
-                                    <TextBlock Grid.Column="3" Text="Cost:" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,5,0" FontSize="11"/>
-                                    <TextBox Grid.Column="4" Text="{Binding SelectedMatrixVariant.ExpectedCost}" Style="{StaticResource ClassicInput}" Background="#FFFFE0" HorizontalContentAlignment="Right"/>
-
-                                    <Button Grid.Column="5" Content="UPDATE ROW" Command="{Binding UpdateMatrixRowCommand}" Style="{StaticResource ClassicBtn}" Height="24" Margin="5,0,0,0"/>
-                                </Grid>
-                            </Border>
-
-                            <Grid Margin="0,0,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="70"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="10"/>
-                                    <ColumnDefinition Width="60"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Tax Code:" Style="{StaticResource InlineLabel}"/>
-                                <ComboBox Grid.Column="1" Style="{StaticResource ClassicCombo}" Margin="0,0,10,0">
-                                    <ComboBoxItem Content="Exempt" IsSelected="True"/>
-                                    <ComboBoxItem Content="VAT 18%"/>
-                                </ComboBox>
-
-                                <TextBlock Grid.Column="3" Text="UOM:" Style="{StaticResource InlineLabel}"/>
-                                <ComboBox Grid.Column="4" Style="{StaticResource ClassicCombo}">
-                                    <ComboBoxItem Content="PCS" IsSelected="True"/>
-                                    <ComboBoxItem Content="BOX"/>
-                                </ComboBox>
-                            </Grid>
-
-                            <Button Content="⚡ ADD ENTIRE MATRIX TO PO" Command="{Binding AddMatrixCommand}" Style="{StaticResource ActionBtn}" Background="#0066CC" BorderBrush="#004C99" Height="30" Margin="0,10,0,0" FontSize="13"/>
+                            <Button Content="⚡ ADD ACTIVE MATRIX TO PO" Command="{Binding AddMatrixCommand}" Style="{StaticResource ActionBtn}" Background="#0066CC" BorderBrush="#004C99" Height="30" Margin="0,10,0,0" FontSize="13"/>
                         </StackPanel>
                     </Border>
-
-                    <StackPanel Visibility="Collapsed">
-                        <Grid Margin="0,0,0,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="70"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="70"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Order Qty:" Style="{StaticResource InlineLabel}" Foreground="#005555"/>
-                            <TextBox Grid.Column="1" Text="100" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center" FontWeight="Bold" Background="#E0FFFF"/>
-
-                            <TextBlock Grid.Column="3" Text="UOM:" Style="{StaticResource InlineLabel}"/>
-                            <ComboBox Grid.Column="4" Style="{StaticResource ClassicCombo}">
-                                <ComboBoxItem Content="PCS" IsSelected="True"/>
-                                <ComboBoxItem Content="BOX"/>
-                            </ComboBox>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="70"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="50"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Exp. Cost:" Style="{StaticResource InlineLabel}"/>
-                            <TextBox Grid.Column="1" Text="145.00" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right" Background="#FFFFE0"/>
-
-                            <TextBlock Grid.Column="3" Text="Est Disc:" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
-                            <TextBox Grid.Column="4" Text="0.00" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="70"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Tax Code:" Style="{StaticResource InlineLabel}"/>
-                            <ComboBox Grid.Column="1" Style="{StaticResource ClassicCombo}">
-                                <ComboBoxItem Content="Exempt" IsSelected="True"/>
-                                <ComboBoxItem Content="VAT 18%"/>
-                            </ComboBox>
-                        </Grid>
-
-                        <Button Content="ADD TO ORDER GRID" Command="{Binding AddItemCommand}" Style="{StaticResource ActionBtn}" Height="34" FontSize="13"/>
-                    </StackPanel>
                 </StackPanel>
             </Border>
         </Grid>
@@ -354,7 +271,6 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0" Background="#003366" Padding="10" BorderBrush="#002244" BorderThickness="1">
@@ -362,31 +278,28 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="PO NO:" Foreground="#A0C0E0" FontSize="14" FontWeight="Bold" Margin="0,0,10,0"/>
-                        <TextBlock Text="PO-2026-0045" Foreground="White" FontSize="18" FontWeight="Bold"/>
+                        <TextBlock Text="[ AUTO GENERATED ON POST ]" Foreground="White" FontSize="14" FontWeight="Bold"/>
                     </StackPanel>
-                    <Border Grid.Column="2" Background="#FFD700" Padding="15,4">
-                        <TextBlock Text="DRAFT / ESTIMATE" FontWeight="Bold" Foreground="Black" FontSize="12"/>
-                    </Border>
                 </Grid>
             </Border>
 
             <Border Grid.Row="1" Background="#E5E5E5" Padding="5" BorderBrush="#A0A0A0" BorderThickness="1,0,1,0">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Selected Row Actions:" VerticalAlignment="Center" FontWeight="Bold" Foreground="#666" Margin="0,0,10,0"/>
-                    <Button Content="📋 Show Price History" Style="{StaticResource ClassicBtn}" Height="24" Margin="0,0,5,0"/>
-                    <Button Content="🗑️ Remove Item" Style="{StaticResource ClassicBtn}" Foreground="DarkRed" Height="24"/>
+                    <Button Content="🗑️ Remove Item" Command="{Binding RemoveLineCommand}" CommandParameter="{Binding SelectedLine}" Style="{StaticResource ClassicBtn}" Foreground="DarkRed" Height="24"/>
+                    <TextBlock Text="(Double-click highlighted cells below to quick-edit)" VerticalAlignment="Center" Foreground="#888" FontStyle="Italic" Margin="20,0,0,0"/>
                 </StackPanel>
             </Border>
 
             <DataGrid Grid.Row="2" x:Name="dgPoLines" ItemsSource="{Binding PoLines}" SelectedItem="{Binding SelectedLine}" 
-                      AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" IsReadOnly="True"
+                      AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" IsReadOnly="False"
                       HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
-                      RowHeight="26" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1,0,1,0" 
-                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                      RowHeight="26" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
+                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9"
+                      CellEditEnding="DgPoLines_CellEditEnding">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
@@ -401,46 +314,38 @@
                 </DataGrid.Resources>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="85" Foreground="#666"/>
-                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="110" Foreground="#444"/>
-                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" FontWeight="SemiBold"/>
-                    <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="50"/>
+                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="85" IsReadOnly="True" Foreground="#666"/>
+                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="110" IsReadOnly="True" Foreground="#444"/>
+                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="50" IsReadOnly="True"/>
 
-                    <DataGridTextColumn Header="SOH" Binding="{Binding SOH}" Width="45" Foreground="#005500">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Order Qty" Width="75">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding OrderQty, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center" FontWeight="Bold" Background="#E0FFFF" BorderThickness="0"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Order Qty" Binding="{Binding OrderQty}" Width="70" FontWeight="Bold">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Exp. Cost Rs." Width="95">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ExpectedCost, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" Background="#FFFFE0" BorderThickness="0"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Exp. Unit Cost" Binding="{Binding ExpectedCost, StringFormat=N2}" Width="90">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Line Disc" Width="70">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding LineDiscount, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Right" Foreground="DarkRed" Background="#FFFFE0" BorderThickness="0"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Est. Disc" Binding="{Binding LineDiscount, StringFormat=N2}" Width="65" Foreground="DarkRed">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Tax Code" Binding="{Binding TaxCode}" Width="70" IsReadOnly="True" Foreground="#666"/>
 
-                    <DataGridTextColumn Header="Tax Code" Binding="{Binding TaxCode}" Width="70" Foreground="#666"/>
-
-                    <DataGridTextColumn Header="Est. Line Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="110" FontWeight="Bold">
+                    <DataGridTextColumn Header="Est. Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="100" IsReadOnly="True" FontWeight="Bold">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -450,42 +355,12 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <Border Grid.Row="3" Background="#E0FFFF" BorderBrush="#005555" BorderThickness="1,1,1,1" Padding="6">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="✏️ EDIT SELECTED LINE:" FontWeight="Bold" Foreground="#005555" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock Grid.Column="1" Text="{Binding SelectedLine.Description}" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedLine.Description}"/>
-
-                    <TextBlock Grid.Column="2" Text="Ord Qty:" VerticalAlignment="Center" Margin="10,0,5,0" FontSize="11"/>
-                    <TextBox Grid.Column="3" Text="{Binding SelectedLine.OrderQty}" Width="60" Style="{StaticResource ClassicInput}" FontWeight="Bold" HorizontalContentAlignment="Center"/>
-
-                    <TextBlock Grid.Column="4" Text="Exp Cost:" VerticalAlignment="Center" Margin="10,0,5,0" FontSize="11"/>
-                    <TextBox Grid.Column="5" Text="{Binding SelectedLine.ExpectedCost, StringFormat=N2}" Width="80" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
-
-                    <TextBlock Grid.Column="6" Text="Disc:" VerticalAlignment="Center" Margin="10,0,5,0" FontSize="11"/>
-                    <TextBox Grid.Column="7" Text="{Binding SelectedLine.LineDiscount, StringFormat=N2}" Width="60" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
-
-                    <Button Grid.Column="8" Content="UPDATE LINE" Command="{Binding UpdateLineCommand}" Style="{StaticResource ActionBtn}" Height="24" Padding="15,0" Margin="10,0,0,0"/>
-                </Grid>
-            </Border>
-
-            <Border Grid.Row="4" Background="#D4D0C8" BorderBrush="#A0A0A0" BorderThickness="1" Margin="0,5,0,0" Padding="10">
+            <Border Grid.Row="3" Background="#D4D0C8" BorderBrush="#A0A0A0" BorderThickness="1" Margin="0,5,0,0" Padding="10">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="15"/>
-                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="220"/>
                         <ColumnDefinition Width="15"/>
                         <ColumnDefinition Width="320"/>
                     </Grid.ColumnDefinitions>
@@ -505,9 +380,11 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Est. Disc (-)" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
-                            <TextBox Grid.Column="1" Text="{Binding GlobalBillDiscount, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right" Background="#FEF2F2"/>
+                            <TextBox Grid.Column="1" Text="{Binding GlobalBillDiscount, StringFormat=N2, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right" Background="#FEF2F2"/>
                         </Grid>
                         <TextBlock Text="(Applied to total order value)" FontSize="10" Foreground="#888" Margin="0,5,0,0" FontStyle="Italic"/>
+
+                        <CheckBox Content="Tax Inclusive Prices" IsChecked="{Binding IsTaxInclusive}" Foreground="#333" Margin="0,15,0,0" ToolTip="Check this if the Expected Cost you typed already includes VAT"/>
                     </StackPanel>
 
                     <Rectangle Grid.Column="3" Width="1" Fill="#A0A0A0" Margin="7,0"/>
@@ -536,14 +413,11 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="5"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="5"/>
+                                <ColumnDefinition Width="10"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="Save Draft" Style="{StaticResource ClassicBtn}" Height="36"/>
-                            <Button Grid.Column="2" Content="Print PO" Style="{StaticResource ClassicBtn}" Height="36"/>
-                            <Button Grid.Column="4" Content="APPROVE &amp; SEND" Background="#005500" Foreground="White" FontWeight="Bold" BorderBrush="#003300" BorderThickness="1" Height="36" Cursor="Hand"/>
+                            <Button Grid.Column="0" Content="Clear Form" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Height="36"/>
+                            <Button Grid.Column="2" Content="APPROVE PO" Command="{Binding ApprovePoCommand}" Background="#005500" Foreground="White" FontWeight="Bold" BorderBrush="#003300" BorderThickness="1" Height="36" Cursor="Hand"/>
                         </Grid>
                     </StackPanel>
                 </Grid>

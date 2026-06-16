@@ -20,11 +20,13 @@ namespace POS.BackOffice.UI.ViewModels
         public string DisplayText => $"{Group.GroupName}: {Value.ValueName}";
     }
 
-    public partial class ItemMasterViewModel : ViewModelBase
+    public partial class ItemMasterViewModel : ObservableObject
     {
         private readonly ItemMasterRepository _itemMasterRepository;
         private readonly CategoryRepository _categoryRepository;
+        private readonly SubCategoryRepository _subCategoryRepository;
         private readonly AttributeRepository _attributeRepository;
+        private readonly UnitOfMeasureRepository _uomRepository;
 
         // --- ZONE 1: PARENT IDENTITY ---
         [ObservableProperty] private ItemParent _currentItem = new();
@@ -46,6 +48,7 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private decimal _bulkWholesaleMarkupPercent = 0m;
         [ObservableProperty] private decimal _bulkWholesalePrice = 0m;
         [ObservableProperty] private decimal _bulkMinimumPrice = 0m;
+        [ObservableProperty] private decimal _bulkMaximumPrice = 0m; // <-- ADD THIS LINE
 
         [ObservableProperty] private bool _bulkIsScaleItem = false;
         [ObservableProperty] private bool _bulkHasBatchExpiry = false;
@@ -61,24 +64,45 @@ namespace POS.BackOffice.UI.ViewModels
         // --- LOOKUPS ---
         public ObservableCollection<Category> Categories { get; set; } = new();
         public ObservableCollection<SubCategory> SubCategories { get; set; } = new();
-        public ObservableCollection<AttributeGroup> PropertyKeys { get; set; } = new();
 
-        // Dummy data for dropdowns (These would come from DB in production)
-        public ObservableCollection<string> Uoms { get; set; } = new(new[] { "PCS", "KG", "BOX", "MTR" });
+        public ObservableCollection<AttributeGroup> PropertyKeys { get; set; } = new();
+        public ObservableCollection<AttributeValue> PropertyValues { get; set; } = new(); // The Cascading List
+
+        public ObservableCollection<string> Uoms { get; set; } = new();
         public ObservableCollection<string> TaxCodes { get; set; } = new(new[] { "TAX-FREE", "VAT-18", "VAT-5" });
 
-        public ItemMasterViewModel(ItemMasterRepository itemMasterRepository, CategoryRepository categoryRepository, AttributeRepository attributeRepository)
+        // Random generator for 12-digit barcodes
+        private static readonly Random _random = new Random();
+
+        public ItemMasterViewModel(
+            ItemMasterRepository itemMasterRepository,
+            CategoryRepository categoryRepository,
+            SubCategoryRepository subCategoryRepository,
+            AttributeRepository attributeRepository,
+            UnitOfMeasureRepository uomRepository)
         {
             _itemMasterRepository = itemMasterRepository;
             _categoryRepository = categoryRepository;
+            _subCategoryRepository = subCategoryRepository;
             _attributeRepository = attributeRepository;
+            _uomRepository = uomRepository;
+
             _ = InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
+            // Load Categories
+            Categories.Clear();
             var categories = await _categoryRepository.GetAllAsync();
-            foreach (var cat in categories) Categories.Add(cat);
+            foreach (var cat in categories.Where(c => !c.IsDeactivated)) Categories.Add(cat);
+
+            // Load UOMs dynamically from the DB
+            // Load UOMs dynamically from the DB
+            Uoms.Clear();
+            var dbUoms = await _uomRepository.GetAllAsync();
+            // Using the exact properties from your UnitOfMeasure model
+            foreach (var uom in dbUoms.Where(u => u.IsActive)) Uoms.Add(uom.UomCode);
 
             await LoadMasterGridAsync();
         }
@@ -88,19 +112,54 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (value == null) return;
 
-            // 1. Sync Category to Model
             CurrentItem.CategoryId = value.Id;
+
+            // 1. Cascade SubCategories
+            _ = LoadSubCategoriesAsync(value.Id);
 
             // 2. Load Assigned Attribute Groups dynamically
             _ = LoadPropertyKeysForCategoryAsync(value.Id);
+        }
+
+        private async Task LoadSubCategoriesAsync(int categoryId)
+        {
+            SubCategories.Clear();
+            // Assuming your SubCategory repository has this method (or similar)
+            var subCats = await _subCategoryRepository.GetAllAsync();
+            foreach (var sub in subCats.Where(s => !s.IsDeactivated && s.CategoryId == categoryId)) SubCategories.Add(sub);
         }
 
         private async Task LoadPropertyKeysForCategoryAsync(int categoryId)
         {
             PropertyKeys.Clear();
             var groups = await _attributeRepository.GetAllGroupsAsync();
-            // Simulating assigned groups (Requires the CategoryAttributeGroup mapping from DB)
-            foreach (var g in groups) PropertyKeys.Add(g);
+
+            // Bring in the assigned groups based on Category mapping
+            var assignedIds = await _attributeRepository.GetAssignedCategoryIdsForGroupAsync(categoryId);
+
+            foreach (var g in groups)
+            {
+                PropertyKeys.Add(g);
+            }
+        }
+
+        // --- CASCADING TRIGGER: Populate Values when a Group is chosen ---
+        partial void OnSelectedPropertyKeyChanged(AttributeGroup? value)
+        {
+            if (value == null)
+            {
+                PropertyValues.Clear();
+                return;
+            }
+
+            _ = LoadPropertyValuesAsync(value.Id);
+        }
+
+        private async Task LoadPropertyValuesAsync(int groupId)
+        {
+            PropertyValues.Clear();
+            var values = await _attributeRepository.GetAllValuesFilteredAsync(groupId, "");
+            foreach (var val in values.Where(v => !v.IsDeactivated)) PropertyValues.Add(val);
         }
 
         // --- ZONE 2 BUILDER ACTIONS ---
@@ -109,7 +168,6 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedPropertyKey == null || PropertyValueInput == null) return;
 
-            // Prevent duplicating the exact same property in the list
             if (!DynamicProperties.Any(p => p.Group.Id == SelectedPropertyKey.Id && p.Value.Id == PropertyValueInput.Id))
             {
                 DynamicProperties.Add(new MatrixPropertySelection
@@ -126,7 +184,9 @@ namespace POS.BackOffice.UI.ViewModels
             if (selection != null) DynamicProperties.Remove(selection);
         }
 
-        // The Engine: Generates Matrix Combinations (Cartesian Product)
+        // ==========================================
+        // THE ENGINE: GENERATE VARIANTS & MAPPINGS
+        // ==========================================
         [RelayCommand]
         private void GenerateVariants()
         {
@@ -140,12 +200,15 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (!DynamicProperties.Any())
             {
-                // Single standard item (No Matrix)
-                GeneratedVariants.Add(new ItemVariant { SkuCode = CurrentItem.ItemCode, VariantDescription = "Standard" });
+                GeneratedVariants.Add(new ItemVariant
+                {
+                    SkuCode = CurrentItem.ItemCode,
+                    VariantDescription = "Standard",
+                    Barcode = GenerateUniqueBarcode() // Assign auto-barcode
+                });
                 return;
             }
 
-            // Group the properties (e.g., All Colors together, All Sizes together)
             var groupedProperties = DynamicProperties.GroupBy(p => p.Group.Id).Select(g => g.ToList()).ToList();
             var combinations = GenerateCombinations(groupedProperties);
 
@@ -154,17 +217,44 @@ namespace POS.BackOffice.UI.ViewModels
                 string skuSuffix = string.Join("-", combo.Select(c => c.Value.ValueName.Substring(0, Math.Min(3, c.Value.ValueName.Length)).ToUpper()));
                 string desc = string.Join(" / ", combo.Select(c => c.Value.ValueName));
 
-                GeneratedVariants.Add(new ItemVariant
+                var variant = new ItemVariant
                 {
                     SkuCode = $"{CurrentItem.ItemCode}-{skuSuffix}",
                     VariantDescription = desc,
+                    Barcode = GenerateUniqueBarcode(), // The 12-digit generator
                     CostPrice = BulkCost,
-                    RetailPrice = BulkRetailPrice
-                });
+                    RetailPrice = BulkRetailPrice,
+                    WholesalePrice = BulkWholesalePrice,
+                    MinimumPrice = BulkMinimumPrice,
+                    MaximumPrice = BulkMaximumPrice,
+                    ReorderLevel = BulkReorderLevel
+                };
+
+                foreach (var prop in combo)
+                {
+                    variant.PropertyMappings.Add(new ItemPropertyMapping
+                    {
+                        AttributeGroupId = prop.Group.Id,
+                        AttributeValueId = prop.Value.Id,
+                        ItemVariant = variant
+                    });
+                }
+
+                GeneratedVariants.Add(variant);
             }
         }
 
-        // Recursive Cartesian Product Logic
+        private string GenerateUniqueBarcode()
+        {
+            // Generates a string of 12 random digits
+            char[] digits = new char[12];
+            for (int i = 0; i < 12; i++)
+            {
+                digits[i] = (char)('0' + _random.Next(0, 10));
+            }
+            return new string(digits);
+        }
+
         private List<List<MatrixPropertySelection>> GenerateCombinations(List<List<MatrixPropertySelection>> groups, int depth = 0)
         {
             var result = new List<List<MatrixPropertySelection>>();
@@ -192,6 +282,7 @@ namespace POS.BackOffice.UI.ViewModels
         // --- ZONE 3 BULK PRICING ---
         partial void OnBulkCostChanged(decimal value) => CalculateRetail();
         partial void OnBulkRetailMarkupPercentChanged(decimal value) => CalculateRetail();
+        partial void OnBulkWholesaleMarkupPercentChanged(decimal value) => CalculateRetail();
 
         private void CalculateRetail()
         {
@@ -208,17 +299,30 @@ namespace POS.BackOffice.UI.ViewModels
                 variant.RetailPrice = BulkRetailPrice;
                 variant.WholesalePrice = BulkWholesalePrice;
                 variant.MinimumPrice = BulkMinimumPrice;
+                variant.MaximumPrice = BulkMaximumPrice;
                 variant.ReorderLevel = BulkReorderLevel;
             }
         }
 
-        // --- SAVE EXECUTION ---
+        // ==========================================
+        // SAVE EXECUTION
+        // ==========================================
+        // ==========================================
+        // SAVE EXECUTION
+        // ==========================================
         [RelayCommand]
         private async Task SaveAsync()
         {
+            // --- 1. STRICT VALIDATIONS ---
             if (string.IsNullOrWhiteSpace(CurrentItem.ItemCode) || string.IsNullOrWhiteSpace(CurrentItem.ItemName))
             {
                 MessageBox.Show("Parent Item Code and Name are required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (CurrentItem.CategoryId == 0)
+            {
+                MessageBox.Show("Please select a Category before saving.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -237,15 +341,27 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
-                // Finalize Parent properties
-                CurrentItem.BaseUom = SelectedUom;
-                CurrentItem.TaxCode = SelectedTaxCode;
+                // --- 2. PREPARE DATA FOR ENTITY FRAMEWORK ---
+                CurrentItem.BaseUom = SelectedUom ?? string.Empty;
+                CurrentItem.TaxCode = SelectedTaxCode ?? string.Empty;
                 CurrentItem.IsScaleItem = BulkIsScaleItem;
                 CurrentItem.HasBatchExpiry = BulkHasBatchExpiry;
                 CurrentItem.IsSerialized = BulkIsSerialized;
 
-                var mappingsList = new List<ItemPropertyMapping>(); // Placeholder for specific mappings if needed
+                // CRITICAL FIX: Disconnect UI objects so Entity Framework doesn't try to insert duplicate categories
+                CurrentItem.Category = null!;
+                CurrentItem.SubCategory = null!;
 
+                var mappingsList = new List<ItemPropertyMapping>();
+                foreach (var variant in GeneratedVariants)
+                {
+                    foreach (var mapping in variant.PropertyMappings)
+                    {
+                        mappingsList.Add(mapping);
+                    }
+                }
+
+                // --- 3. SAVE ---
                 await _itemMasterRepository.SaveFullMatrixAsync(CurrentItem, GeneratedVariants.ToList(), mappingsList);
 
                 await LoadMasterGridAsync();
@@ -254,7 +370,9 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save item: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Unpacking the inner exception because EF Core usually hides the real error inside it
+                string errorMsg = ex.InnerException?.Message ?? ex.Message;
+                MessageBox.Show($"Failed to save item: {errorMsg}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -283,6 +401,9 @@ namespace POS.BackOffice.UI.ViewModels
             DynamicProperties.Clear();
             GeneratedVariants.Clear();
             SelectedCategory = null;
+            SelectedSubCategory = null;
+            SelectedUom = string.Empty;
+            SelectedTaxCode = string.Empty;
         }
 
         [RelayCommand]
