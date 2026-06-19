@@ -41,15 +41,29 @@ namespace POS.Core.Models
         public string VatRegistrationNumber { get; set; } = string.Empty;
 
         // ==========================================
-        // POS SETTINGS & LOYALTY
+        // POS SETTINGS & LOYALTY (UPGRADED)
         // ==========================================
         [Required]
         [MaxLength(20)]
-        public string CustomerType { get; set; } = "Retail"; // "Retail" or "Wholesale" (Triggers UI/Price changes)
+        public string CustomerType { get; set; } = "Retail";
 
-        // Nullable because a standard walk-in might not be part of a loyalty tier
         public int? CustomerGroupId { get; set; }
 
+        [MaxLength(50)]
+        public string LoyaltyCardNumber { get; set; } = string.Empty;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal LoyaltyPointsBalance { get; set; } = 0m;
+
+        // ------------------------------------------
+        // NEW: MANUAL DISCOUNT ASSIGNMENT
+        // ------------------------------------------
+        public int? LoyaltyDiscountProfileId { get; set; } // Links to the specific discount rule
+
+        public DateTime? LoyaltyDiscountExpiryDate { get; set; } // When does this customer's perk expire?
+
+        [ForeignKey("LoyaltyDiscountProfileId")]
+        public virtual LoyaltyDiscountProfile? LoyaltyDiscountProfile { get; set; } // Navigation property
         // ==========================================
         // FINANCIAL CONTROLS
         // ==========================================
@@ -58,7 +72,7 @@ namespace POS.Core.Models
 
         public int CreditDays { get; set; } = 0; // Payment terms (e.g., 30 Days)
 
-        // A live, cached snapshot of what they owe to prevent the POS from calculating the whole ledger every time
+        // A live, cached snapshot of what they owe
         [Column(TypeName = "decimal(18,2)")]
         public decimal CurrentBalance { get; set; } = 0m;
 
@@ -67,7 +81,7 @@ namespace POS.Core.Models
         // ==========================================
         public bool IsActive { get; set; } = true;
 
-        // Admin override to stop them from buying on credit if they default on payments
+        // Admin override to stop them from buying on credit
         public bool IsCreditLocked { get; set; } = false;
 
         // Navigation Property

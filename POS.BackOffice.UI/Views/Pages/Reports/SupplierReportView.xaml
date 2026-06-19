@@ -4,299 +4,251 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="850" d:DesignWidth="1250"
-             Background="#F5F5F5">
+             d:DesignHeight="850" d:DesignWidth="1400"
+             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
 
     <UserControl.Resources>
-        <Style TargetType="Button" x:Key="StandardBtn">
-            <Setter Property="Background" Value="#2B3C38"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3B524E"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="ExcelBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#28A745"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#218838"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="PrintBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#2B5B84"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1C3F5E"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="SmartActionBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#6F42C1"/>
+        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#5936A2"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Margin" Value="0,5,0,10"/>
         </Style>
 
-        <Style TargetType="Button" x:Key="QuickDateBtn" BasedOn="{StaticResource StandardBtn}">
-            <Setter Property="Background" Value="#E2EDF8"/>
-            <Setter Property="Foreground" Value="#2B5B84"/>
-            <Setter Property="Padding" Value="10,5"/>
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
-            <Setter Property="BorderBrush" Value="#B6D4FE"/>
+        </Style>
+
+        <Style TargetType="DatePicker" x:Key="ClassicDate">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Width" Value="130"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#B6D4FE"/>
+                    <Setter Property="Background" Value="#CCCCCC"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Control" x:Key="StandardInput">
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Height" Value="30"/>
+        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003333"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#007777"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <Style TargetType="Border" x:Key="GroupBoxBorder">
-            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+        <Style TargetType="Border" x:Key="ClassicGroupBox">
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
         <Style TargetType="Border" x:Key="KpiCard">
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="20,15"/>
-            <Setter Property="Margin" Value="0,0,15,0"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="DataGridCell" x:Key="BaseCell">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#005555"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="RightElement">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="RightBoldElement" BasedOn="{StaticResource RightElement}">
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="DangerElement" BasedOn="{StaticResource RightBoldElement}">
+            <Setter Property="Foreground" Value="#A94044"/>
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource GroupBoxBorder}" Margin="0,0,0,15">
-            <StackPanel>
-                <TextBlock Text="Supplier &amp; Supply Chain Analytics" FontSize="20" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,15"/>
+        <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="1*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="1*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="REPORTING PERIOD:" Style="{StaticResource HeaderLabel}" Margin="0,0,20,0" VerticalAlignment="Center"/>
 
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="Select Intelligence Report *" Foreground="#2B5B84" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                        <ComboBox x:Name="cmbReportType" Style="{StaticResource StandardInput}" Background="#E2EDF8">
-                            <ComboBoxItem Content="Supplier Reliability &amp; Spend Summary" IsSelected="True"/>
-                            <ComboBoxItem Content="Accounts Payable Summary (Unpaid GRNs)"/>
-                            <ComboBoxItem Content="Supplier Return Analysis (Defect Rates)"/>
-                            <ComboBoxItem Content="Pending Purchase Orders"/>
-                        </ComboBox>
-                    </StackPanel>
+                <TextBlock Grid.Column="1" Text="From Date:" Style="{StaticResource InlineLabel}"/>
+                <DatePicker Grid.Column="2" SelectedDate="{Binding StartDate}" Style="{StaticResource ClassicDate}" Margin="0,0,15,0"/>
 
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="Filter by Supplier" Foreground="#666666" Margin="0,0,0,5"/>
-                        <ComboBox x:Name="cmbSupplier" Style="{StaticResource StandardInput}" IsEditable="True"/>
-                    </StackPanel>
+                <TextBlock Grid.Column="3" Text="To Date:" Style="{StaticResource InlineLabel}"/>
+                <DatePicker Grid.Column="4" SelectedDate="{Binding EndDate}" Style="{StaticResource ClassicDate}" Margin="0,0,20,0"/>
 
-                    <StackPanel Grid.Column="4">
-                        <TextBlock Text="Date From *" Foreground="#666666" Margin="0,0,0,5"/>
-                        <DatePicker x:Name="dpFromDate" Style="{StaticResource StandardInput}"/>
-                    </StackPanel>
+                <Button Grid.Column="5" Content="⚡ GENERATE REPORT" Command="{Binding GenerateReportCommand}" Style="{StaticResource ActionBtn}" HorizontalAlignment="Left" Padding="30,0" FontSize="13"/>
 
-                    <StackPanel Grid.Column="6">
-                        <TextBlock Text="Date To *" Foreground="#666666" Margin="0,0,0,5"/>
-                        <DatePicker x:Name="dpToDate" Style="{StaticResource StandardInput}"/>
-                    </StackPanel>
-
-                    <Button Grid.Column="8" x:Name="btnRunReport" Content="Generate Report" Style="{StaticResource StandardBtn}" Background="#2B5B84" Margin="0" VerticalAlignment="Bottom" Height="30" Width="130"/>
-                </Grid>
-
-                <Grid Margin="0,5,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Orientation="Horizontal">
-                        <TextBlock Text="Quick Dates:" VerticalAlignment="Center" Foreground="#666666" Margin="0,0,10,0"/>
-                        <Button Content="Today" Style="{StaticResource QuickDateBtn}"/>
-                        <Button Content="This Week" Style="{StaticResource QuickDateBtn}"/>
-                        <Button Content="This Month" Style="{StaticResource QuickDateBtn}"/>
-                        <Button Content="This Year" Style="{StaticResource QuickDateBtn}"/>
-                    </StackPanel>
-                </Grid>
-            </StackPanel>
+                <StackPanel Grid.Column="6" Orientation="Horizontal">
+                    <Button Content="📊 Export to Excel" Command="{Binding ExportToExcelCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0"/>
+                    <Button Content="🖨️ Export PDF" Command="{Binding ExportToPdfCommand}" Style="{StaticResource ClassicBtn}"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,-15,15">
-
-            <Border Style="{StaticResource KpiCard}" Background="#F4FAF6" BorderBrush="#C3E6CB">
+        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,8">
+            <Border Style="{StaticResource KpiCard}" BorderBrush="#D97706" Background="#FFF8EB">
                 <StackPanel>
-                    <TextBlock Text="Total Purchasing Spend" Foreground="#28A745" FontSize="13" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="txtKpiSpend" Text="Rs. 3,250,000" FontWeight="Bold" FontSize="26" Foreground="#28A745" Margin="0,5,0,0"/>
-                    <TextBlock Text="Value of all posted GRNs" Foreground="#28A745" FontSize="11" Margin="0,2,0,0" Opacity="0.8"/>
+                    <TextBlock Text="TOTAL COMPANY OUTSTANDING DEBT (A/P)" FontSize="11" FontWeight="Bold" Foreground="#D97706"/>
+                    <TextBlock Text="{Binding TotalCompanyDebt, StringFormat=Rs. \{0:N2\}}" FontSize="26" FontWeight="Bold" Foreground="#A94044" Margin="0,5,0,0" ToolTip="Total amount owed across all suppliers"/>
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource KpiCard}" Background="#FDF3F3" BorderBrush="#F5C6CB">
+            <Border Style="{StaticResource KpiCard}" BorderBrush="#005555">
                 <StackPanel>
-                    <TextBlock Text="Total Outstanding Payables" Foreground="#A94044" FontSize="13" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="txtKpiPayables" Text="Rs. 845,000" FontWeight="Bold" FontSize="26" Foreground="#A94044" Margin="0,5,0,0"/>
-                    <TextBlock Text="Current debt owed to suppliers" Foreground="#A94044" FontSize="11" Margin="0,2,0,0" Opacity="0.8"/>
+                    <TextBlock Text="REPORTING TIMEFRAME" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding StartDate, StringFormat=dd-MMM-yyyy}" FontSize="18" FontWeight="Bold" Foreground="#003366"/>
+                        <TextBlock Text="  to  " FontSize="18" Foreground="#666"/>
+                        <TextBlock Text="{Binding EndDate, StringFormat=dd-MMM-yyyy}" FontSize="18" FontWeight="Bold" Foreground="#003366"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource KpiCard}" Background="#FFF8EB" BorderBrush="#FDE0A6">
+            <Border Style="{StaticResource KpiCard}" BorderBrush="#A0A0A0" Margin="0">
                 <StackPanel>
-                    <TextBlock Text="Value of Goods Returned" Foreground="#D97706" FontSize="13" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="txtKpiReturns" Text="Rs. 112,000" FontWeight="Bold" FontSize="26" Foreground="#D97706" Margin="0,5,0,0"/>
-                    <TextBlock Text="Defective or expired stock sent back" Foreground="#D97706" FontSize="11" Margin="0,2,0,0" Opacity="0.8"/>
+                    <TextBlock Text="DATA STATUS" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                    <TextBlock Text="Live Read-Only Ledger" FontSize="18" FontWeight="SemiBold" Foreground="#28A745" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
-
-            <Border Style="{StaticResource KpiCard}" Background="#E2EDF8" BorderBrush="#B6D4FE">
-                <StackPanel>
-                    <TextBlock Text="Average Supplier Lead Time" Foreground="#2B5B84" FontSize="13" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="txtKpiLeadTime" Text="4.2 Days" FontWeight="Bold" FontSize="26" Foreground="#2B5B84" Margin="0,5,0,0"/>
-                    <TextBlock Text="From PO creation to GRN delivery" Foreground="#2B5B84" FontSize="11" Margin="0,2,0,0" Opacity="0.8"/>
-                </StackPanel>
-            </Border>
-
         </UniformGrid>
 
-        <Border Grid.Row="2" Style="{StaticResource GroupBoxBorder}" Padding="0" Margin="0,0,0,15">
-            <DataGrid x:Name="dgSupplierAnalytics" 
-                      AutoGenerateColumns="False" 
-                      CanUserAddRows="False" 
-                      CanUserDeleteRows="False" 
-                      IsReadOnly="True" 
-                      HeadersVisibility="Column" 
-                      GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#EEEEEE"
-                      BorderThickness="0"
-                      RowHeight="35"
-                      Background="Transparent"
-                      SelectionMode="Single">
-
-                <DataGrid.Resources>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#F8F8F8"/>
-                        <Setter Property="Foreground" Value="#333333"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Padding" Value="10,10"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#DDDDDD"/>
+        <Border Grid.Row="2" Background="White" BorderBrush="#A0A0A0" BorderThickness="1">
+            <TabControl Background="#F0F0F0" BorderThickness="0,0,0,1" BorderBrush="#A0A0A0">
+                <TabControl.Resources>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Padding" Value="15,8"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="FontSize" Value="13"/>
+                        <Setter Property="Foreground" Value="#555"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="#003366"/>
+                            </Trigger>
+                        </Style.Triggers>
                     </Style>
-                    <Style TargetType="DataGridCell">
-                        <Setter Property="Padding" Value="10,0"/>
-                        <Setter Property="VerticalContentAlignment" Value="Center"/>
-                    </Style>
-                </DataGrid.Resources>
+                </TabControl.Resources>
 
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Supplier / Vendor Name" Binding="{Binding SupplierName}" Width="2*"/>
-
-                    <DataGridTextColumn Header="POs Raised" Binding="{Binding TotalPOs}" Width="100">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                <Setter Property="Foreground" Value="#666666"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-
-                    <DataGridTextColumn Header="Avg Lead Time" Binding="{Binding AvgLeadTime, StringFormat={}{0} Days}" Width="120">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Foreground" Value="#2B5B84"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-
-                    <DataGridTextColumn Header="Total Spend (Rs.)" Binding="{Binding TotalSpend, StringFormat=N2}" Width="140">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                <TabItem Header="Aged Payables Summary (Who Do We Owe?)">
+                    <DataGrid ItemsSource="{Binding AgedPayables}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                              HeadersVisibility="Column" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0" 
+                              RowHeight="30" Background="White" BorderThickness="0" SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#E0E0E0"/>
+                                <Setter Property="Foreground" Value="Black"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Foreground" Value="#28A745"/>
+                                <Setter Property="Padding" Value="6"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
                             </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="350" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="0 - 30 Days" Binding="{Binding CurrentTo30Days, StringFormat=N2}" Width="*" ElementStyle="{StaticResource RightElement}"/>
+                            <DataGridTextColumn Header="31 - 60 Days" Binding="{Binding Days31To60, StringFormat=N2}" Width="*" ElementStyle="{StaticResource RightElement}"/>
+                            <DataGridTextColumn Header="61 - 90 Days" Binding="{Binding Days61To90, StringFormat=N2}" Width="*" ElementStyle="{StaticResource RightElement}"/>
+                            <DataGridTextColumn Header="Over 90 Days" Binding="{Binding Over90Days, StringFormat=N2}" Width="*" ElementStyle="{StaticResource DangerElement}"/>
+                            <DataGridTextColumn Header="Total Owed (Rs.)" Binding="{Binding TotalOwed, StringFormat=N2}" Width="150" ElementStyle="{StaticResource RightBoldElement}" Foreground="#003366"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
 
-                    <DataGridTextColumn Header="Defect / Return Rate" Binding="{Binding ReturnRate, StringFormat={}{0:N1}%}" Width="150">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Foreground" Value="#D97706"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-
-                    <DataGridTextColumn Header="Current Balance Owed" Binding="{Binding BalanceOwed, StringFormat=N2}" Width="160">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                <TabItem Header="Purchasing Volume (Top 20 Partners)">
+                    <DataGrid ItemsSource="{Binding PurchasingVolumes}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                              HeadersVisibility="Column" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0" 
+                              RowHeight="30" Background="White" BorderThickness="0" SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#E0E0E0"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Foreground" Value="#A94044"/>
+                                <Setter Property="Padding" Value="6"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
                             </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                </DataGrid.Columns>
-            </DataGrid>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="350" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Total GRN Value (Rs.)" Binding="{Binding TotalGrnValue, StringFormat=N2}" Width="250" ElementStyle="{StaticResource RightElement}"/>
+                            <DataGridTextColumn Header="% of Total Store Purchases" Binding="{Binding PercentageOfTotalStore, StringFormat=\{0:N2\}%}" Width="*" ElementStyle="{StaticResource RightBoldElement}" Foreground="#005555"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+                <TabItem Header="Return &amp; Defect Rates">
+                    <DataGrid ItemsSource="{Binding ReturnRates}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
+                              HeadersVisibility="Column" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0" 
+                              RowHeight="30" Background="White" BorderThickness="0" SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#E0E0E0"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Padding" Value="6"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                            </Style>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="350" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Total Units Bought" Binding="{Binding TotalItemsBought, StringFormat=N2}" Width="200" ElementStyle="{StaticResource RightElement}"/>
+                            <DataGridTextColumn Header="Total Units Returned" Binding="{Binding TotalItemsReturned, StringFormat=N2}" Width="200" ElementStyle="{StaticResource RightElement}"/>
+                            <DataGridTextColumn Header="Defect / Return Rate (%)" Binding="{Binding DefectPercentage, StringFormat=\{0:N2\}%}" Width="*" ElementStyle="{StaticResource DangerElement}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+
+            </TabControl>
         </Border>
-
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
-                <TextBlock Text="Data Status:" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,5,0"/>
-                <TextBlock Text="Includes all posted Purchase Orders, GRNs, and Supplier Returns." Foreground="#666666"/>
-            </StackPanel>
-
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Export to Excel" Style="{StaticResource ExcelBtn}" Width="140"/>
-                <Button Content="Print PDF Report" Style="{StaticResource PrintBtn}" Width="140"/>
-                <Button x:Name="btnDraftPayment" Content="Auto-Draft Payment Voucher" Style="{StaticResource SmartActionBtn}" Width="210" Margin="0" ToolTip="Instantly bridges to the Finance module to pay the selected supplier's outstanding debt"/>
-            </StackPanel>
-        </Grid>
     </Grid>
 </UserControl>

@@ -5,6 +5,9 @@
     <Compile Update="Dialogs\AddFloatDialog.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Dialogs\B2BCustomerDialogView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Dialogs\BatchSelectionDialog.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -32,10 +35,16 @@
     <Compile Update="Dialogs\DocumentTenderDialog.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Dialogs\ExpressItemDialogView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Dialogs\HoldRecallDialog.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Dialogs\LockScreenView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Dialogs\LoyaltyCustomerDialogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Dialogs\ManagerAuthDialog.xaml.cs">
@@ -72,6 +81,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Dialogs\ZReportSummaryDialog.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Components\ExpressItemGridControl.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\LoginView.xaml.cs">

@@ -1,11 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "bfIC78vugOg=",
+  "dgSpecHash": "ZvSwqP7tZcw=",
   "success": true,
   "projectFilePath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\communitytoolkit.mvvm\\8.4.2\\communitytoolkit.mvvm.8.4.2.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
+    "C:\\Users\\Sanjeewa\\.nuget\\packages\\livecharts\\0.9.7\\livecharts.0.9.7.nupkg.sha512",
+    "C:\\Users\\Sanjeewa\\.nuget\\packages\\livecharts.wpf\\0.9.7\\livecharts.wpf.0.9.7.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\6.0.0\\microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.3\\microsoft.codeanalysis.analyzers.3.3.3.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\microsoft.codeanalysis.common\\4.5.0\\microsoft.codeanalysis.common.4.5.0.nupkg.sha512",
@@ -54,5 +56,30 @@
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\zxing.net\\0.16.11\\zxing.net.0.16.11.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\zxing.net.bindings.windows.compatibility\\0.16.14\\zxing.net.bindings.windows.compatibility.0.16.14.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "Package 'LiveCharts 0.9.7' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows7.0'. This package may not be fully compatible with your project.",
+      "projectPath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
+      "libraryId": "LiveCharts",
+      "targetGraphs": [
+        "net8.0-windows7.0"
+      ]
+    },
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "Package 'LiveCharts.Wpf 0.9.7' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows7.0'. This package may not be fully compatible with your project.",
+      "projectPath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
+      "libraryId": "LiveCharts.Wpf",
+      "targetGraphs": [
+        "net8.0-windows7.0"
+      ]
+    }
+  ]
 }

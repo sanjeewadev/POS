@@ -19,10 +19,8 @@
         <Menu Grid.Row="0" Background="#F0F0F0" BorderBrush="DarkGray" BorderThickness="0,0,0,1" Padding="2,2" VerticalAlignment="Center">
 
             <MenuItem Header="_File">
-                <MenuItem Header="Final Account Format Setting" />
-                <MenuItem Header="Cheque Printer Margin Setting" />
-                <MenuItem Header="Item Upload To Scale" />
-                <MenuItem Header="Day-End Update" />
+                <Button Content="⚙️ Store Settings" 
+        Command="{Binding NavigateToStoreConfigurationCommand}" />
                 <Separator />
                 <MenuItem Header="Backup" />
                 <MenuItem Header="Exit" />
@@ -43,6 +41,7 @@
                 <MenuItem Header="Stock Adjustment" Command="{Binding NavigateToStockAdjustmentCommand}" />
                 <MenuItem Header="Stock Balance" Command="{Binding NavigateToStockBalanceCommand}" />
                 <MenuItem Header="Goods Received Note (GRN)" Command="{Binding NavigateToGoodsReceivedNoteCommand}" />
+                <MenuItem Header="Express Items Designer" Command="{Binding NavigateToExpressItemAdminCommand}" />
             </MenuItem>
 
             <MenuItem Header="_Purchasing">
@@ -56,6 +55,7 @@
                 <MenuItem Header="Quotation" Command="{Binding NavigateToQuotationCommand}" />
                 <MenuItem Header="Receipt" Command="{Binding NavigateToReceiptCommand}" />
                 <MenuItem Header="Wholesale Invoice" Command="{Binding NavigateToWholesaleInvoiceCommand}" />
+                
             </MenuItem>
 
             <MenuItem Header="_CRM">
@@ -69,24 +69,26 @@
                 <MenuItem Header="Bank Deposit" Command="{Binding NavigateToBankDepositCommand}" />
                 <MenuItem Header="Cash Book" Command="{Binding NavigateToCashBookCommand}" />
                 <MenuItem Header="Payment Voucher" Command="{Binding NavigateToPaymentVoucherCommand}" />
+                <MenuItem Header="Supplier Ledger (A/P)" Command="{Binding NavigateToSupplierLedgerCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Reports">
+                <MenuItem Header="Cash Movement (In / Out)" Command="{Binding NavigateToCashMovementDashboardCommand}"/>
                 <MenuItem Header="Audit Log" Command="{Binding NavigateToAuditLogCommand}" />
                 <MenuItem Header="Inventory Report" Command="{Binding NavigateToInventoryReportCommand}" />
                 <MenuItem Header="Sales Report" Command="{Binding NavigateToSalesReportCommand}" />
-                <MenuItem Header="Supplier Report" Command="{Binding NavigateToSupplierReportCommand}" />
+                <MenuItem Header="Supplier Report" Command="{Binding NavigateToSupplierReportCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Admin">
                 <MenuItem Header="Access Control" Command="{Binding NavigateToAccessControlCommand}" />
+                
                 <MenuItem Header="POS Hardware Settings" Command="{Binding NavigateToPosHardwareSettingsCommand}" />
                 <MenuItem Header="Store Configuration" Command="{Binding NavigateToStoreConfigurationCommand}" />
                 <MenuItem Header="User Management" Command="{Binding NavigateToUserManagementCommand}" />
             </MenuItem>
 
         </Menu>
-
         <Grid Grid.Row="1">
             <ContentControl Background="#DED9CD" x:Name="MainContentHost" Content="{Binding CurrentPage}" />
         </Grid>

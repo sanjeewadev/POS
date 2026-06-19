@@ -5,7 +5,7 @@ using POS.BackOffice.UI.Views;
 using POS.BackOffice.UI.Views.Layout;
 using POS.Core.Data;
 using POS.Core.Repositories;
-using POS.Core.Services; // Needed for AuthService
+using POS.Core.Services;
 using System;
 using System.Windows;
 
@@ -13,7 +13,6 @@ namespace POS.BackOffice.UI
 {
     public partial class App : System.Windows.Application
     {
-        // Added the '?' to satisfy the compiler's non-nullable warning
         public static IServiceProvider? Services { get; private set; }
 
         public App()
@@ -28,24 +27,22 @@ namespace POS.BackOffice.UI
             // ==========================================
             // ENTERPRISE FIX: SHARED DATABASE PATH
             // ==========================================
-            // This creates a permanent folder in Windows: C:\Users\Sanjeewa\AppData\Local\POS
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string dbFolder = System.IO.Path.Combine(appData, "POS");
-            System.IO.Directory.CreateDirectory(dbFolder); // Build the folder if it doesn't exist
+            System.IO.Directory.CreateDirectory(dbFolder);
             string dbPath = System.IO.Path.Combine(dbFolder, "pos_local.db");
 
-            // Tell Entity Framework to use this exact file
             services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));
 
             // 2. Register Security Core
-            services.AddSingleton<AuthService>(); // MUST be singleton to remember login state
+            services.AddSingleton<AuthService>();
 
             // 3. Register ALL Repositories
             services.AddTransient<UserRepository>();
             services.AddTransient<CategoryRepository>();
             services.AddTransient<SubCategoryRepository>();
-            services.AddTransient<AttributeRepository>(); // Replaced Group/Value with main AttributeRepository
+            services.AddTransient<AttributeRepository>();
             services.AddTransient<SupplierRepository>();
             services.AddTransient<ItemMasterRepository>();
             services.AddTransient<UnitOfMeasureRepository>();
@@ -54,11 +51,34 @@ namespace POS.BackOffice.UI
             services.AddTransient<StockAdjustmentRepository>();
             services.AddTransient<StockBalanceRepository>();
             services.AddTransient<ReturnRepository>();
+            services.AddTransient<ExpressItemRepository>();
+
+            // CRM & Loyalty Repositories
+            services.AddTransient<LoyaltyDiscountRepository>();
+            services.AddTransient<CustomerAdminRepository>();
+
+            // Financial & Supplier Repositories
+            services.AddTransient<SupplierLedgerRepository>();
+            services.AddTransient<SupplierReportRepository>();
+
+            // Sales & Analytics Repositories
+            services.AddTransient<FloatCashRepository>();
+            services.AddTransient<FinancialAnalyticsRepository>();
+            services.AddTransient<SecurityAuditRepository>();
+            services.AddTransient<QuotationRepository>();
+            services.AddTransient<MasterSalesAnalyticsRepository>();
+            services.AddTransient<SalesAnalyticsRepository>();
+
+            // Register the Master Settings Repository
+            services.AddTransient<POS.Core.Repositories.SystemSettingsRepository>();
+
+
 
             // 4. Register ALL ViewModels
-            // Making Main & Login Singletons, but keeping data pages Transient so they reload fresh data when clicked.
             services.AddSingleton<MainViewModel>();
             services.AddTransient<LoginViewModel>();
+
+            // Inventory ViewModels
             services.AddTransient<CategoryViewModel>();
             services.AddTransient<SubCategoryViewModel>();
             services.AddTransient<ItemPropertyViewModel>();
@@ -70,7 +90,31 @@ namespace POS.BackOffice.UI
             services.AddTransient<StockAdjustmentViewModel>();
             services.AddTransient<StockBalanceViewModel>();
             services.AddTransient<SupplierReturnViewModel>();
+            services.AddTransient<ExpressItemAdminViewModel>();
+
+            // Sales & Analytics ViewModels
+            services.AddTransient<SalesExplorerViewModel>();
+            services.AddTransient<FloatCashLogViewModel>();
+            services.AddTransient<FinancialSummaryViewModel>();
+            services.AddTransient<SecurityAuditViewModel>();
+            services.AddTransient<QuotationManagerViewModel>();
+            services.AddTransient<ItemSalesAnalyticsViewModel>();
+            services.AddTransient<CashMovementDashboardViewModel>();
+
+            // CRM ViewModels
+            services.AddTransient<CustomerMasterViewModel>();
+            services.AddTransient<CustomerLedgerViewModel>();
+            services.AddTransient<LoyaltyDiscountAdminViewModel>();
+
+            // Finance ViewModels
+            services.AddTransient<SupplierLedgerViewModel>();
+            services.AddTransient<SupplierReportViewModel>();
+
+            // Admin ViewModels
             services.AddTransient<UserManagementViewModel>();
+
+            // Register the Store Configuration ViewModel
+            services.AddTransient<POS.BackOffice.UI.ViewModels.StoreConfigurationViewModel>();
 
             return services.BuildServiceProvider();
         }
@@ -89,7 +133,6 @@ namespace POS.BackOffice.UI
             // ==========================================
             // CRITICAL FIX: PREVENT PREMATURE SHUTDOWN
             // ==========================================
-            // Tell WPF not to kill the app when the login window closes
             Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             // 2. THE SECURITY GATEWAY
@@ -103,15 +146,11 @@ namespace POS.BackOffice.UI
                 var mainViewModel = Services.GetRequiredService<MainViewModel>();
 
                 mainWindow.DataContext = mainViewModel;
-
-                // Restore normal shutdown behavior so the app closes when the Main Window closes
                 Application.Current.ShutdownMode = ShutdownMode.OnLastWindowClose;
-
                 mainWindow.Show();
             }
             else
             {
-                // User explicitly closed the login window, shut it down completely
                 Application.Current.Shutdown();
             }
         }

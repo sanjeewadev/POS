@@ -11,19 +11,7 @@
     <Compile Update="Views\LoginWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Admin\AccessControlView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Update="Views\Pages\Admin\CashMovementDashboardView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Admin\ExpressItemsAdminView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Admin\PosHardwareSettingsView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Admin\StoreConfigurationView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Admin\SuspendedTransactionsMonitorView.xaml.cs">
@@ -41,22 +29,13 @@
     <Compile Update="Views\Pages\Crm\GiftVoucherView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Crm\LoyaltyPromotionsAdminView.xaml.cs">
+    <Compile Update="Views\Pages\Crm\LoyaltyDiscountAdminView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\DashboardView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Finance\BankDepositView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Finance\CashBookView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Finance\ExpenseVoucherView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Finance\PaymentVoucherView.xaml.cs">
+    <Compile Update="Views\Pages\File\StoreConfigurationView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\InventoryOperations\BarcodeManagementView.xaml.cs">
@@ -101,34 +80,31 @@
     <Compile Update="Views\Pages\Purchasing\PurchaseOrderView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Reports\AuditLogView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Reports\InventoryReportView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="Views\Pages\Reports\SalesReportView.xaml.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Update="Views\Pages\Reports\SupplierReportView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Sales\CustomerReturnsAuditView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Sales\DailySalesAuditView.xaml.cs">
+    <Compile Update="Views\Pages\Sales\FinancialSummaryView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Sales\QuotationView.xaml.cs">
+    <Compile Update="Views\Pages\Sales\FloatCashLogView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Pages\Sales\ItemSalesAnalyticsView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\Pages\Sales\QuotationManagerView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Views\Pages\Sales\ReceiptLedgerView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Sales\ReceiptView.xaml.cs">
+    <Compile Update="Views\Pages\Sales\SalesExplorerView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="Views\Pages\Sales\WholesaleInvoiceView.xaml.cs">
+    <Compile Update="Views\Pages\Sales\SecurityAuditView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

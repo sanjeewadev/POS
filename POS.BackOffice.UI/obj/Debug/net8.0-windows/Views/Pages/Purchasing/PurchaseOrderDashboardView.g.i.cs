@@ -60,8 +60,8 @@ namespace POS.BackOffice.UI.Views.Pages.Purchasing {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/purchasing/purchaseorderdashboardview.xa" +
-                    "ml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/purchasing/purchaseorderdashboa" +
+                    "rdview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\Purchasing\PurchaseOrderDashboardView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

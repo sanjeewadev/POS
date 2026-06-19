@@ -43,6 +43,7 @@ namespace POS.Cashier.UI
             services.AddSingleton<AuthService>();
             services.AddTransient<IReceiptPrintService, EscPosReceiptPrintService>();
 
+
             // ViewModels
             services.AddTransient<LoginViewModel>();
             services.AddTransient<SalesViewModel>();
@@ -52,8 +53,13 @@ namespace POS.Cashier.UI
             // Tells the app: When a UI asks for ICashMovementService, give it the CashMovementService logic.
             services.AddTransient<ICashMovementService, POS.Services.CashMovementService>();
 
+            // NEW: Express Items Repository (Required for the popup to load buttons)
+            services.AddTransient<POS.Core.Repositories.ExpressItemRepository>();
+
             // Tells the app: When a UI asks for IReceiptPrinterService, use the real hardware.
             services.AddSingleton<IReceiptPrinterService, POS.Hardware.Services.ReceiptPrinterService>();
+
+            services.AddTransient<POS.Core.Repositories.LoyaltyCustomerRepository>();
 
             return services.BuildServiceProvider();
         }

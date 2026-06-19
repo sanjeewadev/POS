@@ -1,0 +1,191 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Sales.FinancialSummaryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="850" d:DesignWidth="1400"
+             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+
+    <UserControl.Resources>
+        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Margin" Value="0,5,0,10"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+        <Style TargetType="DatePicker" x:Key="ClassicDate">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Width" Value="130"/>
+        </Style>
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="15,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+        </Style>
+        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style TargetType="Border" x:Key="ClassicGroupBox">
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style TargetType="Border" x:Key="KpiCard">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="15,15"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="FINANCIAL DASHBOARD:" Style="{StaticResource HeaderLabel}" Margin="0,0,20,0" VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Column="1" Text="From:" Style="{StaticResource InlineLabel}"/>
+                <DatePicker Grid.Column="2" SelectedDate="{Binding StartDate}" Style="{StaticResource ClassicDate}" Margin="0,0,15,0"/>
+
+                <TextBlock Grid.Column="3" Text="To:" Style="{StaticResource InlineLabel}"/>
+                <DatePicker Grid.Column="4" SelectedDate="{Binding EndDate}" Style="{StaticResource ClassicDate}" Margin="0,0,20,0"/>
+
+                <Button Grid.Column="5" Content="⚡ GENERATE DASHBOARD" Command="{Binding ApplyFiltersCommand}" Style="{StaticResource ActionBtn}" HorizontalAlignment="Left" Padding="20,0"/>
+
+                <Button Grid.Column="6" Content="Reset Filters" Command="{Binding ClearFiltersCommand}" Style="{StaticResource ClassicBtn}" HorizontalAlignment="Right"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="-5,0,-5,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <UniformGrid Grid.Row="0" Columns="5">
+                <Border Style="{StaticResource KpiCard}">
+                    <StackPanel>
+                        <TextBlock Text="GROSS SALES" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                        <TextBlock Text="{Binding GrossSales, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="#333" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}">
+                    <StackPanel>
+                        <TextBlock Text="TOTAL DISCOUNTS" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                        <TextBlock Text="{Binding TotalDiscounts, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="#A94044" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}">
+                    <StackPanel>
+                        <TextBlock Text="TOTAL RETURNS" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                        <TextBlock Text="{Binding TotalReturns, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="#A94044" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}" Background="#F0F8FF" BorderBrush="#003366">
+                    <StackPanel>
+                        <TextBlock Text="NET SALES (REVENUE)" FontSize="11" FontWeight="Bold" Foreground="#003366"/>
+                        <TextBlock Text="{Binding NetSales, StringFormat=Rs. \{0:N2\}}" FontSize="24" FontWeight="Bold" Foreground="#003366" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}">
+                    <StackPanel>
+                        <TextBlock Text="INVOICE COUNT" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                        <TextBlock Text="{Binding TotalSalesCount, StringFormat=N0}" FontSize="20" FontWeight="Bold" Foreground="#555" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <UniformGrid Grid.Row="1" Columns="5">
+                <Border Style="{StaticResource KpiCard}">
+                    <StackPanel>
+                        <TextBlock Text="COST OF GOODS SOLD (COGS)" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                        <TextBlock Text="{Binding TotalCostOfGoods, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="#555" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}" Background="#F0FFF4" BorderBrush="#28A745">
+                    <StackPanel>
+                        <TextBlock Text="GROSS PROFIT" FontSize="11" FontWeight="Bold" Foreground="#1E7E34"/>
+                        <TextBlock Text="{Binding GrossProfit, StringFormat=Rs. \{0:N2\}}" FontSize="24" FontWeight="Bold" Foreground="#28A745" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}">
+                    <StackPanel>
+                        <TextBlock Text="OPERATING EXPENSES (PAYOUTS)" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                        <TextBlock Text="{Binding OperatingExpenses, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="#A94044" Margin="0,5,0,0" ToolTip="Derived from Negative Cash Movements (Petty Cash, Bills)"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}" BorderBrush="#005500" BorderThickness="2">
+                    <StackPanel>
+                        <TextBlock Text="OPERATING MARGIN" FontSize="11" FontWeight="Bold" Foreground="#005500"/>
+                        <TextBlock Text="{Binding OperatingMargin, StringFormat=Rs. \{0:N2\}}" FontSize="24" FontWeight="Bold" Foreground="#005500" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCard}">
+                    <StackPanel>
+                        <TextBlock Text="AVERAGE SALE VALUE" FontSize="11" FontWeight="Bold" Foreground="#666"/>
+                        <TextBlock Text="{Binding AverageSaleValue, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="#555" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </Grid>
+
+        <Border Grid.Row="2" BorderBrush="#003366" BorderThickness="1" Background="White">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="📊 REVENUE &amp; PROFIT TRENDS" Background="#E6F0FA" Foreground="#003366" FontWeight="Bold" Padding="15,10" FontSize="14"/>
+
+                <Border Grid.Row="1" Background="#F8F8F8" BorderBrush="#DDDDDD" BorderThickness="1" Margin="20" Padding="15">
+                    <lvc:CartesianChart Series="{Binding TrendSeries}" LegendLocation="Top" DisableAnimations="True">
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Labels="{Binding TrendLabels}">
+                                <lvc:Axis.Separator>
+                                    <lvc:Separator Step="1" IsEnabled="False"/>
+                                </lvc:Axis.Separator>
+                            </lvc:Axis>
+                        </lvc:CartesianChart.AxisX>
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis LabelFormatter="{Binding CurrencyFormatter}" Title="Amount (Rs.)"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </Border>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>

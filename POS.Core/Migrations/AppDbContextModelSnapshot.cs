@@ -118,7 +118,12 @@ namespace POS.Core.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ReferenceVoucherNo")
+                        .IsUnique();
+
                     b.HasIndex("ShiftSessionId");
+
+                    b.HasIndex("Timestamp");
 
                     b.ToTable("CashMovements");
                 });
@@ -267,6 +272,20 @@ namespace POS.Core.Migrations
                     b.Property<bool>("IsCreditLocked")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("LoyaltyCardNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LoyaltyDiscountExpiryDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("LoyaltyDiscountProfileId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("LoyaltyPointsBalance")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -281,6 +300,8 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("CustomerCode")
                         .IsUnique();
+
+                    b.HasIndex("LoyaltyDiscountProfileId");
 
                     b.HasIndex("Phone");
 
@@ -413,8 +434,53 @@ namespace POS.Core.Migrations
                             NextSequenceNumber = 1,
                             PaddingLength = 5,
                             Prefix = "GRN-",
-                            UpdatedAt = new DateTime(2026, 6, 15, 18, 22, 1, 822, DateTimeKind.Local).AddTicks(3370)
+                            UpdatedAt = new DateTime(2026, 6, 17, 14, 17, 3, 707, DateTimeKind.Local).AddTicks(5232)
                         });
+                });
+
+            modelBuilder.Entity("POS.Core.Models.ExpressItemLayout", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ButtonColorHex")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayLabel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GridColumn")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GridRow")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemVariantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TabCategory")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TextColorHex")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemVariantId");
+
+                    b.ToTable("ExpressItemLayouts");
                 });
 
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
@@ -801,6 +867,43 @@ namespace POS.Core.Migrations
                     b.HasIndex("ItemParentId");
 
                     b.ToTable("ItemVariants");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.LoyaltyDiscountProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProfileName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LoyaltyDiscountProfiles");
                 });
 
             modelBuilder.Entity("POS.Core.Models.PoHeader", b =>
@@ -1727,6 +1830,15 @@ namespace POS.Core.Migrations
                     b.Navigation("CustomerMaster");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CustomerMaster", b =>
+                {
+                    b.HasOne("POS.Core.Models.LoyaltyDiscountProfile", "LoyaltyDiscountProfile")
+                        .WithMany()
+                        .HasForeignKey("LoyaltyDiscountProfileId");
+
+                    b.Navigation("LoyaltyDiscountProfile");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CustomerReturnLine", b =>
                 {
                     b.HasOne("POS.Core.Models.CustomerReturnHeader", "CustomerReturnHeader")
@@ -1736,6 +1848,17 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("CustomerReturnHeader");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.ExpressItemLayout", b =>
+                {
+                    b.HasOne("POS.Core.Models.ItemVariant", "ItemVariant")
+                        .WithMany()
+                        .HasForeignKey("ItemVariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ItemVariant");
                 });
 
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
