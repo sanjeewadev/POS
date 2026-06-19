@@ -168,7 +168,38 @@ namespace POS.Cashier.UI.Views
         // --- NEW DIALOG ROUTING METHODS ---
 
         private void CustomerBtn_Click(object sender, RoutedEventArgs e)
-            => new POS.Cashier.UI.Views.Dialogs.CustomerManagementDialog().ShowDialog();
+        {
+            // 1. Turn on the hardware-accelerated dark overlay
+            if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                // 2. Open the newly built B2B/Wholesale Directory
+                var b2bDialog = new POS.Cashier.UI.Views.Dialogs.B2BCustomerDialogView();
+
+                // Pause the main POS thread until the cashier makes a choice or closes the window
+                bool? result = b2bDialog.ShowDialog();
+
+                // 3. Check if the cashier successfully validated and clicked "ATTACH TO INVOICE"
+                if (result == true && b2bDialog.SelectedCustomer != null)
+                {
+                    var customer = b2bDialog.SelectedCustomer;
+
+                    // TODO: Link the Wholesale customer to your active invoice!
+                    // Example:
+                    // CurrentInvoice.CustomerName = customer.CompanyName;
+                    // CurrentInvoice.IsCreditSaleAllowed = true;
+
+                    MessageBox.Show($"B2B Account Attached:\n{customer.CompanyName}\nAvailable Credit: Rs. {customer.RemainingCredit:N2}",
+                                    "Wholesale Link Active", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            finally
+            {
+                // 4. Turn off the dark overlay
+                if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
 
         private void DiscountBtn_Click(object sender, RoutedEventArgs e)
             => new POS.Cashier.UI.Views.Dialogs.PriceDiscountDialog().ShowDialog();
@@ -359,6 +390,67 @@ namespace POS.Cashier.UI.Views
             }
         }
 
+        private void LoyaltyBtn_Click(object sender, RoutedEventArgs e)
+        {
+            // 1. Turn on the dark overlay (Screen goes dark instantly)
+            if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                // 2. Open the new Loyalty Dashboard
+                var loyaltyDialog = new POS.Cashier.UI.Views.Dialogs.LoyaltyCustomerDialogView();
+
+                // ShowDialog pauses the code here until the cashier closes the window
+                bool? result = loyaltyDialog.ShowDialog();
+
+                // 3. Check if the cashier clicked "APPLY SELECTED TO SALE"
+                if (result == true && loyaltyDialog.SelectedCustomer != null)
+                {
+                    var customer = loyaltyDialog.SelectedCustomer;
+
+                    // TODO: Here is where you link the customer to the active invoice!
+                    // Example:
+                    // CurrentInvoice.CustomerName = customer.FullName;
+                    // CurrentInvoice.ApplyDiscount(customer.ActiveDiscountName);
+
+                    MessageBox.Show($"Loyalty Customer Applied:\n{customer.FullName}\nDiscount: {customer.ActiveDiscountName}",
+                                    "Customer Linked", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            finally
+            {
+                // 4. Turn off the dark overlay (Screen returns to normal)
+                if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void ExpressItemsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            // Darken the background
+            if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var expressDialog = new POS.Cashier.UI.Views.Dialogs.ExpressItemDialogView();
+
+                bool? result = expressDialog.ShowDialog();
+
+                // If the cashier clicked an item, the result will be true
+                if (result == true && !string.IsNullOrWhiteSpace(expressDialog.SelectedSkuCode))
+                {
+                    // Audio feedback
+                    System.Media.SystemSounds.Beep.Play();
+                    if (this.DataContext is SalesViewModel viewModel)
+                    {
+                        _ = viewModel.ProcessBarcodeAsync(expressDialog.SelectedSkuCode);
+                    }
+                }
+            }
+            finally
+            {
+                if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
 
     }
 }

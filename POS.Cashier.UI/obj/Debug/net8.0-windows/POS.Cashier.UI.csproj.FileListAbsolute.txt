@@ -115,6 +115,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\bin\Debug\net8.0-windows\POS
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\bin\Debug\net8.0-windows\POS.Hardware.pdb
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\POS.Cashier.UI.csproj.AssemblyReference.cache
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\AddFloatDialog.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\B2BCustomerDialogView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\BatchSelectionDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\CardAuthDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\CashDenominationDialog.baml
@@ -126,8 +127,10 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\CustomerSelectionDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DiscountDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DocumentTenderDialog.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ExpressItemDialogView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\HoldRecallDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LockScreenView.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LoyaltyCustomerDialogView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ManagerAuthDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PayDialogView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PluSearchDialog.baml
@@ -142,11 +145,13 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\UnifiedCheckoutView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ZReportSummaryDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Resources\Colors.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\Components\ExpressItemGridControl.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\LoginView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\OpenCloseShiftView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\SalesView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\TerminalLockedView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\AddFloatDialog.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\B2BCustomerDialogView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\BatchSelectionDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\CardAuthDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\CashDenominationDialog.g.cs
@@ -158,8 +163,10 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\CustomerSelectionDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DiscountDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DocumentTenderDialog.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ExpressItemDialogView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\HoldRecallDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LockScreenView.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LoyaltyCustomerDialogView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ManagerAuthDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PayDialogView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PluSearchDialog.g.cs
@@ -174,6 +181,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\UnifiedCheckoutView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ZReportSummaryDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\MainWindow.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\Components\ExpressItemGridControl.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\LoginView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\OpenCloseShiftView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Views\SalesView.g.cs

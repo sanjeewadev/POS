@@ -188,7 +188,8 @@ namespace POS.BackOffice.UI.Views.Pages.Finance {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/finance/paymentvoucherview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/finance/paymentvoucherview.xaml" +
+                    "", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\Finance\PaymentVoucherView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

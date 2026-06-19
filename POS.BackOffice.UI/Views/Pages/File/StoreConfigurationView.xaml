@@ -1,0 +1,415 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.File.StoreConfigurationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="950" d:DesignWidth="1250"
+             Background="#F5F5F5" FontFamily="Segoe UI">
+
+    <UserControl.Resources>
+        <Style TargetType="Button" x:Key="StandardBtn">
+            <Setter Property="Background" Value="#2B3C38"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3B524E"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="SaveBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="#28A745"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#218838"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="OutlineBtn" BasedOn="{StaticResource StandardBtn}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#2B5B84"/>
+            <Setter Property="BorderBrush" Value="#2B5B84"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E2EDF8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="DiagBtn" BasedOn="{StaticResource OutlineBtn}">
+            <Setter Property="Foreground" Value="#17A2B8"/>
+            <Setter Property="BorderBrush" Value="#17A2B8"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E2F3F5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Control" x:Key="StandardInput">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Height" Value="30"/>
+        </Style>
+
+        <Style TargetType="Border" x:Key="GroupBoxBorder">
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="⚙️ Master Store Configuration" FontSize="22" FontWeight="Bold" Foreground="#333333" Margin="0,0,0,20"/>
+
+        <Border Grid.Row="1" Background="White" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="4">
+            <TabControl Background="Transparent" BorderThickness="0" Padding="15">
+                <TabControl.Resources>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Padding" Value="20,10"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="Foreground" Value="#555"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="#2B5B84"/>
+                                <Setter Property="BorderBrush" Value="#2B5B84"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TabControl.Resources>
+
+                <TabItem Header="🏢 Corporate Identity &amp; Tax">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+
+                            <Border Style="{StaticResource GroupBoxBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Company Legal Name *" Foreground="#333" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding LegalName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                        <TextBlock Text="Trading Name (Receipt Display) *" Foreground="#333" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding StoreName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                        <TextBlock Text="Business Registration (BRN)" Foreground="#666" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Brn, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                        <TextBlock Text="VAT / Tax Registration Number" Foreground="#666" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding TaxNo, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                        <Border Background="#F9F5FF" BorderBrush="#E5D6FA" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,10,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="GLOBAL VAT RATE % (For Math Engine)" FontWeight="Bold" Foreground="#6F42C1" Margin="0,0,0,5"/>
+                                                <TextBox Text="{Binding GlobalVatRate, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" Width="150" HorizontalAlignment="Left" FontWeight="Bold"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Primary Address" Foreground="#333" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Address1, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2*"/>
+                                                <ColumnDefinition Width="10"/>
+                                                <ColumnDefinition Width="1*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="City" Foreground="#333" Margin="0,0,0,5"/>
+                                                <TextBox Text="{Binding City, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Postal Code" Foreground="#333" Margin="0,0,0,5"/>
+                                                <TextBox Text="{Binding PostalCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <TextBlock Text="Country" Foreground="#666" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Country, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                        <TextBlock Text="Landline / Mobile" Foreground="#333" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                        <TextBlock Text="Support Email" Foreground="#666" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="📄 Document Formatting">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+
+                            <Border Style="{StaticResource GroupBoxBorder}">
+                                <StackPanel>
+                                    <TextBlock Text="Prefix Management" FontSize="16" FontWeight="SemiBold" Foreground="#28A745" Margin="0,0,0,15"/>
+                                    <Grid Margin="0,0,0,15">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Invoice Prefix" Foreground="#333" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding InvPrefix, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Quotation Prefix" Foreground="#333" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding QuotePrefix, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="4">
+                                            <TextBlock Text="Purchase Order Prefix" Foreground="#333" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding PoPrefix, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBlock Text="Receipt Messages &amp; Terms" FontSize="16" FontWeight="SemiBold" Foreground="#28A745" Margin="0,15,0,15"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="POS Receipt Header" Foreground="#666" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding ReceiptHeader, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="70" Style="{StaticResource StandardInput}"/>
+
+                                            <TextBlock Text="POS Receipt Footer" Foreground="#666" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding ReceiptFooter, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="70" Style="{StaticResource StandardInput}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="B2B Invoice Terms &amp; Conditions (A4 PDF)" Foreground="#2B5B84" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding InvoiceTerms, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="170" Style="{StaticResource StandardInput}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="🖨️ Hardware &amp; Peripherals">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+
+                            <Border Style="{StaticResource GroupBoxBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Workstation ID (Local Machine)" Foreground="#333" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding TerminalName, UpdateSourceTrigger=PropertyChanged}" FontWeight="Bold" Style="{StaticResource StandardInput}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Physical Location" Foreground="#333" Margin="0,0,0,5"/>
+                                        <ComboBox Text="{Binding Location, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" IsEditable="True">
+                                            <ComboBoxItem Content="Main Store"/>
+                                            <ComboBoxItem Content="Warehouse"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Background="#F4FAF6" BorderBrush="#C3E6CB" BorderThickness="1" CornerRadius="4" Padding="20" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="Receipt Printer &amp; Cash Drawer" FontSize="16" FontWeight="SemiBold" Foreground="#1E7E34" Margin="0,0,0,15"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="15"/>
+                                            <ColumnDefinition Width="2*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Printer Mode" Foreground="#333" Margin="0,0,0,5"/>
+                                            <ComboBox Text="{Binding PrinterMode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" IsEditable="True">
+                                                <ComboBoxItem Content="Windows Spooler (USB/Driver)"/>
+                                                <ComboBoxItem Content="Raw COM / Serial Port"/>
+                                            </ComboBox>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Target Device (Windows Printer Name / IP)" Foreground="#333" Margin="0,0,0,5"/>
+                                            <ComboBox Text="{Binding TargetPrinter, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" IsEditable="True">
+                                                <ComboBoxItem Content="EPSON TM-T82 Receipt"/>
+                                                <ComboBoxItem Content="Xprinter XP-80"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,15,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.5*"/>
+                                            <ColumnDefinition Width="15"/>
+                                            <ColumnDefinition Width="2*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <CheckBox Content="Enable Cash Drawer Kick (RJ11)" IsChecked="{Binding EnableDrawer}" FontWeight="Bold" Foreground="#D97706" Margin="0,0,0,5"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" IsEnabled="{Binding EnableDrawer}">
+                                            <TextBlock Text="Kick Code Override (Dec/Hex)" Foreground="#666" Margin="0,0,0,5"/>
+                                            <TextBox Text="{Binding KickCode, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource GroupBoxBorder}">
+                                <StackPanel>
+                                    <TextBlock Text="Scanners &amp; Customer Displays" FontSize="16" FontWeight="SemiBold" Foreground="#6F42C1" Margin="0,0,0,15"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="20"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Scanner Suffix Action" Foreground="#333" Margin="0,0,0,5"/>
+                                            <ComboBox Text="{Binding ScanSuffix, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" IsEditable="True">
+                                                <ComboBoxItem Content="Auto-Enter / Add Item Instantly"/>
+                                                <ComboBoxItem Content="Tab to Next Field"/>
+                                            </ComboBox>
+
+                                            <CheckBox Content="Enable Weighing Scale (COM)" IsChecked="{Binding EnableScale}" FontWeight="SemiBold" Margin="0,15,0,10"/>
+                                            <StackPanel IsEnabled="{Binding EnableScale}">
+                                                <TextBlock Text="Scale COM Port" Foreground="#666" Margin="0,0,0,5"/>
+                                                <TextBox Text="{Binding ScalePort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <CheckBox Content="Enable Customer Pole Display (VFD)" IsChecked="{Binding EnablePoleDisplay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                            <StackPanel IsEnabled="{Binding EnablePoleDisplay}">
+                                                <TextBlock Text="VFD COM Port" Foreground="#666" Margin="0,0,0,5"/>
+                                                <TextBox Text="{Binding PoleCom, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}"/>
+
+                                                <TextBlock Text="Idle Welcome Message" Foreground="#666" Margin="0,10,0,5"/>
+                                                <TextBox Text="{Binding PoleWelcome, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" MaxLength="20"/>
+                                            </StackPanel>
+
+                                            <CheckBox Content="Enable Integrated EFTPOS" IsChecked="{Binding EnableEftpos}" FontWeight="SemiBold" Foreground="#2B5B84" Margin="0,20,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="🌍 System Localization">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="10">
+                            <Border Style="{StaticResource GroupBoxBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="System Time Zone *" Foreground="#333" Margin="0,0,0,5"/>
+                                        <ComboBox Text="{Binding TimeZone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" IsEditable="True">
+                                            <ComboBoxItem Content="(UTC+05:30) Sri Jayawardenepura"/>
+                                            <ComboBoxItem Content="(UTC+00:00) London / GMT"/>
+                                            <ComboBoxItem Content="(UTC-05:00) Eastern Time (US)"/>
+                                        </ComboBox>
+
+                                        <TextBlock Text="Date Format Preference" Foreground="#333" Margin="0,10,0,5"/>
+                                        <ComboBox Text="{Binding DateFormat, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" IsEditable="True">
+                                            <ComboBoxItem Content="DD/MM/YYYY (UK/Asia Default)"/>
+                                            <ComboBoxItem Content="MM/DD/YYYY (US Default)"/>
+                                            <ComboBoxItem Content="YYYY-MM-DD (ISO Standard)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Financial Year Start Month *" Foreground="#A94044" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                        <ComboBox Text="{Binding FinYearStart, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource StandardInput}" Background="#FDF3F3" IsEditable="True">
+                                            <ComboBoxItem Content="January (Jan-Dec)"/>
+                                            <ComboBoxItem Content="April (Apr-Mar)"/>
+                                            <ComboBoxItem Content="July (Jul-Jun)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+            </TabControl>
+        </Border>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#DDDDDD" BorderThickness="1" Padding="20" Margin="0,15,0,0" CornerRadius="4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="IT Diagnostics:" Foreground="#666" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <Button Content="🖨️ Test Print" Command="{Binding TestPrintCommand}" Style="{StaticResource DiagBtn}" Width="100"/>
+                    <Button Content="💵 Kick Drawer" Command="{Binding KickDrawerCommand}" Style="{StaticResource DiagBtn}" Width="120"/>
+                    <Button Content="📺 Test Display" Command="{Binding TestDisplayCommand}" Style="{StaticResource DiagBtn}" Width="120" Margin="0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Discard Changes" Command="{Binding DiscardChangesCommand}" Style="{StaticResource OutlineBtn}" Background="White" Width="140"/>
+                    <Button Content="💾 SAVE CONFIGURATION" Command="{Binding SaveSettingsCommand}" Style="{StaticResource SaveBtn}" Width="220" Margin="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

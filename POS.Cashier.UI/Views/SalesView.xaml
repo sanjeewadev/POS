@@ -279,7 +279,7 @@
                     
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Stock Inq." FontSize="14" Click="StockInquiryBtn_Click"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Customer" FontSize="14" Click="CustomerBtn_Click"/>
-                    <Button Background="{StaticResource LoyaltyBgBrush}" Foreground="#FFD700" Content="LOYALTY" FontSize="14" Click="CustomerBtn_Click"/>
+                    <Button Background="{StaticResource LoyaltyBgBrush}" Foreground="#FFD700" Content="LOYALTY" FontSize="14" Click="LoyaltyBtn_Click"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Reload" FontSize="14"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Retail" FontSize="14"/>
 
@@ -292,7 +292,7 @@
                     <Button Background="{StaticResource ActionBtnBrush}" Content="New Price" FontSize="14" Click="PriceOverrideBtn_Click"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Free" FontSize="14" Click="PriceOverrideBtn_Click"/>
 
-                    <Button Background="{StaticResource ExpressBtnBrush}" Foreground="White" Content="Express Items" FontSize="13"/>
+                    <Button Background="{StaticResource ExpressBtnBrush}" Foreground="White" Content="Express Items" FontSize="13" Click="ExpressItemsBtn_Click"/>
                 </UniformGrid>
 
                 <!-- BOTTOM RIGHT: Payment Buttons -->

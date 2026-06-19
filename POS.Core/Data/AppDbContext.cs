@@ -49,11 +49,18 @@ namespace POS.Core.Data
         public DbSet<PromoCondition> PromoConditions { get; set; }
         public DbSet<PromoReward> PromoRewards { get; set; }
 
+        public DbSet<POS.Core.Models.LoyaltyDiscountProfile> LoyaltyDiscountProfiles { get; set; }
+
+        public DbSet<POS.Core.Models.ExpressItemLayout> ExpressItemLayouts { get; set; }
+
         // --- CASHIER & SALES ENGINE ---
         public DbSet<SalesHeader> SalesHeaders { get; set; }
         public DbSet<SalesLine> SalesLines { get; set; }
         public DbSet<CustomerReturnHeader> CustomerReturnHeaders { get; set; } // Customer Refunds
         public DbSet<CustomerReturnLine> CustomerReturnLines { get; set; }
+
+        public DbSet<QuotationHeader> QuotationHeaders { get; set; }
+        public DbSet<QuotationLine> QuotationLines { get; set; }
 
         // --- CASHIER & SALES ENGINE ---
         public DbSet<SalesPayment> SalesPayments { get; set; } // <--- ADD THIS LINE
@@ -61,6 +68,8 @@ namespace POS.Core.Data
         // --- SHIFT & SECURITY ---
         public DbSet<ShiftSession> ShiftSessions { get; set; }
         public DbSet<CashMovement> CashMovements { get; set; }
+
+        public DbSet<SystemSetting> SystemSettings { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

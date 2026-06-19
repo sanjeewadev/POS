@@ -68,7 +68,8 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryPages {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/inventorypages/itemmasterview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/inventorypages/itemmasterview.x" +
+                    "aml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\InventoryPages\ItemMasterView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
