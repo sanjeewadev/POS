@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.ViewModels;
 using POS.BackOffice.UI.Views;
 using POS.BackOffice.UI.Views.Layout;
+using POS.BackOffice.UI.Views.Pages.Finance;
 using POS.Core.Data;
 using POS.Core.Repositories;
 using POS.Core.Services;
@@ -91,6 +92,10 @@ namespace POS.BackOffice.UI
             services.AddTransient<StockBalanceViewModel>();
             services.AddTransient<SupplierReturnViewModel>();
             services.AddTransient<ExpressItemAdminViewModel>();
+
+            // Inside your ConfigureServices method:
+            services.AddTransient<SupplierClaimsViewModel>();
+            services.AddTransient<SupplierClaimsView>(); // Optional, depends on how strict your DI is
 
             // Sales & Analytics ViewModels
             services.AddTransient<SalesExplorerViewModel>();

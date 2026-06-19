@@ -377,6 +377,21 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
         }
+
+        public void ApplyFreeItemLogic(dynamic item, string reasonCode)
+        {
+            // 1. Drop the price to zero
+            item.UnitPrice = 0m;
+            item.LineAmount = 0m;
+            item.DiscountPercentage = 100m;
+
+            // 2. We tag the item with the reason. 
+            // You will need to add a string property called 'FreeReasonCode' to your CartItemDto!
+            item.FreeReasonCode = reasonCode;
+
+            // 3. Force the UI to recalculate the main Net Total
+            // RecalculateTotals(); 
+        }
     }
 
 }

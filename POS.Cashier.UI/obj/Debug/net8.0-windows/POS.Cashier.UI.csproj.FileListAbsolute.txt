@@ -128,7 +128,9 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DiscountDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DocumentTenderDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ExpressItemDialogView.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\FreeItemReasonModalWindow.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\HoldRecallDialog.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\IssueVoucherModalWindow.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LockScreenView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LoyaltyCustomerDialogView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ManagerAuthDialog.baml
@@ -137,6 +139,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PriceDiscountDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PriceOverrideDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ProductSeekDialog.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\RedeemVoucherModalWindow.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ReturnInvoiceDialog.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ShiftMenuView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ShiftSummaryDialog.baml
@@ -164,7 +167,9 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DiscountDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\DocumentTenderDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ExpressItemDialogView.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\FreeItemReasonModalWindow.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\HoldRecallDialog.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\IssueVoucherModalWindow.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LockScreenView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\LoyaltyCustomerDialogView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ManagerAuthDialog.g.cs
@@ -173,6 +178,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dia
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PriceDiscountDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\PriceOverrideDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ProductSeekDialog.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\RedeemVoucherModalWindow.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ReturnInvoiceDialog.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ShiftMenuView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\obj\Debug\net8.0-windows\Dialogs\ShiftSummaryDialog.g.cs

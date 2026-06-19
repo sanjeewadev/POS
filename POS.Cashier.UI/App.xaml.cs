@@ -35,6 +35,8 @@ namespace POS.Cashier.UI
             services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));
 
+
+            services.AddSingleton<FreeItemClaimRepository>();
             // Core
             services.AddTransient<UserRepository>();
             services.AddTransient<ItemMasterRepository>();
@@ -48,6 +50,8 @@ namespace POS.Cashier.UI
             services.AddTransient<LoginViewModel>();
             services.AddTransient<SalesViewModel>();
             services.AddTransient<OpenCloseShiftViewModel>();
+
+
 
 
             // Tells the app: When a UI asks for ICashMovementService, give it the CashMovementService logic.

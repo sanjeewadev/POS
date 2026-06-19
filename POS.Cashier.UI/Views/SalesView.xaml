@@ -290,7 +290,7 @@
 
                     <Button Background="{StaticResource ActionBtnBrush}" Content="No Sale" FontSize="14"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="New Price" FontSize="14" Click="PriceOverrideBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Free" FontSize="14" Click="PriceOverrideBtn_Click"/>
+                    <Button Background="{StaticResource ActionBtnBrush}" Content="Free" FontSize="14" Click="FreeBtn_Click"/>
 
                     <Button Background="{StaticResource ExpressBtnBrush}" Foreground="White" Content="Express Items" FontSize="13" Click="ExpressItemsBtn_Click"/>
                 </UniformGrid>

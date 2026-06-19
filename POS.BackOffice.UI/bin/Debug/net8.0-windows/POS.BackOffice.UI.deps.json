@@ -13,6 +13,7 @@
           "Microsoft.EntityFrameworkCore.Design": "8.0.0",
           "Microsoft.EntityFrameworkCore.Sqlite": "8.0.28",
           "Microsoft.Extensions.DependencyInjection": "8.0.1",
+          "Microsoft.Xaml.Behaviors.Wpf": "1.1.142",
           "POS.Core": "1.0.0",
           "POS.Hardware": "1.0.0",
           "ZXing.Net.Bindings.Windows.Compatibility": "0.16.14"
@@ -486,6 +487,14 @@
             "assetType": "runtime",
             "assemblyVersion": "9.0.0.0",
             "fileVersion": "9.0.1025.47515"
+          }
+        }
+      },
+      "Microsoft.Xaml.Behaviors.Wpf/1.1.142": {
+        "runtime": {
+          "lib/net8.0-windows7.0/Microsoft.Xaml.Behaviors.dll": {
+            "assemblyVersion": "1.1.0.0",
+            "fileVersion": "1.1.142.60144"
           }
         }
       },
@@ -994,6 +1003,13 @@
       "sha512": "sha512-P1CEtsxar/RhfoH3r1vc9ra28LLVYphpcFBxyRIEMM/jP3qh4j9TU4sWH2RUhMZX+GbFxZ+zz1oSP2n9MwjshA==",
       "path": "microsoft.win32.systemevents/9.0.10",
       "hashPath": "microsoft.win32.systemevents.9.0.10.nupkg.sha512"
+    },
+    "Microsoft.Xaml.Behaviors.Wpf/1.1.142": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-c47wA/8GHiQ9w+O6+mdqrZhZrxHogx2/fSZyRKL9tz0k+ypoTiwOx6fID0X3jr5LnCazJbCk7KiAcL0zVnNgNA==",
+      "path": "microsoft.xaml.behaviors.wpf/1.1.142",
+      "hashPath": "microsoft.xaml.behaviors.wpf.1.1.142.nupkg.sha512"
     },
     "Mono.TextTemplating/2.2.1": {
       "type": "package",
