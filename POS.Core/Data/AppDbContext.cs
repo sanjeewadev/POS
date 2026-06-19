@@ -71,6 +71,11 @@ namespace POS.Core.Data
 
         public DbSet<SystemSetting> SystemSettings { get; set; }
 
+
+        public DbSet<GiftVoucher> GiftVouchers { get; set; }
+
+        public DbSet<FreeItemClaimLog> FreeItemClaims { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)

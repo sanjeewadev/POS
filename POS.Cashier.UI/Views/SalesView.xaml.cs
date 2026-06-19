@@ -1,12 +1,15 @@
-﻿using System;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using POS.Cashier.UI.ViewModels;
+using POS.Cashier.UI.ViewModels.Dialogs;
+using POS.Core.Enums;
+using System;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Microsoft.Extensions.DependencyInjection;
-using POS.Cashier.UI.ViewModels;
-using POS.Core.Enums;
 
 namespace POS.Cashier.UI.Views
 {
@@ -144,7 +147,6 @@ namespace POS.Cashier.UI.Views
 
             var itemRepo = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<POS.Core.Repositories.ItemMasterRepository>(App.Services!);
 
-            // Pass the Brain AND the Repo into the new Live-Add Dialog
             var seekDialog = new POS.Cashier.UI.Views.Dialogs.ProductSeekDialog(currentViewModel, itemRepo);
             seekDialog.ShowDialog();
         }
@@ -165,38 +167,24 @@ namespace POS.Cashier.UI.Views
             }
         }
 
-        // --- NEW DIALOG ROUTING METHODS ---
-
         private void CustomerBtn_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Turn on the hardware-accelerated dark overlay
             if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
-                // 2. Open the newly built B2B/Wholesale Directory
                 var b2bDialog = new POS.Cashier.UI.Views.Dialogs.B2BCustomerDialogView();
-
-                // Pause the main POS thread until the cashier makes a choice or closes the window
                 bool? result = b2bDialog.ShowDialog();
 
-                // 3. Check if the cashier successfully validated and clicked "ATTACH TO INVOICE"
                 if (result == true && b2bDialog.SelectedCustomer != null)
                 {
                     var customer = b2bDialog.SelectedCustomer;
-
-                    // TODO: Link the Wholesale customer to your active invoice!
-                    // Example:
-                    // CurrentInvoice.CustomerName = customer.CompanyName;
-                    // CurrentInvoice.IsCreditSaleAllowed = true;
-
                     MessageBox.Show($"B2B Account Attached:\n{customer.CompanyName}\nAvailable Credit: Rs. {customer.RemainingCredit:N2}",
                                     "Wholesale Link Active", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             finally
             {
-                // 4. Turn off the dark overlay
                 if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
             }
         }
@@ -210,11 +198,9 @@ namespace POS.Cashier.UI.Views
         private void SuspendRecallBtn_Click(object sender, RoutedEventArgs e)
             => new POS.Cashier.UI.Views.Dialogs.SuspendedCartsDialog().ShowDialog();
 
-        // Ensure you update your XAML to use Click="AddFloatBtn_Click" if you are not using standard Command bindings for it
         private void AddFloatBtn_Click(object sender, RoutedEventArgs e)
             => new POS.Cashier.UI.Views.Dialogs.AddFloatDialog().ShowDialog();
 
-        // Stubs for future windows
         private void StockInquiryBtn_Click(object sender, RoutedEventArgs e)
             => MessageBox.Show("Stock Inquiry Dialog coming soon.");
 
@@ -224,7 +210,6 @@ namespace POS.Cashier.UI.Views
         private void ReportsBtn_Click(object sender, RoutedEventArgs e)
             => MessageBox.Show("Reports Dialog coming soon.");
 
-        // --- PAYMENT TRAFFIC COP ---
         private void PayBtn_Click(object sender, RoutedEventArgs e)
         {
             if (this.DataContext is SalesViewModel viewModel)
@@ -234,7 +219,6 @@ namespace POS.Cashier.UI.Views
                 string buttonText = (sender as Button)?.Content?.ToString() ?? "";
                 Window dialog = null;
 
-                // Route to the correct micro-dialog based on the button clicked
                 switch (buttonText)
                 {
                     case "Cash":
@@ -246,9 +230,14 @@ namespace POS.Cashier.UI.Views
                         dialog = new POS.Cashier.UI.Views.Dialogs.CardAuthDialog();
                         break;
                     case "Cheque":
-                    case "Gift Voucher":
                     case "Credit Note":
                         dialog = new POS.Cashier.UI.Views.Dialogs.DocumentTenderDialog();
+                        break;
+                    case "Gift Voucher":
+                        // SPINS UP THE NEW DIALOG!
+                        var voucherVM = App.Services!.GetRequiredService<RedeemVoucherModalViewModel>();
+                        voucherVM.Initialize(viewModel.NetValue);
+                        dialog = new POS.Cashier.UI.Dialogs.RedeemVoucherModalWindow(voucherVM);
                         break;
                     case "Cust Credit":
                     case "LOYALTY":
@@ -263,12 +252,21 @@ namespace POS.Cashier.UI.Views
 
                 if (dialog != null)
                 {
-                    bool? result = dialog.ShowDialog();
+                    // Darken screen if the dialog isn't managing it natively yet
+                    if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
 
-                    if (result == true)
+                    try
                     {
-                        // Fire the finalize checkout logic in your ViewModel once the dialog succeeds
-                        _ = viewModel.FinalizeCheckoutAsync(buttonText, viewModel.NetValue);
+                        bool? result = dialog.ShowDialog();
+
+                        if (result == true)
+                        {
+                            _ = viewModel.FinalizeCheckoutAsync(buttonText, viewModel.NetValue);
+                        }
+                    }
+                    finally
+                    {
+                        if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
                     }
                 }
             }
@@ -288,7 +286,6 @@ namespace POS.Cashier.UI.Views
 
         private void CancelSaleBtn_Click(object sender, RoutedEventArgs e)
         {
-            // Update this to use a custom ConfirmDialog later
             MessageBoxResult result = MessageBox.Show(
                 "Are you sure you want to clear this entire sale? This cannot be undone.",
                 "CANCEL SALE",
@@ -306,22 +303,14 @@ namespace POS.Cashier.UI.Views
 
         private void PaidInBtn_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Turn on the dark overlay (Screen goes dark instantly)
             DimmingCurtain.Visibility = Visibility.Visible;
-
             try
             {
-                // 2. Open the Cash Movement Dialog (Set to Paid In mode)
                 var cashDialog = new POS.Cashier.UI.Dialogs.CashMovementDialogView(POS.Cashier.UI.Dialogs.MovementType.PaidIn);
-
-                // Use ShowDialog() so the code pauses here and waits for the cashier to finish
                 cashDialog.ShowDialog();
             }
             finally
             {
-                // 3. Turn off the dark overlay (Screen returns to normal)
-                // Putting this in a 'finally' block ensures the screen ALWAYS un-dims, 
-                // even if the dialog crashes or throws an error!
                 DimmingCurtain.Visibility = Visibility.Collapsed;
             }
         }
@@ -370,17 +359,14 @@ namespace POS.Cashier.UI.Views
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-
         }
 
         private void ShiftMenuBtn_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Grab the "Brain" (ViewModel) that is currently running this Sales Window
             var currentViewModel = this.DataContext as POS.Cashier.UI.ViewModels.SalesViewModel;
 
             if (currentViewModel != null)
             {
-                // 2. Open the Shift Menu Hub, handing it the Brain so it can read the terminal status
                 var shiftMenu = new POS.Cashier.UI.Views.Dialogs.ShiftMenuView(currentViewModel);
                 shiftMenu.ShowDialog();
             }
@@ -392,53 +378,37 @@ namespace POS.Cashier.UI.Views
 
         private void LoyaltyBtn_Click(object sender, RoutedEventArgs e)
         {
-            // 1. Turn on the dark overlay (Screen goes dark instantly)
             if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
-                // 2. Open the new Loyalty Dashboard
                 var loyaltyDialog = new POS.Cashier.UI.Views.Dialogs.LoyaltyCustomerDialogView();
-
-                // ShowDialog pauses the code here until the cashier closes the window
                 bool? result = loyaltyDialog.ShowDialog();
 
-                // 3. Check if the cashier clicked "APPLY SELECTED TO SALE"
                 if (result == true && loyaltyDialog.SelectedCustomer != null)
                 {
                     var customer = loyaltyDialog.SelectedCustomer;
-
-                    // TODO: Here is where you link the customer to the active invoice!
-                    // Example:
-                    // CurrentInvoice.CustomerName = customer.FullName;
-                    // CurrentInvoice.ApplyDiscount(customer.ActiveDiscountName);
-
                     MessageBox.Show($"Loyalty Customer Applied:\n{customer.FullName}\nDiscount: {customer.ActiveDiscountName}",
                                     "Customer Linked", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             finally
             {
-                // 4. Turn off the dark overlay (Screen returns to normal)
                 if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
             }
         }
 
         private void ExpressItemsBtn_Click(object sender, RoutedEventArgs e)
         {
-            // Darken the background
             if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
                 var expressDialog = new POS.Cashier.UI.Views.Dialogs.ExpressItemDialogView();
-
                 bool? result = expressDialog.ShowDialog();
 
-                // If the cashier clicked an item, the result will be true
                 if (result == true && !string.IsNullOrWhiteSpace(expressDialog.SelectedSkuCode))
                 {
-                    // Audio feedback
                     System.Media.SystemSounds.Beep.Play();
                     if (this.DataContext is SalesViewModel viewModel)
                     {
@@ -452,5 +422,48 @@ namespace POS.Cashier.UI.Views
             }
         }
 
+        private void FreeBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is SalesViewModel viewModel)
+            {
+                // 1. Check if they actually selected an item in the grid!
+                if (CartDataGrid.SelectedItem == null)
+                {
+                    MessageBox.Show("Please select an item from the cart to make it free.", "Select Item", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // We use 'dynamic' here temporarily, but you should cast this to your actual CartItemDto class (e.g., as CartItemDto)
+                dynamic selectedItem = CartDataGrid.SelectedItem;
+
+                // 2. Darken Screen
+                if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
+
+                try
+                {
+                    // 3. Spin up the ViewModel and hand it the item details
+                    var reasonVM = App.Services!.GetRequiredService<FreeItemReasonModalViewModel>();
+
+                    // Pass the description and price to the popup
+                    reasonVM.Initialize(selectedItem.Description, selectedItem.UnitPrice);
+
+                    // 4. Show Window
+                    var dialog = new POS.Cashier.UI.Dialogs.FreeItemReasonModalWindow(reasonVM);
+                    dialog.Owner = this;
+                    bool? result = dialog.ShowDialog();
+
+                    // 5. If they tapped a reason, apply the math!
+                    if (result == true)
+                    {
+                        // Trigger the logic in your SalesViewModel to zero out the price
+                        viewModel.ApplyFreeItemLogic(selectedItem, reasonVM.SelectedReason);
+                    }
+                }
+                finally
+                {
+                    if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
     }
 }

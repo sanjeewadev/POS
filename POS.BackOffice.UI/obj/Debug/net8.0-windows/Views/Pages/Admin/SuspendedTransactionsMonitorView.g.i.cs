@@ -52,8 +52,8 @@ namespace POS.BackOffice.UI.Views.Pages.Admin {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/admin/suspendedtransactionsmoni" +
-                    "torview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/admin/suspendedtransactionsmonitorview.x" +
+                    "aml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\Admin\SuspendedTransactionsMonitorView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

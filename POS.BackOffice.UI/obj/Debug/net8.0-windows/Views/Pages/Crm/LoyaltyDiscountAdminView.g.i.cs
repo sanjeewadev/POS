@@ -68,8 +68,7 @@ namespace POS.BackOffice.UI.Views.Pages.Crm {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/crm/loyaltydiscountadminview.xa" +
-                    "ml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/crm/loyaltydiscountadminview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\Crm\LoyaltyDiscountAdminView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

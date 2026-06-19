@@ -38,7 +38,13 @@
     <Compile Update="Dialogs\ExpressItemDialogView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Dialogs\FreeItemReasonModalWindow.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Dialogs\HoldRecallDialog.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Dialogs\IssueVoucherModalWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Dialogs\LockScreenView.xaml.cs">
@@ -60,6 +66,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Dialogs\ProductSeekDialog.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Dialogs\RedeemVoucherModalWindow.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Update="Dialogs\ReturnInvoiceDialog.xaml.cs">

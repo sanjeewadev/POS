@@ -52,8 +52,8 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryOperations {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/inventoryoperations/barcodemana" +
-                    "gementview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/inventoryoperations/barcodemanagementvie" +
+                    "w.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\InventoryOperations\BarcodeManagementView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

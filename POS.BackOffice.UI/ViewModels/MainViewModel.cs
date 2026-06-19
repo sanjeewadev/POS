@@ -158,6 +158,13 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void NavigateToPaymentVoucher() => ShowComingSoon("Supplier Payment Vouchers");
 
+        [RelayCommand]
+        private void NavigateToSupplierClaims()
+        {
+            // Pull a fresh instance of the dashboard (and its data) from the DI container
+            CurrentPage = App.Services!.GetRequiredService<SupplierClaimsViewModel>();
+        }
+
         // ==========================================
         // 8. REPORTS & ANALYTICS COMMANDS (Active)
         // ==========================================

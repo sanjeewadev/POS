@@ -52,7 +52,7 @@ namespace POS.BackOffice.UI.Views.Pages.Sales {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/sales/salesexplorerview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/sales/salesexplorerview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\Sales\SalesExplorerView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

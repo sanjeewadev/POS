@@ -1,0 +1,93 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Finance.SupplierClaimsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             Background="#F5F6FA" FontFamily="Segoe UI">
+
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding LoadClaimsCommand}"/>
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="📊 Supplier Claims &amp; Recoverable Comps" FontSize="26" FontWeight="Bold" Foreground="#2D3436" Margin="0,0,0,5"/>
+        <TextBlock Grid.Row="0" Text="Track free items and generate billing reports for suppliers." FontSize="14" Foreground="#636E72" Margin="0,32,0,15"/>
+
+        <Border Grid.Row="1" Background="White" CornerRadius="6" Padding="15" Margin="0,0,0,15">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.05"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="From Date:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                <DatePicker Grid.Column="1" SelectedDate="{Binding StartDate}" Width="120" Margin="0,0,20,0"/>
+
+                <TextBlock Grid.Column="2" Text="To Date:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                <DatePicker Grid.Column="3" SelectedDate="{Binding EndDate}" Width="120" Margin="0,0,20,0"/>
+
+                <Button Grid.Column="4" Content="↻ Filter" Command="{Binding LoadClaimsCommand}" HorizontalAlignment="Left" 
+                        Background="#0984E3" Foreground="White" FontWeight="Bold" Padding="15,5" BorderThickness="0" Cursor="Hand"/>
+
+                <Button Grid.Column="5" Content="📥 Export Billing Report" Command="{Binding ExportToExcelCommand}" 
+                        Background="#00B894" Foreground="White" FontWeight="Bold" Padding="15,5" BorderThickness="0" Cursor="Hand"/>
+            </Grid>
+        </Border>
+
+        <DataGrid Grid.Row="2" ItemsSource="{Binding ClaimedItems}" AutoGenerateColumns="False" IsReadOnly="True" 
+                  Background="White" RowHeight="40" AlternatingRowBackground="#FDFDFD" HeadersVisibility="Column" 
+                  BorderBrush="#DFE6E9" BorderThickness="1" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F2F6">
+            <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#2D3436"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Padding" Value="10"/>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Date" Binding="{Binding Timestamp, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
+                <DataGridTextColumn Header="Item Code" Binding="{Binding Barcode}" Width="120"/>
+                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+                <DataGridTextColumn Header="Reason Code" Binding="{Binding ReasonCode}" Width="150"/>
+                <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="80"/>
+                <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCostAtTime, StringFormat=Rs. \{0:N2\}}" Width="120"/>
+                <DataGridTextColumn Header="Cashier ID" Binding="{Binding CashierId}" Width="100"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Border Grid.Row="3" Background="#2D3436" CornerRadius="6" Padding="20" Margin="0,15,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Total Items Comped:" Foreground="#B2BEC3" FontSize="16" Margin="0,0,10,0"/>
+                    <TextBlock Text="{Binding TotalItemsComped}" Foreground="White" FontSize="18" FontWeight="Bold"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="TOTAL OWED BY SUPPLIERS:" Foreground="#00B894" FontSize="18" FontWeight="Heavy" Margin="0,0,15,0"/>
+                    <TextBlock Text="{Binding TotalRecoverableAmount, StringFormat=Rs. \{0:N2\}}" Foreground="White" FontSize="28" FontWeight="Heavy"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
