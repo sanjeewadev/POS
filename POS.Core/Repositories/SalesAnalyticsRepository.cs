@@ -42,16 +42,17 @@ namespace POS.Core.Repositories
 
             // 2. Fetch Variant Master dictionary, combining Parent Name and Variant Description
             var itemDict = await context.ItemVariants
-                .AsNoTracking()
-                .Select(v => new
-                {
-                    v.Id,
-                    ItemCode = v.SkuCode,
-                    ItemName = v.ItemParent.ItemName + " " + v.VariantDescription,
-                    CategoryName = "General", // Bypassing deep category links to guarantee no CS1061 errors
-                    CurrentSOH = v.ItemBatches.Sum(b => b.CurrentStock) // Aggregating actual physical batches
-                })
-                .ToDictionaryAsync(v => v.Id);
+                            .AsNoTracking()
+                            .Select(v => new
+                            {
+                                v.Id,
+                                ItemCode = v.SkuCode,
+                                ItemName = v.ItemParent.ItemName + " " + v.VariantDescription,
+                                CategoryName = "General",
+                                // ✅ FIXED: Double-cast applied here
+                                CurrentSOH = (decimal)v.ItemBatches.Sum(b => (double)b.CurrentStock)
+                            })
+                            .ToDictionaryAsync(v => v.Id);
 
             var daysInPeriod = (endDate - startDate).Days;
             if (daysInPeriod <= 0) daysInPeriod = 1;
@@ -119,17 +120,19 @@ namespace POS.Core.Repositories
             var itemLastSoldDict = latestSales.ToDictionary(s => s.ItemVariantId, s => s.LastSoldDate);
 
             var allStockedItems = await context.ItemVariants
-                .AsNoTracking()
-                .Select(v => new
-                {
-                    v.Id,
-                    ItemCode = v.SkuCode,
-                    ItemName = v.ItemParent.ItemName + " " + v.VariantDescription,
-                    CurrentSOH = v.ItemBatches.Sum(b => b.CurrentStock),
-                    v.IsDeactivated
-                })
-                .Where(v => v.CurrentSOH > 0 && !v.IsDeactivated)
-                .ToListAsync();
+                            .AsNoTracking()
+                            .Select(v => new
+                            {
+                                v.Id,
+                                ItemCode = v.SkuCode,
+                                ItemName = v.ItemParent.ItemName + " " + v.VariantDescription,
+                                // ✅ FIXED: Double-cast applied here
+                                CurrentSOH = (decimal)v.ItemBatches.Sum(b => (double)b.CurrentStock),
+                                v.IsDeactivated
+                            })
+                            // Note: If CurrentSOH is cast to decimal above, this Where clause still works perfectly
+                            .Where(v => v.CurrentSOH > 0 && !v.IsDeactivated)
+                            .ToListAsync();
 
             var deadStockList = new List<ItemPerformanceDto>();
 
