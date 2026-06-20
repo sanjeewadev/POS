@@ -16,5 +16,5 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.Cashier.UI\App.xaml
 220-1154373925
 Dialogs\AddFloatDialog.xaml;Dialogs\B2BCustomerDialogView.xaml;Dialogs\BatchSelectionDialog.xaml;Dialogs\CardAuthDialog.xaml;Dialogs\CashDenominationDialog.xaml;Dialogs\CashMovementDialogView.xaml;Dialogs\CashTenderDialog.xaml;Dialogs\ConfirmDialogView.xaml;Dialogs\CustomerAccountDialog.xaml;Dialogs\CustomerManagementDialog.xaml;Dialogs\CustomerSelectionDialog.xaml;Dialogs\DiscountDialog.xaml;Dialogs\DocumentTenderDialog.xaml;Dialogs\ExpressItemDialogView.xaml;Dialogs\FreeItemReasonModalWindow.xaml;Dialogs\HoldRecallDialog.xaml;Dialogs\IssueVoucherModalWindow.xaml;Dialogs\LockScreenView.xaml;Dialogs\LoyaltyCustomerDialogView.xaml;Dialogs\ManagerAuthDialog.xaml;Dialogs\PayDialogView.xaml;Dialogs\PluSearchDialog.xaml;Dialogs\PriceDiscountDialog.xaml;Dialogs\PriceOverrideDialog.xaml;Dialogs\ProductSeekDialog.xaml;Dialogs\RedeemVoucherModalWindow.xaml;Dialogs\ReturnInvoiceDialog.xaml;Dialogs\ShiftMenuView.xaml;Dialogs\ShiftSummaryDialog.xaml;Dialogs\StockInquiryDialog.xaml;Dialogs\SuspendedCartsDialog.xaml;Dialogs\UnifiedCheckoutView.xaml;Dialogs\ZReportSummaryDialog.xaml;MainWindow.xaml;Resources\Colors.xaml;Views\Components\ExpressItemGridControl.xaml;Views\LoginView.xaml;Views\OpenCloseShiftView.xaml;Views\SalesView.xaml;Views\TerminalLockedView.xaml;
 
-False
+True
 

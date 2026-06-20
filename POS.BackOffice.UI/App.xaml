@@ -19,6 +19,10 @@
 
     <Application.Resources>
 
+        <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
+            <pages:DashboardView />
+        </DataTemplate>
+
         <DataTemplate DataType="{x:Type viewmodels:CategoryViewModel}">
             <inventorypages:CategoryView />
         </DataTemplate>
@@ -53,15 +57,38 @@
         <DataTemplate DataType="{x:Type viewmodels:ExpressItemAdminViewModel}">
             <inventoryoperations:ExpressItemAdminView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:BarcodeManagementViewModel}">
+            <inventoryoperations:BarcodeManagementView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:BarcodePrinterViewModel}">
+            <inventoryoperations:BarcodePrinterView />
+        </DataTemplate>
 
         <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderViewModel}">
             <purchasing:PurchaseOrderView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderDashboardViewModel}">
+            <purchasing:PurchaseOrderDashboardView />
+        </DataTemplate>
+
         <DataTemplate DataType="{x:Type viewmodels:SupplierLedgerViewModel}">
             <finance:SupplierLedgerView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:SupplierClaimsViewModel}">
+            <finance:SupplierClaimsView />
+        </DataTemplate>
+
         <DataTemplate DataType="{x:Type viewmodels:SupplierReportViewModel}">
             <reports:SupplierReportView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:FloatCashLogViewModel}">
+            <reports:FloatCashLogView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:FinancialSummaryViewModel}">
+            <reports:FinancialSummaryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:CashMovementDashboardViewModel}">
+            <reports:CashMovementDashboardView />
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type viewmodels:SalesExplorerViewModel}">
@@ -73,17 +100,14 @@
         <DataTemplate DataType="{x:Type viewmodels:QuotationManagerViewModel}">
             <sales:QuotationManagerView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:FloatCashLogViewModel}">
-            <sales:FloatCashLogView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:FinancialSummaryViewModel}">
-            <sales:FinancialSummaryView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:CashMovementDashboardViewModel}">
-            <reports:CashMovementDashboardView />
-        </DataTemplate>
         <DataTemplate DataType="{x:Type viewmodels:ItemSalesAnalyticsViewModel}">
             <sales:ItemSalesAnalyticsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:CustomerReturnsAuditViewModel}">
+            <sales:CustomerReturnsAuditView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:ReceiptLedgerViewModel}">
+            <sales:ReceiptLedgerView />
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type viewmodels:LoyaltyDiscountAdminViewModel}">
@@ -95,11 +119,16 @@
         <DataTemplate DataType="{x:Type viewmodels:CustomerLedgerViewModel}">
             <crm:CustomerLedgerView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:GiftVoucherAdminViewModel}">
+            <crm:GiftVoucherAdminView />
+        </DataTemplate>
 
         <DataTemplate DataType="{x:Type viewmodels:UserManagementViewModel}">
             <admin:UserManagementView />
         </DataTemplate>
-
+        <DataTemplate DataType="{x:Type viewmodels:SuspendedTransactionsMonitorViewModel}">
+            <admin:SuspendedTransactionsMonitorView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type viewmodels:StoreConfigurationViewModel}">
             <filepages:StoreConfigurationView />
         </DataTemplate>

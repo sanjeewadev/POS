@@ -47,6 +47,13 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         // ==========================================
+        // 0. FILE (Active)
+        // ==========================================
+
+        [RelayCommand]
+        private void NavigateToStoreConfiguration() => CurrentPage = _serviceProvider.GetRequiredService<StoreConfigurationViewModel>();
+
+        // ==========================================
         // 1. INVENTORY SETUP COMMANDS (Active)
         // ==========================================
         [RelayCommand]
@@ -79,6 +86,18 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void NavigateToGoodsReceivedNote() => CurrentPage = _serviceProvider.GetRequiredService<GrnViewModel>();
 
+        [RelayCommand]
+        private void NavigateToBarcodeManagement() => CurrentPage = _serviceProvider.GetRequiredService<BarcodeManagementViewModel>();
+
+        [RelayCommand]
+        private void NavigateToBarcodePrinter() => CurrentPage = _serviceProvider.GetRequiredService<BarcodePrinterViewModel>();
+
+        [RelayCommand]
+        private void NavigateToExpressItemAdmin() => CurrentPage = _serviceProvider.GetRequiredService<ExpressItemAdminViewModel>();
+
+        [RelayCommand]
+        private void NavigateToSupplierReturn() => CurrentPage = _serviceProvider.GetRequiredService<SupplierReturnViewModel>();
+
         // ==========================================
         // 3. PURCHASING COMMANDS (Active)
         // ==========================================
@@ -86,7 +105,7 @@ namespace POS.BackOffice.UI.ViewModels
         private void NavigateToPurchaseOrder() => CurrentPage = _serviceProvider.GetRequiredService<PurchaseOrderViewModel>();
 
         [RelayCommand]
-        private void NavigateToSupplierReturn() => CurrentPage = _serviceProvider.GetRequiredService<SupplierReturnViewModel>();
+        private void NavigateToPurchaseOrderDashboard() => CurrentPage = _serviceProvider.GetRequiredService<PurchaseOrderDashboardViewModel>();
 
         // ==========================================
         // 4. CRM & WHOLESALE COMMANDS (Active)
@@ -101,10 +120,8 @@ namespace POS.BackOffice.UI.ViewModels
         private void NavigateToLoyaltyRewards() => CurrentPage = _serviceProvider.GetRequiredService<LoyaltyDiscountAdminViewModel>();
 
         [RelayCommand]
-        private void NavigateToGiftVoucher() => ShowComingSoon("Gift Voucher Setup");
+        private void NavigateToGiftVoucher() => CurrentPage = _serviceProvider.GetRequiredService<GiftVoucherAdminViewModel>();
 
-        [RelayCommand]
-        private void NavigateToFloatCash() => CurrentPage = _serviceProvider.GetRequiredService<FloatCashLogViewModel>();
 
         // ==========================================
         // 5. ADMIN & POS CONFIGURATION (Active)
@@ -113,13 +130,7 @@ namespace POS.BackOffice.UI.ViewModels
         private void NavigateToUserManagement() => CurrentPage = _serviceProvider.GetRequiredService<UserManagementViewModel>();
 
         [RelayCommand]
-        private void NavigateToExpressItemAdmin() => CurrentPage = _serviceProvider.GetRequiredService<ExpressItemAdminViewModel>();
-
-        [RelayCommand]
-        private void NavigateToPosHardwareSettings() => ShowComingSoon("POS Hardware & Peripherals Configuration");
-
-        [RelayCommand]
-        private void NavigateToAccessControl() => ShowComingSoon("Security & Access Control Settings");
+        private void NavigateToSuspendedTransactionsMonitor() => CurrentPage = _serviceProvider.GetRequiredService<SuspendedTransactionsMonitorViewModel>();
 
 
         // ==========================================
@@ -135,28 +146,21 @@ namespace POS.BackOffice.UI.ViewModels
         private void NavigateToSecurityAudit() => CurrentPage = _serviceProvider.GetRequiredService<SecurityAuditViewModel>();
 
         [RelayCommand]
-        private void NavigateToCustomerReturn() => ShowComingSoon("Customer Returns & Credit Notes");
+        private void NavigateToCustomerReturnsAudit() => CurrentPage = _serviceProvider.GetRequiredService<CustomerReturnsAuditViewModel>();
 
         [RelayCommand]
-        private void NavigateToWholesaleInvoice() => ShowComingSoon("Direct Back-Office Wholesale Invoicing");
+        private void NavigateToItemSalesAnalytics() => CurrentPage = _serviceProvider.GetRequiredService<ItemSalesAnalyticsViewModel>();
+
+        [RelayCommand]
+        private void NavigateToReceiptLedger() => CurrentPage = _serviceProvider.GetRequiredService<ReceiptLedgerViewModel>();
 
         // ==========================================
         // 7. FINANCE COMMANDS (Active)
         // ==========================================
-        [RelayCommand]
-        private void NavigateToCashMovementDashboard() => CurrentPage = _serviceProvider.GetRequiredService<CashMovementDashboardViewModel>();
 
         [RelayCommand]
         private void NavigateToSupplierLedger() => CurrentPage = _serviceProvider.GetRequiredService<SupplierLedgerViewModel>();
 
-        [RelayCommand]
-        private void NavigateToBankDeposit() => ShowComingSoon("Bank Deposit Processing");
-
-        [RelayCommand]
-        private void NavigateToCashBook() => ShowComingSoon("Cash Book (View Paid In / Paid Out records here)");
-
-        [RelayCommand]
-        private void NavigateToPaymentVoucher() => ShowComingSoon("Supplier Payment Vouchers");
 
         [RelayCommand]
         private void NavigateToSupplierClaims()
@@ -171,21 +175,17 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void NavigateToFinancialSummary() => CurrentPage = _serviceProvider.GetRequiredService<FinancialSummaryViewModel>();
 
-        [RelayCommand]
-        private void NavigateToItemSalesAnalytics() => CurrentPage = _serviceProvider.GetRequiredService<ItemSalesAnalyticsViewModel>();
 
         [RelayCommand]
         private void NavigateToSupplierReport() => CurrentPage = _serviceProvider.GetRequiredService<SupplierReportViewModel>();
 
         [RelayCommand]
-        private void NavigateToInventoryReport() => ShowComingSoon("Advanced Inventory Analytics");
+        private void NavigateToFloatCashLog() => CurrentPage = _serviceProvider.GetRequiredService<FloatCashLogViewModel>();
 
-
-        // ==========================================
-        // 5. ADMIN & POS CONFIGURATION (Active)
-        // ==========================================
         [RelayCommand]
-        private void NavigateToStoreConfiguration() => CurrentPage = _serviceProvider.GetRequiredService<StoreConfigurationViewModel>();
+        private void NavigateToCashMovementDashboard() => CurrentPage = _serviceProvider.GetRequiredService<CashMovementDashboardViewModel>();
+
+
 
         // ==========================================
         // HELPER METHOD

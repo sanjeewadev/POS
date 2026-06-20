@@ -19,8 +19,8 @@
         <Menu Grid.Row="0" Background="#F0F0F0" BorderBrush="DarkGray" BorderThickness="0,0,0,1" Padding="2,2" VerticalAlignment="Center">
 
             <MenuItem Header="_File">
-                <Button Content="⚙️ Store Settings" 
-        Command="{Binding NavigateToStoreConfigurationCommand}" />
+                <Button Content="⚙️ Store Settings" Command="{Binding NavigateToStoreConfigurationCommand}" />
+
                 <Separator />
                 <MenuItem Header="Backup" />
                 <MenuItem Header="Exit" />
@@ -38,24 +38,28 @@
             </MenuItem>
 
             <MenuItem Header="Inventory _Operation">
+                <MenuItem Header="Goods Received Note (GRN)" Command="{Binding NavigateToGoodsReceivedNoteCommand}" />
                 <MenuItem Header="Stock Adjustment" Command="{Binding NavigateToStockAdjustmentCommand}" />
                 <MenuItem Header="Stock Balance" Command="{Binding NavigateToStockBalanceCommand}" />
-                <MenuItem Header="Goods Received Note (GRN)" Command="{Binding NavigateToGoodsReceivedNoteCommand}" />
                 <MenuItem Header="Express Items Designer" Command="{Binding NavigateToExpressItemAdminCommand}" />
+                <MenuItem Header="Supplier Return" Command="{Binding NavigateToSupplierReturnCommand}" />
+                <MenuItem Header="Barcode Management" Command="{Binding NavigateToBarcodeManagementCommand}" />
+                <MenuItem Header="Barcode Printer" Command="{Binding NavigateToBarcodePrinterCommand}" />
             </MenuItem>
 
             <MenuItem Header="_Purchasing">
+                <MenuItem Header="Purchase Order DB" Command="{Binding NavigateToPurchaseOrderDashboardCommand}" />
                 <MenuItem Header="Purchase Order" Command="{Binding NavigateToPurchaseOrderCommand}" />
-                <MenuItem Header="Supplier Return" Command="{Binding NavigateToSupplierReturnCommand}" />
             </MenuItem>
 
             <MenuItem Header="_Sales">
-                <MenuItem Header="Customer Return" Command="{Binding NavigateToCustomerReturnCommand}" />
-                <MenuItem Header="Daily Sales Audit" Command="{Binding NavigateToDailySalesAuditCommand}" />
+                <MenuItem Header="Customer Return" Command="{Binding NavigateToCustomerReturnsAuditCommand}" />
+                <MenuItem Header="Item Sales Analytics" Command="{Binding NavigateToItemSalesAnalyticsCommand}" />
                 <MenuItem Header="Quotation" Command="{Binding NavigateToQuotationCommand}" />
-                <MenuItem Header="Receipt" Command="{Binding NavigateToReceiptCommand}" />
-                <MenuItem Header="Wholesale Invoice" Command="{Binding NavigateToWholesaleInvoiceCommand}" />
-                
+                <MenuItem Header="Receipt Ledger" Command="{Binding NavigateToReceiptLedgerCommand}" />
+                <MenuItem Header="Sales Explorer" Command="{Binding NavigateToSalesExplorerCommand}" />
+                <MenuItem Header="Security Audit" Command="{Binding NavigateToSecurityAuditCommand}" />
+
             </MenuItem>
 
             <MenuItem Header="_CRM">
@@ -66,25 +70,20 @@
             </MenuItem>
 
             <MenuItem Header="_Finance">
-                <MenuItem Header="Bank Deposit" Command="{Binding NavigateToBankDepositCommand}" />
-                <MenuItem Header="Cash Book" Command="{Binding NavigateToCashBookCommand}" />
-                <MenuItem Header="Payment Voucher" Command="{Binding NavigateToPaymentVoucherCommand}" />
+                <MenuItem Header="Supplier Claims" Command="{Binding NavigateToSupplierClaimsCommand}" />
                 <MenuItem Header="Supplier Ledger (A/P)" Command="{Binding NavigateToSupplierLedgerCommand}"/>
+                
             </MenuItem>
 
             <MenuItem Header="_Reports">
                 <MenuItem Header="Cash Movement (In / Out)" Command="{Binding NavigateToCashMovementDashboardCommand}"/>
-                <MenuItem Header="Audit Log" Command="{Binding NavigateToAuditLogCommand}" />
-                <MenuItem Header="Inventory Report" Command="{Binding NavigateToInventoryReportCommand}" />
-                <MenuItem Header="Sales Report" Command="{Binding NavigateToSalesReportCommand}" />
+                <MenuItem Header="Financial Summary" Command="{Binding NavigateToFinancialSummaryCommand}" />
+                <MenuItem Header="Float Cash Log" Command="{Binding NavigateToFloatCashLogCommand}" />
                 <MenuItem Header="Supplier Report" Command="{Binding NavigateToSupplierReportCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Admin">
-                <MenuItem Header="Access Control" Command="{Binding NavigateToAccessControlCommand}" />
-                
-                <MenuItem Header="POS Hardware Settings" Command="{Binding NavigateToPosHardwareSettingsCommand}" />
-                <MenuItem Header="Store Configuration" Command="{Binding NavigateToStoreConfigurationCommand}" />
+                <MenuItem Header="Suspended Transactions" Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}" />
                 <MenuItem Header="User Management" Command="{Binding NavigateToUserManagementCommand}" />
             </MenuItem>
 
