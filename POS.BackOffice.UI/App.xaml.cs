@@ -26,7 +26,7 @@ namespace POS.BackOffice.UI
             var services = new ServiceCollection();
 
             // ==========================================
-            // ENTERPRISE FIX: SHARED DATABASE PATH
+            // DATABASE CONFIGURATION
             // ==========================================
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string dbFolder = System.IO.Path.Combine(appData, "POS");
@@ -53,31 +53,27 @@ namespace POS.BackOffice.UI
             services.AddTransient<StockBalanceRepository>();
             services.AddTransient<ReturnRepository>();
             services.AddTransient<ExpressItemRepository>();
-
-            // CRM & Loyalty Repositories
             services.AddTransient<LoyaltyDiscountRepository>();
             services.AddTransient<CustomerAdminRepository>();
-
-            // Financial & Supplier Repositories
             services.AddTransient<SupplierLedgerRepository>();
             services.AddTransient<SupplierReportRepository>();
-
-            // Sales & Analytics Repositories
+            services.AddTransient<FreeItemClaimRepository>();
             services.AddTransient<FloatCashRepository>();
             services.AddTransient<FinancialAnalyticsRepository>();
             services.AddTransient<SecurityAuditRepository>();
             services.AddTransient<QuotationRepository>();
             services.AddTransient<MasterSalesAnalyticsRepository>();
             services.AddTransient<SalesAnalyticsRepository>();
-
-            // Register the Master Settings Repository
-            services.AddTransient<POS.Core.Repositories.SystemSettingsRepository>();
-
-
+            services.AddTransient<SystemSettingsRepository>();
+            // Add this right below your other CRM repositories!
+            services.AddTransient<POS.Core.Repositories.GiftVoucherRepository>();
 
             // 4. Register ALL ViewModels
             services.AddSingleton<MainViewModel>();
             services.AddTransient<LoginViewModel>();
+
+            // Dashboard
+            services.AddTransient<DashboardViewModel>();
 
             // Inventory ViewModels
             services.AddTransient<CategoryViewModel>();
@@ -87,15 +83,22 @@ namespace POS.BackOffice.UI
             services.AddTransient<ItemMasterViewModel>();
             services.AddTransient<UnitOfMeasureViewModel>();
             services.AddTransient<GrnViewModel>();
-            services.AddTransient<PurchaseOrderViewModel>();
             services.AddTransient<StockAdjustmentViewModel>();
             services.AddTransient<StockBalanceViewModel>();
             services.AddTransient<SupplierReturnViewModel>();
             services.AddTransient<ExpressItemAdminViewModel>();
+            services.AddTransient<BarcodeManagementViewModel>();
+            services.AddTransient<BarcodePrinterViewModel>();
+            services.AddTransient<POS.Core.Services.IBarcodePrintService, POS.BackOffice.UI.Services.WpfBarcodePrintService>();
 
-            // Inside your ConfigureServices method:
+            // Purchasing
+            services.AddTransient<PurchaseOrderViewModel>();
+            services.AddTransient<PurchaseOrderDashboardViewModel>();
+
+            // Finance ViewModels
+            services.AddTransient<SupplierLedgerViewModel>();
+            services.AddTransient<SupplierReportViewModel>();
             services.AddTransient<SupplierClaimsViewModel>();
-            services.AddTransient<SupplierClaimsView>(); // Optional, depends on how strict your DI is
 
             // Sales & Analytics ViewModels
             services.AddTransient<SalesExplorerViewModel>();
@@ -105,21 +108,20 @@ namespace POS.BackOffice.UI
             services.AddTransient<QuotationManagerViewModel>();
             services.AddTransient<ItemSalesAnalyticsViewModel>();
             services.AddTransient<CashMovementDashboardViewModel>();
+            services.AddTransient<CustomerReturnsAuditViewModel>();
 
             // CRM ViewModels
             services.AddTransient<CustomerMasterViewModel>();
             services.AddTransient<CustomerLedgerViewModel>();
             services.AddTransient<LoyaltyDiscountAdminViewModel>();
-
-            // Finance ViewModels
-            services.AddTransient<SupplierLedgerViewModel>();
-            services.AddTransient<SupplierReportViewModel>();
+            services.AddTransient<GiftVoucherAdminViewModel>();
 
             // Admin ViewModels
             services.AddTransient<UserManagementViewModel>();
+            services.AddTransient<SuspendedTransactionsMonitorViewModel>();
+            services.AddTransient<StoreConfigurationViewModel>();
 
-            // Register the Store Configuration ViewModel
-            services.AddTransient<POS.BackOffice.UI.ViewModels.StoreConfigurationViewModel>();
+            services.AddTransient<ReceiptLedgerViewModel>();
 
             return services.BuildServiceProvider();
         }
@@ -128,25 +130,19 @@ namespace POS.BackOffice.UI
         {
             if (Services == null) return;
 
-            // 1. AUTO-BUILD THE DATABASE
             var dbFactory = Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
             using (var context = dbFactory.CreateDbContext())
             {
                 context.Database.EnsureCreated();
             }
 
-            // ==========================================
-            // CRITICAL FIX: PREVENT PREMATURE SHUTDOWN
-            // ==========================================
             Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            // 2. THE SECURITY GATEWAY
             var loginViewModel = Services.GetRequiredService<LoginViewModel>();
             var loginWindow = new LoginWindow(loginViewModel);
 
             if (loginWindow.ShowDialog() == true)
             {
-                // 3. SECURE LAUNCH
                 var mainWindow = new ManagementShellView();
                 var mainViewModel = Services.GetRequiredService<MainViewModel>();
 
