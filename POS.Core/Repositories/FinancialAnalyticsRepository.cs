@@ -39,23 +39,26 @@ namespace POS.Core.Repositories
             var completedSaleIds = salesBase.Select(s => s.Id).ToList();
 
             // 2. Fetch Cost of Goods Sold (COGS) strictly for completed sales
-            var totalCogs = await context.SalesLines
+            // 2. Fetch Cost of Goods Sold (COGS) strictly for completed sales
+            // ✅ FIX: Double-cast the COGS
+            var totalCogs = (decimal)await context.SalesLines
                 .AsNoTracking()
                 .Where(l => completedSaleIds.Contains(l.SalesHeaderId))
-                .SumAsync(l => l.CostPrice * l.Quantity);
+                .SumAsync(l => (double)(l.CostPrice * l.Quantity));
 
             // 3. Fetch Total Returns (Refunds given back to customers)
-            var totalReturns = await context.CustomerReturnHeaders
+            // ✅ FIX: Double-cast the Returns
+            var totalReturns = (decimal)await context.CustomerReturnHeaders
                 .AsNoTracking()
                 .Where(r => r.ReturnDate.Date >= startDate.Date && r.ReturnDate.Date <= endDate.Date)
-                .SumAsync(r => r.TotalRefundAmount);
+                .SumAsync(r => (double)r.TotalRefundAmount);
 
             // 4. Fetch Operating Expenses (Petty cash, payouts, store expenses)
-            // Note: We use Math.Abs to convert negative cash outflow into a positive expense figure
-            var operatingExpenses = await context.CashMovements
+            // ✅ FIX: Double-cast the Expenses and the Math.Abs
+            var operatingExpenses = (decimal)await context.CashMovements
                 .AsNoTracking()
                 .Where(m => m.Timestamp.Date >= startDate.Date && m.Timestamp.Date <= endDate.Date && m.Amount < 0)
-                .SumAsync(m => Math.Abs(m.Amount));
+                .SumAsync(m => Math.Abs((double)m.Amount));
 
             return new FinancialSummaryDto
             {
@@ -78,16 +81,16 @@ namespace POS.Core.Repositories
             // We pull the raw flat data first. We do the grouping in memory because SQLite 
             // sometimes struggles to translate 'GroupBy(TransactionDate.Date)' into pure SQL.
             var rawSalesData = await context.SalesHeaders
-                .AsNoTracking()
-                .Where(h => h.TransactionDate.Date >= startDate.Date && h.TransactionDate.Date <= endDate.Date && h.Status == "Completed")
-                .Select(h => new
-                {
-                    SaleDate = h.TransactionDate.Date,
-                    Revenue = h.NetTotal,
-                    // Summing the cost of the lines attached to this specific header
-                    Cost = h.SalesLines.Sum(l => l.CostPrice * l.Quantity)
-                })
-                .ToListAsync();
+                            .AsNoTracking()
+                            .Where(h => h.TransactionDate.Date >= startDate.Date && h.TransactionDate.Date <= endDate.Date && h.Status == "Completed")
+                            .Select(h => new
+                            {
+                                SaleDate = h.TransactionDate.Date,
+                                Revenue = h.NetTotal,
+                                // ✅ FIX: Double-cast the inline cost sum
+                                Cost = (decimal)h.SalesLines.Sum(l => (double)(l.CostPrice * l.Quantity))
+                            })
+                            .ToListAsync();
 
             var trendData = rawSalesData
                 .GroupBy(s => s.SaleDate)

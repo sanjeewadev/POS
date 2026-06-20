@@ -52,13 +52,17 @@ namespace POS.Core.Repositories
 
             // 2. Execute the Macro Math (Count & Grand Totals) DIRECTLY in SQL
             // This is lightning fast because it only returns 3 numbers, not 100,000 rows.
+            // 2. Execute the Macro Math (Count & Grand Totals) DIRECTLY in SQL
+            // This is lightning fast because it only returns 3 numbers, not 100,000 rows.
             var totalCount = await query.CountAsync();
-            var totalRevenue = await query.SumAsync(h => h.NetTotal);
 
-            // To get Total Cost, we ask SQL to sum the cost of the lines belonging to the filtered headers
-            var totalCost = await context.SalesLines
+            // ✅ FIX 1: Double-cast the revenue sum
+            var totalRevenue = (decimal)await query.SumAsync(h => (double)h.NetTotal);
+
+            // ✅ FIX 2: Double-cast the cost sum
+            var totalCost = (decimal)await context.SalesLines
                 .Where(l => query.Select(h => h.Id).Contains(l.SalesHeaderId))
-                .SumAsync(l => l.CostPrice * l.Quantity);
+                .SumAsync(l => (double)(l.CostPrice * l.Quantity));
 
             // 3. Fetch ONLY the specific Page of 50 Records
             var pagedHeaders = await query

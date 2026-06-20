@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("POS.Cashier.UI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+49c54d88be2a47deb1003f03c47151fc20f61782")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+55a63869812a6249368ebed5c2b8eec56fdec541")]
 [assembly: System.Reflection.AssemblyProductAttribute("POS.Cashier.UI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("POS.Cashier.UI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

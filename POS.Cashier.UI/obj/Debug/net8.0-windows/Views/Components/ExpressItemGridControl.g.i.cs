@@ -60,7 +60,7 @@ namespace POS.Cashier.UI.Views.Components {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;component/views/components/expressitemgridcontrol.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;V1.0.0.0;component/views/components/expressitemgridcontrol.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\Views\Components\ExpressItemGridControl.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
