@@ -26,8 +26,6 @@ namespace POS.Core.Models
         public int? SubCategoryId { get; set; }
         public SubCategory? SubCategory { get; set; }
 
-        // Storing as strings based on your ComboBox UI, 
-        // assuming standard ERP setup where UOM/Tax are simple lookup codes.
         [MaxLength(20)]
         public string BaseUom { get; set; } = string.Empty;
 
@@ -41,7 +39,11 @@ namespace POS.Core.Models
 
         // POS Matrix Restrictions
         public bool AllowCashierDiscount { get; set; }
+
+        // THE FIX: Put this back so the database doesn't crash. 
+        // It stays hidden from the UI.
         public bool IsPurchaseLocked { get; set; }
+
         public bool IsSaleLocked { get; set; }
         public bool IsDeactivated { get; set; }
 

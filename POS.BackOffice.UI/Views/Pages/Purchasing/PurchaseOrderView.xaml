@@ -3,10 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:POS.BackOffice.UI.Views.Pages.Purchasing"
              mc:Ignorable="d" 
              d:DesignHeight="850" d:DesignWidth="1400"
              Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
     <UserControl.Resources>
+
+        <!-- ✅ Register the new Color Converter -->
+        <local:MoqColorConverter x:Key="MoqColorConverter"/>
 
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="12"/>
@@ -230,12 +234,23 @@
                                     </Style>
                                 </DataGrid.Resources>
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="150" IsReadOnly="True" CellStyle="{StaticResource FrozenCell}"/>
+                                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="120" IsReadOnly="True" CellStyle="{StaticResource FrozenCell}"/>
 
-                                    <DataGridTemplateColumn Header="Order Qty" Width="75">
+                                    <!-- ✅ NEW: Vendor SKU Column -->
+                                    <DataGridTextColumn Header="Vendor SKU" Binding="{Binding SupplierItemCode}" Width="100" IsReadOnly="True" CellStyle="{StaticResource FrozenCell}" Foreground="#005555" FontWeight="SemiBold"/>
+
+                                    <DataGridTemplateColumn Header="Order Qty" Width="85">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <TextBox Text="{Binding OrderQty, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center" FontWeight="Bold" Background="#E0FFFF" BorderThickness="0"/>
+                                                <!-- ✅ NEW: Tooltip and Binding to MultiValueConverter for MOQ coloring -->
+                                                <TextBox Text="{Binding OrderQty, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center" FontWeight="Bold" BorderThickness="0" ToolTip="{Binding Moq, StringFormat='Minimum Required Order Qty: {0}'}">
+                                                    <TextBox.Background>
+                                                        <MultiBinding Converter="{StaticResource MoqColorConverter}">
+                                                            <Binding Path="OrderQty"/>
+                                                            <Binding Path="Moq"/>
+                                                        </MultiBinding>
+                                                    </TextBox.Background>
+                                                </TextBox>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
@@ -316,13 +331,25 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="85" IsReadOnly="True" Foreground="#666"/>
                     <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="110" IsReadOnly="True" Foreground="#444"/>
+
+                    <!-- ✅ NEW: Vendor SKU Column -->
+                    <DataGridTextColumn Header="Vendor SKU" Binding="{Binding SupplierItemCode}" Width="100" IsReadOnly="True" Foreground="#005555" FontWeight="SemiBold"/>
+
                     <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
                     <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="50" IsReadOnly="True"/>
 
-                    <DataGridTemplateColumn Header="Order Qty" Width="75">
+                    <DataGridTemplateColumn Header="Order Qty" Width="80">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding OrderQty, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center" FontWeight="Bold" Background="#E0FFFF" BorderThickness="0"/>
+                                <!-- ✅ NEW: Tooltip and Binding to MultiValueConverter for MOQ coloring -->
+                                <TextBox Text="{Binding OrderQty, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Center" FontWeight="Bold" BorderThickness="0" ToolTip="{Binding Moq, StringFormat='Minimum Required Order Qty: {0}'}">
+                                    <TextBox.Background>
+                                        <MultiBinding Converter="{StaticResource MoqColorConverter}">
+                                            <Binding Path="OrderQty"/>
+                                            <Binding Path="Moq"/>
+                                        </MultiBinding>
+                                    </TextBox.Background>
+                                </TextBox>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

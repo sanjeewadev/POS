@@ -434,7 +434,7 @@ namespace POS.Core.Migrations
                             NextSequenceNumber = 1,
                             PaddingLength = 5,
                             Prefix = "GRN-",
-                            UpdatedAt = new DateTime(2026, 6, 17, 14, 17, 3, 707, DateTimeKind.Local).AddTicks(5232)
+                            UpdatedAt = new DateTime(2026, 6, 21, 23, 12, 17, 445, DateTimeKind.Local).AddTicks(3830)
                         });
                 });
 
@@ -481,6 +481,96 @@ namespace POS.Core.Migrations
                     b.HasIndex("ItemVariantId");
 
                     b.ToTable("ExpressItemLayouts");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.FreeItemClaimLog", b =>
+                {
+                    b.Property<int>("ClaimId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Barcode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CashierId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsRecoverable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UnitCostAtTime")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ClaimId");
+
+                    b.ToTable("FreeItemClaimLogs");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.GiftVoucher", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ActivationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Barcode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CurrentBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("InitialAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SoldInInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GiftVouchers");
                 });
 
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
@@ -811,6 +901,43 @@ namespace POS.Core.Migrations
                     b.ToTable("ItemPropertyMappings");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.ItemSupplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemVariantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("LastCostPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("MinimumOrderQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SupplierItemCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemVariantId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("ItemSuppliers");
+                });
+
             modelBuilder.Entity("POS.Core.Models.ItemVariant", b =>
                 {
                     b.Property<int>("Id")
@@ -1004,6 +1131,10 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("ReceivedQty")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SupplierItemCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("TaxAmount")
                         .HasColumnType("TEXT");
 
@@ -1110,6 +1241,116 @@ namespace POS.Core.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PromoRules");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.QuotationHeader", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerEmail")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerPhone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("GrossTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("NetTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("QuoteNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ValidUntil")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuoteNo")
+                        .IsUnique();
+
+                    b.ToTable("QuotationHeaders");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.QuotationLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("CostPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ItemCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ItemDescription")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("QuotationHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuotationHeaderId");
+
+                    b.ToTable("QuotationLines");
                 });
 
             modelBuilder.Entity("POS.Core.Models.ReturnHeader", b =>
@@ -1667,6 +1908,24 @@ namespace POS.Core.Migrations
                     b.ToTable("SupplierLedgers");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.SystemSetting", b =>
+                {
+                    b.Property<string>("SettingKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SettingValue")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("SettingKey");
+
+                    b.ToTable("SystemSettings");
+                });
+
             modelBuilder.Entity("POS.Core.Models.UnitOfMeasure", b =>
                 {
                     b.Property<int>("Id")
@@ -1721,9 +1980,6 @@ namespace POS.Core.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("ForcePasswordReset")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
@@ -1753,10 +2009,8 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -1957,6 +2211,25 @@ namespace POS.Core.Migrations
                     b.Navigation("ItemVariant");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.ItemSupplier", b =>
+                {
+                    b.HasOne("POS.Core.Models.ItemVariant", "ItemVariant")
+                        .WithMany("ItemSuppliers")
+                        .HasForeignKey("ItemVariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("POS.Core.Models.Supplier", "Supplier")
+                        .WithMany("ItemSuppliers")
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ItemVariant");
+
+                    b.Navigation("Supplier");
+                });
+
             modelBuilder.Entity("POS.Core.Models.ItemVariant", b =>
                 {
                     b.HasOne("POS.Core.Models.ItemParent", "ItemParent")
@@ -2018,6 +2291,17 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("PromoRule");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.QuotationLine", b =>
+                {
+                    b.HasOne("POS.Core.Models.QuotationHeader", "QuotationHeader")
+                        .WithMany("QuotationLines")
+                        .HasForeignKey("QuotationHeaderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("QuotationHeader");
                 });
 
             modelBuilder.Entity("POS.Core.Models.ReturnHeader", b =>
@@ -2157,6 +2441,8 @@ namespace POS.Core.Migrations
                 {
                     b.Navigation("ItemBatches");
 
+                    b.Navigation("ItemSuppliers");
+
                     b.Navigation("PropertyMappings");
                 });
 
@@ -2170,6 +2456,11 @@ namespace POS.Core.Migrations
                     b.Navigation("Conditions");
 
                     b.Navigation("Rewards");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.QuotationHeader", b =>
+                {
+                    b.Navigation("QuotationLines");
                 });
 
             modelBuilder.Entity("POS.Core.Models.ReturnHeader", b =>
@@ -2192,6 +2483,11 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.StockAdjustmentHeader", b =>
                 {
                     b.Navigation("AdjustmentLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.Supplier", b =>
+                {
+                    b.Navigation("ItemSuppliers");
                 });
 #pragma warning restore 612, 618
         }

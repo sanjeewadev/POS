@@ -15,53 +15,30 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly SupplierRepository _supplierRepository;
 
         // --- Identity Fields ---
-        [ObservableProperty]
-        private string _supplierCode = string.Empty;
+        [ObservableProperty] private string _supplierCode = string.Empty;
+        [ObservableProperty] private string _supplierName = string.Empty;
+        [ObservableProperty] private string _companyName = string.Empty;
+        [ObservableProperty] private string _contactPerson = string.Empty;
 
-        [ObservableProperty]
-        private string _supplierName = string.Empty;
-
-        [ObservableProperty]
-        private string _companyName = string.Empty;
-
-        [ObservableProperty]
-        private string _contactPerson = string.Empty;
+        // NEW: Protects data integrity by preventing edits to existing codes
+        [ObservableProperty] private bool _isCodeReadOnly = false;
 
         // --- Contact Fields ---
-        [ObservableProperty]
-        private string _phone1 = string.Empty;
-
-        [ObservableProperty]
-        private string _phone2 = string.Empty;
-
-        [ObservableProperty]
-        private string _email = string.Empty;
-
-        [ObservableProperty]
-        private string _address = string.Empty;
+        [ObservableProperty] private string _phone1 = string.Empty;
+        [ObservableProperty] private string _phone2 = string.Empty;
+        [ObservableProperty] private string _email = string.Empty;
+        [ObservableProperty] private string _address = string.Empty;
 
         // --- Financial Fields ---
-        [ObservableProperty]
-        private bool _hasVat = false;
+        [ObservableProperty] private bool _hasVat = false;
+        [ObservableProperty] private string _vatNumber = string.Empty;
 
-        [ObservableProperty]
-        private string _vatNumber = string.Empty;
-
-        [ObservableProperty]
-        private int _defaultCreditDays = 30;
-
-        [ObservableProperty]
-        private decimal _currentBalance = 0m;
-
-        [ObservableProperty]
-        private bool _isDeactivated = false;
+        [ObservableProperty] private decimal _currentBalance = 0m;
+        [ObservableProperty] private bool _isDeactivated = false;
 
         // --- State & Collections ---
-        [ObservableProperty]
-        private string _searchText = string.Empty;
-
-        [ObservableProperty]
-        private Supplier? _selectedSupplier;
+        [ObservableProperty] private string _searchText = string.Empty;
+        [ObservableProperty] private Supplier? _selectedSupplier;
 
         public ObservableCollection<Supplier> Suppliers { get; set; } = new();
 
@@ -140,7 +117,9 @@ namespace POS.BackOffice.UI.ViewModels
                         Address = this.Address.Trim(),
                         HasVat = this.HasVat,
                         VatNumber = this.HasVat ? this.VatNumber.Trim() : string.Empty, // Clear VAT if unchecked
-                        DefaultCreditDays = this.DefaultCreditDays,
+
+                        // DefaultCreditDays is silently handled by the Model's default value (30) so the database won't crash
+
                         CurrentBalance = 0m, // New suppliers always start at 0
                         IsDeactivated = this.IsDeactivated,
                         CreatedAt = DateTime.Now
@@ -159,8 +138,9 @@ namespace POS.BackOffice.UI.ViewModels
                     SelectedSupplier.Address = this.Address.Trim();
                     SelectedSupplier.HasVat = this.HasVat;
                     SelectedSupplier.VatNumber = this.HasVat ? this.VatNumber.Trim() : string.Empty;
-                    SelectedSupplier.DefaultCreditDays = this.DefaultCreditDays;
                     SelectedSupplier.IsDeactivated = this.IsDeactivated;
+
+                    // We simply don't map DefaultCreditDays here so it safely retains whatever value it has in the DB
 
                     await _supplierRepository.UpdateAsync(SelectedSupplier);
                 }
@@ -188,10 +168,12 @@ namespace POS.BackOffice.UI.ViewModels
             Address = string.Empty;
             HasVat = false;
             VatNumber = string.Empty;
-            DefaultCreditDays = 30; // Reset to standard default
             CurrentBalance = 0m;
             IsDeactivated = false;
             SelectedSupplier = null;
+
+            // Unlock the field for new entries
+            IsCodeReadOnly = false;
         }
 
         [RelayCommand]
@@ -237,9 +219,15 @@ namespace POS.BackOffice.UI.ViewModels
                 Address = value.Address ?? string.Empty;
                 HasVat = value.HasVat;
                 VatNumber = value.VatNumber ?? string.Empty;
-                DefaultCreditDays = value.DefaultCreditDays;
                 CurrentBalance = value.CurrentBalance;
                 IsDeactivated = value.IsDeactivated;
+
+                // Lock code to protect data integrity
+                IsCodeReadOnly = true;
+            }
+            else
+            {
+                IsCodeReadOnly = false;
             }
         }
     }

@@ -16,30 +16,65 @@ namespace POS.Core.Repositories
             _contextFactory = contextFactory;
         }
 
-        // --- GROUP MANAGEMENT ---
+        // ==========================================
+        // GROUP MANAGEMENT (Upgraded for Master-Detail)
+        // ==========================================
 
-        public async Task<IEnumerable<AttributeGroup>> GetAllGroupsAsync()
+        public async Task<IEnumerable<AttributeGroup>> GetAllGroupsAsync(string searchTerm = "")
         {
             using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.AttributeGroups.AsNoTracking().ToListAsync();
+            var query = context.AttributeGroups.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(g => g.GroupName.Contains(searchTerm));
+            }
+
+            return await query.ToListAsync();
         }
 
-        public async Task<AttributeGroup> AddGroupAsync(string groupName)
+        public async Task<bool> IsGroupUniqueAsync(string groupName, int currentGroupId = 0)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
-            var newGroup = new AttributeGroup { GroupName = groupName.Trim(), IsDeactivated = false };
-            await context.AttributeGroups.AddAsync(newGroup);
+            return !await context.AttributeGroups.AnyAsync(g =>
+                g.GroupName.ToLower() == groupName.ToLower() &&
+                g.Id != currentGroupId);
+        }
+
+        public async Task<AttributeGroup> AddGroupAsync(AttributeGroup group)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            await context.AttributeGroups.AddAsync(group);
             await context.SaveChangesAsync();
-            return newGroup;
+            return group;
         }
 
-        // --- VALUE MANAGEMENT ---
+        public async Task UpdateGroupAsync(AttributeGroup group)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            context.AttributeGroups.Update(group);
+            await context.SaveChangesAsync();
+        }
+
+        public async Task DeleteGroupAsync(int id)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            var group = await context.AttributeGroups.FindAsync(id);
+            if (group != null)
+            {
+                context.AttributeGroups.Remove(group);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        // ==========================================
+        // VALUE MANAGEMENT
+        // ==========================================
 
         public async Task<IEnumerable<AttributeValue>> GetAllValuesFilteredAsync(int? groupId = null, string searchTerm = "")
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            // Always Include the Group for the UI DataGrid JOIN
             var query = context.AttributeValues
                                .Include(v => v.AttributeGroup)
                                .AsNoTracking();
@@ -59,7 +94,6 @@ namespace POS.Core.Repositories
             return await query.ToListAsync();
         }
 
-        // SECURITY: Blocks duplicate Values inside the SAME Group (e.g. Cannot have two "Red"s in "Color")
         public async Task<bool> IsValueUniqueAsync(string valueName, int groupId, int currentValueId = 0)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
@@ -95,7 +129,9 @@ namespace POS.Core.Repositories
             }
         }
 
-        // --- MANY-TO-MANY SYNCING (CATEGORY <-> GROUP) ---
+        // ==========================================
+        // MANY-TO-MANY SYNCING (CATEGORY <-> GROUP)
+        // ==========================================
 
         public async Task<List<int>> GetAssignedCategoryIdsForGroupAsync(int groupId)
         {
@@ -110,11 +146,9 @@ namespace POS.Core.Repositories
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            // 1. Wipe existing assignments for this group
             var existingAssignments = context.CategoryAttributeGroups.Where(c => c.AttributeGroupId == groupId);
             context.CategoryAttributeGroups.RemoveRange(existingAssignments);
 
-            // 2. Rebuild assignments based on the checked boxes
             foreach (var catId in categoryIds)
             {
                 context.CategoryAttributeGroups.Add(new CategoryAttributeGroup

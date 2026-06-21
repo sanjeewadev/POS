@@ -5,20 +5,20 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200"
-             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+             Background="{DynamicResource WindowBackgroundBrush}" FontFamily="Segoe UI" FontSize="12">
     <UserControl.Resources>
 
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
             <Setter Property="Margin" Value="0,5,0,5"/>
         </Style>
 
         <Style TargetType="TextBlock" x:Key="InlineLabel">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
@@ -27,49 +27,55 @@
             <Setter Property="Height" Value="24"/>
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="IsReadOnly" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="ComboBox" x:Key="ClassicCombo">
             <Setter Property="Height" Value="24"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
             <Setter Property="Height" Value="26"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#CCCCCC"/>
+                    <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005555"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003333"/>
+            <Setter Property="Background" Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#007777"/>
+                    <Setter Property="Background" Value="{DynamicResource ActionHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Border" x:Key="ClassicGroupBox">
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
             <Setter Property="Padding" Value="10"/>
             <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
@@ -78,12 +84,12 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="4,0"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#005555"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="{DynamicResource LightSelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -113,8 +119,8 @@
                             <ColumnDefinition Width="100"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="UOM Code *" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
-                        <TextBox Grid.Column="1" x:Name="txtUomCode" Text="{Binding UomCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Background="#FFFFE0" FontWeight="Bold" MaxLength="10" ToolTip="e.g., PCS, KG, LTR, BOX"/>
+                        <TextBlock Grid.Column="0" Text="UOM Code *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
+                        <TextBox Grid.Column="1" x:Name="txtUomCode" Text="{Binding UomCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsCodeReadOnly}" Style="{StaticResource ClassicInput}" FontWeight="Bold" MaxLength="10" ToolTip="e.g., PCS, KG, LTR, BOX. Cannot be changed after saving."/>
                     </Grid>
 
                     <Grid Margin="0,0,0,4">
@@ -130,15 +136,15 @@
 
             <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="2. INVENTORY RULES" Style="{StaticResource HeaderLabel}" Foreground="#005500" Margin="0,0,0,5"/>
-                    <CheckBox x:Name="chkAllowDecimals" Content="Allow Decimal Quantities (e.g., 1.5 KG)" IsChecked="{Binding AllowDecimals, Mode=TwoWay}" FontWeight="SemiBold" Foreground="#333" Margin="0,5,0,0"/>
-                    <TextBlock Text="(Do not check this for items sold strictly in whole numbers like Shirts or PCS)" FontSize="10" Foreground="#888" Margin="20,2,0,8" FontStyle="Italic" TextWrapping="Wrap"/>
+                    <TextBlock Text="2. INVENTORY RULES" Style="{StaticResource HeaderLabel}" Foreground="{DynamicResource SuccessBorderBrush}" Margin="0,0,0,5"/>
+                    <CheckBox x:Name="chkAllowDecimals" Content="Allow Decimal Quantities (e.g., 1.5 KG)" IsChecked="{Binding AllowDecimals, Mode=TwoWay}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,5,0,0"/>
+                    <TextBlock Text="(Do not check this for items sold strictly in whole numbers like Shirts or PCS)" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="20,2,0,8" FontStyle="Italic" TextWrapping="Wrap"/>
 
-                    <CheckBox x:Name="chkIsActive" Content="Unit is Active" IsChecked="{Binding IsActive, Mode=TwoWay}" FontWeight="SemiBold" Foreground="#333"/>
+                    <CheckBox x:Name="chkIsActive" Content="Unit is Active" IsChecked="{Binding IsActive, Mode=TwoWay}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="2" Background="#E8E8E8" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" Margin="0,5,0,0">
+            <Border Grid.Row="2" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" Margin="0,5,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -147,7 +153,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="DarkRed" BorderBrush="DarkRed" Padding="15,0" Height="30"/>
+                    <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="{DynamicResource WarningTextBrush}" BorderBrush="{DynamicResource WarningTextBrush}" Padding="15,0" Height="30"/>
 
                     <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0" Padding="15,0" Height="30"/>
                     <Button Grid.Column="3" Content="💾 SAVE UOM" Command="{Binding SaveCommand}" Style="{StaticResource ActionBtn}" Padding="20,0" Height="30" FontSize="13"/>
@@ -161,7 +167,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="#003366" Padding="10" BorderBrush="#002244" BorderThickness="1">
+            <Border Grid.Row="0" Background="{DynamicResource HeaderTextBrush}" Padding="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -169,7 +175,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="UOM DATABASE" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="0" Text="UOM DATABASE" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
 
                     <TextBox Grid.Column="1" x:Name="txtSearch" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Height="28" Padding="5,0" Margin="0,0,15,0" ToolTip="Search by Code or Description..."/>
 
@@ -180,18 +186,18 @@
             <DataGrid Grid.Row="1" x:Name="dgUom" ItemsSource="{Binding Uoms}" SelectedItem="{Binding SelectedUom, Mode=TwoWay}" 
                       AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                       IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="All" 
-                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
-                      RowHeight="26" Background="White" BorderBrush="#A0A0A0" BorderThickness="1,0,1,1" 
-                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                      HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
+                      RowHeight="26" Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" 
+                      SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#E0E0E0"/>
-                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="Padding" Value="5"/>
                         <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                     </Style>
                     <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                 </DataGrid.Resources>

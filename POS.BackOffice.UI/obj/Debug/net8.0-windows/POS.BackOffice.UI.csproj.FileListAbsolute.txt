@@ -150,7 +150,6 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryPages\SupplierView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryPages\UnitOfMeasureView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\Purchasing\PurchaseOrderDashboardView.baml
-C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\Purchasing\PurchaseOrderView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\Reports\CashMovementDashboardView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\Reports\FinancialSummaryView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\Reports\FloatCashLogView.baml
@@ -206,6 +205,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\POS.BackOffice.UI_MarkupCompile.lref
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\App.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\MainWindow.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\Purchasing\PurchaseOrderView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\POS.BackOffice.UI.g.resources
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\POS.BackOffice.UI.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\POS.BackOffice.UI.AssemblyInfoInputs.cache

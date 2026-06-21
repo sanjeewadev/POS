@@ -60,7 +60,7 @@ namespace POS.Cashier.UI.Dialogs {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;V1.0.0.0;component/dialogs/batchselectiondialog.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;component/dialogs/batchselectiondialog.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Dialogs\BatchSelectionDialog.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

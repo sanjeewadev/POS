@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Utilities;
+using POS.Core.Enums;
 
 namespace POS.Core.Services
 {
@@ -15,8 +16,15 @@ namespace POS.Core.Services
 
         // Quick boolean checks for UI data binding and logic barriers
         public bool IsLoggedIn => CurrentUser != null;
-        public bool IsSuperAdmin => CurrentUser?.Role == "Super Admin";
-        public bool IsAdmin => CurrentUser?.Role == "Admin" || IsSuperAdmin;
+
+        // Super Admin is identified by the backdoor ID 0
+        public bool IsSuperAdmin => CurrentUser?.Id == 0;
+
+        // Admin is either a standard Admin or the Super Admin backdoor
+        public bool IsAdmin => CurrentUser?.Role == UserRole.Admin || IsSuperAdmin;
+
+        // Manager check (Admins and SuperAdmins automatically pass Manager checks)
+        public bool IsManager => CurrentUser?.Role == UserRole.Manager || IsAdmin;
 
         // Event that the UI can listen to when the user logs in or logs out
         public event Action? OnAuthStateChanged;
@@ -44,7 +52,7 @@ namespace POS.Core.Services
                     FirstName = "Super",
                     LastName = "Admin",
                     Username = "SuperAdmin",
-                    Role = "Super Admin",
+                    Role = UserRole.Admin, // Mapped to enum, but elevated by Id == 0
                     IsActive = true
                 };
 

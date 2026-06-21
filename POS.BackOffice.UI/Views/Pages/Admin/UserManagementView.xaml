@@ -5,20 +5,20 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="850" d:DesignWidth="1400"
-             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+             Background="{DynamicResource WindowBackgroundBrush}" FontFamily="Segoe UI" FontSize="12">
 
     <UserControl.Resources>
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
             <Setter Property="Margin" Value="0,10,0,5"/>
         </Style>
 
         <Style TargetType="TextBlock" x:Key="InlineLabel">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
@@ -27,58 +27,58 @@
             <Setter Property="Height" Value="24"/>
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="PasswordBox" x:Key="ClassicPassword">
             <Setter Property="Height" Value="24"/>
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="ComboBox" x:Key="ClassicCombo">
             <Setter Property="Height" Value="24"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
             <Setter Property="Height" Value="26"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="10,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#CCCCCC"/>
+                    <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005555"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003333"/>
+            <Setter Property="Background" Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#007777"/>
+                    <Setter Property="Background" Value="{DynamicResource ActionHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Border" x:Key="ClassicGroupBox">
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
             <Setter Property="Padding" Value="10"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
@@ -87,12 +87,12 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="4,0"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#005555"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="{DynamicResource LightSelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -134,23 +134,23 @@
                 <DataGrid Grid.Row="1" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" 
                           AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True"
                           HeadersVisibility="Column" GridLinesVisibility="All" 
-                          HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
-                          RowHeight="26" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
-                          SelectionMode="Single" AlternatingRowBackground="#F9F9F9" Margin="0,5,0,0">
+                          HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
+                          RowHeight="26" Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                          SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}" Margin="0,5,0,0">
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#E0E0E0"/>
-                            <Setter Property="Foreground" Value="Black"/>
+                            <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                             <Setter Property="Padding" Value="5"/>
                             <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                         </Style>
                         <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                     </DataGrid.Resources>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Employee Name" Binding="{Binding FullName}" Width="*" FontWeight="SemiBold"/>
-                        <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100" Foreground="#003366"/>
+                        <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100" Foreground="{DynamicResource HeaderTextBrush}"/>
                         <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
@@ -177,8 +177,8 @@
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,5,0">
                     <StackPanel>
 
-                        <TextBlock Text="HUMAN RESOURCES DATA" FontSize="10" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
-                        <Border Background="#F8F8F8" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" Margin="0,0,0,10">
+                        <TextBlock Text="HUMAN RESOURCES DATA" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,5"/>
+                        <Border Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
@@ -204,7 +204,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Employee ID:" Style="{StaticResource InlineLabel}"/>
-                                    <TextBox Grid.Column="1" Text="{Binding EmployeeId}" Style="{StaticResource ClassicInput}" Background="#EEEEEE"/>
+                                    <TextBox Grid.Column="1" Text="{Binding EmployeeId}" Style="{StaticResource ClassicInput}" Background="{DynamicResource ButtonDefaultBrush}"/>
 
                                     <TextBlock Grid.Column="3" Text="Mobile:" Style="{StaticResource InlineLabel}"/>
                                     <TextBox Grid.Column="4" Text="{Binding Mobile}" Style="{StaticResource ClassicInput}"/>
@@ -221,8 +221,8 @@
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Text="SYSTEM AUTHENTICATION KEYS" FontSize="10" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
-                        <Border Background="#F0F8FF" BorderBrush="#005555" BorderThickness="1" Padding="10" Margin="0,0,0,10">
+                        <TextBlock Text="SYSTEM AUTHENTICATION KEYS" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,5"/>
+                        <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource ActionBackgroundBrush}" BorderThickness="1" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
                                 <Grid Margin="0,0,0,4">
                                     <Grid.ColumnDefinitions>
@@ -243,19 +243,16 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="90"/>
                                         <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="15"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Retail POS PIN *" Style="{StaticResource InlineLabel}" Foreground="#A94044"/>
-                                    <PasswordBox Grid.Column="1" x:Name="pinBox" Style="{StaticResource ClassicPassword}" Background="#FFFFE0" MaxLength="6" HorizontalContentAlignment="Center" FontWeight="Bold"/>
-
-                                    <CheckBox Grid.Column="3" IsChecked="{Binding ForcePasswordReset}" Content="Force password reset on next login" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#003366"/>
+                                    <TextBlock Text="Retail POS PIN *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
+                                    <PasswordBox Grid.Column="1" x:Name="pinBox" Style="{StaticResource ClassicPassword}" Background="{DynamicResource HighlightBackgroundBrush}" MaxLength="6" HorizontalContentAlignment="Center" FontWeight="Bold"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Text="AUTHORIZATION &amp; LIFECYCLE" FontSize="10" FontWeight="Bold" Foreground="#666" Margin="0,0,0,5"/>
-                        <Border Background="#F4FAF6" BorderBrush="#3D8B40" BorderThickness="1" Padding="10">
+                        <TextBlock Text="AUTHORIZATION &amp; LIFECYCLE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,5"/>
+                        <Border Background="{DynamicResource SuccessBackgroundBrush}" BorderBrush="{DynamicResource SuccessBorderBrush}" BorderThickness="1" Padding="10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="90"/>
@@ -268,23 +265,22 @@
                                 <TextBlock Text="Security Role *" Style="{StaticResource InlineLabel}"/>
                                 <ComboBox Grid.Column="1" SelectedItem="{Binding SelectedRole}" ItemsSource="{Binding AvailableRoles}" Style="{StaticResource ClassicCombo}"/>
 
-                                <TextBlock Grid.Column="3" Text="Account Status *" Style="{StaticResource InlineLabel}" Foreground="#A94044"/>
-                                <ComboBox Grid.Column="4" SelectedItem="{Binding StatusText}" ItemsSource="{Binding AccountStatuses}" Style="{StaticResource ClassicCombo}" Background="#FFFFE0" ToolTip="Select 'Suspended' to revoke access"/>
+                                <TextBlock Grid.Column="3" Text="Account Status *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
+                                <ComboBox Grid.Column="4" SelectedItem="{Binding StatusText}" ItemsSource="{Binding AccountStatuses}" Style="{StaticResource ClassicCombo}" Background="{DynamicResource HighlightBackgroundBrush}" ToolTip="Select 'Suspended' to revoke access"/>
                             </Grid>
                         </Border>
 
                     </StackPanel>
                 </ScrollViewer>
 
-                <Border Grid.Row="2" Background="#D4D0C8" BorderBrush="#A0A0A0" BorderThickness="1" Margin="0,5,0,0" Padding="10">
+                <Border Grid.Row="2" Background="{DynamicResource WindowBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,5,0,0" Padding="10">
                     <Grid>
-                        <TextBlock Text="* Requires Admin authorization to modify Roles." Foreground="#555" FontStyle="Italic" VerticalAlignment="Center"/>
+                        <TextBlock Text="* Requires Admin authorization to modify Roles." Foreground="{DynamicResource SecondaryTextBrush}" FontStyle="Italic" VerticalAlignment="Center"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="Clear Form" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Height="34" Margin="0,0,10,0"/>
+                            <Button Content="Clear Form" Command="{Binding ClearFormCommand}" Style="{StaticResource ClassicBtn}" Height="34" Margin="0,0,10,0"/>
 
                             <Button Content="SAVE / UPDATE USER" Click="BtnSaveUser_Click" Style="{StaticResource ActionBtn}" Height="34" Padding="20,0"/>
-
                         </StackPanel>
                     </Grid>
                 </Border>

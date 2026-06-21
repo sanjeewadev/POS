@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
 using POS.Core.Data;
+using POS.Core.Enums;
 
 namespace POS.Core.Repositories
 {
@@ -30,9 +32,10 @@ namespace POS.Core.Repositories
                     u.EmployeeId.ToLower().Contains(lowerSearch));
             }
 
-            if (roleFilter != "All Roles")
+            // FIX: Parse the string filter into the strongly-typed UserRole enum
+            if (roleFilter != "All Roles" && Enum.TryParse<UserRole>(roleFilter, out var parsedRole))
             {
-                query = query.Where(u => u.Role == roleFilter);
+                query = query.Where(u => u.Role == parsedRole);
             }
 
             // Order by Status (Active first), then by Name

@@ -22,8 +22,15 @@ namespace POS.Core.Models
         [NotMapped] public string Barcode { get; set; } = string.Empty;
         [NotMapped] public decimal SOH { get; set; } = 0m; // Stock on Hand indicator
 
+        // ✅ NEW: Tracks the Minimum Order Quantity for UI validation (Not saved in PO table)
+        [NotMapped] public int Moq { get; set; } = 1;
+
         [MaxLength(20)]
         public string Uom { get; set; } = string.Empty;
+
+        // ✅ NEW: The Vendor's specific catalog code for this item (Saved to DB for PO printing)
+        [MaxLength(100)]
+        public string? SupplierItemCode { get; set; }
 
         // --- QUANTITY TRACKING ---
         public decimal OrderQty { get; set; } = 0m;

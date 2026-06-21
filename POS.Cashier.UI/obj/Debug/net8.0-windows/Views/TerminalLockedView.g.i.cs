@@ -60,7 +60,7 @@ namespace POS.Cashier.UI.Views {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;V1.0.0.0;component/views/terminallockedview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;component/views/terminallockedview.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Views\TerminalLockedView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

@@ -51,11 +51,9 @@ namespace POS.Cashier.UI
             services.AddTransient<SalesViewModel>();
             services.AddTransient<OpenCloseShiftViewModel>();
 
-
-
-
             // Tells the app: When a UI asks for ICashMovementService, give it the CashMovementService logic.
-            services.AddTransient<ICashMovementService, POS.Services.CashMovementService>();
+            // FIXED NAMESPACE HERE
+            services.AddTransient<ICashMovementService, POS.Core.Services.CashMovementService>();
 
             // NEW: Express Items Repository (Required for the popup to load buttons)
             services.AddTransient<POS.Core.Repositories.ExpressItemRepository>();

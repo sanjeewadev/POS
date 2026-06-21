@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "YvXIa6er7kw=",
+  "dgSpecHash": "g9gzMU3M+to=",
   "success": true,
   "projectFilePath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
   "expectedPackageFiles": [
@@ -57,30 +57,5 @@
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\zxing.net\\0.16.11\\zxing.net.0.16.11.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\zxing.net.bindings.windows.compatibility\\0.16.14\\zxing.net.bindings.windows.compatibility.0.16.14.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1701",
-      "level": "Warning",
-      "message": "Package 'LiveCharts 0.9.7' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows7.0'. This package may not be fully compatible with your project.",
-      "projectPath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
-      "libraryId": "LiveCharts",
-      "targetGraphs": [
-        "net8.0-windows7.0"
-      ]
-    },
-    {
-      "code": "NU1701",
-      "level": "Warning",
-      "message": "Package 'LiveCharts.Wpf 0.9.7' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows7.0'. This package may not be fully compatible with your project.",
-      "projectPath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.BackOffice.UI\\POS.BackOffice.UI.csproj",
-      "libraryId": "LiveCharts.Wpf",
-      "targetGraphs": [
-        "net8.0-windows7.0"
-      ]
-    }
-  ]
+  "logs": []
 }

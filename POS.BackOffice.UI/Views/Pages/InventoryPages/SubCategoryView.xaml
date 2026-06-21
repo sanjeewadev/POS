@@ -5,20 +5,20 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200"
-             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+             Background="{DynamicResource WindowBackgroundBrush}" FontFamily="Segoe UI" FontSize="12">
     <UserControl.Resources>
 
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
             <Setter Property="Margin" Value="0,5,0,5"/>
         </Style>
 
         <Style TargetType="TextBlock" x:Key="InlineLabel">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
@@ -27,49 +27,55 @@
             <Setter Property="Height" Value="24"/>
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="IsReadOnly" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="ComboBox" x:Key="ClassicCombo">
             <Setter Property="Height" Value="24"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
             <Setter Property="Height" Value="26"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#CCCCCC"/>
+                    <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005555"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003333"/>
+            <Setter Property="Background" Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#007777"/>
+                    <Setter Property="Background" Value="{DynamicResource ActionHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Border" x:Key="ClassicGroupBox">
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
             <Setter Property="Padding" Value="10"/>
             <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
@@ -98,7 +104,7 @@
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Parent Cat Code *" Style="{StaticResource InlineLabel}" Foreground="#003366"/>
+                        <TextBlock Grid.Column="0" Text="Parent Cat Code *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource HeaderTextBrush}"/>
                         <ComboBox Grid.Column="1" 
                                   x:Name="cmbParentCategoryCode" 
                                   ItemsSource="{Binding Categories}"
@@ -115,7 +121,7 @@
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Parent Cat Name *" Style="{StaticResource InlineLabel}" Foreground="#003366"/>
+                        <TextBlock Grid.Column="0" Text="Parent Cat Name *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource HeaderTextBrush}"/>
                         <ComboBox Grid.Column="1" 
                                   x:Name="cmbParentCategoryName" 
                                   ItemsSource="{Binding Categories}"
@@ -127,15 +133,39 @@
                                   ToolTip="Type or select the Parent Category Name"/>
                     </Grid>
 
-                    <Rectangle Height="1" Fill="#C0C0C0" Margin="0,0,0,8"/>
+                    <Rectangle Height="1" Fill="{DynamicResource LightBorderBrush}" Margin="0,0,0,8"/>
 
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Sub-Category Code *" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
-                        <TextBox Grid.Column="1" Text="{Binding SubCategoryCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Background="#FFFFE0" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="0" Text="Sub-Category Code *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
+
+                        <Border Grid.Column="1" BorderBrush="{DynamicResource InputBoxBorderBrush}" BorderThickness="1" Height="24">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCodeReadOnly}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Background="{DynamicResource ButtonDefaultBrush}" BorderBrush="{DynamicResource LightBorderBrush}" BorderThickness="0,0,1,0">
+                                    <TextBlock Text="{Binding ParentPrefix}" Foreground="{DynamicResource SecondaryTextBrush}" Padding="6,0" VerticalAlignment="Center" FontWeight="Bold"/>
+                                </Border>
+
+                                <TextBox Grid.Column="1" Text="{Binding SubCategorySuffix, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsCodeReadOnly}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" Padding="4,0" FontWeight="Bold" ToolTip="Type the numerical suffix (e.g., 025). Code locks after saving."/>
+                            </Grid>
+                        </Border>
                     </Grid>
 
                     <Grid Margin="0,0,0,4">
@@ -151,13 +181,13 @@
 
             <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="2. SETTINGS" Style="{StaticResource HeaderLabel}" Foreground="DarkRed" Margin="0,0,0,5"/>
-                    <CheckBox Content="Deactivate Sub-Category" IsChecked="{Binding IsDeactivated, Mode=TwoWay}" FontWeight="Bold" Foreground="DarkRed" Margin="0,5,0,0"/>
-                    <TextBlock Text="(Deactivated sub-categories will not appear during new item creation)" FontSize="10" Foreground="#888" Margin="20,2,0,0" FontStyle="Italic" TextWrapping="Wrap"/>
+                    <TextBlock Text="2. SETTINGS" Style="{StaticResource HeaderLabel}" Foreground="{DynamicResource WarningTextBrush}" Margin="0,0,0,5"/>
+                    <CheckBox Content="Deactivate Sub-Category" IsChecked="{Binding IsDeactivated, Mode=TwoWay}" FontWeight="Bold" Foreground="{DynamicResource WarningTextBrush}" Margin="0,5,0,0"/>
+                    <TextBlock Text="(Deactivated sub-categories will not appear during new item creation)" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="20,2,0,0" FontStyle="Italic" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="2" Background="#E8E8E8" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" Margin="0,5,0,0">
+            <Border Grid.Row="2" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" Margin="0,5,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -166,7 +196,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="DarkRed" BorderBrush="DarkRed" Padding="15,0" Height="30"/>
+                    <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="{DynamicResource WarningTextBrush}" BorderBrush="{DynamicResource WarningTextBrush}" Padding="15,0" Height="30"/>
 
                     <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0" Padding="15,0" Height="30"/>
                     <Button Grid.Column="3" Content="💾 SAVE" Command="{Binding SaveCommand}" Style="{StaticResource ActionBtn}" Padding="20,0" Height="30" FontSize="13"/>
@@ -180,7 +210,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="#003366" Padding="10" BorderBrush="#002244" BorderThickness="1">
+            <Border Grid.Row="0" Background="{DynamicResource HeaderTextBrush}" Padding="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -190,11 +220,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="SUB-CATEGORY DATABASE" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="0" Text="SUB-CATEGORY DATABASE" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
 
                     <TextBox Grid.Column="1" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Height="28" Padding="5,0" Margin="0,0,15,0"/>
 
-                    <TextBlock Grid.Column="2" Text="Filter by Parent:" Foreground="#A0C0E0" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Grid.Column="2" Text="Filter by Parent:" Foreground="{DynamicResource WhiteBackgroundBrush}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <ComboBox Grid.Column="3" 
                               x:Name="cmbFilterCategory" 
                               ItemsSource="{Binding Categories}"
@@ -202,41 +232,41 @@
                               DisplayMemberPath="CategoryName" 
                               Style="{StaticResource ClassicCombo}" Height="28" Margin="0,0,15,0"/>
 
-                    <Button Grid.Column="4" Content="SEARCH &amp; REFRESH" Style="{StaticResource ClassicBtn}" Height="28" Padding="15,0"/>
+                    <Button Grid.Column="4" Content="SEARCH &amp; REFRESH" Command="{Binding SearchCommand}" Style="{StaticResource ClassicBtn}" Height="28" Padding="15,0"/>
                 </Grid>
             </Border>
 
             <DataGrid Grid.Row="1" x:Name="dgSubCategories" ItemsSource="{Binding SubCategories}" SelectedItem="{Binding SelectedSubCategory, Mode=TwoWay}" 
                       AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
-                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
-                      RowHeight="26" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1,0,1,1" 
-                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                      HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
+                      RowHeight="26" HeadersVisibility="Column" Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" 
+                      SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#E0E0E0"/>
-                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="Padding" Value="5"/>
                         <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                     </Style>
                     <Style TargetType="DataGridCell">
                         <Setter Property="VerticalContentAlignment" Value="Center"/>
                         <Setter Property="BorderThickness" Value="0"/>
                         <Setter Property="Padding" Value="4,0"/>
-                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#005555"/>
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Background" Value="{DynamicResource LightSelectionBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
                 </DataGrid.Resources>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Parent Category" Binding="{Binding Category.CategoryName}" Width="150" IsReadOnly="True" FontWeight="SemiBold" Foreground="#003366"/>
+                    <DataGridTextColumn Header="Parent Category" Binding="{Binding Category.CategoryName}" Width="150" IsReadOnly="True" FontWeight="SemiBold" Foreground="{DynamicResource HeaderTextBrush}"/>
                     <DataGridTextColumn Header="Sub-Category Code" Binding="{Binding SubCategoryCode}" Width="120" IsReadOnly="True" FontWeight="Bold"/>
                     <DataGridTextColumn Header="Sub-Category Name" Binding="{Binding SubCategoryName}" Width="*" IsReadOnly="True"/>
 

@@ -4,21 +4,21 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="900" d:DesignWidth="1400"
-             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+             d:DesignHeight="1000" d:DesignWidth="1400"
+             Background="{DynamicResource WindowBackgroundBrush}" FontFamily="Segoe UI" FontSize="12">
     <UserControl.Resources>
 
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
             <Setter Property="Margin" Value="0,5,0,5"/>
         </Style>
 
         <Style TargetType="TextBlock" x:Key="InlineLabel">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
@@ -27,388 +27,135 @@
             <Setter Property="Height" Value="24"/>
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="IsReadOnly" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style TargetType="ComboBox" x:Key="ClassicCombo">
             <Setter Property="Height" Value="24"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
             <Setter Property="Height" Value="26"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Padding" Value="15,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#CCCCCC"/>
+                    <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005555"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003333"/>
+            <Setter Property="Background" Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#007777"/>
+                    <Setter Property="Background" Value="{DynamicResource ActionHoverBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="Border" x:Key="ClassicGroupBox">
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
     </UserControl.Resources>
 
     <Grid Margin="5">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="560"/>
+            <ColumnDefinition Width="400"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Grid Grid.Column="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <Border Grid.Column="0" Background="{DynamicResource HeaderTextBrush}" Padding="8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
-                <StackPanel>
-                    <TextBlock Text="1. PARENT ITEM IDENTITY" Style="{StaticResource HeaderLabel}" Margin="0,0,0,5"/>
-
-                    <Grid Margin="0,0,0,4">
+                <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="ITEM DATABASE" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Item Code *" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
-                        <TextBox Grid.Column="1" Text="{Binding CurrentItem.ItemCode}" Style="{StaticResource ClassicInput}" Background="#FFFFE0" FontWeight="Bold"/>
-
-                        <TextBlock Grid.Column="3" Text="Category:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="4" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" 
-                                  DisplayMemberPath="CategoryName" TextSearch.TextPath="CategoryName"
-                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Item Name *" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="1" Text="{Binding CurrentItem.ItemName}" Style="{StaticResource ClassicInput}" FontWeight="Bold" ToolTip="e.g., Linen Casual Shirt"/>
-
-                        <TextBlock Grid.Column="3" Text="Sub-Cat:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="4" ItemsSource="{Binding SubCategories}" SelectedItem="{Binding SelectedSubCategory}" 
-                                  DisplayMemberPath="SubCategoryName" TextSearch.TextPath="SubCategoryName"
-                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Print Name:" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="1" Text="{Binding CurrentItem.PrintName}" Style="{StaticResource ClassicInput}" ToolTip="Optional short name for 58mm POS receipt printers"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Base UOM *" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Uoms}" SelectedItem="{Binding SelectedUom}" 
-                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
-
-                        <TextBlock Grid.Column="3" Text="Tax Code:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="4" ItemsSource="{Binding TaxCodes}" SelectedItem="{Binding SelectedTaxCode}" 
-                                  IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}">
-                <StackPanel>
-                    <TextBlock Text="2. VARIANT BUILDER (Size, Color, Material)" Style="{StaticResource HeaderLabel}" Foreground="#005555" Margin="0,0,0,5"/>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="40"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Property:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding PropertyKeys}" SelectedItem="{Binding SelectedPropertyKey}" DisplayMemberPath="GroupName" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
-
-                        <TextBlock Grid.Column="2" Text="Value:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="3" ItemsSource="{Binding PropertyValues}" SelectedItem="{Binding PropertyValueInput}" DisplayMemberPath="ValueName" IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
-
-                        <Button Grid.Column="4" Content="+ Add" Command="{Binding AddPropertyCommand}" Style="{StaticResource ClassicBtn}" Height="24" Padding="10,0"/>
+                        <TextBox Grid.Column="0" Text="{Binding MasterSearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Margin="0,0,5,0" ToolTip="Search Code or Name"/>
+                        <Button Grid.Column="1" Content="SEARCH" Command="{Binding SearchItemsCommand}" Style="{StaticResource ClassicBtn}" Padding="10,0"/>
                     </Grid>
-
-                    <ListBox ItemsSource="{Binding DynamicProperties}" Height="45" BorderBrush="#A0A0A0" Background="White" ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding DisplayText}" FontSize="11" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1" Content="[x]" Command="{Binding DataContext.RemovePropertyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Foreground="DarkRed" FontWeight="Bold" Cursor="Hand" Padding="2,0"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-
-                    <Button Content="⚡ GENERATE MATRIX VARIANTS" Command="{Binding GenerateVariantsCommand}" Style="{StaticResource ClassicBtn}" Background="#D0E4F5" BorderBrush="#003366" Foreground="#003366" Margin="0,5,0,0" Height="28"/>
                 </StackPanel>
-            </Border>
 
-            <Border Grid.Row="2" Style="{StaticResource ClassicGroupBox}">
-                <StackPanel>
-                    <TextBlock Text="3. BULK PRICING &amp; LOGIC DEFAULTS" Style="{StaticResource HeaderLabel}" Foreground="#B8860B" Margin="0,0,0,5"/>
-
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Base Cost:" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="1" Text="{Binding BulkCost, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
-
-                        <TextBlock Grid.Column="3" Text="Re-Order Lvl:" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="4" Text="{Binding BulkReorderLevel}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center"/>
-                    </Grid>
-
-                    <Rectangle Height="1" Fill="#C0C0C0" Margin="0,0,0,4"/>
-
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Retail Mkp %:" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="1" Text="{Binding BulkRetailMarkupPercent}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center"/>
-
-                        <TextBlock Grid.Column="3" Text="Retail Price:" Style="{StaticResource InlineLabel}" Foreground="#005500"/>
-                        <TextBox Grid.Column="4" Text="{Binding BulkRetailPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right" FontWeight="Bold" Background="#F0FFF0"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Whsale Mkp %:" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="1" Text="{Binding BulkWholesaleMarkupPercent}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center"/>
-
-                        <TextBlock Grid.Column="3" Text="Whsale Price:" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="4" Text="{Binding BulkWholesalePrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Min Price:" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="1" Text="{Binding BulkMinimumPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
-
-                        <TextBlock Grid.Column="3" Text="Max Price:" Style="{StaticResource InlineLabel}" Foreground="DarkRed"/>
-                        <TextBox Grid.Column="4" Text="{Binding BulkMaximumPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
-                    </Grid>
-
-                    <Border Background="#E8E8E8" BorderBrush="#C0C0C0" BorderThickness="1" Padding="4" Margin="0,0,0,4">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <CheckBox Grid.Column="0" Content="Scale Item" IsChecked="{Binding BulkIsScaleItem}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
-                            <CheckBox Grid.Column="1" Content="Batch/Expiry" IsChecked="{Binding BulkHasBatchExpiry}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
-                            <CheckBox Grid.Column="2" Content="Serialized" IsChecked="{Binding BulkIsSerialized}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
-                        </Grid>
-                    </Border>
-
-                    <Button Content="↓ BULK APPLY TO ALL VARIANTS" Command="{Binding ApplyBulkDefaultsCommand}" Style="{StaticResource ClassicBtn}" Height="26" Margin="0,2,0,0"/>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Row="3" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Stretch" Padding="0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Background="#E0E0E0" BorderBrush="#A0A0A0" BorderThickness="0,0,0,1" Padding="8,4">
-                        <TextBlock Text="4. GENERATED VARIANT SKUs (Scroll Horizontally to Edit Prices)" Style="{StaticResource HeaderLabel}" Foreground="#003366" Margin="0"/>
-                    </Border>
-
-                    <DataGrid Grid.Row="1" x:Name="dgVariants" ItemsSource="{Binding GeneratedVariants}" 
-                              AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
-                              HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
-                              RowHeight="26" HeadersVisibility="Column" Background="White" BorderThickness="0" 
-                              SelectionMode="Single" AlternatingRowBackground="#F9F9F9"
-                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              FrozenColumnCount="2">
-                        <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#F0F0F0"/>
-                                <Setter Property="Foreground" Value="Black"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="6,4"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                            </Style>
-
-                            <Style TargetType="DataGridCell" x:Key="BaseCell">
-                                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="Padding" Value="4,0"/>
-                                <Setter Property="Foreground" Value="Black"/>
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#005555"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-
-                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
-
-                            <Style TargetType="DataGridCell" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
-                                <Setter Property="Background" Value="#F5F5F5"/>
-                            </Style>
-                            <Style TargetType="DataGridCell" x:Key="AvgCostCell" BasedOn="{StaticResource BaseCell}">
-                                <Setter Property="Background" Value="#EFEFEF"/>
-                            </Style>
-                            <Style TargetType="DataGridCell" x:Key="RetailCell" BasedOn="{StaticResource BaseCell}">
-                                <Setter Property="Background" Value="#F0FFF0"/>
-                            </Style>
-                        </DataGrid.Resources>
-
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Auto-SKU" Binding="{Binding SkuCode}" Width="100" FontWeight="SemiBold" IsReadOnly="True" CellStyle="{StaticResource FrozenCell}"/>
-                            <DataGridTextColumn Header="Variant Attributes" Binding="{Binding VariantDescription}" Width="130" IsReadOnly="True" Foreground="#444" CellStyle="{StaticResource FrozenCell}"/>
-
-                            <DataGridTextColumn Header="Barcode (Override)" Binding="{Binding Barcode}" Width="130"/>
-
-                            <DataGridTextColumn Header="Avg Cost (RO)" Binding="{Binding AverageCost, StringFormat=N2}" Width="90" IsReadOnly="True" Foreground="#666" CellStyle="{StaticResource AvgCostCell}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="New Cost Rs." Binding="{Binding CostPrice, StringFormat=N2}" Width="90">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Retail Rs." Binding="{Binding RetailPrice, StringFormat=N2}" Width="90" FontWeight="Bold" Foreground="#005500" CellStyle="{StaticResource RetailCell}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Whsale Rs." Binding="{Binding WholesalePrice, StringFormat=N2}" Width="90">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Min Price" Binding="{Binding MinimumPrice, StringFormat=N2}" Width="90">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Max Price" Binding="{Binding MaximumPrice, StringFormat=N2}" Width="90">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Re-Ord" Binding="{Binding ReorderLevel}" Width="60">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
-        </Grid>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedDatabaseItem}" 
+                          AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
+                          HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
+                          RowHeight="26" HeadersVisibility="Column" Background="{DynamicResource WhiteBackgroundBrush}" BorderThickness="0" 
+                          SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="5"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                        </Style>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Padding" Value="4,0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource LightSelectionBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Code" Binding="{Binding ItemCode}" Width="80" IsReadOnly="True" FontWeight="Bold"/>
+                        <DataGridTextColumn Header="Name" Binding="{Binding ItemName}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
+                        <DataGridTextColumn Header="Vars" Binding="{Binding VariantCount}" Width="45" IsReadOnly="True" Foreground="{DynamicResource SuccessBorderBrush}">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
 
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="#003366" Padding="10" BorderBrush="#002244" BorderThickness="1">
+            <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8" Margin="0,0,0,5">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -417,97 +164,426 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="ITEM DATABASE" Foreground="White" FontSize="14" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Text="{Binding MasterSearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Height="28" Padding="5,0"/>
-                    <Button Grid.Column="2" Content="SEARCH" Command="{Binding SearchItemsCommand}" Style="{StaticResource ClassicBtn}" Height="28" Margin="5,0,0,0"/>
-                    <Button Grid.Column="3" Content="REFRESH" Command="{Binding RefreshDatabaseCommand}" Style="{StaticResource ClassicBtn}" Height="28" Margin="5,0,0,0"/>
+                    <Button Grid.Column="0" Content="🗑️ DELETE ITEM" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="{DynamicResource WarningTextBrush}" BorderBrush="{DynamicResource WarningTextBrush}"/>
+
+                    <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0"/>
+                    <Button Grid.Column="3" Content="💾 SAVE FULL ITEM" Command="{Binding SaveCommand}" Style="{StaticResource ActionBtn}" Padding="20,0" FontSize="13"/>
                 </Grid>
             </Border>
 
-            <DataGrid Grid.Row="1" x:Name="dgItems" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedDatabaseItem}" 
-                      AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
-                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
-                      RowHeight="26" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1,0,1,1" 
-                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
-                <DataGrid.Resources>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#E0E0E0"/>
-                        <Setter Property="Foreground" Value="Black"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Padding" Value="5"/>
-                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                    </Style>
-                    <Style TargetType="DataGridCell">
-                        <Setter Property="VerticalContentAlignment" Value="Center"/>
-                        <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="Padding" Value="4,0"/>
-                        <Setter Property="Foreground" Value="Black"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#005555"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.Resources>
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="100" IsReadOnly="True" FontWeight="Bold"/>
-                    <DataGridTextColumn Header="Base Name" Binding="{Binding ItemName}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
-                    <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="110" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Variants" Binding="{Binding VariantCount}" Width="70" IsReadOnly="True" Foreground="#005555">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Total SOH" Binding="{Binding TotalStockOnHand}" Width="80" IsReadOnly="True" FontWeight="Bold">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="80" IsReadOnly="True"/>
-                </DataGrid.Columns>
-            </DataGrid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
 
-            <Grid Grid.Row="2" Margin="0,5,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="5"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource ClassicGroupBox}">
+                        <StackPanel>
+                            <TextBlock Text="1. CLASSIFICATION &amp; IDENTITY" Style="{StaticResource HeaderLabel}"/>
 
-                <Border Grid.Column="0" Style="{StaticResource ClassicGroupBox}" Margin="0" VerticalAlignment="Stretch">
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="5. MATRIX SETTINGS" Style="{StaticResource HeaderLabel}" Foreground="DarkRed" Margin="0,0,0,5"/>
-                        <WrapPanel Orientation="Horizontal">
-                            <CheckBox Content="Deactivate Item Matrix" IsChecked="{Binding CurrentItem.IsDeactivated}" FontWeight="Bold" Foreground="DarkRed" Margin="0,0,10,0"/>
-                            <CheckBox Content="Allow Cashier Disc" IsChecked="{Binding CurrentItem.AllowCashierDiscount}" Margin="0,0,10,0"/>
-                            <CheckBox Content="Lock Purchase" IsChecked="{Binding CurrentItem.IsPurchaseLocked}" Margin="0,0,10,0"/>
-                            <CheckBox Content="Lock Sale" IsChecked="{Binding CurrentItem.IsSaleLocked}" Margin="0,0,0,0"/>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="2" Background="#E8E8E8" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" VerticalAlignment="Stretch">
-                    <Grid VerticalAlignment="Center">
+                                <TextBlock Grid.Column="0" Text="Category *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource HeaderTextBrush}"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" DisplayMemberPath="CategoryName" IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
+
+                                <TextBlock Grid.Column="3" Text="Sub-Cat *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource HeaderTextBrush}"/>
+                                <ComboBox Grid.Column="4" ItemsSource="{Binding SubCategories}" SelectedItem="{Binding SelectedSubCategory}" DisplayMemberPath="SubCategoryName" IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Item Code *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
+                                <Border Grid.Column="1" BorderBrush="{DynamicResource InputBoxBorderBrush}" BorderThickness="1" Height="24">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCodeReadOnly}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="{DynamicResource ButtonDefaultBrush}" BorderBrush="{DynamicResource LightBorderBrush}" BorderThickness="0,0,1,0">
+                                            <TextBlock Text="{Binding ItemPrefix}" Foreground="{DynamicResource SecondaryTextBrush}" Padding="6,0" VerticalAlignment="Center" FontWeight="Bold"/>
+                                        </Border>
+                                        <TextBox Grid.Column="1" Text="{Binding ItemSuffix, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsCodeReadOnly}" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" Padding="4,0" FontWeight="Bold"/>
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock Grid.Column="3" Text="Item Name *" Style="{StaticResource InlineLabel}"/>
+                                <TextBox Grid.Column="4" Text="{Binding CurrentItem.ItemName}" Style="{StaticResource ClassicInput}" FontWeight="Bold"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="100"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Print Name:" Style="{StaticResource InlineLabel}"/>
+                                <TextBox Grid.Column="1" Text="{Binding CurrentItem.PrintName}" Style="{StaticResource ClassicInput}" ToolTip="Short name for 58mm receipts"/>
+
+                                <TextBlock Grid.Column="3" Text="Base UOM *" Style="{StaticResource InlineLabel}"/>
+                                <ComboBox Grid.Column="4" ItemsSource="{Binding Uoms}" SelectedItem="{Binding SelectedUom}" IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}"/>
+
+                                <TextBlock Grid.Column="6" Text="Tax *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource HeaderTextBrush}"/>
+                                <ComboBox Grid.Column="7" ItemsSource="{Binding TaxCodes}" SelectedItem="{Binding SelectedTaxCode}" Style="{StaticResource ClassicCombo}"/>
+                            </Grid>
+
+                            <Border Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource LightBorderBrush}" BorderThickness="1" Padding="5" Margin="0,5,0,0">
+                                <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Logistics / POS Flags: " Style="{StaticResource InlineLabel}" Margin="0,0,10,0" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                    <CheckBox Content="Scale Item (Weighed)" IsChecked="{Binding BulkIsScaleItem}" Margin="0,0,15,0" FontWeight="SemiBold"/>
+                                    <CheckBox Content="Serialized (Electronics)" IsChecked="{Binding BulkIsSerialized}" Margin="0,0,15,0" FontWeight="SemiBold"/>
+                                    <CheckBox Content="Has Batch/Expiry" IsChecked="{Binding BulkHasBatchExpiry}" Margin="0,0,15,0" FontWeight="SemiBold"/>
+                                    <CheckBox Content="Allow Cashier Disc." IsChecked="{Binding CurrentItem.AllowCashierDiscount}" Margin="0,0,15,0" FontWeight="SemiBold"/>
+                                    <CheckBox Content="Lock Sale" IsChecked="{Binding CurrentItem.IsSaleLocked}" Margin="0,0,15,0" FontWeight="SemiBold" Foreground="{DynamicResource WarningTextBrush}"/>
+                                    <CheckBox Content="Item Deactivated" IsChecked="{Binding CurrentItem.IsDeactivated}" FontWeight="Bold" Foreground="{DynamicResource WarningTextBrush}"/>
+                                </WrapPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <Button Grid.Column="0" Content="🗑️ DELETE MATRIX" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="DarkRed" BorderBrush="DarkRed" Padding="15,0" Height="30"/>
+                        <Border Grid.Column="0" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock Text="2. MATRIX VARIANT BUILDER" Style="{StaticResource HeaderLabel}"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Prop:" Style="{StaticResource InlineLabel}"/>
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding PropertyKeys}" SelectedItem="{Binding SelectedPropertyKey}" DisplayMemberPath="GroupName" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
 
-                        <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0" Padding="15,0" Height="30"/>
-                        <Button Grid.Column="3" Content="💾 SAVE FULL MATRIX" Command="{Binding SaveCommand}" Style="{StaticResource ActionBtn}" Padding="20,0" Height="30" FontSize="13"/>
+                                    <TextBlock Grid.Column="2" Text="Val:" Style="{StaticResource InlineLabel}"/>
+                                    <ComboBox Grid.Column="3" ItemsSource="{Binding PropertyValues}" SelectedItem="{Binding PropertyValueInput}" DisplayMemberPath="ValueName" IsEditable="True" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}" Margin="0,0,5,0"/>
+
+                                    <Button Grid.Column="4" Content="+ Add" Command="{Binding AddPropertyCommand}" Style="{StaticResource ClassicBtn}" Height="24" Padding="10,0"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding DynamicProperties}" Margin="0,5,0,10">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource HighlightBackgroundBrush}" 
+                                                    BorderBrush="{DynamicResource InputBoxBorderBrush}" 
+                                                    BorderThickness="1" 
+                                                    CornerRadius="12" 
+                                                    Padding="10,3" 
+                                                    Margin="0,0,6,6">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DisplayText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                    <Button Content="✕" 
+                                                            Command="{Binding DataContext.RemovePropertyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Background="Transparent" 
+                                                            BorderThickness="0" 
+                                                            Foreground="{DynamicResource WarningTextBrush}" 
+                                                            FontWeight="Bold" 
+                                                            FontSize="10"
+                                                            Cursor="Hand" 
+                                                            Padding="2,0"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip="Remove this property"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <Button Content="⚡ GENERATE VARIANTS" Command="{Binding GenerateVariantsCommand}" Style="{StaticResource ClassicBtn}" Background="{DynamicResource ActionBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" Foreground="{DynamicResource WhiteBackgroundBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock Text="3. BULK PRICING &amp; LEVELS" Style="{StaticResource HeaderLabel}"/>
+
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Base Cost:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding BulkCost, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
+
+                                    <TextBlock Grid.Column="3" Text="Re-Order:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="4" Text="{Binding BulkReorderLevel}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Ret. Mkp%:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding BulkRetailMarkupPercent}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="3" Text="Retail Rs:" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource SuccessBorderBrush}"/>
+                                    <TextBox Grid.Column="4" Text="{Binding BulkRetailPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right" FontWeight="Bold" Background="{DynamicResource HighlightBackgroundBrush}"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Whs. Mkp%:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding BulkWholesaleMarkupPercent}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Center"/>
+
+                                    <TextBlock Grid.Column="3" Text="Whsale Rs:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="4" Text="{Binding BulkWholesalePrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Min Price:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding BulkMinimumPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
+
+                                    <TextBlock Grid.Column="3" Text="Max Price:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="4" Text="{Binding BulkMaximumPrice, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right"/>
+                                </Grid>
+
+                                <Button Content="↓ APPLY TO ALL VARIANTS BELOW" Command="{Binding ApplyBulkDefaultsCommand}" Style="{StaticResource ClassicBtn}"/>
+                            </StackPanel>
+                        </Border>
                     </Grid>
-                </Border>
-            </Grid>
+
+                    <Border Style="{StaticResource ClassicGroupBox}" Padding="0">
+                        <StackPanel>
+                            <Border Background="{DynamicResource ButtonDefaultBrush}" BorderBrush="{DynamicResource LightBorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                                <TextBlock Text="4. GENERATED VARIANT SKUs (Select a row to manage its Suppliers)" Style="{StaticResource HeaderLabel}" Margin="0" Foreground="#005555"/>
+                            </Border>
+
+                            <DataGrid ItemsSource="{Binding GeneratedVariants}" SelectedItem="{Binding SelectedVariantForSupplierEdit, Mode=TwoWay}" 
+                                      Height="200"
+                                      AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
+                                      HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
+                                      RowHeight="26" HeadersVisibility="Column" Background="{DynamicResource WhiteBackgroundBrush}" BorderThickness="0" 
+                                      SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Resources>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Padding" Value="6,4"/>
+                                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                    </Style>
+                                    <Style TargetType="DataGridCell" x:Key="BaseCell">
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Padding" Value="4,0"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource LightSelectionBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                                    <Style TargetType="DataGridCell" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
+                                        <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
+                                    </Style>
+                                    <Style TargetType="DataGridCell" x:Key="RetailCell" BasedOn="{StaticResource BaseCell}">
+                                        <Setter Property="Background" Value="{DynamicResource HighlightBackgroundBrush}"/>
+                                    </Style>
+                                </DataGrid.Resources>
+
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Auto-SKU" Binding="{Binding SkuCode}" Width="120" FontWeight="SemiBold" IsReadOnly="True" CellStyle="{StaticResource FrozenCell}"/>
+                                    <DataGridTextColumn Header="Attributes" Binding="{Binding VariantDescription}" Width="*" IsReadOnly="True" CellStyle="{StaticResource FrozenCell}"/>
+                                    <DataGridTextColumn Header="Barcode Override" Binding="{Binding Barcode}" Width="130"/>
+                                    <DataGridTextColumn Header="New Cost" Binding="{Binding CostPrice, StringFormat=N2}" Width="80">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Retail Rs." Binding="{Binding RetailPrice, StringFormat=N2}" Width="90" FontWeight="Bold" Foreground="{DynamicResource SuccessBorderBrush}" CellStyle="{StaticResource RetailCell}">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Whsale Rs." Binding="{Binding WholesalePrice, StringFormat=N2}" Width="80">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Min" Binding="{Binding MinimumPrice, StringFormat=N2}" Width="65">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Re-Ord" Binding="{Binding ReorderLevel}" Width="60">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ClassicGroupBox}" Padding="0">
+                        <StackPanel>
+                            <Border Background="#E6F2F2" BorderBrush="{DynamicResource LightBorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="5. APPROVED SUPPLIERS" Style="{StaticResource HeaderLabel}" Margin="0,0,10,0"/>
+                                    <TextBlock Text="→ Editing:" Foreground="#555" VerticalAlignment="Center" Margin="0,0,5,0" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding SelectedVariantForSupplierEdit.VariantDescription, FallbackValue='(Click a variant above)'}" Foreground="#D97706" VerticalAlignment="Center" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="Supplier:" Style="{StaticResource InlineLabel}"/>
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableSuppliers}" SelectedItem="{Binding SupplierToAdd}" DisplayMemberPath="SupplierName" IsTextSearchEnabled="True" Style="{StaticResource ClassicCombo}" Margin="0,0,15,0"/>
+
+                                    <TextBlock Grid.Column="2" Text="Supplier Item Code:" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="3" Text="{Binding SupplierItemCodeInput}" Style="{StaticResource ClassicInput}" Margin="0,0,15,0" ToolTip="What the vendor calls this item"/>
+
+                                    <TextBlock Grid.Column="4" Text="Cost (Rs):" Style="{StaticResource InlineLabel}"/>
+                                    <TextBox Grid.Column="5" Text="{Binding SupplierCostInput}" Style="{StaticResource ClassicInput}" Margin="0,0,15,0" HorizontalContentAlignment="Right" FontWeight="Bold"/>
+
+                                    <CheckBox Grid.Column="6" Content="Primary" IsChecked="{Binding IsPrimarySupplierInput}" VerticalAlignment="Center" Margin="0,0,15,0" FontWeight="Bold" Foreground="#005555" ToolTip="Default supplier for auto-generating POs"/>
+
+                                    <Button Grid.Column="7" Content="+ ADD SUPPLIER" Command="{Binding AddSupplierToVariantCommand}" Style="{StaticResource ClassicBtn}" Padding="15,0"/>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding SelectedVariantSuppliers}" 
+                                          Height="120"
+                                          AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
+                                          HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
+                                          RowHeight="26" HeadersVisibility="Column" Background="{DynamicResource WhiteBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                                          SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="Padding" Value="5"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                        </Style>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Padding" Value="4,0"/>
+                                        </Style>
+                                    </DataGrid.Resources>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Supplier Name" Binding="{Binding Supplier.SupplierName}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
+                                        <DataGridTextColumn Header="Vendor Item Code" Binding="{Binding SupplierItemCode}" Width="150" IsReadOnly="True" Foreground="#555"/>
+                                        <DataGridTextColumn Header="Specific Cost" Binding="{Binding LastCostPrice, StringFormat=N2}" Width="100" IsReadOnly="True" FontWeight="Bold">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridCheckBoxColumn Header="Primary" Binding="{Binding IsPrimary}" Width="60" IsReadOnly="True"/>
+                                        <DataGridTemplateColumn Header="Action" Width="70">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="✕ Remove" 
+                                                            Command="{Binding DataContext.RemoveSupplierFromVariantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource WarningTextBrush}" Cursor="Hand" FontWeight="Bold"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </UserControl>

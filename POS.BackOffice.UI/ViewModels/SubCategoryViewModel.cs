@@ -20,8 +20,12 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private Category? _selectedParentCategory;
 
+        // NEW: Split Code Properties
         [ObservableProperty]
-        private string _subCategoryCode = string.Empty;
+        private string _parentPrefix = string.Empty;
+
+        [ObservableProperty]
+        private string _subCategorySuffix = string.Empty;
 
         [ObservableProperty]
         private string _subCategoryName = string.Empty;
@@ -31,6 +35,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private SubCategory? _selectedSubCategory;
+
+        [ObservableProperty]
+        private bool _isCodeReadOnly = false;
 
         // --- Filter Fields ---
         [ObservableProperty]
@@ -62,10 +69,7 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 Categories.Clear();
-                // Only load categories that are NOT deactivated for the dropdowns
                 var activeCategories = (await _categoryRepository.GetAllAsync()).Where(c => !c.IsDeactivated);
-
-                // Add a "Clear Filter" option for the right-side filter dropdown
                 Categories.Add(new Category { Id = 0, CategoryName = "-- ALL CATEGORIES --", CategoryCode = "ALL" });
 
                 foreach (var cat in activeCategories)
@@ -86,12 +90,10 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 SubCategories.Clear();
 
-                // 1. Determine if a specific parent category is selected for filtering
                 int? parentFilterId = (SelectedFilterCategory != null && SelectedFilterCategory.Id != 0)
                                       ? SelectedFilterCategory.Id
                                       : null;
 
-                // 2. Fetch data using the blazing-fast SQL repository method we just built
                 var data = await _subCategoryRepository.GetAllFilteredAsync(parentFilterId, SearchText);
 
                 foreach (var item in data)
@@ -114,38 +116,38 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
-            // 1. Basic Validation
             if (SelectedParentCategory == null || SelectedParentCategory.Id == 0)
             {
                 MessageBox.Show("Please select a valid Parent Category.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(SubCategoryCode) || string.IsNullOrWhiteSpace(SubCategoryName))
+            if (string.IsNullOrWhiteSpace(SubCategorySuffix) || string.IsNullOrWhiteSpace(SubCategoryName))
             {
-                MessageBox.Show("Sub-Category Code and Name are required fields.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Sub-Category Suffix and Name are required fields.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                // 2. Duplicate Check Validation
+                // COMBINE PREFIX AND SUFFIX FOR THE DATABASE
+                string finalSubCategoryCode = $"{ParentPrefix}{SubCategorySuffix}".Trim().ToUpper();
+
                 int currentId = SelectedSubCategory?.Id ?? 0;
-                bool isUnique = await _subCategoryRepository.IsCodeUniqueAsync(SubCategoryCode, currentId);
+                bool isUnique = await _subCategoryRepository.IsCodeUniqueAsync(finalSubCategoryCode, currentId);
 
                 if (!isUnique)
                 {
-                    MessageBox.Show($"The Sub-Category Code '{SubCategoryCode}' is already in use.", "Duplicate Entry", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show($"The Sub-Category Code '{finalSubCategoryCode}' is already in use.", "Duplicate Entry", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
-                // 3. Save or Update
                 if (SelectedSubCategory == null)
                 {
                     var newSub = new SubCategory
                     {
                         CategoryId = SelectedParentCategory.Id,
-                        SubCategoryCode = this.SubCategoryCode.Trim().ToUpper(),
+                        SubCategoryCode = finalSubCategoryCode,
                         SubCategoryName = this.SubCategoryName.Trim(),
                         IsDeactivated = this.IsDeactivated,
                         CreatedAt = DateTime.Now
@@ -155,14 +157,13 @@ namespace POS.BackOffice.UI.ViewModels
                 else
                 {
                     SelectedSubCategory.CategoryId = SelectedParentCategory.Id;
-                    SelectedSubCategory.SubCategoryCode = this.SubCategoryCode.Trim().ToUpper();
+                    SelectedSubCategory.SubCategoryCode = finalSubCategoryCode;
                     SelectedSubCategory.SubCategoryName = this.SubCategoryName.Trim();
                     SelectedSubCategory.IsDeactivated = this.IsDeactivated;
 
                     await _subCategoryRepository.UpdateAsync(SelectedSubCategory);
                 }
 
-                // 4. Reset UI
                 await LoadSubCategoriesAsync();
                 Clear();
                 MessageBox.Show("Sub-Category saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -177,10 +178,13 @@ namespace POS.BackOffice.UI.ViewModels
         private void Clear()
         {
             SelectedParentCategory = null;
-            SubCategoryCode = string.Empty;
+            ParentPrefix = string.Empty;
+            SubCategorySuffix = string.Empty;
             SubCategoryName = string.Empty;
             IsDeactivated = false;
             SelectedSubCategory = null;
+
+            IsCodeReadOnly = false;
         }
 
         [RelayCommand]
@@ -200,7 +204,6 @@ namespace POS.BackOffice.UI.ViewModels
                 }
                 catch (DbUpdateException)
                 {
-                    // Defensive Architecture: Catching Foreign Key Violations if Items are attached to this Sub-Category
                     MessageBox.Show("This sub-category cannot be deleted because it is currently linked to items in your inventory. \n\nPlease Deactivate it instead.",
                                     "Deletion Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
@@ -210,8 +213,6 @@ namespace POS.BackOffice.UI.ViewModels
                 }
             }
         }
-
-        // --- Auto-Triggers ---
 
         partial void OnSearchTextChanged(string value)
         {
@@ -223,14 +224,46 @@ namespace POS.BackOffice.UI.ViewModels
             _ = LoadSubCategoriesAsync();
         }
 
+        // Intelligent Part Numbering: Auto-fills Prefix when a parent is selected
+        partial void OnSelectedParentCategoryChanged(Category? value)
+        {
+            if (value != null && value.Id != 0 && !IsCodeReadOnly)
+            {
+                ParentPrefix = $"{value.CategoryCode}-";
+            }
+        }
+
+        // Splits the database code back into Prefix and Suffix when a row is clicked
         partial void OnSelectedSubCategoryChanged(SubCategory? value)
         {
             if (value != null)
             {
                 SelectedParentCategory = Categories.FirstOrDefault(c => c.Id == value.CategoryId);
-                SubCategoryCode = value.SubCategoryCode ?? string.Empty;
+
+                string fullCode = value.SubCategoryCode ?? string.Empty;
+                string calculatedPrefix = SelectedParentCategory != null ? $"{SelectedParentCategory.CategoryCode}-" : string.Empty;
+
+                // Split the code back out for the UI
+                if (!string.IsNullOrEmpty(calculatedPrefix) && fullCode.StartsWith(calculatedPrefix))
+                {
+                    ParentPrefix = calculatedPrefix;
+                    SubCategorySuffix = fullCode.Substring(calculatedPrefix.Length);
+                }
+                else
+                {
+                    // Fallback for old mismatched data
+                    ParentPrefix = string.Empty;
+                    SubCategorySuffix = fullCode;
+                }
+
                 SubCategoryName = value.SubCategoryName ?? string.Empty;
                 IsDeactivated = value.IsDeactivated;
+
+                IsCodeReadOnly = true;
+            }
+            else
+            {
+                IsCodeReadOnly = false;
             }
         }
     }
