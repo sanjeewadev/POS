@@ -31,6 +31,10 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private UnitOfMeasure? _selectedUom;
 
+        // NEW: Controls the read-only state of the UOM Code in the UI
+        [ObservableProperty]
+        private bool _isCodeReadOnly = false;
+
         // --- Filter Fields ---
         [ObservableProperty]
         private string _searchText = string.Empty;
@@ -132,6 +136,9 @@ namespace POS.BackOffice.UI.ViewModels
             AllowDecimals = false;
             IsActive = true;
             SelectedUom = null;
+
+            // Unlock the UOM Code field for new entries
+            IsCodeReadOnly = false;
         }
 
         [RelayCommand]
@@ -176,6 +183,14 @@ namespace POS.BackOffice.UI.ViewModels
                 UomDescription = value.UomDescription ?? string.Empty;
                 AllowDecimals = value.AllowDecimals;
                 IsActive = value.IsActive;
+
+                // Lock the UOM Code field for existing entries
+                IsCodeReadOnly = true;
+            }
+            else
+            {
+                // Unlock the UOM Code field if the selection is lost
+                IsCodeReadOnly = false;
             }
         }
     }

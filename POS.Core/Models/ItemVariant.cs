@@ -13,7 +13,6 @@ namespace POS.Core.Models
         public int ItemParentId { get; set; }
         public ItemParent ItemParent { get; set; } = null!;
 
-
         [Required]
         [MaxLength(100)]
         public string SkuCode { get; set; } = string.Empty;
@@ -48,5 +47,10 @@ namespace POS.Core.Models
 
         // Navigation: One Variant contains many distinct stock batches
         public ICollection<ItemBatch> ItemBatches { get; set; } = new List<ItemBatch>();
+
+        // ==========================================
+        // NEW: Navigation for Approved Suppliers
+        // ==========================================
+        public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
     }
 }

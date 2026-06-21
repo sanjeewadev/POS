@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models;
 using POS.Cashier.UI.Views;
 using POS.Core.Services;
+using POS.Core.Enums; // ADDED
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -94,7 +95,8 @@ namespace POS.Cashier.UI.ViewModels
                     // 3. Did they click "Manager Override" on the red screen?
                     if (lockedWindow.IsOverrideApproved)
                     {
-                        if (user.Role == "Admin" || user.Role == "Manager" || user.Role == "Super Admin")
+                        // FIXED: Using strong Enums instead of strings
+                        if (user.Role == UserRole.Admin || user.Role == UserRole.Manager)
                         {
                             LoginSuccessful?.Invoke();
                             return;

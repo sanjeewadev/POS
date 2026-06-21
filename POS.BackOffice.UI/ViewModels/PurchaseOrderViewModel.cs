@@ -27,6 +27,10 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private decimal _lineDiscount = 0m;
 
         public string TaxCode { get; set; } = "Exempt";
+
+        // ✅ NEW: Vendor Specific Data for the UI Matrix
+        public string? SupplierItemCode { get; set; }
+        public int Moq { get; set; } = 1;
     }
 
     public partial class PurchaseOrderViewModel : ObservableObject
@@ -85,6 +89,17 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnSelectedItemChanged(ItemMasterSummaryDto? value)
         {
             if (value == null) return;
+
+            // ✅ STRICT MODE: Block searching if no supplier is picked
+            if (SelectedSupplier == null)
+            {
+                MessageBox.Show("Please select a Supplier first before loading matrix items.", "Supplier Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                // Temporarily detach the event to reset without looping
+                SelectedItem = null;
+                return;
+            }
+
             _ = LoadVariantsForGridAsync(value.ParentId);
         }
 
@@ -97,6 +112,12 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var variant in variants)
             {
+                // ✅ STRICT MODE: Check if this supplier is approved for this variant
+                var supplierLink = variant.ItemSuppliers?.FirstOrDefault(s => s.SupplierId == SelectedSupplier!.Id);
+
+                // If this supplier doesn't sell this specific variant, hide it from the matrix!
+                if (supplierLink == null) continue;
+
                 _allMatrixVariants.Add(new PoMatrixEntryDto
                 {
                     ItemVariantId = variant.Id,
@@ -106,11 +127,22 @@ namespace POS.BackOffice.UI.ViewModels
                     Barcode = variant.Barcode,
                     Uom = variant.ItemParent?.BaseUom ?? "PCS",
                     TaxCode = variant.ItemParent?.TaxCode ?? "Exempt",
-                    ExpectedCost = variant.CostPrice,
+
+                    // ✅ PULL VENDOR SPECIFIC DATA
+                    ExpectedCost = supplierLink.LastCostPrice,
+                    SupplierItemCode = supplierLink.SupplierItemCode,
+                    Moq = supplierLink.MinimumOrderQuantity,
+
                     OrderQty = 0,
                     CurrentSOH = 0m
                 });
             }
+
+            if (!_allMatrixVariants.Any())
+            {
+                MessageBox.Show("None of the variants for this item are approved for the selected supplier.", "Strict Mode", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
             ApplyMatrixFilter();
         }
 
@@ -135,11 +167,28 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (string.IsNullOrWhiteSpace(ScanBarcode)) return;
 
+            // ✅ STRICT MODE
+            if (SelectedSupplier == null)
+            {
+                MessageBox.Show("Please select a Supplier first before scanning items.", "Supplier Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ScanBarcode = string.Empty;
+                return;
+            }
+
             var variant = await _itemMasterRepository.GetItemByBarcodeAsync(ScanBarcode.Trim());
 
             if (variant == null)
             {
                 MessageBox.Show($"Barcode '{ScanBarcode}' not found.", "Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ScanBarcode = string.Empty;
+                return;
+            }
+
+            // ✅ STRICT MODE: Block the scan if the item isn't mapped to the vendor
+            var supplierLink = variant.ItemSuppliers?.FirstOrDefault(s => s.SupplierId == SelectedSupplier.Id);
+            if (supplierLink == null)
+            {
+                MessageBox.Show($"Strict Mode Blocked: This item ({variant.ItemParent?.ItemName} - {variant.VariantDescription}) is not approved for the selected supplier.", "Invalid Vendor", MessageBoxButton.OK, MessageBoxImage.Error);
                 ScanBarcode = string.Empty;
                 return;
             }
@@ -153,8 +202,14 @@ namespace POS.BackOffice.UI.ViewModels
                 Barcode = variant.Barcode,
                 Uom = variant.ItemParent?.BaseUom ?? "PCS",
                 TaxCode = variant.ItemParent?.TaxCode ?? "Exempt",
-                ExpectedCost = variant.CostPrice,
-                OrderQty = 1
+
+                // ✅ PULL VENDOR SPECIFIC DATA
+                ExpectedCost = supplierLink.LastCostPrice,
+                SupplierItemCode = supplierLink.SupplierItemCode,
+                Moq = supplierLink.MinimumOrderQuantity,
+
+                // Default to MOQ so they don't accidentally order 1 if MOQ is 12
+                OrderQty = supplierLink.MinimumOrderQuantity > 0 ? supplierLink.MinimumOrderQuantity : 1
             };
 
             PoLines.Add(newLine);
@@ -223,7 +278,11 @@ namespace POS.BackOffice.UI.ViewModels
                     OrderQty = item.OrderQty,
                     ExpectedCost = item.ExpectedCost,
                     LineDiscount = item.LineDiscount,
-                    TaxCode = item.TaxCode
+                    TaxCode = item.TaxCode,
+
+                    // ✅ PASS VENDOR INFO TO MAIN GRID
+                    SupplierItemCode = item.SupplierItemCode,
+                    Moq = item.Moq
                 };
 
                 PoLines.Add(newLine);
@@ -287,7 +346,6 @@ namespace POS.BackOffice.UI.ViewModels
                         CreatedBy = this.CurrentUser
                     };
 
-                    // Note: Hardcoding isDraft to false since we removed drafts entirely.
                     await _poRepository.SavePurchaseOrderAsync(header, PoLines.ToList(), false);
 
                     MessageBox.Show($"Purchase Order Approved Successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);

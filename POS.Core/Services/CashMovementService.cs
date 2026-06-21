@@ -2,11 +2,12 @@
 using POS.Core.Data;
 using POS.Core.Interfaces;
 using POS.Core.Models;
+using POS.Core.Enums;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace POS.Services
+namespace POS.Core.Services
 {
     public class CashMovementService : ICashMovementService
     {
@@ -22,7 +23,7 @@ namespace POS.Services
             // In a real system, you hash the PIN and compare against the Users table.
             // For now, checking against a hardcoded highly-privileged role.
             var manager = await _context.Users
-                .FirstOrDefaultAsync(u => u.PosPinHash == pin && u.Role == "Manager");
+                .FirstOrDefaultAsync(u => u.PosPinHash == pin && u.Role == UserRole.Manager);
 
             return manager != null;
         }

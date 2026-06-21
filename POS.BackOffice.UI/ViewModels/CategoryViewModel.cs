@@ -29,6 +29,10 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private Category? _selectedCategory;
 
+        // Added property to control the XAML IsReadOnly binding
+        [ObservableProperty]
+        private bool _isCodeReadOnly = false;
+
         public ObservableCollection<Category> Categories { get; set; } = new();
 
         public CategoryViewModel(CategoryRepository categoryRepository)
@@ -124,6 +128,9 @@ namespace POS.BackOffice.UI.ViewModels
             CategoryName = string.Empty;
             IsDeactivated = false;
             SelectedCategory = null;
+
+            // Unlock the Category Code field for new entries
+            IsCodeReadOnly = false;
         }
 
         [RelayCommand]
@@ -169,6 +176,13 @@ namespace POS.BackOffice.UI.ViewModels
                 CategoryCode = value.CategoryCode ?? string.Empty;
                 CategoryName = value.CategoryName ?? string.Empty;
                 IsDeactivated = value.IsDeactivated;
+
+                // Lock the Category Code field for existing entries
+                IsCodeReadOnly = true;
+            }
+            else
+            {
+                IsCodeReadOnly = false;
             }
         }
     }

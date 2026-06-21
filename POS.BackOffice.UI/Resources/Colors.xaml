@@ -1,4 +1,30 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    
+
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#D4D0C8"/>
+    <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#F0F0F0"/>
+    <SolidColorBrush x:Key="WhiteBackgroundBrush" Color="White"/>
+
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="Black"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#666666"/>
+    <SolidColorBrush x:Key="HeaderTextBrush" Color="#003366"/>
+
+    <SolidColorBrush x:Key="BorderBrush" Color="#A0A0A0"/>
+    <SolidColorBrush x:Key="LightBorderBrush" Color="#D0D0D0"/>
+    <SolidColorBrush x:Key="InputBoxBorderBrush" Color="#808080"/>
+
+    <SolidColorBrush x:Key="ActionBackgroundBrush" Color="#005555"/>
+    <SolidColorBrush x:Key="ActionHoverBrush" Color="#007777"/>
+    <SolidColorBrush x:Key="ButtonDefaultBrush" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="ButtonHoverBrush" Color="#CCCCCC"/>
+
+    <SolidColorBrush x:Key="WarningTextBrush" Color="#A94044"/>
+    <SolidColorBrush x:Key="HighlightBackgroundBrush" Color="#FFFFE0"/>
+    <SolidColorBrush x:Key="SuccessBorderBrush" Color="#3D8B40"/>
+    <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#F4FAF6"/>
+
+    <SolidColorBrush x:Key="DataGridAlternatingRow" Color="#F9F9F9"/>
+    <SolidColorBrush x:Key="DataGridHeaderBackground" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="LightSelectionBrush" Color="#D0E8E8"/>
+
 </ResourceDictionary>

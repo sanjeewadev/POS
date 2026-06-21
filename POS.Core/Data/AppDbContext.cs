@@ -59,6 +59,8 @@ namespace POS.Core.Data
         public DbSet<CustomerReturnHeader> CustomerReturnHeaders { get; set; } // Customer Refunds
         public DbSet<CustomerReturnLine> CustomerReturnLines { get; set; }
 
+        public DbSet<ItemSupplier> ItemSuppliers { get; set; } = null!;
+
         public DbSet<QuotationHeader> QuotationHeaders { get; set; }
         public DbSet<QuotationLine> QuotationLines { get; set; }
 

@@ -4,6 +4,7 @@ using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Utilities;
+using POS.Core.Enums;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -27,15 +28,15 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private string _email = string.Empty;
         [ObservableProperty] private string _mobile = string.Empty;
         [ObservableProperty] private string _username = string.Empty;
-        [ObservableProperty] private bool _forcePasswordReset = true;
 
-        // Default role is now Cashier
-        [ObservableProperty] private string _selectedRole = "Cashier";
+        // Default role is now Cashier (Using Enum)
+        [ObservableProperty] private UserRole _selectedRole = UserRole.Cashier;
         [ObservableProperty] private string _statusText = "Active";
 
-        // --- COLLECTIONS (Simplified Roles) ---
-        public ObservableCollection<string> FilterRoles { get; set; } = new() { "All Roles", "Admin", "Cashier" };
-        public ObservableCollection<string> AvailableRoles { get; set; } = new() { "Admin", "Cashier" };
+        // --- COLLECTIONS ---
+        // Includes the new "Manager" role
+        public ObservableCollection<string> FilterRoles { get; set; } = new() { "All Roles", "Admin", "Manager", "Cashier" };
+        public ObservableCollection<UserRole> AvailableRoles { get; set; } = new() { UserRole.Admin, UserRole.Manager, UserRole.Cashier };
 
         public ObservableCollection<string> AccountStatuses { get; set; } = new() { "Active", "Suspended" };
         public ObservableCollection<User> Users { get; set; } = new();
@@ -64,7 +65,6 @@ namespace POS.BackOffice.UI.ViewModels
                 Email = value.Email;
                 Mobile = value.Mobile;
                 Username = value.Username;
-                ForcePasswordReset = value.ForcePasswordReset;
                 SelectedRole = value.Role;
                 StatusText = value.IsActive ? "Active" : "Suspended";
             }
@@ -92,9 +92,9 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             // 2. Validation
-            if (string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(SelectedRole))
+            if (string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(Username))
             {
-                MessageBox.Show("First Name, Username, and Role are mandatory.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("First Name and Username are mandatory.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -124,7 +124,6 @@ namespace POS.BackOffice.UI.ViewModels
                 user.Email = Email.Trim();
                 user.Mobile = Mobile.Trim();
                 user.Username = Username.Trim();
-                user.ForcePasswordReset = ForcePasswordReset;
                 user.Role = SelectedRole;
                 user.IsActive = StatusText == "Active";
 
@@ -171,8 +170,7 @@ namespace POS.BackOffice.UI.ViewModels
             Email = string.Empty;
             Mobile = string.Empty;
             Username = string.Empty;
-            ForcePasswordReset = true;
-            SelectedRole = "Cashier";
+            SelectedRole = UserRole.Cashier;
             StatusText = "Active";
         }
     }

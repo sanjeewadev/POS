@@ -28,10 +28,20 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly AttributeRepository _attributeRepository;
         private readonly UnitOfMeasureRepository _uomRepository;
 
-        // --- ZONE 1: PARENT IDENTITY ---
+        // ✅ NEW: We need to pull the list of suppliers for the UI dropdown
+        private readonly SupplierRepository _supplierRepository;
+
+        private bool _isLoadingItem = false;
+
+        // --- ZONE 1: PARENT IDENTITY & CLASSIFICATION ---
         [ObservableProperty] private ItemParent _currentItem = new();
         [ObservableProperty] private Category? _selectedCategory;
         [ObservableProperty] private SubCategory? _selectedSubCategory;
+
+        [ObservableProperty] private string _itemPrefix = string.Empty;
+        [ObservableProperty] private string _itemSuffix = string.Empty;
+        [ObservableProperty] private bool _isCodeReadOnly = false;
+
         [ObservableProperty] private string _selectedUom = string.Empty;
         [ObservableProperty] private string _selectedTaxCode = string.Empty;
 
@@ -40,7 +50,7 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private AttributeValue? _propertyValueInput;
         public ObservableCollection<MatrixPropertySelection> DynamicProperties { get; set; } = new();
 
-        // --- ZONE 3: BULK PRICING ---
+        // --- ZONE 3: BULK PRICING & LOGISTICS ---
         [ObservableProperty] private decimal _bulkCost = 0m;
         [ObservableProperty] private int _bulkReorderLevel = 0;
         [ObservableProperty] private decimal _bulkRetailMarkupPercent = 0m;
@@ -48,7 +58,7 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private decimal _bulkWholesaleMarkupPercent = 0m;
         [ObservableProperty] private decimal _bulkWholesalePrice = 0m;
         [ObservableProperty] private decimal _bulkMinimumPrice = 0m;
-        [ObservableProperty] private decimal _bulkMaximumPrice = 0m; // <-- ADD THIS LINE
+        [ObservableProperty] private decimal _bulkMaximumPrice = 0m;
 
         [ObservableProperty] private bool _bulkIsScaleItem = false;
         [ObservableProperty] private bool _bulkHasBatchExpiry = false;
@@ -61,17 +71,34 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private string _masterSearchText = string.Empty;
         [ObservableProperty] private ItemMasterSummaryDto? _selectedDatabaseItem;
 
+        // ==========================================
+        // ✅ NEW: ZONE 7: SUPPLIER MANAGEMENT STATE
+        // ==========================================
+
+        // The master list of all suppliers for the dropdown
+        public ObservableCollection<Supplier> AvailableSuppliers { get; set; } = new();
+
+        // The specific variant we clicked on to edit its suppliers
+        [ObservableProperty] private ItemVariant? _selectedVariantForSupplierEdit;
+
+        // The specific suppliers attached to the clicked variant
+        public ObservableCollection<ItemSupplier> SelectedVariantSuppliers { get; set; } = new();
+
+        // Inputs for adding a new supplier to the grid
+        [ObservableProperty] private Supplier? _supplierToAdd;
+        [ObservableProperty] private string _supplierItemCodeInput = string.Empty;
+        [ObservableProperty] private decimal _supplierCostInput = 0m;
+        [ObservableProperty] private bool _isPrimarySupplierInput = true;
+
+
         // --- LOOKUPS ---
         public ObservableCollection<Category> Categories { get; set; } = new();
         public ObservableCollection<SubCategory> SubCategories { get; set; } = new();
-
         public ObservableCollection<AttributeGroup> PropertyKeys { get; set; } = new();
-        public ObservableCollection<AttributeValue> PropertyValues { get; set; } = new(); // The Cascading List
-
+        public ObservableCollection<AttributeValue> PropertyValues { get; set; } = new();
         public ObservableCollection<string> Uoms { get; set; } = new();
         public ObservableCollection<string> TaxCodes { get; set; } = new(new[] { "TAX-FREE", "VAT-18", "VAT-5" });
 
-        // Random generator for 12-digit barcodes
         private static readonly Random _random = new Random();
 
         public ItemMasterViewModel(
@@ -79,52 +106,141 @@ namespace POS.BackOffice.UI.ViewModels
             CategoryRepository categoryRepository,
             SubCategoryRepository subCategoryRepository,
             AttributeRepository attributeRepository,
-            UnitOfMeasureRepository uomRepository)
+            UnitOfMeasureRepository uomRepository,
+            SupplierRepository supplierRepository) // ✅ Injected!
         {
             _itemMasterRepository = itemMasterRepository;
             _categoryRepository = categoryRepository;
             _subCategoryRepository = subCategoryRepository;
             _attributeRepository = attributeRepository;
             _uomRepository = uomRepository;
+            _supplierRepository = supplierRepository; // ✅ Injected!
 
             _ = InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
-            // Load Categories
             Categories.Clear();
             var categories = await _categoryRepository.GetAllAsync();
             foreach (var cat in categories.Where(c => !c.IsDeactivated)) Categories.Add(cat);
 
-            // Load UOMs dynamically from the DB
-            // Load UOMs dynamically from the DB
             Uoms.Clear();
             var dbUoms = await _uomRepository.GetAllAsync();
-            // Using the exact properties from your UnitOfMeasure model
             foreach (var uom in dbUoms.Where(u => u.IsActive)) Uoms.Add(uom.UomCode);
+
+            // ✅ Load Master Supplier List for the dropdown
+            AvailableSuppliers.Clear();
+            var suppliers = await _supplierRepository.GetAllAsync();
+            foreach (var sup in suppliers.Where(s => !s.IsDeactivated)) AvailableSuppliers.Add(sup);
 
             await LoadMasterGridAsync();
         }
 
-        // --- UI TRIGGERS ---
+        // ==========================================
+        // UI TRIGGERS & AUTO-CODING
+        // ==========================================
+
         partial void OnSelectedCategoryChanged(Category? value)
         {
             if (value == null) return;
-
             CurrentItem.CategoryId = value.Id;
 
-            // 1. Cascade SubCategories
-            _ = LoadSubCategoriesAsync(value.Id);
+            if (!_isLoadingItem)
+            {
+                _ = LoadSubCategoriesAsync(value.Id);
+                _ = LoadPropertyKeysForCategoryAsync(value.Id);
+                SelectedSubCategory = null;
+            }
+        }
 
-            // 2. Load Assigned Attribute Groups dynamically
-            _ = LoadPropertyKeysForCategoryAsync(value.Id);
+        partial void OnSelectedSubCategoryChanged(SubCategory? value)
+        {
+            if (value != null && SelectedCategory != null && !IsCodeReadOnly && !_isLoadingItem)
+            {
+                ItemPrefix = $"{SelectedCategory.CategoryCode}-{value.SubCategoryCode}-";
+            }
+        }
+
+        partial void OnSelectedDatabaseItemChanged(ItemMasterSummaryDto? value)
+        {
+            if (value != null)
+            {
+                _ = LoadFullItemDetailsAsync(value.ParentId);
+            }
+            else
+            {
+                IsCodeReadOnly = false;
+            }
+        }
+
+        // ✅ NEW: Triggered when a user clicks a row in the Generated Variants grid
+        partial void OnSelectedVariantForSupplierEditChanged(ItemVariant? value)
+        {
+            SelectedVariantSuppliers.Clear();
+            if (value != null && value.ItemSuppliers != null)
+            {
+                // Load the suppliers for this specific variant into the UI Grid
+                foreach (var sup in value.ItemSuppliers)
+                {
+                    SelectedVariantSuppliers.Add(sup);
+                }
+
+                // Pre-fill the add box with the variant's current cost
+                SupplierCostInput = value.CostPrice;
+            }
+        }
+
+
+        private async Task LoadFullItemDetailsAsync(int parentId)
+        {
+            _isLoadingItem = true;
+
+            try
+            {
+                var fullItem = await _itemMasterRepository.GetFullMatrixByIdAsync(parentId);
+                if (fullItem == null) return;
+
+                CurrentItem = fullItem;
+                IsCodeReadOnly = true;
+                ItemPrefix = fullItem.ItemCode;
+                ItemSuffix = string.Empty;
+
+                SelectedCategory = Categories.FirstOrDefault(c => c.Id == fullItem.CategoryId);
+
+                await LoadSubCategoriesAsync(fullItem.CategoryId);
+                SelectedSubCategory = SubCategories.FirstOrDefault(s => s.Id == fullItem.SubCategoryId);
+
+                await LoadPropertyKeysForCategoryAsync(fullItem.CategoryId);
+
+                SelectedUom = fullItem.BaseUom;
+                SelectedTaxCode = fullItem.TaxCode;
+
+                BulkIsScaleItem = fullItem.IsScaleItem;
+                BulkHasBatchExpiry = fullItem.HasBatchExpiry;
+                BulkIsSerialized = fullItem.IsSerialized;
+
+                GeneratedVariants.Clear();
+                SelectedVariantSuppliers.Clear(); // Clear supplier grid on fresh load
+
+                foreach (var variant in fullItem.Variants.Where(v => !v.IsDeactivated))
+                {
+                    // Ensure the ItemSuppliers list isn't null before adding
+                    if (variant.ItemSuppliers == null) variant.ItemSuppliers = new List<ItemSupplier>();
+                    GeneratedVariants.Add(variant);
+                }
+
+                DynamicProperties.Clear();
+            }
+            finally
+            {
+                _isLoadingItem = false;
+            }
         }
 
         private async Task LoadSubCategoriesAsync(int categoryId)
         {
             SubCategories.Clear();
-            // Assuming your SubCategory repository has this method (or similar)
             var subCats = await _subCategoryRepository.GetAllAsync();
             foreach (var sub in subCats.Where(s => !s.IsDeactivated && s.CategoryId == categoryId)) SubCategories.Add(sub);
         }
@@ -133,17 +249,14 @@ namespace POS.BackOffice.UI.ViewModels
         {
             PropertyKeys.Clear();
             var groups = await _attributeRepository.GetAllGroupsAsync();
-
-            // Bring in the assigned groups based on Category mapping
             var assignedIds = await _attributeRepository.GetAssignedCategoryIdsForGroupAsync(categoryId);
 
-            foreach (var g in groups)
+            foreach (var g in groups.Where(g => assignedIds.Contains(g.Id)))
             {
                 PropertyKeys.Add(g);
             }
         }
 
-        // --- CASCADING TRIGGER: Populate Values when a Group is chosen ---
         partial void OnSelectedPropertyKeyChanged(AttributeGroup? value)
         {
             if (value == null)
@@ -151,7 +264,6 @@ namespace POS.BackOffice.UI.ViewModels
                 PropertyValues.Clear();
                 return;
             }
-
             _ = LoadPropertyValuesAsync(value.Id);
         }
 
@@ -162,7 +274,95 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var val in values.Where(v => !v.IsDeactivated)) PropertyValues.Add(val);
         }
 
-        // --- ZONE 2 BUILDER ACTIONS ---
+
+        // ==========================================
+        // ✅ NEW: SUPPLIER MANAGEMENT COMMANDS
+        // ==========================================
+
+        [RelayCommand]
+        private void AddSupplierToVariant()
+        {
+            if (SelectedVariantForSupplierEdit == null)
+            {
+                MessageBox.Show("Please select a Variant from the main grid first.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (SupplierToAdd == null)
+            {
+                MessageBox.Show("Please select a Supplier from the dropdown.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (SupplierCostInput <= 0)
+            {
+                MessageBox.Show("Supplier Cost must be greater than zero.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Prevent duplicate suppliers on the same item
+            if (SelectedVariantSuppliers.Any(s => s.SupplierId == SupplierToAdd.Id))
+            {
+                MessageBox.Show("This supplier is already attached to this variant.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // If this is set to primary, un-check primary on all others for this variant
+            if (IsPrimarySupplierInput)
+            {
+                foreach (var s in SelectedVariantSuppliers) s.IsPrimary = false;
+            }
+            else if (!SelectedVariantSuppliers.Any())
+            {
+                // If it's the first supplier, force it to be primary
+                IsPrimarySupplierInput = true;
+            }
+
+            var newBridge = new ItemSupplier
+            {
+                SupplierId = SupplierToAdd.Id,
+                Supplier = SupplierToAdd, // Required for UI display
+                ItemVariantId = SelectedVariantForSupplierEdit.Id,
+                SupplierItemCode = SupplierItemCodeInput,
+                LastCostPrice = SupplierCostInput,
+                IsPrimary = IsPrimarySupplierInput,
+                MinimumOrderQuantity = 1
+            };
+
+            // Add to UI Grid
+            SelectedVariantSuppliers.Add(newBridge);
+
+            // Link to the actual underlying data model so EF saves it
+            SelectedVariantForSupplierEdit.ItemSuppliers.Add(newBridge);
+
+            // Reset inputs for next entry
+            SupplierToAdd = null;
+            SupplierItemCodeInput = string.Empty;
+            IsPrimarySupplierInput = false;
+        }
+
+        [RelayCommand]
+        private void RemoveSupplierFromVariant(ItemSupplier? itemSupplier)
+        {
+            if (itemSupplier == null || SelectedVariantForSupplierEdit == null) return;
+
+            // Remove from UI
+            SelectedVariantSuppliers.Remove(itemSupplier);
+
+            // Remove from underlying data model
+            SelectedVariantForSupplierEdit.ItemSuppliers.Remove(itemSupplier);
+
+            // If we deleted the primary, assign primary to the first available remaining supplier
+            if (itemSupplier.IsPrimary && SelectedVariantSuppliers.Any())
+            {
+                SelectedVariantSuppliers.First().IsPrimary = true;
+            }
+        }
+
+
+        // ==========================================
+        // VARIANT BUILDER
+        // ==========================================
         [RelayCommand]
         private void AddProperty()
         {
@@ -184,19 +384,19 @@ namespace POS.BackOffice.UI.ViewModels
             if (selection != null) DynamicProperties.Remove(selection);
         }
 
-        // ==========================================
-        // THE ENGINE: GENERATE VARIANTS & MAPPINGS
-        // ==========================================
         [RelayCommand]
         private void GenerateVariants()
         {
+            CurrentItem.ItemCode = $"{ItemPrefix}{ItemSuffix}".Trim().ToUpper();
+
             if (string.IsNullOrWhiteSpace(CurrentItem.ItemCode))
             {
-                MessageBox.Show("Please define the Parent Item Code first.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please complete the Item Code (Prefix + Suffix) first.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             GeneratedVariants.Clear();
+            SelectedVariantSuppliers.Clear(); // Clear suppliers since we wiped the variants
 
             if (!DynamicProperties.Any())
             {
@@ -204,7 +404,14 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     SkuCode = CurrentItem.ItemCode,
                     VariantDescription = "Standard",
-                    Barcode = GenerateUniqueBarcode() // Assign auto-barcode
+                    Barcode = GenerateUniqueBarcode(),
+                    CostPrice = BulkCost,
+                    RetailPrice = BulkRetailPrice,
+                    WholesalePrice = BulkWholesalePrice,
+                    MinimumPrice = BulkMinimumPrice,
+                    MaximumPrice = BulkMaximumPrice,
+                    ReorderLevel = BulkReorderLevel,
+                    ItemSuppliers = new List<ItemSupplier>() // Initialize the empty list!
                 });
                 return;
             }
@@ -221,13 +428,14 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     SkuCode = $"{CurrentItem.ItemCode}-{skuSuffix}",
                     VariantDescription = desc,
-                    Barcode = GenerateUniqueBarcode(), // The 12-digit generator
+                    Barcode = GenerateUniqueBarcode(),
                     CostPrice = BulkCost,
                     RetailPrice = BulkRetailPrice,
                     WholesalePrice = BulkWholesalePrice,
                     MinimumPrice = BulkMinimumPrice,
                     MaximumPrice = BulkMaximumPrice,
-                    ReorderLevel = BulkReorderLevel
+                    ReorderLevel = BulkReorderLevel,
+                    ItemSuppliers = new List<ItemSupplier>() // Initialize the empty list!
                 };
 
                 foreach (var prop in combo)
@@ -246,7 +454,6 @@ namespace POS.BackOffice.UI.ViewModels
 
         private string GenerateUniqueBarcode()
         {
-            // Generates a string of 12 random digits
             char[] digits = new char[12];
             for (int i = 0; i < 12; i++)
             {
@@ -279,7 +486,9 @@ namespace POS.BackOffice.UI.ViewModels
             return result;
         }
 
-        // --- ZONE 3 BULK PRICING ---
+        // ==========================================
+        // BULK PRICING
+        // ==========================================
         partial void OnBulkCostChanged(decimal value) => CalculateRetail();
         partial void OnBulkRetailMarkupPercentChanged(decimal value) => CalculateRetail();
         partial void OnBulkWholesaleMarkupPercentChanged(decimal value) => CalculateRetail();
@@ -293,7 +502,11 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void ApplyBulkDefaults()
         {
-            foreach (var variant in GeneratedVariants)
+            if (!GeneratedVariants.Any()) return;
+
+            var tempList = GeneratedVariants.ToList();
+
+            foreach (var variant in tempList)
             {
                 variant.CostPrice = BulkCost;
                 variant.RetailPrice = BulkRetailPrice;
@@ -302,27 +515,31 @@ namespace POS.BackOffice.UI.ViewModels
                 variant.MaximumPrice = BulkMaximumPrice;
                 variant.ReorderLevel = BulkReorderLevel;
             }
+
+            GeneratedVariants.Clear();
+            foreach (var variant in tempList)
+            {
+                GeneratedVariants.Add(variant);
+            }
         }
 
         // ==========================================
-        // SAVE EXECUTION
-        // ==========================================
-        // ==========================================
-        // SAVE EXECUTION
+        // SAVE & DATABASE LOGIC
         // ==========================================
         [RelayCommand]
         private async Task SaveAsync()
         {
-            // --- 1. STRICT VALIDATIONS ---
+            CurrentItem.ItemCode = $"{ItemPrefix}{ItemSuffix}".Trim().ToUpper();
+
             if (string.IsNullOrWhiteSpace(CurrentItem.ItemCode) || string.IsNullOrWhiteSpace(CurrentItem.ItemName))
             {
                 MessageBox.Show("Parent Item Code and Name are required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (CurrentItem.CategoryId == 0)
+            if (SelectedCategory == null || SelectedSubCategory == null)
             {
-                MessageBox.Show("Please select a Category before saving.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please select a Category and Sub-Category before saving.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -341,14 +558,14 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
-                // --- 2. PREPARE DATA FOR ENTITY FRAMEWORK ---
+                CurrentItem.CategoryId = SelectedCategory.Id;
+                CurrentItem.SubCategoryId = SelectedSubCategory.Id;
                 CurrentItem.BaseUom = SelectedUom ?? string.Empty;
                 CurrentItem.TaxCode = SelectedTaxCode ?? string.Empty;
                 CurrentItem.IsScaleItem = BulkIsScaleItem;
                 CurrentItem.HasBatchExpiry = BulkHasBatchExpiry;
                 CurrentItem.IsSerialized = BulkIsSerialized;
 
-                // CRITICAL FIX: Disconnect UI objects so Entity Framework doesn't try to insert duplicate categories
                 CurrentItem.Category = null!;
                 CurrentItem.SubCategory = null!;
 
@@ -361,7 +578,6 @@ namespace POS.BackOffice.UI.ViewModels
                     }
                 }
 
-                // --- 3. SAVE ---
                 await _itemMasterRepository.SaveFullMatrixAsync(CurrentItem, GeneratedVariants.ToList(), mappingsList);
 
                 await LoadMasterGridAsync();
@@ -370,7 +586,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                // Unpacking the inner exception because EF Core usually hides the real error inside it
                 string errorMsg = ex.InnerException?.Message ?? ex.Message;
                 MessageBox.Show($"Failed to save item: {errorMsg}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -398,8 +613,15 @@ namespace POS.BackOffice.UI.ViewModels
         private void Clear()
         {
             CurrentItem = new ItemParent();
+            ItemPrefix = string.Empty;
+            ItemSuffix = string.Empty;
+            IsCodeReadOnly = false;
+
             DynamicProperties.Clear();
             GeneratedVariants.Clear();
+            SelectedVariantSuppliers.Clear(); // ✅ Clear suppliers grid
+            SelectedVariantForSupplierEdit = null;
+
             SelectedCategory = null;
             SelectedSubCategory = null;
             SelectedUom = string.Empty;
@@ -418,6 +640,7 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     await _itemMasterRepository.DeleteMatrixAsync(SelectedDatabaseItem.ParentId);
                     await LoadMasterGridAsync();
+                    Clear();
                 }
                 catch (DbUpdateException)
                 {

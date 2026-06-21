@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              
              xmlns:viewmodels="clr-namespace:POS.BackOffice.UI.ViewModels"
-             
              xmlns:pages="clr-namespace:POS.BackOffice.UI.Views.Pages"
              xmlns:crm="clr-namespace:POS.BackOffice.UI.Views.Pages.Crm"
              xmlns:reports="clr-namespace:POS.BackOffice.UI.Views.Pages.Reports"
@@ -18,120 +17,125 @@
              Startup="Application_Startup">
 
     <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Colors.xaml" />
+            </ResourceDictionary.MergedDictionaries>
 
-        <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
-            <pages:DashboardView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
+                <pages:DashboardView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:CategoryViewModel}">
-            <inventorypages:CategoryView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:SubCategoryViewModel}">
-            <inventorypages:SubCategoryView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:ItemPropertyViewModel}">
-            <inventorypages:ItemPropertyView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:SupplierViewModel}">
-            <inventorypages:SupplierView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:ItemMasterViewModel}">
-            <inventorypages:ItemMasterView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:UnitOfMeasureViewModel}">
-            <inventorypages:UnitOfMeasureView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:CategoryViewModel}">
+                <inventorypages:CategoryView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SubCategoryViewModel}">
+                <inventorypages:SubCategoryView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:ItemPropertyViewModel}">
+                <inventorypages:ItemPropertyView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SupplierViewModel}">
+                <inventorypages:SupplierView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:ItemMasterViewModel}">
+                <inventorypages:ItemMasterView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:UnitOfMeasureViewModel}">
+                <inventorypages:UnitOfMeasureView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
-            <inventoryoperations:GrnView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:StockAdjustmentViewModel}">
-            <inventoryoperations:StockAdjustmentView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:StockBalanceViewModel}">
-            <inventoryoperations:StockBalanceView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:SupplierReturnViewModel}">
-            <inventoryoperations:SupplierReturnView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:ExpressItemAdminViewModel}">
-            <inventoryoperations:ExpressItemAdminView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:BarcodeManagementViewModel}">
-            <inventoryoperations:BarcodeManagementView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:BarcodePrinterViewModel}">
-            <inventoryoperations:BarcodePrinterView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
+                <inventoryoperations:GrnView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:StockAdjustmentViewModel}">
+                <inventoryoperations:StockAdjustmentView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:StockBalanceViewModel}">
+                <inventoryoperations:StockBalanceView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SupplierReturnViewModel}">
+                <inventoryoperations:SupplierReturnView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:ExpressItemAdminViewModel}">
+                <inventoryoperations:ExpressItemAdminView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:BarcodeManagementViewModel}">
+                <inventoryoperations:BarcodeManagementView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:BarcodePrinterViewModel}">
+                <inventoryoperations:BarcodePrinterView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderViewModel}">
-            <purchasing:PurchaseOrderView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderDashboardViewModel}">
-            <purchasing:PurchaseOrderDashboardView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderViewModel}">
+                <purchasing:PurchaseOrderView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderDashboardViewModel}">
+                <purchasing:PurchaseOrderDashboardView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:SupplierLedgerViewModel}">
-            <finance:SupplierLedgerView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:SupplierClaimsViewModel}">
-            <finance:SupplierClaimsView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SupplierLedgerViewModel}">
+                <finance:SupplierLedgerView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SupplierClaimsViewModel}">
+                <finance:SupplierClaimsView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:SupplierReportViewModel}">
-            <reports:SupplierReportView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:FloatCashLogViewModel}">
-            <reports:FloatCashLogView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:FinancialSummaryViewModel}">
-            <reports:FinancialSummaryView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:CashMovementDashboardViewModel}">
-            <reports:CashMovementDashboardView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SupplierReportViewModel}">
+                <reports:SupplierReportView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:FloatCashLogViewModel}">
+                <reports:FloatCashLogView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:FinancialSummaryViewModel}">
+                <reports:FinancialSummaryView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:CashMovementDashboardViewModel}">
+                <reports:CashMovementDashboardView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:SalesExplorerViewModel}">
-            <sales:SalesExplorerView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:SecurityAuditViewModel}">
-            <sales:SecurityAuditView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:QuotationManagerViewModel}">
-            <sales:QuotationManagerView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:ItemSalesAnalyticsViewModel}">
-            <sales:ItemSalesAnalyticsView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:CustomerReturnsAuditViewModel}">
-            <sales:CustomerReturnsAuditView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:ReceiptLedgerViewModel}">
-            <sales:ReceiptLedgerView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SalesExplorerViewModel}">
+                <sales:SalesExplorerView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SecurityAuditViewModel}">
+                <sales:SecurityAuditView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:QuotationManagerViewModel}">
+                <sales:QuotationManagerView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:ItemSalesAnalyticsViewModel}">
+                <sales:ItemSalesAnalyticsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:CustomerReturnsAuditViewModel}">
+                <sales:CustomerReturnsAuditView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:ReceiptLedgerViewModel}">
+                <sales:ReceiptLedgerView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:LoyaltyDiscountAdminViewModel}">
-            <crm:LoyaltyDiscountAdminView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:CustomerMasterViewModel}">
-            <crm:CustomerMasterView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:CustomerLedgerViewModel}">
-            <crm:CustomerLedgerView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:GiftVoucherAdminViewModel}">
-            <crm:GiftVoucherAdminView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:LoyaltyDiscountAdminViewModel}">
+                <crm:LoyaltyDiscountAdminView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:CustomerMasterViewModel}">
+                <crm:CustomerMasterView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:CustomerLedgerViewModel}">
+                <crm:CustomerLedgerView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:GiftVoucherAdminViewModel}">
+                <crm:GiftVoucherAdminView />
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type viewmodels:UserManagementViewModel}">
-            <admin:UserManagementView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:SuspendedTransactionsMonitorViewModel}">
-            <admin:SuspendedTransactionsMonitorView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type viewmodels:StoreConfigurationViewModel}">
-            <filepages:StoreConfigurationView />
-        </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:UserManagementViewModel}">
+                <admin:UserManagementView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:SuspendedTransactionsMonitorViewModel}">
+                <admin:SuspendedTransactionsMonitorView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:StoreConfigurationViewModel}">
+                <filepages:StoreConfigurationView />
+            </DataTemplate>
 
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -49,8 +49,8 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     passwordBox.Clear();
 
-                    // Convert the simplified roles to the Enum
-                    UserRole role = MapRoleToEnum(_authService.CurrentUser.Role);
+                    // FIXED: We don't need a map anymore. It is natively an Enum!
+                    UserRole role = _authService.CurrentUser.Role;
 
                     // Shout to MainViewModel to switch the screen
                     LoginSuccessful?.Invoke(role);
@@ -70,20 +70,6 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsProcessing = false;
             }
-        }
-
-        /// <summary>
-        /// Translates our new simplified roles into the Enum your app expects.
-        /// </summary>
-        private UserRole MapRoleToEnum(string dbRole)
-        {
-            return dbRole switch
-            {
-                "Super Admin" => UserRole.Admin, // The hardcoded Skeleton Key
-                "Admin" => UserRole.Admin,       // Standard Database Admin
-                "Cashier" => UserRole.Cashier,   // Standard Cashier
-                _ => UserRole.Cashier            // Safest default fallback
-            };
         }
     }
 }

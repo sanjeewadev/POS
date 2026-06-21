@@ -20,7 +20,7 @@ namespace POS.Core.Repositories
         public string StatusText { get; set; } = string.Empty;
     }
 
-    // NEW DTO: Lightweight container for Barcode Management Grid
+    // Lightweight container for Barcode Management Grid
     public class BarcodeManagementDto
     {
         public int VariantId { get; set; }
@@ -31,11 +31,10 @@ namespace POS.Core.Repositories
         public string CategoryName { get; set; } = string.Empty;
         public bool IsDeactivated { get; set; }
 
-        // UI Helper for the "Select All" Checkbox Column
         public bool IsSelected { get; set; } = false;
     }
 
-    // NEW DTO: Lightweight container for the Live-Add Seek Window
+    // Lightweight container for the Live-Add Seek Window
     public class ProductSeekDto
     {
         public string Barcode { get; set; } = string.Empty;
@@ -55,7 +54,7 @@ namespace POS.Core.Repositories
         }
 
         // ==============================================================================
-        // --- MASTER GRID DATA (Zone 6) : SPLIT QUERY PATTERN TO BYPASS SQLITE LIMIT ---
+        // --- MASTER GRID DATA : LIGHTWEIGHT SUMMARY FETCH ---
         // ==============================================================================
         public async Task<IEnumerable<ItemMasterSummaryDto>> GetSummariesAsync(string searchTerm = "")
         {
@@ -107,7 +106,29 @@ namespace POS.Core.Repositories
             return itemsList;
         }
 
-        // --- VALIDATION ---
+        // ==============================================================================
+        // --- FULL MATRIX FETCH (NEW: For editing and viewing in the UI) ---
+        // ==============================================================================
+        public async Task<ItemParent?> GetFullMatrixByIdAsync(int parentId)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.ItemParents
+                .Include(p => p.Category)
+                .Include(p => p.SubCategory)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.PropertyMappings)
+                        .ThenInclude(m => m.AttributeGroup)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.PropertyMappings)
+                        .ThenInclude(m => m.AttributeValue)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.ItemSuppliers)
+                        .ThenInclude(s => s.Supplier)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == parentId);
+        }
+
         public async Task<bool> IsItemCodeUniqueAsync(string itemCode, int currentParentId = 0)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
@@ -122,6 +143,9 @@ namespace POS.Core.Repositories
 
             try
             {
+                // Sever the tie to the children to prevent recursive tracking errors
+                parent.Variants = null!;
+
                 if (parent.Id == 0)
                 {
                     await context.ItemParents.AddAsync(parent);
@@ -136,13 +160,37 @@ namespace POS.Core.Repositories
                 var existingVariantIds = existingVariants.Select(v => v.Id).ToList();
 
                 var existingMappings = await context.ItemPropertyMappings.Where(m => existingVariantIds.Contains(m.ItemVariantId)).ToListAsync();
+                var existingSuppliers = await context.ItemSuppliers.Where(s => existingVariantIds.Contains(s.ItemVariantId)).ToListAsync();
+
                 context.ItemPropertyMappings.RemoveRange(existingMappings);
+                context.ItemSuppliers.RemoveRange(existingSuppliers);
                 context.ItemVariants.RemoveRange(existingVariants);
                 await context.SaveChangesAsync();
 
                 foreach (var variant in variants)
                 {
+                    // Reset IDs to force a brand new INSERT
+                    variant.Id = 0;
                     variant.ItemParentId = parent.Id;
+
+                    if (variant.PropertyMappings != null)
+                    {
+                        foreach (var map in variant.PropertyMappings)
+                        {
+                            map.ItemVariant = null!; // Prevent circular tracking loops
+                        }
+                    }
+
+                    if (variant.ItemSuppliers != null)
+                    {
+                        foreach (var bridge in variant.ItemSuppliers)
+                        {
+                            bridge.Id = 0; // Force Insert for the Supplier bridge
+                            bridge.Supplier = null!; // Prevent UNIQUE constraint crash
+                            bridge.ItemVariant = null!;
+                        }
+                    }
+
                     await context.ItemVariants.AddAsync(variant);
                 }
                 await context.SaveChangesAsync();
@@ -156,7 +204,6 @@ namespace POS.Core.Repositories
             }
         }
 
-        // --- THE SOFT DELETE FIX ---
         public async Task DeleteMatrixAsync(int parentId)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
@@ -177,12 +224,14 @@ namespace POS.Core.Repositories
             }
         }
 
-        // --- CASHIER & GRN SEARCH ENGINE ---
+        // --- CASHIER & PO SEARCH ENGINE ---
         public async Task<ItemVariant?> GetItemByBarcodeAsync(string barcode)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             return await context.ItemVariants
                 .Include(v => v.ItemParent)
+                // ✅ NEW: Added Include so PO Scanner pulls supplier costs and codes!
+                .Include(v => v.ItemSuppliers)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(v => !v.IsDeactivated &&
                                     (v.SkuCode.ToLower() == barcode.ToLower() || v.Barcode.ToLower() == barcode.ToLower()));
@@ -193,13 +242,14 @@ namespace POS.Core.Repositories
             using var context = await _contextFactory.CreateDbContextAsync();
             return await context.ItemVariants
                 .Include(v => v.ItemParent)
+                .Include(v => v.ItemSuppliers)
                 .Where(v => v.ItemParentId == parentId && !v.IsDeactivated)
                 .AsNoTracking()
                 .ToListAsync();
         }
 
         // ==============================================================================
-        // --- PHASE 1: BARCODE MANAGEMENT ENGINE ---------------------------------------
+        // --- BARCODE MANAGEMENT ENGINE ---
         // ==============================================================================
 
         public async Task<List<BarcodeManagementDto>> GetBarcodeManagementListAsync(string searchTerm = "", int? categoryId = null, bool activeOnly = true)
@@ -257,7 +307,6 @@ namespace POS.Core.Repositories
 
             string formattedBarcode = newBarcode?.Trim() ?? string.Empty;
 
-            // Strict Uniqueness Check
             if (!string.IsNullOrWhiteSpace(formattedBarcode))
             {
                 bool exists = await context.ItemVariants.AnyAsync(v => v.Barcode == formattedBarcode && v.Id != variantId);
@@ -279,18 +328,14 @@ namespace POS.Core.Repositories
 
             try
             {
-                // Only generate barcodes for variants that currently have NONE
                 var variants = await context.ItemVariants
                     .Where(v => variantIds.Contains(v.Id) && string.IsNullOrWhiteSpace(v.Barcode))
                     .ToListAsync();
 
                 foreach (var variant in variants)
                 {
-                    // Industry Standard: In-store barcodes begin with '20' (Local use restricted)
-                    // We append an 8-digit padded ID to ensure it is 100% unique internally
                     string generatedSku = $"20{variant.Id.ToString("D8")}";
 
-                    // Double-check collision (extreme edge case safeguard)
                     while (await context.ItemVariants.AnyAsync(v => v.Barcode == generatedSku))
                     {
                         generatedSku = $"20{new Random().Next(10000000, 99999999)}";
@@ -311,15 +356,7 @@ namespace POS.Core.Repositories
         }
 
         // ==============================================================================
-        // --- PHASE 2: CONTINUOUS SEEK SEARCH ENGINE -----------------------------------
-        // ==============================================================================
-
-        // ==============================================================================
-        // --- PHASE 2: CONTINUOUS SEEK SEARCH ENGINE (SQLITE SAFE VERSION) -------------
-        // ==============================================================================
-
-        // ==============================================================================
-        // --- PHASE 2: CONTINUOUS SEEK SEARCH ENGINE (100% SQLITE BULLETPROOF) ---------
+        // --- CONTINUOUS SEEK SEARCH ENGINE ---
         // ==============================================================================
 
         public async Task<List<ProductSeekDto>> SearchSeekItemsAsync(string nameFilter, string barcodeFilter, string categoryFilter)
@@ -349,7 +386,6 @@ namespace POS.Core.Repositories
                 query = query.Where(v => v.ItemParent.Category.CategoryName == categoryFilter);
             }
 
-            // 1. SAFEST FETCH: Pull raw properties only. No C# logic inside the SQL query!
             var rawResults = await query
                 .Select(v => new
                 {
@@ -373,20 +409,17 @@ namespace POS.Core.Repositories
                     .Select(b => new { b.ItemVariantId, b.CurrentStock })
                     .ToListAsync();
 
-                // 2. MEMORY FORMATTING: Do the string logic here where C# handles it perfectly
                 var finalResults = rawResults.Select(r => new ProductSeekDto
                 {
                     Barcode = string.IsNullOrWhiteSpace(r.RawBarcode) ? r.RawSku : r.RawBarcode,
-
                     Description = string.IsNullOrWhiteSpace(r.VariantDesc)
                                   ? r.ParentName
                                   : r.ParentName + " - " + r.VariantDesc,
-
                     CategoryName = r.CategoryName,
                     RetailPrice = r.RetailPrice,
                     StockOnHand = stockData.Where(s => s.ItemVariantId == r.VariantId).Sum(s => s.CurrentStock)
                 })
-                .OrderBy(dto => dto.Description) // Sort alphabetically
+                .OrderBy(dto => dto.Description)
                 .ToList();
 
                 return finalResults;
@@ -394,6 +427,5 @@ namespace POS.Core.Repositories
 
             return new List<ProductSeekDto>();
         }
-
     }
 }

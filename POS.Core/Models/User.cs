@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using POS.Core.Enums;
 
 namespace POS.Core.Models
 {
@@ -42,13 +43,9 @@ namespace POS.Core.Models
 
         public string PosPinSalt { get; set; } = string.Empty;
 
-        // Lifecycle flags
-        public bool ForcePasswordReset { get; set; } = true;
-
         // --- AUTHORIZATION ---
         [Required]
-        [MaxLength(50)]
-        public string Role { get; set; } = "Cashier";
+        public UserRole Role { get; set; } = UserRole.Cashier;
 
         public bool IsActive { get; set; } = true;
 
@@ -57,7 +54,6 @@ namespace POS.Core.Models
         // Helper property for the UI DataGrid
         public string FullName => $"{FirstName} {LastName}";
 
-        // ADD THIS LINE:
         public string StatusText => IsActive ? "Active" : "Suspended";
     }
 }

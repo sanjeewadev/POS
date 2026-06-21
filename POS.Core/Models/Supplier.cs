@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -53,5 +54,10 @@ namespace POS.Core.Models
         // Computed Property for the DataGrid - Not saved to the DB
         [NotMapped]
         public string StatusText => IsDeactivated ? "Suspended" : "Active";
+
+        // ==========================================
+        // NEW: Navigation for Items supplied by this vendor
+        // ==========================================
+        public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
     }
 }
