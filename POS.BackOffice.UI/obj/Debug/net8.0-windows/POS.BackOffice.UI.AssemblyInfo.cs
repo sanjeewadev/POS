@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("POS.BackOffice.UI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+41d25c3c547542e195ce86257616d32dee979330")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1e6a5fce09f10dabb5d517f9c53ee119cd04ba35")]
 [assembly: System.Reflection.AssemblyProductAttribute("POS.BackOffice.UI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("POS.BackOffice.UI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

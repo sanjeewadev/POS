@@ -33,21 +33,21 @@ namespace POS.Core.Models
         [MaxLength(500)]
         public string Remarks { get; set; } = string.Empty;
 
-        // --- GLOBAL FINANCIALS ---
-        public bool IsTaxInclusive { get; set; } = false;
+        // --- PURIFIED FINANCIALS ---
         public decimal Subtotal { get; set; } = 0m;
         public decimal GlobalBillDiscount { get; set; } = 0m;
         public decimal FreightAmount { get; set; } = 0m;
-        public decimal TotalDiscountAmount { get; set; } = 0m; // Sum of line discounts + global discount
-        public decimal NetPayable { get; set; } = 0m; // The actual amount added to Supplier Ledger
+
+        public decimal TotalDiscountAmount { get; set; } = 0m;
+
+        // The final immutable amount added to Accounts Payable / Supplier Ledger
+        public decimal NetPayable { get; set; } = 0m;
 
         // Document Status (e.g., Draft, Posted, Canceled)
         [MaxLength(20)]
         public string Status { get; set; } = "Draft";
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-        // Add this directly above or below Subtotal
-
 
         [MaxLength(50)]
         public string CreatedBy { get; set; } = string.Empty; // User who processed the GRN

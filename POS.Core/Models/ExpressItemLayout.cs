@@ -1,9 +1,12 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace POS.Core.Models
 {
+    // CRITICAL RULE: Ensures no two buttons can overlap on the exact same row/col on the same tab.
+    // This makes it mathematically impossible to corrupt the POS touch UI layout.
+    [Index(nameof(TabCategory), nameof(GridRow), nameof(GridColumn), IsUnique = true)]
     public class ExpressItemLayout
     {
         [Key]
@@ -21,7 +24,7 @@ namespace POS.Core.Models
         [MaxLength(50)]
         public string TabCategory { get; set; } = "General";
 
-        // The text printed on the touch button
+        // The short text printed on the touch button
         [Required]
         [MaxLength(50)]
         public string DisplayLabel { get; set; } = string.Empty;

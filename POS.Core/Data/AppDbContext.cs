@@ -35,8 +35,8 @@ namespace POS.Core.Data
         public DbSet<GrnLine> GrnLines { get; set; }
         public DbSet<PoHeader> PoHeaders { get; set; }
         public DbSet<PoLine> PoLines { get; set; }
-        public DbSet<ReturnHeader> ReturnHeaders { get; set; } // Supplier Returns
-        public DbSet<ReturnLine> ReturnLines { get; set; }
+        public DbSet<SupplierReturnHeader> ReturnHeaders { get; set; } // Supplier Returns
+        public DbSet<SupplierReturnLine> ReturnLines { get; set; }
         public DbSet<StockAdjustmentHeader> StockAdjustmentHeaders { get; set; }
         public DbSet<StockAdjustmentLine> StockAdjustmentLines { get; set; }
 
@@ -77,6 +77,10 @@ namespace POS.Core.Data
         public DbSet<GiftVoucher> GiftVouchers { get; set; }
 
         public DbSet<FreeItemClaimLog> FreeItemClaims { get; set; }
+
+
+        public DbSet<SupplierReturnHeader> SupplierReturnHeaders { get; set; }
+        public DbSet<SupplierReturnLine> SupplierReturnLines { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

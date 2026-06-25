@@ -1,32 +1,23 @@
 ﻿using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace POS.Core.Models
 {
-    // Configuration for the physical label and design
-    public class LabelSettings
+    // Represents the physical dimensions and visual toggles for the sticker hardware
+    public partial class LabelSettings : ObservableObject
     {
-        public string PrinterName { get; set; } = string.Empty;
+        [ObservableProperty] private string _printerName = string.Empty;
 
-        // Standard Thermal Label sizes are often 50x25mm, 30x20mm, or 40x30mm
-        public double WidthMm { get; set; } = 50.0;
-        public double HeightMm { get; set; } = 25.0;
+        // Defaulting to standard 50mm x 25mm thermal retail stickers
+        [ObservableProperty] private double _widthMm = 50.0;
+        [ObservableProperty] private double _heightMm = 25.0;
 
-        // Display Toggles
-        public bool PrintStoreName { get; set; } = true;
-        public string StoreName { get; set; } = "MY STORE";
+        // Visual Toggles
+        [ObservableProperty] private bool _printStoreName = true;
+        [ObservableProperty] private string _storeName = "MY RETAIL STORE"; // TODO: Load from global app settings later
 
-        public bool PrintItemName { get; set; } = true;
-        public bool PrintPrice { get; set; } = true;
-        public bool PrintItemCode { get; set; } = false;
-    }
-
-    // DTO representing exactly what needs to be printed and how many times
-    public class BarcodePrintJobItem
-    {
-        public string Barcode { get; set; } = string.Empty;
-        public string ItemName { get; set; } = string.Empty;
-        public string ItemCode { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-        public int PrintQuantity { get; set; } = 1;
+        [ObservableProperty] private bool _printItemName = true;
+        [ObservableProperty] private bool _printPrice = true;
+        [ObservableProperty] private bool _printItemCode = true;
     }
 }

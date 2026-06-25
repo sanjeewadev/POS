@@ -140,6 +140,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\BarcodePrinterView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\ExpressItemAdminView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\GrnView.baml
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\PriceManagementView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\StockAdjustmentView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\StockBalanceView.baml
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\SupplierReturnView.baml
@@ -178,6 +179,7 @@ C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\BarcodePrinterView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\ExpressItemAdminView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\GrnView.g.cs
+C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\PriceManagementView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\StockAdjustmentView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\StockBalanceView.g.cs
 C:\Users\Sanjeewa\Dev\MyProjects\POS\POS.BackOffice.UI\obj\Debug\net8.0-windows\Views\Pages\InventoryOperations\SupplierReturnView.g.cs

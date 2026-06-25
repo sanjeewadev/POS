@@ -15,9 +15,12 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly GrnRepository _grnRepository;
         private readonly ItemMasterRepository _itemMasterRepository;
+        private readonly PoRepository _poRepository;
 
         // --- ZONE 1: HEADER & SUPPLIER ---
         [ObservableProperty] private Supplier? _selectedSupplier;
+        [ObservableProperty] private bool _isSupplierSelectionEnabled = true;
+
         [ObservableProperty] private string _supplierInvoiceNo = string.Empty;
         [ObservableProperty] private DateTime _invoiceDate = DateTime.Now;
         [ObservableProperty] private DateTime _receivedDate = DateTime.Now;
@@ -25,17 +28,17 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private string _documentStatus = "DRAFT";
         [ObservableProperty] private string _remarks = string.Empty;
 
-        // ENTERPRISE TOGGLES
-        [ObservableProperty] private bool _isTaxInclusive = false;
-        [ObservableProperty] private bool _amortizeFoc = true;
+        // --- ZONE 2: PO LINKING ---
+        public ObservableCollection<PoHeader> OpenPurchaseOrders { get; set; } = new();
+        [ObservableProperty] private PoHeader? _selectedPO;
 
         // --- ZONE 3: ENTRY MODES ---
         [ObservableProperty] private string _scanBarcode = string.Empty;
         [ObservableProperty] private string _matrixBatchNo = string.Empty;
-        [ObservableProperty] private DateTime _matrixExpiryDate = DateTime.Now.AddYears(1);
-        [ObservableProperty] private string _matrixFilterText = string.Empty; // Fast-filter for the grid
+        [ObservableProperty] private DateTime? _matrixExpiryDate = null;
+        [ObservableProperty] private string _matrixFilterText = string.Empty;
 
-        // --- FINANCIAL TOTALS ---
+        // --- PURIFIED FINANCIAL TOTALS ---
         [ObservableProperty] private decimal _subtotal = 0m;
         [ObservableProperty] private decimal _totalDiscountAmount = 0m;
         [ObservableProperty] private decimal _globalBillDiscount = 0m;
@@ -47,17 +50,17 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<GrnLine> GrnLines { get; set; } = new();
         public ObservableCollection<ItemMasterSummaryDto> AvailableItems { get; set; } = new();
 
-        // The hidden list that holds all variants, and the visible list that binds to the UI
         private List<GrnLine> _allMatrixVariants = new();
         public ObservableCollection<GrnLine> ActiveMatrixVariants { get; set; } = new();
 
         [ObservableProperty] private GrnLine? _selectedLine;
         [ObservableProperty] private ItemMasterSummaryDto? _selectedItem;
 
-        public GrnViewModel(GrnRepository grnRepository, ItemMasterRepository itemMasterRepository)
+        public GrnViewModel(GrnRepository grnRepository, ItemMasterRepository itemMasterRepository, PoRepository poRepository)
         {
             _grnRepository = grnRepository;
             _itemMasterRepository = itemMasterRepository;
+            _poRepository = poRepository;
             _ = InitializeAsync();
         }
 
@@ -68,9 +71,66 @@ namespace POS.BackOffice.UI.ViewModels
 
             var items = await _itemMasterRepository.GetSummariesAsync();
             foreach (var item in items) AvailableItems.Add(item);
+
+            var openPos = await _poRepository.GetOpenPurchaseOrdersAsync();
+            foreach (var po in openPos) OpenPurchaseOrders.Add(po);
         }
 
+        // ==============================================================================
+        // --- PO-TO-GRN CONVERSION ENGINE ---
+        // ==============================================================================
+        [RelayCommand]
+        private async Task LoadPoAsync()
+        {
+            if (SelectedPO == null)
+            {
+                MessageBox.Show("Please select a Purchase Order from the dropdown to load.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var fullPo = await _grnRepository.GetApprovedPoDetailsAsync(SelectedPO.Id);
+            if (fullPo == null) return;
+
+            // Lock the supplier so data integrity is maintained
+            SelectedSupplier = Suppliers.FirstOrDefault(s => s.Id == fullPo.SupplierId);
+            IsSupplierSelectionEnabled = false;
+
+            GrnLines.Clear();
+
+            foreach (var poLine in fullPo.PoLines)
+            {
+                // Calculate outstanding backorder quantity
+                decimal outstandingQty = poLine.OrderQty - poLine.ReceivedQty;
+
+                if (outstandingQty > 0)
+                {
+                    var grnLine = new GrnLine
+                    {
+                        ItemVariantId = poLine.ItemVariantId,
+                        ItemCode = poLine.ItemVariant?.ItemParent?.ItemCode ?? "UNKNOWN",
+                        VariantDescription = poLine.ItemVariant?.VariantDescription ?? string.Empty,
+                        Description = poLine.ItemVariant?.ItemParent?.ItemName ?? "Unknown Item",
+                        Barcode = poLine.ItemVariant?.Barcode ?? string.Empty,
+                        Uom = poLine.Uom,
+
+                        OrderedQty = poLine.OrderQty,
+                        ReceivedQty = outstandingQty, // Default to receiving the rest of the order
+
+                        // Pure Cost Mapping (Retail/Wholesale intentionally excluded)
+                        UnitCost = poLine.ExpectedCost,
+                        LineDiscount = poLine.LineDiscount
+                    };
+
+                    GrnLines.Add(grnLine);
+                }
+            }
+
+            RecalculateTotals();
+        }
+
+        // ==============================================================================
         // --- MATRIX ENGINE & FILTERING ---
+        // ==============================================================================
         partial void OnSelectedItemChanged(ItemMasterSummaryDto? value)
         {
             if (value == null) return;
@@ -94,11 +154,7 @@ namespace POS.BackOffice.UI.ViewModels
                     Description = variant.ItemParent?.ItemName ?? "Unknown Item",
                     Barcode = variant.Barcode,
                     Uom = variant.ItemParent?.BaseUom ?? "PCS",
-                    TaxCode = variant.ItemParent?.TaxCode ?? "Exempt",
                     UnitCost = variant.CostPrice,
-                    RetailPrice = variant.RetailPrice,
-                    WholesalePrice = variant.WholesalePrice,
-                    MinimumPrice = variant.MinimumPrice,
                     ReceivedQty = 0
                 };
 
@@ -119,13 +175,12 @@ namespace POS.BackOffice.UI.ViewModels
                                          v.Barcode.ToLower().Contains(search));
             }
 
-            foreach (var item in query)
-            {
-                ActiveMatrixVariants.Add(item);
-            }
+            foreach (var item in query) ActiveMatrixVariants.Add(item);
         }
 
+        // ==============================================================================
         // --- BARCODE SEARCH ENGINE ---
+        // ==============================================================================
         [RelayCommand]
         private async Task AddItemAsync()
         {
@@ -148,27 +203,22 @@ namespace POS.BackOffice.UI.ViewModels
                 Description = variant.ItemParent?.ItemName ?? "Unknown Item",
                 Barcode = variant.Barcode,
                 Uom = variant.ItemParent?.BaseUom ?? "PCS",
-                TaxCode = variant.ItemParent?.TaxCode ?? "Exempt",
                 UnitCost = variant.CostPrice,
-                RetailPrice = variant.RetailPrice,
-                WholesalePrice = variant.WholesalePrice,
-                MinimumPrice = variant.MinimumPrice,
                 ReceivedQty = 1
             };
 
-            // Drop directly into the main grid if scanning a specific barcode
             GrnLines.Add(newLine);
             ScanBarcode = string.Empty;
             RecalculateTotals();
         }
 
-        // --- THE ENTERPRISE FINANCIAL ENGINE ---
+        // ==============================================================================
+        // --- THE DETERMINISTIC FINANCIAL ENGINE ---
+        // ==============================================================================
         partial void OnFreightAmountChanged(decimal value) => RecalculateTotals();
         partial void OnGlobalBillDiscountChanged(decimal value) => RecalculateTotals();
-        partial void OnIsTaxInclusiveChanged(bool value) => RecalculateTotals();
-        partial void OnAmortizeFocChanged(bool value) => RecalculateTotals();
 
-        [RelayCommand] // Allows the UI DataGrid to trigger this when a user finishes editing a cell
+        [RelayCommand]
         public void RecalculateTotals()
         {
             if (!GrnLines.Any())
@@ -177,25 +227,10 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            // 1. Raw Line Math (Pure gross cost)
             foreach (var line in GrnLines)
             {
-                // 1. Line Tax Math (Simplified VAT calculation)
-                decimal taxRate = line.TaxCode.Contains("18") ? 0.18m : line.TaxCode.Contains("5") ? 0.05m : 0m;
-
-                decimal rawLineTotal = (line.ReceivedQty * line.UnitCost) - line.LineDiscount;
-
-                if (IsTaxInclusive)
-                {
-                    // If unit cost already has tax, extract the tax amount backwards
-                    line.TaxAmount = rawLineTotal - (rawLineTotal / (1 + taxRate));
-                    line.LineTotal = rawLineTotal; // No extra tax added to the bill
-                }
-                else
-                {
-                    // If exclusive, calculate tax and add it to the final line total
-                    line.TaxAmount = rawLineTotal * taxRate;
-                    line.LineTotal = rawLineTotal + line.TaxAmount;
-                }
+                line.LineTotal = (line.ReceivedQty * line.UnitCost) - line.LineDiscount;
             }
 
             Subtotal = GrnLines.Sum(l => l.LineTotal);
@@ -204,7 +239,7 @@ namespace POS.BackOffice.UI.ViewModels
             TotalDiscountAmount = lineDiscounts + GlobalBillDiscount;
             NetPayable = Subtotal - GlobalBillDiscount + FreightAmount;
 
-            // 2. Landed Cost Allocation
+            // 2. Landed Cost Allocation (Proportional Weighting)
             decimal totalBaseValue = GrnLines.Sum(l => l.LineTotal);
 
             if (totalBaseValue > 0)
@@ -217,20 +252,21 @@ namespace POS.BackOffice.UI.ViewModels
 
                     decimal landedLineTotal = line.LineTotal + allocatedFreight - allocatedGlobalDisc;
 
-                    // ENTERPRISE FOC MATH
-                    // If Amortize is True, we divide the cost over Received + FOC (Making items cheaper)
-                    // If False, we only divide over Received (Cost stays normal, FOC are treated as zero-value bonuses)
-                    decimal totalPhysicalQty = line.ReceivedQty + (AmortizeFoc ? line.FocQty : 0m);
-
-                    if (totalPhysicalQty > 0)
+                    if (line.ReceivedQty > 0)
                     {
-                        line.LandedCost = Math.Round(landedLineTotal / totalPhysicalQty, 2);
+                        line.LandedCost = Math.Round(landedLineTotal / line.ReceivedQty, 2);
+                    }
+                    else
+                    {
+                        line.LandedCost = 0;
                     }
                 }
             }
         }
 
+        // ==============================================================================
         // --- GRID ACTIONS ---
+        // ==============================================================================
         [RelayCommand]
         private void RemoveLine(GrnLine line)
         {
@@ -244,7 +280,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void AddMatrix()
         {
-            var itemsToAdd = _allMatrixVariants.Where(v => v.ReceivedQty > 0 || v.FocQty > 0).ToList();
+            var itemsToAdd = _allMatrixVariants.Where(v => v.ReceivedQty > 0).ToList();
 
             if (!itemsToAdd.Any())
             {
@@ -257,7 +293,9 @@ namespace POS.BackOffice.UI.ViewModels
                 if (string.IsNullOrWhiteSpace(item.BatchNo) && !string.IsNullOrWhiteSpace(MatrixBatchNo))
                     item.BatchNo = MatrixBatchNo;
 
-                item.ExpiryDate = MatrixExpiryDate;
+                if (MatrixExpiryDate.HasValue)
+                    item.ExpiryDate = MatrixExpiryDate;
+
                 GrnLines.Add(item);
             }
 
@@ -269,7 +307,9 @@ namespace POS.BackOffice.UI.ViewModels
             RecalculateTotals();
         }
 
+        // ==============================================================================
         // --- POSTING EXECUTION ---
+        // ==============================================================================
         [RelayCommand]
         private async Task PostGrnAsync()
         {
@@ -285,9 +325,9 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            if (!GrnLines.Any())
+            if (!GrnLines.Any(l => l.ReceivedQty > 0))
             {
-                MessageBox.Show("Cannot post an empty GRN. Please add items.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Cannot post an empty GRN. Please ensure at least one item has a received quantity.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -300,6 +340,7 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     var header = new GrnHeader
                     {
+                        PurchaseOrderId = SelectedPO?.Id,
                         SupplierId = SelectedSupplier.Id,
                         SupplierInvoiceNo = this.SupplierInvoiceNo.Trim(),
                         InvoiceDate = this.InvoiceDate,
@@ -311,10 +352,13 @@ namespace POS.BackOffice.UI.ViewModels
                         FreightAmount = this.FreightAmount,
                         TotalDiscountAmount = this.TotalDiscountAmount,
                         NetPayable = this.NetPayable,
-                        IsTaxInclusive = this.IsTaxInclusive
+                        CreatedBy = "Admin" // Note: Wire this to your actual auth service later
                     };
 
-                    await _grnRepository.PostGrnAsync(header, GrnLines.ToList());
+                    // Only send lines that actually have a received quantity
+                    var validLines = GrnLines.Where(l => l.ReceivedQty > 0).ToList();
+
+                    await _grnRepository.PostGrnAsync(header, validLines);
 
                     MessageBox.Show($"GRN Posted Successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     Clear();
@@ -330,6 +374,9 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void Clear()
         {
+            SelectedPO = null;
+            IsSupplierSelectionEnabled = true;
+
             SelectedSupplier = null;
             SupplierInvoiceNo = string.Empty;
             Remarks = string.Empty;

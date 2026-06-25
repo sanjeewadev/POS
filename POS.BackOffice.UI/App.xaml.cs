@@ -51,7 +51,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<PoRepository>();
             services.AddTransient<StockAdjustmentRepository>();
             services.AddTransient<StockBalanceRepository>();
-            services.AddTransient<ReturnRepository>();
+            services.AddTransient<SupplierReturnRepository>();
             services.AddTransient<ExpressItemRepository>();
             services.AddTransient<LoyaltyDiscountRepository>();
             services.AddTransient<CustomerAdminRepository>();
@@ -67,6 +67,8 @@ namespace POS.BackOffice.UI
             services.AddTransient<SystemSettingsRepository>();
             // Add this right below your other CRM repositories!
             services.AddTransient<POS.Core.Repositories.GiftVoucherRepository>();
+            services.AddTransient<PriceManagementRepository>();
+            services.AddTransient<BarcodeManagementRepository>();
 
             // 4. Register ALL ViewModels
             services.AddSingleton<MainViewModel>();
@@ -90,6 +92,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<BarcodeManagementViewModel>();
             services.AddTransient<BarcodePrinterViewModel>();
             services.AddTransient<POS.Core.Services.IBarcodePrintService, POS.BackOffice.UI.Services.WpfBarcodePrintService>();
+            services.AddTransient<PriceManagementViewModel>();
 
             // Purchasing
             services.AddTransient<PurchaseOrderViewModel>();
