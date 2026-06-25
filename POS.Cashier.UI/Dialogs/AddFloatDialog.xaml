@@ -1,120 +1,194 @@
 ﻿<Window x:Class="POS.Cashier.UI.Views.Dialogs.AddFloatDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Add Till Float" Height="700" Width="850"
-        WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize"
-        Background="#1E1E1E" FontFamily="Segoe UI, Arial">
+        Title="Cash Drawer Count" Height="700" Width="950"
+        WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="NoResize"
+        Background="#F1F5F9" FontFamily="Arial">
 
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="3"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Height" Value="60"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#444444"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5"/>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-        </Style>
-
-        <Style TargetType="TextBox" x:Key="FlatTextBox">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="FontWeight" Value="Heavy"/>
-            <Setter Property="FontSize" Value="36"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="10,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Height" Value="60"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="FormLabel">
-            <Setter Property="Foreground" Value="#AAAAAA"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="0.9"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Margin="15">
         <Grid.RowDefinitions>
-            <RowDefinition Height="60"/>
+            <RowDefinition Height="50"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="75"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#0D6EFD" BorderBrush="#111111" BorderThickness="0,0,0,2">
-            <TextBlock Text="ADD TILL FLOAT / STARTING CASH" Foreground="White" FontSize="32" FontWeight="Heavy" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="6.5*"/>
+            <ColumnDefinition Width="3.5*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Background="#004080" CornerRadius="2,2,0,0">
+            <TextBlock Text="CASH COUNT" Foreground="White" FontSize="22" FontWeight="Heavy" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
 
-        <Grid Grid.Row="1" Margin="15">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="5.5*"/>
-                <ColumnDefinition Width="4.5*"/>
-            </Grid.ColumnDefinitions>
+        <Border Grid.Row="1" Grid.Column="0" Background="White" BorderBrush="#CBD5E1" BorderThickness="1,0,1,1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="40"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <Border Grid.Column="0" Background="#2B2B2B" BorderBrush="#444444" BorderThickness="1" Margin="0,0,10,0" Padding="20">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="75"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="#111111" Padding="15" Margin="0,0,0,25">
-                        <Grid>
-                            <StackPanel HorizontalAlignment="Left">
-                                <TextBlock Text="CURRENT EXPECTED CASH:" Foreground="#777777" FontSize="14" FontWeight="Bold"/>
-                                <TextBlock Text="{Binding CurrentExpectedCash, StringFormat=Rs. \{0:N2\}, FallbackValue='Rs. 0.00'}" Foreground="#A9C6E2" FontSize="28" FontWeight="Heavy"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <StackPanel Grid.Row="1" Margin="0,0,0,20">
-                        <TextBlock Text="ENTER FLOAT AMOUNT (Rs.)" Style="{StaticResource FormLabel}"/>
-                        <TextBox Style="{StaticResource FlatTextBox}" Text="{Binding FloatAmount, FallbackValue='10,000.00'}" TextAlignment="Right" Foreground="#28A745"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="2" Margin="0,0,0,20">
-                        <TextBlock Text="REFERENCE NOTE" Style="{StaticResource FormLabel}"/>
-                        <TextBox Style="{StaticResource FlatTextBox}" FontSize="20" FontWeight="Bold" Height="50" Text="{Binding ReferenceNote, FallbackValue='Morning Shift Float'}"/>
-                    </StackPanel>
-
-                    <Grid Grid.Row="4">
+                <Border Grid.Row="0" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="0,0,0,2">
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="2.5*"/>
+                            <ColumnDefinition Width="1.5*"/>
                             <ColumnDefinition Width="2*"/>
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Background="#DC3545" Content="CANCEL" FontSize="22" Margin="0,0,5,0" Command="{Binding CancelCommand}"/>
-                        <Button Grid.Column="1" Background="#0D6EFD" Content="SAVE &amp; OPEN DRAWER" FontSize="22" FontWeight="Heavy" Margin="5,0,0,0" Command="{Binding SaveFloatCommand}"/>
+                        <TextBlock Grid.Column="0" Text="Note/Coin (Rs.)" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="Quantity" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="Line Total" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,25,0" VerticalAlignment="Center"/>
                     </Grid>
-                </Grid>
-            </Border>
+                </Border>
 
-            <Grid Grid.Column="1" Margin="10,0,0,0">
-                <UniformGrid Columns="3" Rows="4">
-                    <Button Background="#444444" Content="7" FontSize="45"/>
-                    <Button Background="#444444" Content="8" FontSize="45"/>
-                    <Button Background="#444444" Content="9" FontSize="45"/>
-                    <Button Background="#444444" Content="4" FontSize="45"/>
-                    <Button Background="#444444" Content="5" FontSize="45"/>
-                    <Button Background="#444444" Content="6" FontSize="45"/>
-                    <Button Background="#444444" Content="1" FontSize="45"/>
-                    <Button Background="#444444" Content="2" FontSize="45"/>
-                    <Button Background="#444444" Content="3" FontSize="45"/>
-                    <Button Background="#DC3545" Content="CLR" FontSize="35"/>
-                    <Button Background="#444444" Content="0" FontSize="45"/>
-                    <Button Background="#0D6EFD" Content="00" FontSize="35"/>
-                </UniformGrid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="PnlDenominations">
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="5000" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty5000" Text="0" Tag="5000" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal5000" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="1000" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty1000" Text="0" Tag="1000" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal1000" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="500" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty500" Text="0" Tag="500" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal500" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="100" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty100" Text="0" Tag="100" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal100" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="50" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty50" Text="0" Tag="50" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal50" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="20" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty20" Text="0" Tag="20" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal20" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="10" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty10" Text="0" Tag="10" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal10" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid Height="45">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="5" FontSize="18" FontWeight="Black" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                <TextBox Grid.Column="1" x:Name="TxtQty5" Text="0" Tag="5" TextChanged="Qty_TextChanged" Background="#FFFFE1" BorderBrush="#CBD5E1" BorderThickness="1" FontSize="20" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center" Width="100" Height="38"/>
+                                <TextBlock Grid.Column="2" x:Name="LblTotal5" Text="0.00" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
-        </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="1" Grid.Column="1" Margin="15,0,0,0" VerticalAlignment="Top">
+            <TextBlock Text="OPERATIONS" FontSize="14" FontWeight="Bold" Foreground="#64748B" Margin="0,5,0,10"/>
+
+            <Button x:Name="BtnFloatIn" Content="📥 ADD CASH (FLOAT IN)" Background="#10B981" Click="Action_Click"/>
+
+            <Button x:Name="BtnFloatOut" Content="📤 REMOVE CASH (FLOAT OUT)" Background="#F59E0B" Click="Action_Click"/>
+
+            <Border Background="#E2E8F0" Height="2" Margin="0,10,0,20"/>
+
+            <TextBlock Text="REFERENCE NOTE" FontSize="14" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,5"/>
+            <TextBox x:Name="TxtNote" Height="45" FontSize="16" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#CBD5E1" Text="Routine Drop Counter"/>
+        </StackPanel>
+
+        <Border Grid.Row="2" Grid.Column="0" Background="#111C24" CornerRadius="0,0,4,4">
+            <Grid Margin="20,0">
+                <TextBlock Text="TOTAL CASH COUNT:" Foreground="#94A3B8" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="LblTotalCashCount" Text="Rs. 0.00" Foreground="#10B981" FontSize="30" FontWeight="Black" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Button Grid.Row="2" Grid.Column="1" x:Name="BtnCancel" Content="CANCEL" Background="#64748B" Margin="15,10,0,5" Height="Auto" Click="Cancel_Click"/>
     </Grid>
 </Window>

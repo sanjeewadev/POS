@@ -7,61 +7,61 @@
         WindowStyle="None" 
         AllowsTransparency="True" 
         Background="Transparent"
-        FontFamily="Segoe UI">
+        FontFamily="Arial, Segoe UI">
 
-    <Border Background="White" BorderBrush="#007BFF" BorderThickness="3" CornerRadius="8" 
-            Width="500" Height="420" Margin="20">
+    <Border Background="{StaticResource MainBgBrush}" BorderBrush="{StaticResource HeaderBgBrush}" BorderThickness="3" 
+            Width="500" Margin="20">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="20" Opacity="0.4" ShadowDepth="5"/>
+            <DropShadowEffect BlurRadius="15" Opacity="0.3" ShadowDepth="4"/>
         </Border.Effect>
 
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="70"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Text="🎁 Apply 100% Comp (Free Item)" FontSize="22" FontWeight="Bold" Foreground="#333" Margin="0,0,0,10"/>
-            <Separator Grid.Row="1" Margin="0,0,0,15" Background="#E0E0E0"/>
+            <StackPanel Grid.Row="0">
+                <TextBlock Text="🎁 APPLY 100% COMP (FREE ITEM)" FontSize="18" FontWeight="Heavy" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,10"/>
+                <Separator Background="#D0D0D0" Margin="0,0,0,15"/>
+            </StackPanel>
 
-            <StackPanel Grid.Row="2">
-                <Border Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,15">
+            <StackPanel Grid.Row="1">
+                <Border Background="White" BorderBrush="#D0D0D0" BorderThickness="1" Padding="15" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Selected Item:" FontSize="12" Foreground="#666"/>
-                        <TextBlock Text="{Binding ItemName}" FontSize="18" FontWeight="Bold" Foreground="#333" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                        <TextBlock Text="Selected Item:" FontSize="12" Foreground="#666666" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ItemName, FallbackValue='Premium Milk Powder 1kg'}" FontSize="16" FontWeight="Bold" Foreground="#333333" TextWrapping="Wrap" Margin="0,3,0,8"/>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Dropping Price from: " FontSize="14" Foreground="#666" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding OriginalPrice, StringFormat=Rs. \{0:N2\}}" FontSize="16" FontWeight="Bold" Foreground="#A94044" VerticalAlignment="Center" TextDecorations="Strikethrough"/>
-                            <TextBlock Text=" ➔ Rs. 0.00" FontSize="16" FontWeight="Heavy" Foreground="#1E7E34" VerticalAlignment="Center"/>
+                            <TextBlock Text="Original Price: " FontSize="13" Foreground="#666666" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding OriginalPrice, StringFormat=Rs. \{0:N2\}, FallbackValue='Rs. 1,450.00'}" FontSize="14" FontWeight="Bold" Foreground="#A94044" VerticalAlignment="Center" TextDecorations="Strikethrough"/>
+                            <TextBlock Text=" ➔ Rs. 0.00" FontSize="15" FontWeight="Heavy" Foreground="#1E7E34" VerticalAlignment="Center"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <TextBlock Text="Select Authorization Reason:" FontSize="14" FontWeight="SemiBold" Foreground="#555" Margin="0,0,0,10"/>
+                <TextBlock Text="Select Disposition Reason:" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,6"/>
+                <ComboBox x:Name="cmbReasons" Height="45" FontSize="15" FontWeight="Bold" VerticalContentAlignment="Center" Margin="0,0,0,15" SelectionChanged="CmbReasons_SelectionChanged">
+                    <ComboBoxItem x:Name="cbiVendor" Content="Vendor Sponsored Promotion"/>
+                    <ComboBoxItem x:Name="cbiLoyalty" Content="Loyalty Points Redemption"/>
+                    <ComboBoxItem x:Name="cbiInHouse" Content="Store In-House Campaign"/>
+                    <ComboBoxItem x:Name="cbiOther" Content="Other (Manual Authorization)"/>
+                </ComboBox>
 
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="55"/>
-                        <RowDefinition Height="55"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button Grid.Row="0" Grid.Column="0" Content="Supplier Promo (Recoverable)" Background="#1E7E34" Foreground="White" FontWeight="Bold" FontSize="13" Command="{Binding SelectReasonCommand}" CommandParameter="SupplierPromo"/>
-                    <Button Grid.Row="0" Grid.Column="2" Content="Manager Comp (Loss)" Background="#007BFF" Foreground="White" FontWeight="Bold" FontSize="13" Command="{Binding SelectReasonCommand}" CommandParameter="ManagerComp"/>
-
-                    <Button Grid.Row="1" Grid.Column="0" Content="Damaged Goods (Loss)" Background="#E0A800" Foreground="White" FontWeight="Bold" FontSize="13" Margin="0,10,0,0" Command="{Binding SelectReasonCommand}" CommandParameter="DamagedGoods"/>
-                    <Button Grid.Row="1" Grid.Column="2" Content="Customer Apology (Loss)" Background="#6F42C1" Foreground="White" FontWeight="Bold" FontSize="13" Margin="0,10,0,0" Command="{Binding SelectReasonCommand}" CommandParameter="CustomerApology"/>
-                </Grid>
+                <StackPanel x:Name="pnlCustomReason" Visibility="Collapsed" Margin="0,5,0,10">
+                    <TextBlock Text="Specify Reason (Required):" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextDangerBrush}" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtCustomReason" Background="White" Foreground="Black" FontSize="15" Padding="8" Height="40" VerticalContentAlignment="Center" FontWeight="SemiBold"/>
+                </StackPanel>
             </StackPanel>
 
-            <Button Grid.Row="3" Content="Cancel" Command="{Binding CancelCommand}" 
-                    Background="#F5F5F5" Foreground="#333" BorderBrush="#CCC" BorderThickness="1" Height="45" FontSize="14" FontWeight="Bold" Cursor="Hand" Margin="0,15,0,0"/>
+            <Grid Grid.Row="2" Margin="0,15,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Click="CancelBtn_Click" Grid.Column="0" Background="{StaticResource CancelBtnBrush}" Content="CANCEL" FontSize="16" FontWeight="Bold" Height="45" Margin="0,0,6,0" Cursor="Hand"/>
+                <Button Click="ApplyBtn_Click" Grid.Column="1" Background="{StaticResource ExpressBtnBrush}" Content="APPLY COMP" FontSize="16" FontWeight="Bold" Height="45" Margin="6,0,0,0" Cursor="Hand"/>
+            </Grid>
         </Grid>
     </Border>
 </Window>
