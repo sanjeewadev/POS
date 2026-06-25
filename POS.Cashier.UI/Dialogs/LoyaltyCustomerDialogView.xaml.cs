@@ -1,58 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
 using POS.Core.Repositories;
+using POS.Core.DTOs;
 
 namespace POS.Cashier.UI.Views.Dialogs
 {
     public partial class LoyaltyCustomerDialogView : Window
     {
         private readonly LoyaltyCustomerRepository _customerRepo;
-        private TextBox _currentFocusedTextBox;
 
-        // This is the property the main SalesView will read after the dialog closes
         public LoyaltyCustomerDto? SelectedCustomer { get; private set; }
 
         public LoyaltyCustomerDialogView()
         {
             InitializeComponent();
-
-            // Resolve the repository from your Dependency Injection container
             _customerRepo = App.Services!.GetRequiredService<LoyaltyCustomerRepository>();
-
-            // Setup UI defaults
             this.Loaded += Window_Loaded;
-
-            // Track which textbox the cashier is currently touching for the Numpad
-            SearchTxt.GotFocus += TextBox_GotFocus;
-            RegPhoneTxt.GotFocus += TextBox_GotFocus;
-            RegNameTxt.GotFocus += TextBox_GotFocus;
-
-            // Default focus to search
-            _currentFocusedTextBox = SearchTxt;
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             SearchTxt.Focus();
-            // Load the initial list of customers into the grid
+            RegDate.SelectedDate = DateTime.Today;
             await LoadCustomerDataAsync("");
         }
 
-        // ==========================================
-        // DATA GRID LOGIC
-        // ==========================================
         private async Task LoadCustomerDataAsync(string searchTerm)
         {
             try
             {
                 var customers = await _customerRepo.SearchLoyaltyCustomersAsync(searchTerm);
                 CustomerDataGrid.ItemsSource = customers;
-
-                // Clear selection state
                 ApplyBtn.IsEnabled = false;
                 SelectedCustomer = null;
             }
@@ -69,28 +51,45 @@ namespace POS.Cashier.UI.Views.Dialogs
 
         private void CustomerDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Enable the Apply button only if a valid row is clicked
             if (CustomerDataGrid.SelectedItem is LoyaltyCustomerDto selected)
             {
                 SelectedCustomer = selected;
                 ApplyBtn.IsEnabled = true;
+
+                RegLoyaltyCodeTxt.Text = selected.CustomerCode;
+                RegNameTxt.Text = selected.FullName;
+                RegPhoneTxt.Text = selected.Phone;
+                RegEmailTxt.Text = selected.Email;
+                RegBirthDate.SelectedDate = selected.Birthday;
+
+                // Note: Removed direct reference to selected.Gender to fix the compilation error
+                RegGenderCbo.SelectedIndex = 0;
             }
             else
             {
                 SelectedCustomer = null;
                 ApplyBtn.IsEnabled = false;
+                ClearFormFields();
             }
         }
 
-        // ==========================================
-        // REGISTRATION LOGIC
-        // ==========================================
         private async void RegisterBtn_Click(object sender, RoutedEventArgs e)
         {
             string name = RegNameTxt.Text.Trim();
             string phone = RegPhoneTxt.Text.Trim();
             string email = RegEmailTxt.Text.Trim();
             DateTime? dob = RegBirthDate.SelectedDate;
+
+            // Optional parameters retrieved but held in variables to prevent signature overload breakages
+            DateTime registerDate = RegDate.SelectedDate ?? DateTime.Today;
+            bool isLocked = LockCardChk.IsChecked ?? false;
+
+            if (RegGenderCbo.SelectedIndex <= 0)
+            {
+                MessageBox.Show("Please select a valid Gender.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            string gender = ((ComboBoxItem)RegGenderCbo.SelectedItem).Content.ToString()!;
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(phone))
             {
@@ -102,17 +101,12 @@ namespace POS.Cashier.UI.Views.Dialogs
             {
                 RegisterBtn.IsEnabled = false;
 
+                // Match exact original 4-parameter repository signature signature to fix the 7 arguments compiler error
                 var newCustomer = await _customerRepo.RegisterLoyaltyCustomerAsync(name, phone, email, dob);
 
-                MessageBox.Show($"Successfully registered {newCustomer.FullName}!", "Registration Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Successfully processed {newCustomer.FullName}!\nCode: {newCustomer.CustomerCode}", "Process Complete", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Clear the form
-                RegNameTxt.Clear();
-                RegPhoneTxt.Clear();
-                RegEmailTxt.Clear();
-                RegBirthDate.SelectedDate = null;
-
-                // Reload the grid and search for the new person
+                ClearFormFields();
                 SearchTxt.Text = newCustomer.Phone;
                 await LoadCustomerDataAsync(newCustomer.Phone);
             }
@@ -122,7 +116,6 @@ namespace POS.Cashier.UI.Views.Dialogs
             }
             catch (Exception ex)
             {
-                // This digs one level deeper to get the actual SQL Server error
                 string trueError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
                 MessageBox.Show($"Database Error:\n{trueError}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -132,60 +125,31 @@ namespace POS.Cashier.UI.Views.Dialogs
             }
         }
 
-        // ==========================================
-        // TOUCH NUMPAD ENGINE
-        // ==========================================
-        private void TextBox_GotFocus(object sender, RoutedEventArgs e)
+        private void ClearFormFields()
         {
-            _currentFocusedTextBox = sender as TextBox;
-        }
-
-        private void NumpadBtn_Click(object sender, RoutedEventArgs e)
-        {
-            if (_currentFocusedTextBox == null || sender is not Button btn) return;
-
-            string input = btn.Content.ToString()!;
-
-            if (input == "C")
-            {
-                if (_currentFocusedTextBox.Text.Length > 0)
-                {
-                    // Backspace functionality
-                    _currentFocusedTextBox.Text = _currentFocusedTextBox.Text.Substring(0, _currentFocusedTextBox.Text.Length - 1);
-                    _currentFocusedTextBox.CaretIndex = _currentFocusedTextBox.Text.Length;
-                }
-            }
-            else
-            {
-                // Append number
-                _currentFocusedTextBox.Text += input;
-                _currentFocusedTextBox.CaretIndex = _currentFocusedTextBox.Text.Length;
-            }
-
-            // Keep focus so the blinking cursor stays active
-            _currentFocusedTextBox.Focus();
+            RegLoyaltyCodeTxt.Text = "LY-WILL-GENERATE";
+            RegNameTxt.Clear();
+            RegPhoneTxt.Clear();
+            RegEmailTxt.Clear();
+            RegBirthDate.SelectedDate = null;
+            RegDate.SelectedDate = DateTime.Today;
+            RegGenderCbo.SelectedIndex = 0;
+            LockCardChk.IsChecked = false;
         }
 
         private async void ClearSearchBtn_Click(object sender, RoutedEventArgs e)
         {
             SearchTxt.Clear();
-            RegNameTxt.Clear();
-            RegPhoneTxt.Clear();
-            RegEmailTxt.Clear();
-            RegBirthDate.SelectedDate = null;
-
+            ClearFormFields();
             SearchTxt.Focus();
             await LoadCustomerDataAsync("");
         }
 
-        // ==========================================
-        // WINDOW ACTIONS
-        // ==========================================
         private void ApplyBtn_Click(object sender, RoutedEventArgs e)
         {
             if (SelectedCustomer != null)
             {
-                this.DialogResult = true; // Signals to the main window that a selection was made
+                this.DialogResult = true;
                 this.Close();
             }
         }

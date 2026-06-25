@@ -59,11 +59,21 @@
                             <DataGridTextColumn Header="Customer Code" Binding="{Binding CustomerCode}" Width="120" FontWeight="Bold"/>
                             <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
                             <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="110"/>
-
                             <DataGridTextColumn Header="Birthday" Binding="{Binding Birthday, StringFormat=MMM dd}" Width="80"/>
-                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="130"/>
 
-                            <DataGridTextColumn Header="Active Discount" Binding="{Binding ActiveDiscountName}" Width="150">
+                            <DataGridTextColumn Header="Loyalty Points" Binding="{Binding LoyaltyPoints, StringFormat=\{0:N0\}}" Width="110">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#003366"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="TextAlignment" Value="Right"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="0,0,10,0"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Active Discount" Binding="{Binding ActiveDiscountName}" Width="140">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="#005500"/>
@@ -73,8 +83,7 @@
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Applies To" Binding="{Binding DiscountScope}" Width="160" />
+                            <DataGridTextColumn Header="Applies To" Binding="{Binding DiscountScope}" Width="130" />
                             <DataGridTextColumn Header="Expiry Date" Binding="{Binding DiscountExpiry, StringFormat=yyyy-MM-dd}" Width="100">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
@@ -89,62 +98,51 @@
                 </Grid>
             </GroupBox>
 
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <GroupBox Grid.Column="2" Header="Customer Details &amp; Registration" FontSize="15" FontWeight="Bold" Foreground="#003366" BorderBrush="#A0A0A0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10,6,10,0">
 
-                <GroupBox Grid.Row="0" Header="New Customer Registration" FontSize="15" FontWeight="Bold" Foreground="#003366" BorderBrush="#A0A0A0" Margin="0,0,0,5">
-                    <StackPanel Margin="0,6,0,0">
+                        <TextBlock Text="Loyalty Code (Auto-Generated)" FontWeight="Normal" Foreground="Black" FontSize="14" Margin="0,0,0,2"/>
+                        <TextBox x:Name="RegLoyaltyCodeTxt" Height="36" FontSize="16" FontWeight="Bold" Background="#E5E7EB" Foreground="#4B5563" IsReadOnly="True" VerticalContentAlignment="Center" Padding="6,0" BorderBrush="#A0A0A0" Margin="0,0,0,8" Text="LY-WILL-GENERATE"/>
 
                         <TextBlock Text="Full Name *" FontWeight="Normal" Foreground="Black" FontSize="14" Margin="0,0,0,2"/>
-                        <TextBox x:Name="RegNameTxt" Height="36" FontSize="18" FontWeight="Bold" Background="#FFFFE0" VerticalContentAlignment="Center" Padding="4,0" BorderBrush="#A0A0A0" Margin="0,0,0,6"/>
+                        <TextBox x:Name="RegNameTxt" Height="36" FontSize="16" FontWeight="Bold" Background="#FFFFE0" VerticalContentAlignment="Center" Padding="6,0" BorderBrush="#A0A0A0" Margin="0,0,0,8"/>
 
                         <TextBlock Text="Phone Number *" FontWeight="Normal" Foreground="Black" FontSize="14" Margin="0,0,0,2"/>
-                        <TextBox x:Name="RegPhoneTxt" Height="36" FontSize="18" FontWeight="Bold" Background="#FFFFE0" VerticalContentAlignment="Center" Padding="4,0" BorderBrush="#A0A0A0" Margin="0,0,0,6"/>
+                        <TextBox x:Name="RegPhoneTxt" Height="36" FontSize="16" FontWeight="Bold" Background="#FFFFE0" VerticalContentAlignment="Center" Padding="6,0" BorderBrush="#A0A0A0" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="Gender *" FontWeight="Normal" Foreground="Black" FontSize="14" Margin="0,0,0,2"/>
+                        <ComboBox x:Name="RegGenderCbo" Height="36" FontSize="15" FontWeight="SemiBold" VerticalContentAlignment="Center" Margin="0,0,0,8" SelectedIndex="0">
+                            <ComboBoxItem Content="Select Gender" IsEnabled="False"/>
+                            <ComboBoxItem Content="Male"/>
+                            <ComboBoxItem Content="Female"/>
+                        </ComboBox>
 
                         <TextBlock Text="Email Address (Optional)" FontWeight="Normal" Foreground="Black" FontSize="14" Margin="0,0,0,2"/>
-                        <TextBox x:Name="RegEmailTxt" Height="36" FontSize="18" FontWeight="Bold" Background="#FFFFE0" VerticalContentAlignment="Center" Padding="4,0" BorderBrush="#A0A0A0" Margin="0,0,0,6"/>
+                        <TextBox x:Name="RegEmailTxt" Height="36" FontSize="16" FontWeight="Bold" Background="#FFFFE0" VerticalContentAlignment="Center" Padding="6,0" BorderBrush="#A0A0A0" Margin="0,0,0,8"/>
 
                         <TextBlock Text="Birthday (Optional)" FontWeight="Normal" Foreground="Black" FontSize="14" Margin="0,0,0,2"/>
-                        <DatePicker x:Name="RegBirthDate" Height="36" VerticalContentAlignment="Center" BorderBrush="#A0A0A0" Margin="0,0,0,10">
-                            <DatePicker.Resources>
-                                <Style TargetType="DatePickerTextBox">
-                                    <Setter Property="Background" Value="#FFFFE0"/>
-                                    <Setter Property="FontSize" Value="16"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                </Style>
-                            </DatePicker.Resources>
-                        </DatePicker>
+                        <DatePicker x:Name="RegBirthDate" Height="36" VerticalContentAlignment="Center" BorderBrush="#A0A0A0" Margin="0,0,0,8"/>
 
-                        <Button x:Name="RegisterBtn" Content="REGISTER NEW CUSTOMER" Click="RegisterBtn_Click" Background="#E0E0E0" FontWeight="Bold" FontSize="15" Height="45" Padding="0"/>
+                        <TextBlock Text="Registration Date" FontWeight="Normal" Foreground="Black" FontSize="14" Margin="0,0,0,2"/>
+                        <DatePicker x:Name="RegDate" Height="36" VerticalContentAlignment="Center" BorderBrush="#A0A0A0" Margin="0,0,0,12"/>
+
+                        <Border BorderBrush="#A0A0A0" BorderThickness="1" Background="#FFF5F5" Padding="10,8" CornerRadius="4" Margin="0,0,0,15">
+                            <CheckBox x:Name="LockCardChk" Content="Lock Loyalty Card (Suspend Account)" Foreground="#DC3545" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </Border>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="ClearFieldsBtn" Grid.Column="0" Content="CLR" Click="ClearSearchBtn_Click" Background="#FFC107" FontWeight="Bold" FontSize="14" Height="45" Margin="0,0,6,0"/>
+                            <Button x:Name="RegisterBtn" Grid.Column="1" Content="REGISTER / UPDATE" Click="RegisterBtn_Click" Background="#E0E0E0" FontWeight="Bold" FontSize="14" Height="45"/>
+                        </Grid>
 
                     </StackPanel>
-                </GroupBox>
-
-                <GroupBox Grid.Row="1" Header="Quick Input" FontSize="15" FontWeight="Bold" Foreground="#003366">
-                    <Border Background="#D4D0C8" Padding="0" Margin="0">
-                        <UniformGrid Columns="3" Rows="4">
-                            <Button Content="7" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button Content="8" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button Content="9" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-
-                            <Button Content="4" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button Content="5" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button Content="6" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-
-                            <Button Content="1" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button Content="2" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button Content="3" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-
-                            <Button Content="C" FontSize="26" FontWeight="Heavy" Background="#DC3545" Foreground="White" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button Content="0" FontSize="26" FontWeight="Heavy" Margin="1" Click="NumpadBtn_Click"/>
-                            <Button x:Name="ClearSearchBtn" Content="CLR" FontSize="20" FontWeight="Heavy" Background="#FFC107" Margin="1" Click="ClearSearchBtn_Click" ToolTip="Clear Fields"/>
-                        </UniformGrid>
-                    </Border>
-                </GroupBox>
-            </Grid>
+                </ScrollViewer>
+            </GroupBox>
         </Grid>
 
         <Grid Grid.Row="2" Margin="6,4,6,4">
