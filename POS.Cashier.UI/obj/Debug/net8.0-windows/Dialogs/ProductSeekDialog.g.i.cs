@@ -100,7 +100,7 @@ namespace POS.Cashier.UI.Views.Dialogs {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;component/dialogs/productseekdialog.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.Cashier.UI;V1.0.0.0;component/dialogs/productseekdialog.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Dialogs\ProductSeekDialog.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
