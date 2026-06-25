@@ -2,188 +2,174 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public class ExpressItemAdminViewModel : ViewModelBase
+    public partial class ExpressItemAdminViewModel : ObservableObject
     {
         private readonly ExpressItemRepository _repository;
 
         // ==========================================
         // PROPERTIES: LEFT PANE (VARIANT SEARCH)
         // ==========================================
-        public ObservableCollection<ItemVariant> SearchResults { get; set; } = new();
+        public ObservableCollection<ItemVariant> SearchResults { get; } = new();
 
-        private string _searchText = string.Empty;
-        public string SearchText
-        {
-            get => _searchText;
-            set { _searchText = value; OnPropertyChanged(nameof(SearchText)); }
-        }
+        [ObservableProperty] private string _searchText = string.Empty;
 
-        private ItemVariant? _selectedVariant;
-        public ItemVariant? SelectedVariant
-        {
-            get => _selectedVariant;
-            set
-            {
-                _selectedVariant = value;
-                OnPropertyChanged(nameof(SelectedVariant));
-
-                // SMART FEATURE: Auto-fill the Display Label if a new variant is picked 
-                // and the label is currently empty
-                if (value != null && string.IsNullOrWhiteSpace(CurrentLayout.DisplayLabel))
-                {
-                    string autoName = string.IsNullOrWhiteSpace(value.VariantDescription)
-                        ? value.ItemParent?.ItemName ?? ""
-                        : $"{value.ItemParent?.ItemName} {value.VariantDescription}";
-
-                    // Truncate to 20 characters so it fits nicely on a square POS button
-                    CurrentLayout.DisplayLabel = autoName.Length > 20 ? autoName.Substring(0, 20) : autoName;
-                }
-            }
-        }
+        [ObservableProperty] private ItemVariant? _selectedVariant;
 
         // ==========================================
         // PROPERTIES: RIGHT PANE (LAYOUT SETUP)
         // ==========================================
-        public ObservableCollection<ExpressItemLayout> Layouts { get; set; } = new();
+        public ObservableCollection<ExpressItemLayout> Layouts { get; } = new();
 
-        private ExpressItemLayout _currentLayout = new ExpressItemLayout();
-        public ExpressItemLayout CurrentLayout
-        {
-            get => _currentLayout;
-            set { _currentLayout = value; OnPropertyChanged(nameof(CurrentLayout)); }
-        }
+        [ObservableProperty] private ExpressItemLayout _currentLayout = new ExpressItemLayout();
 
-        private ExpressItemLayout? _selectedLayout;
-        public ExpressItemLayout? SelectedLayout
-        {
-            get => _selectedLayout;
-            set
-            {
-                _selectedLayout = value;
-                OnPropertyChanged(nameof(SelectedLayout));
+        [ObservableProperty] private ExpressItemLayout? _selectedLayout;
 
-                if (value != null)
-                {
-                    // Copy to CurrentLayout so editing doesn't instantly affect the grid until saved
-                    CurrentLayout = new ExpressItemLayout
-                    {
-                        Id = value.Id,
-                        ItemVariantId = value.ItemVariantId,
-                        TabCategory = value.TabCategory,
-                        DisplayLabel = value.DisplayLabel,
-                        ButtonColorHex = value.ButtonColorHex,
-                        TextColorHex = value.TextColorHex,
-                        GridRow = value.GridRow,
-                        GridColumn = value.GridColumn,
-                        IsActive = value.IsActive,
-                        ItemVariant = value.ItemVariant // Keep the reference for the UI display
-                    };
-                }
-            }
-        }
-
-        // Color Palette choices for the manager to pick from
-        public ObservableCollection<string> AvailableColors { get; } = new()
+        // Color Palette choices for the manager to design their POS screens
+        public ObservableCollection<string> AvailableColors { get; } = new(new[]
         {
             "#005555", "#8B0000", "#D97706", "#059669", "#1E3A8A",
             "#4C1D95", "#B91C1C", "#333333", "#0F766E", "#BE123C"
-        };
-
-        // ==========================================
-        // COMMANDS
-        // ==========================================
-        public ICommand SearchCommand { get; }
-        public ICommand SaveCommand { get; }
-        public ICommand DeleteCommand { get; }
-        public ICommand ClearCommand { get; }
+        });
 
         public ExpressItemAdminViewModel(ExpressItemRepository repository)
         {
             _repository = repository;
-
-            SearchCommand = new RelayCommand(async (o) => await ExecuteSearch());
-            SaveCommand = new RelayCommand(async (o) => await ExecuteSave());
-            DeleteCommand = new RelayCommand(async (o) => await ExecuteDelete());
-            ClearCommand = new RelayCommand((o) => ExecuteClear());
-
             _ = LoadLayoutsAsync();
         }
 
         // ==========================================
-        // METHODS
+        // SMART UI TRIGGERS
         // ==========================================
-        private async Task LoadLayoutsAsync()
+
+        // Fires automatically when a manager clicks a searched item
+        partial void OnSelectedVariantChanged(ItemVariant? value)
         {
-            var data = await _repository.GetAllLayoutsAsync();
-            Layouts.Clear();
-            foreach (var item in data) Layouts.Add(item);
+            if (value != null && string.IsNullOrWhiteSpace(CurrentLayout.DisplayLabel))
+            {
+                // Auto-generate the button label based on Parent Name + Variant Description
+                string autoName = string.IsNullOrWhiteSpace(value.VariantDescription)
+                    ? value.ItemParent?.ItemName ?? ""
+                    : $"{value.ItemParent?.ItemName} {value.VariantDescription}";
+
+                // Truncate to exactly 20 characters so it fits nicely on a square POS touch button
+                CurrentLayout.DisplayLabel = autoName.Length > 20 ? autoName.Substring(0, 20).Trim() : autoName;
+
+                // Force UI to refresh the form to show the newly generated name
+                OnPropertyChanged(nameof(CurrentLayout));
+            }
         }
 
-        private async Task ExecuteSearch()
+        // Fires automatically when a manager selects an existing layout to edit
+        partial void OnSelectedLayoutChanged(ExpressItemLayout? value)
         {
+            if (value != null)
+            {
+                // We CLONE the object. This prevents live UI edits from corrupting 
+                // the DataGrid display until the user actually hits "Save".
+                CurrentLayout = new ExpressItemLayout
+                {
+                    Id = value.Id,
+                    ItemVariantId = value.ItemVariantId,
+                    TabCategory = value.TabCategory,
+                    DisplayLabel = value.DisplayLabel,
+                    ButtonColorHex = value.ButtonColorHex,
+                    TextColorHex = value.TextColorHex,
+                    GridRow = value.GridRow,
+                    GridColumn = value.GridColumn,
+                    IsActive = value.IsActive,
+                    ItemVariant = value.ItemVariant
+                };
+            }
+        }
+
+        // ==========================================
+        // COMMANDS & EXECUTION
+        // ==========================================
+
+        [RelayCommand]
+        private async Task SearchAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SearchText)) return;
+
             var data = await _repository.SearchVariantsAsync(SearchText);
             SearchResults.Clear();
             foreach (var item in data) SearchResults.Add(item);
         }
 
-        private async Task ExecuteSave()
+        [RelayCommand]
+        private async Task SaveAsync()
         {
-            // Validation
+            // 1. Basic Validation
             if (CurrentLayout.Id == 0 && SelectedVariant == null)
             {
-                MessageBox.Show("Please search and select an Item Variant first.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please search and select an Item Variant from the left pane first.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            if (string.IsNullOrWhiteSpace(CurrentLayout.DisplayLabel) || string.IsNullOrWhiteSpace(CurrentLayout.TabCategory))
+
+            if (string.IsNullOrWhiteSpace(CurrentLayout.TabCategory) || string.IsNullOrWhiteSpace(CurrentLayout.DisplayLabel))
             {
-                MessageBox.Show("Tab Category and Display Label are required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Tab Category and Button Display Label are strictly required.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                // If it's a new layout, attach the variant ID from the search results
+                // Assign variant ID if it's a brand new button layout
                 if (CurrentLayout.Id == 0)
                 {
                     CurrentLayout.ItemVariantId = SelectedVariant!.Id;
                 }
 
                 await _repository.SaveLayoutAsync(CurrentLayout);
-                MessageBox.Show("Express button layout saved.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Express POS button successfully mapped and saved.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 await LoadLayoutsAsync();
-                ExecuteClear();
+                Clear();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Catch the strict Grid Collision rule we built into the repository!
+                MessageBox.Show(ex.Message, "Grid Collision Detected", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving layout: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Failed to save layout: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private async Task ExecuteDelete()
+        [RelayCommand]
+        private async Task DeleteAsync()
         {
             if (SelectedLayout == null || SelectedLayout.Id == 0) return;
 
-            if (MessageBox.Show($"Delete button mapping for '{SelectedLayout.DisplayLabel}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (MessageBox.Show($"Are you sure you want to completely remove the '{SelectedLayout.DisplayLabel}' button from the POS?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _repository.DeleteLayoutAsync(SelectedLayout.Id);
                 await LoadLayoutsAsync();
-                ExecuteClear();
+                Clear();
             }
         }
 
-        private void ExecuteClear()
+        [RelayCommand]
+        private void Clear()
         {
-            // Reset to defaults
             CurrentLayout = new ExpressItemLayout();
             SelectedLayout = null;
             SelectedVariant = null;
+        }
+
+        private async Task LoadLayoutsAsync()
+        {
+            var data = await _repository.GetAllLayoutsAsync();
+            Layouts.Clear();
+            foreach (var item in data) Layouts.Add(item);
         }
     }
 }

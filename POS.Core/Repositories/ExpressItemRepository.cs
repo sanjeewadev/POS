@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-// using POS.Core.Data; // Ensure this points to your AppDbContext
 
 namespace POS.Core.Repositories
 {
@@ -19,7 +18,7 @@ namespace POS.Core.Repositories
         }
 
         // ==========================================
-        // 1. GET ALL LAYOUTS (For Admin Grid)
+        // 1. GET ALL LAYOUTS (For Admin Grid & POS)
         // ==========================================
         public async Task<List<ExpressItemLayout>> GetAllLayoutsAsync()
         {
@@ -29,10 +28,10 @@ namespace POS.Core.Repositories
             return await context.ExpressItemLayouts
                 .Include(e => e.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
-                .Where(e => e.IsActive)
                 .OrderBy(e => e.TabCategory)
                 .ThenBy(e => e.GridRow)
                 .ThenBy(e => e.GridColumn)
+                .AsNoTracking()
                 .ToListAsync();
         }
 
@@ -43,11 +42,12 @@ namespace POS.Core.Repositories
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            // Exclude deactivated items
+            // Exclude deactivated items completely
             var query = context.ItemVariants
                 .Include(v => v.ItemParent)
+                .Where(v => !v.IsDeactivated && !v.ItemParent.IsDeactivated)
                 .AsNoTracking()
-                .Where(v => !v.IsDeactivated && !v.ItemParent.IsDeactivated);
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -65,15 +65,29 @@ namespace POS.Core.Repositories
         }
 
         // ==========================================
-        // 3. SAVE LAYOUT MAPPING
+        // 3. SAVE LAYOUT MAPPING (HARDENED)
         // ==========================================
         public async Task<ExpressItemLayout> SaveLayoutAsync(ExpressItemLayout layout)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
+            // THE ENTERPRISE VALIDATION GATE
+            // Checks if another button already occupies this exact X,Y coordinate on this specific tab.
+            bool positionOccupied = await context.ExpressItemLayouts
+                .AnyAsync(e => e.TabCategory == layout.TabCategory
+                            && e.GridRow == layout.GridRow
+                            && e.GridColumn == layout.GridColumn
+                            && e.Id != layout.Id); // Ignore itself if updating an existing layout
+
+            if (positionOccupied)
+            {
+                throw new InvalidOperationException(
+                    $"Collision Detected: There is already a button located at Row {layout.GridRow}, Column {layout.GridColumn} on the '{layout.TabCategory}' tab.\n\nPlease choose a different row or column.");
+            }
+
             if (layout.Id == 0)
             {
-                context.ExpressItemLayouts.Add(layout);
+                await context.ExpressItemLayouts.AddAsync(layout);
             }
             else
             {

@@ -11,7 +11,6 @@ using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    // DTO for Matrix Rapid Entry to avoid polluting the core database model
     public partial class PoMatrixEntryDto : ObservableObject
     {
         public int ItemVariantId { get; set; }
@@ -27,8 +26,6 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private decimal _lineDiscount = 0m;
 
         public string TaxCode { get; set; } = "Exempt";
-
-        // ✅ NEW: Vendor Specific Data for the UI Matrix
         public string? SupplierItemCode { get; set; }
         public int Moq { get; set; } = 1;
     }
@@ -40,11 +37,15 @@ namespace POS.BackOffice.UI.ViewModels
 
         // --- ZONE 1: HEADER ---
         [ObservableProperty] private Supplier? _selectedSupplier;
+        [ObservableProperty] private string _supplierCode = string.Empty;
+
+        [ObservableProperty] private string _selectedTerms = "Credit";
+        [ObservableProperty] private int? _creditDaysInput = null;
+
         [ObservableProperty] private DateTime _orderDate = DateTime.Now;
         [ObservableProperty] private DateTime _expectedDate = DateTime.Now.AddDays(7);
-        [ObservableProperty] private string _currentUser = "Admin"; // TODO: Pull from Auth Service
+        [ObservableProperty] private string _currentUser = "Admin";
         [ObservableProperty] private string _remarks = string.Empty;
-        [ObservableProperty] private bool _isTaxInclusive = false;
 
         // --- ZONE 2: ENTRY MODES ---
         [ObservableProperty] private string _scanBarcode = string.Empty;
@@ -85,17 +86,23 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var item in items) AvailableItems.Add(item);
         }
 
-        // --- MATRIX ENGINE & FILTERING ---
+        partial void OnSelectedSupplierChanged(Supplier? value)
+        {
+            SupplierCode = value?.SupplierCode ?? string.Empty;
+
+            if (value != null && value.DefaultCreditDays > 0)
+            {
+                CreditDaysInput = value.DefaultCreditDays;
+            }
+        }
+
         partial void OnSelectedItemChanged(ItemMasterSummaryDto? value)
         {
             if (value == null) return;
 
-            // ✅ STRICT MODE: Block searching if no supplier is picked
             if (SelectedSupplier == null)
             {
                 MessageBox.Show("Please select a Supplier first before loading matrix items.", "Supplier Required", MessageBoxButton.OK, MessageBoxImage.Warning);
-
-                // Temporarily detach the event to reset without looping
                 SelectedItem = null;
                 return;
             }
@@ -112,10 +119,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var variant in variants)
             {
-                // ✅ STRICT MODE: Check if this supplier is approved for this variant
                 var supplierLink = variant.ItemSuppliers?.FirstOrDefault(s => s.SupplierId == SelectedSupplier!.Id);
-
-                // If this supplier doesn't sell this specific variant, hide it from the matrix!
                 if (supplierLink == null) continue;
 
                 _allMatrixVariants.Add(new PoMatrixEntryDto
@@ -127,12 +131,9 @@ namespace POS.BackOffice.UI.ViewModels
                     Barcode = variant.Barcode,
                     Uom = variant.ItemParent?.BaseUom ?? "PCS",
                     TaxCode = variant.ItemParent?.TaxCode ?? "Exempt",
-
-                    // ✅ PULL VENDOR SPECIFIC DATA
                     ExpectedCost = supplierLink.LastCostPrice,
                     SupplierItemCode = supplierLink.SupplierItemCode,
                     Moq = supplierLink.MinimumOrderQuantity,
-
                     OrderQty = 0,
                     CurrentSOH = 0m
                 });
@@ -161,13 +162,11 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var item in query) ActiveMatrixVariants.Add(item);
         }
 
-        // --- BARCODE SEARCH ENGINE ---
         [RelayCommand]
         private async Task AddItemAsync()
         {
             if (string.IsNullOrWhiteSpace(ScanBarcode)) return;
 
-            // ✅ STRICT MODE
             if (SelectedSupplier == null)
             {
                 MessageBox.Show("Please select a Supplier first before scanning items.", "Supplier Required", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -184,7 +183,6 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            // ✅ STRICT MODE: Block the scan if the item isn't mapped to the vendor
             var supplierLink = variant.ItemSuppliers?.FirstOrDefault(s => s.SupplierId == SelectedSupplier.Id);
             if (supplierLink == null)
             {
@@ -202,13 +200,9 @@ namespace POS.BackOffice.UI.ViewModels
                 Barcode = variant.Barcode,
                 Uom = variant.ItemParent?.BaseUom ?? "PCS",
                 TaxCode = variant.ItemParent?.TaxCode ?? "Exempt",
-
-                // ✅ PULL VENDOR SPECIFIC DATA
                 ExpectedCost = supplierLink.LastCostPrice,
                 SupplierItemCode = supplierLink.SupplierItemCode,
                 Moq = supplierLink.MinimumOrderQuantity,
-
-                // Default to MOQ so they don't accidentally order 1 if MOQ is 12
                 OrderQty = supplierLink.MinimumOrderQuantity > 0 ? supplierLink.MinimumOrderQuantity : 1
             };
 
@@ -217,11 +211,8 @@ namespace POS.BackOffice.UI.ViewModels
             RecalculateTotals();
         }
 
-        // --- FINANCIAL MATH ENGINE ---
         partial void OnGlobalBillDiscountChanged(decimal value) => RecalculateTotals();
-        partial void OnIsTaxInclusiveChanged(bool value) => RecalculateTotals();
 
-        [RelayCommand]
         public void RecalculateTotals()
         {
             if (!PoLines.Any())
@@ -232,19 +223,12 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var line in PoLines)
             {
+                // Core calculation without complex inclusive/exclusive branching
                 decimal taxRate = line.TaxCode.Contains("18") ? 0.18m : line.TaxCode.Contains("5") ? 0.05m : 0m;
                 decimal rawLineTotal = (line.OrderQty * line.ExpectedCost) - line.LineDiscount;
 
-                if (IsTaxInclusive)
-                {
-                    line.TaxAmount = rawLineTotal - (rawLineTotal / (1 + taxRate));
-                    line.LineTotal = rawLineTotal;
-                }
-                else
-                {
-                    line.TaxAmount = rawLineTotal * taxRate;
-                    line.LineTotal = rawLineTotal + line.TaxAmount;
-                }
+                line.TaxAmount = rawLineTotal * taxRate;
+                line.LineTotal = rawLineTotal + line.TaxAmount;
             }
 
             Subtotal = PoLines.Sum(l => l.LineTotal);
@@ -253,7 +237,6 @@ namespace POS.BackOffice.UI.ViewModels
             NetPayable = Subtotal - GlobalBillDiscount;
         }
 
-        // --- GRID ACTIONS ---
         [RelayCommand]
         private void AddMatrix()
         {
@@ -279,8 +262,6 @@ namespace POS.BackOffice.UI.ViewModels
                     ExpectedCost = item.ExpectedCost,
                     LineDiscount = item.LineDiscount,
                     TaxCode = item.TaxCode,
-
-                    // ✅ PASS VENDOR INFO TO MAIN GRID
                     SupplierItemCode = item.SupplierItemCode,
                     Moq = item.Moq
                 };
@@ -306,10 +287,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // --- SAVING EXECUTION ---
         [RelayCommand]
-        private async Task ApprovePoAsync() => await SaveOrderAsync();
-
         private async Task SaveOrderAsync()
         {
             if (SelectedSupplier == null)
@@ -324,8 +302,7 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            string actionText = "Approve and Finalize PO?\n\nOnce approved, this PO will be available for GRN receiving.";
-            var result = MessageBox.Show(actionText, "Confirm Approval", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var result = MessageBox.Show("Save and Finalize Purchase Order?", "Confirm Save", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
             {
@@ -336,19 +313,28 @@ namespace POS.BackOffice.UI.ViewModels
                         SupplierId = SelectedSupplier.Id,
                         OrderDate = this.OrderDate,
                         ExpectedDate = this.ExpectedDate,
+                        Terms = this.SelectedTerms,
+                        CreditDays = this.CreditDaysInput ?? 0,
                         Remarks = this.Remarks.Trim(),
                         Subtotal = this.Subtotal,
                         GlobalBillDiscount = this.GlobalBillDiscount,
                         TotalTaxAmount = this.TotalTaxAmount,
                         TotalDiscountAmount = this.TotalDiscountAmount,
                         NetPayable = this.NetPayable,
-                        IsTaxInclusive = this.IsTaxInclusive,
                         CreatedBy = this.CurrentUser
+                        // IsTaxInclusive defaults silently to database
                     };
 
                     await _poRepository.SavePurchaseOrderAsync(header, PoLines.ToList(), false);
 
-                    MessageBox.Show($"Purchase Order Approved Successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    // PO Saved successfully, trigger PDF download prompt
+                    var pdfResult = MessageBox.Show($"Purchase Order Saved Successfully!\n\nWould you like to download the PDF now?", "Success", MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+                    if (pdfResult == MessageBoxResult.Yes)
+                    {
+                        GeneratePoPdf(header, PoLines.ToList());
+                    }
+
                     Clear();
                 }
                 catch (Exception ex)
@@ -358,10 +344,19 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
+        private void GeneratePoPdf(PoHeader header, List<PoLine> lines)
+        {
+            // PDF Generation Library logic will go here
+            MessageBox.Show($"PDF Module Initializing...\n\n(This will automatically generate a standard A4 Purchase Order format and launch a save file dialog).", "PDF Generation", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         [RelayCommand]
         private void Clear()
         {
             SelectedSupplier = null;
+            SupplierCode = string.Empty;
+            SelectedTerms = "Credit";
+            CreditDaysInput = null;
             Remarks = string.Empty;
             ScanBarcode = string.Empty;
             MatrixFilterText = string.Empty;

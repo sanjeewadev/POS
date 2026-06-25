@@ -14,6 +14,14 @@
             <Setter Property="Foreground" Value="#003366"/>
         </Style>
 
+        <Style TargetType="TextBlock" x:Key="InlineLabel">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
+        </Style>
+
         <Style TargetType="TextBox" x:Key="ClassicInput">
             <Setter Property="Height" Value="26"/>
             <Setter Property="Padding" Value="6,0"/>
@@ -21,6 +29,19 @@
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="DatePicker" x:Key="ClassicDate">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
@@ -50,6 +71,19 @@
             </Style.Triggers>
         </Style>
 
+        <Style TargetType="Button" x:Key="ViewBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#0066CC"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#004C99"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Height" Value="24"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#0052A3"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style TargetType="DataGridCell" x:Key="BaseCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -66,77 +100,262 @@
     </UserControl.Resources>
 
     <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="10"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="10"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                <TextBlock Grid.Column="0" Text="PURCHASE ORDER DASHBOARD" Style="{StaticResource HeaderLabel}" VerticalAlignment="Center" Margin="0,0,20,0"/>
+            <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
-                    <TextBlock Text="Search (PO #, Supplier, Status):" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,10,0"/>
-                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="250" Style="{StaticResource ClassicInput}"/>
+                        <TextBlock Grid.Column="0" Text="PURCHASE ORDER DASHBOARD" Style="{StaticResource HeaderLabel}" VerticalAlignment="Center"/>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <Button Content="🔄 Refresh Grid" Command="{Binding RefreshDatabaseCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0"/>
+                            <Button Content="🧹 Clear Filters" Command="{Binding ClearFiltersCommand}" Style="{StaticResource ClassicBtn}" Foreground="DarkRed"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBlock Text="Search:" Style="{StaticResource InlineLabel}"/>
+                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="150" Style="{StaticResource ClassicInput}" ToolTip="PO Number or Supplier"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBlock Text="Supplier:" Style="{StaticResource InlineLabel}"/>
+                            <ComboBox ItemsSource="{Binding FilterSuppliers}" SelectedItem="{Binding SelectedSupplierFilter}" DisplayMemberPath="SupplierName" Width="180" Style="{StaticResource ClassicCombo}"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBlock Text="Status:" Style="{StaticResource InlineLabel}"/>
+                            <ComboBox ItemsSource="{Binding FilterStatuses}" SelectedItem="{Binding SelectedStatusFilter}" Width="120" Style="{StaticResource ClassicCombo}"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBlock Text="From:" Style="{StaticResource InlineLabel}"/>
+                            <DatePicker SelectedDate="{Binding FilterStartDate}" Width="110" Style="{StaticResource ClassicDate}"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBlock Text="To:" Style="{StaticResource InlineLabel}"/>
+                            <DatePicker SelectedDate="{Binding FilterEndDate}" Width="110" Style="{StaticResource ClassicDate}"/>
+                        </StackPanel>
+                    </WrapPanel>
                 </StackPanel>
+            </Border>
 
-                <Button Grid.Column="3" Content="🔄 Refresh" Command="{Binding RefreshDatabaseCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0"/>
-                <Button Grid.Column="4" Content="🖨️ PRINT SELECTED PO" Command="{Binding PrintPoCommand}" Style="{StaticResource ActionBtn}"/>
-            </Grid>
-        </Border>
+            <DataGrid Grid.Row="2" ItemsSource="{Binding PurchaseOrders}" SelectedItem="{Binding SelectedPo}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" 
+                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
+                      RowHeight="32" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
+                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
 
-        <DataGrid Grid.Row="2" x:Name="dgPurchaseOrders" ItemsSource="{Binding PurchaseOrders}" SelectedItem="{Binding SelectedPo}"
-                  AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" 
-                  HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
-                  RowHeight="30" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
-                  SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#E0E0E0"/>
+                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="8,5"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                    </Style>
+                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                </DataGrid.Resources>
 
-            <DataGrid.Resources>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#E0E0E0"/>
-                    <Setter Property="Foreground" Value="Black"/>
-                    <Setter Property="FontWeight" Value="Bold"/>
-                    <Setter Property="Padding" Value="8,5"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                    <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="Actions" Width="100">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="👁️ View Details" 
+                                        Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}" 
+                                        Style="{StaticResource ViewBtn}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="PO Number" Binding="{Binding PoNumber}" Width="130" FontWeight="Bold" Foreground="#003366"/>
+                    <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="*"/>
+                    <DataGridTextColumn Header="Order Date" Binding="{Binding OrderDate, StringFormat=d}" Width="100"/>
+                    <DataGridTextColumn Header="Exp. Delivery" Binding="{Binding ExpectedDate, StringFormat=d}" Width="100"/>
+
+                    <DataGridTextColumn Header="Est. Total (Rs.)" Binding="{Binding NetPayable, StringFormat=N2}" Width="120" FontWeight="Bold" Foreground="#005500">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Created By" Binding="{Binding CreatedBy}" Width="120" Foreground="#666"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+
+        <Grid Background="#D4D0C8">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ViewingPoDetails}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ViewingPoDetails, Converter={x:Null}}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
                 </Style>
-                <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
-            </DataGrid.Resources>
+            </Grid.Style>
 
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="PO Number" Binding="{Binding PoNumber}" Width="130" FontWeight="Bold" Foreground="#003366"/>
-                <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="*"/>
-                <DataGridTextColumn Header="Order Date" Binding="{Binding OrderDate, StringFormat=d}" Width="100"/>
-                <DataGridTextColumn Header="Exp. Delivery" Binding="{Binding ExpectedDate, StringFormat=d}" Width="100"/>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                <DataGridTextColumn Header="Est. Total (Rs.)" Binding="{Binding NetPayable, StringFormat=N2}" Width="120" FontWeight="Bold" Foreground="#005500">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+            <Border Grid.Row="0" Background="#003366" Padding="15,10" BorderBrush="#002244" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                    <Button Grid.Column="0" Content="← GO BACK" Command="{Binding CloseDetailsCommand}" Style="{StaticResource ClassicBtn}" Background="#E0E0E0" Foreground="Black" Margin="0,0,20,0"/>
 
-                <DataGridTextColumn Header="Created By" Binding="{Binding CreatedBy}" Width="120" Foreground="#666"/>
-            </DataGrid.Columns>
-        </DataGrid>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="PO DETAILS: " Foreground="#A0C0E0" FontSize="18" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.PoNumber}" Foreground="White" FontSize="18" FontWeight="Bold" Margin="5,0,20,0"/>
+                        <Border Background="#005555" CornerRadius="4" Padding="8,2">
+                            <TextBlock Text="{Binding ViewingPoDetails.Status}" Foreground="White" FontWeight="Bold" FontSize="12"/>
+                        </Border>
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Content="❌ CANCEL PO" Command="{Binding CancelPoCommand}" Style="{StaticResource ClassicBtn}" Background="#FEF2F2" Foreground="DarkRed" BorderBrush="DarkRed" Margin="0,0,10,0" Padding="15,0"/>
+
+                    <Button Grid.Column="3" Content="📄 CLONE TO NEW PO" Command="{Binding ClonePoCommand}" Style="{StaticResource ActionBtn}" Background="#0066CC" BorderBrush="#004C99" Margin="0,0,10,0" Padding="15,0"/>
+
+                    <Button Grid.Column="4" Content="🖨️ EXPORT TO PDF" Command="{Binding PrintPoCommand}" Style="{StaticResource ActionBtn}" Background="#D97706" BorderBrush="#B45309" Padding="20,0"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Background="White" BorderBrush="#A0A0A0" BorderThickness="1,0,1,1" Padding="15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="SUPPLIER" Foreground="#888" FontSize="10" FontWeight="Bold" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.Supplier.SupplierName}" FontSize="14" FontWeight="Bold" Foreground="#003366"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.Supplier.ContactPerson}" FontSize="12" Foreground="#444" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="TIMELINE" Foreground="#888" FontSize="10" FontWeight="Bold" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.OrderDate, StringFormat='Ordered: {0:dd MMM yyyy}'}" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.ExpectedDate, StringFormat='Expected: {0:dd MMM yyyy}'}" FontSize="12" Foreground="#005500" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="TERMS" Foreground="#888" FontSize="10" FontWeight="Bold" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.Terms}" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.Remarks}" FontSize="11" Foreground="#666" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" HorizontalAlignment="Right">
+                        <TextBlock Text="NET PAYABLE" Foreground="#888" FontSize="10" FontWeight="Bold" Margin="0,0,0,2" HorizontalAlignment="Right"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.NetPayable, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="#005500"/>
+                        <TextBlock Text="{Binding ViewingPoDetails.IsTaxInclusive, StringFormat='Tax Inclusive: {0}'}" FontSize="11" Foreground="#666" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <DataGrid Grid.Row="2" ItemsSource="{Binding ViewingPoDetails.PoLines}" 
+                      AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" GridLinesVisibility="All" 
+                      HorizontalGridLinesBrush="#C0C0C0" VerticalGridLinesBrush="#D0D0D0" 
+                      RowHeight="30" HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
+                      SelectionMode="Single" AlternatingRowBackground="#F9F9F9" Margin="0,10,0,0">
+
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#E0E0E0"/>
+                        <Setter Property="Foreground" Value="Black"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="8,5"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        <Setter Property="BorderBrush" Value="#A0A0A0"/>
+                    </Style>
+                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Internal Code" Binding="{Binding ItemVariant.ItemParent.ItemCode}" Width="100" Foreground="#666" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Item Description" Binding="{Binding ItemVariant.ItemParent.ItemName}" Width="*" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Variant Attributes" Binding="{Binding ItemVariant.VariantDescription}" Width="150" Foreground="#444"/>
+
+                    <DataGridTextColumn Header="Vendor SKU" Binding="{Binding SupplierItemCode}" Width="120" Foreground="#005555" FontWeight="SemiBold"/>
+
+                    <DataGridTextColumn Header="Order Qty" Binding="{Binding OrderQty}" Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Received" Binding="{Binding ReceivedQty}" Width="80" Foreground="#005500">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Unit Cost" Binding="{Binding ExpectedCost, StringFormat=N2}" Width="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Line Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="110" FontWeight="Bold">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
     </Grid>
 </UserControl>

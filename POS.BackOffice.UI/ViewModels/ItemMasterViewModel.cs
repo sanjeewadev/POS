@@ -12,7 +12,6 @@ using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    // Helper wrapper for Zone 2 Builder
     public class MatrixPropertySelection
     {
         public AttributeGroup Group { get; set; } = null!;
@@ -27,8 +26,6 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly SubCategoryRepository _subCategoryRepository;
         private readonly AttributeRepository _attributeRepository;
         private readonly UnitOfMeasureRepository _uomRepository;
-
-        // ✅ NEW: We need to pull the list of suppliers for the UI dropdown
         private readonly SupplierRepository _supplierRepository;
 
         private bool _isLoadingItem = false;
@@ -71,25 +68,14 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private string _masterSearchText = string.Empty;
         [ObservableProperty] private ItemMasterSummaryDto? _selectedDatabaseItem;
 
-        // ==========================================
-        // ✅ NEW: ZONE 7: SUPPLIER MANAGEMENT STATE
-        // ==========================================
-
-        // The master list of all suppliers for the dropdown
+        // --- ZONE 7: SUPPLIER MANAGEMENT STATE ---
         public ObservableCollection<Supplier> AvailableSuppliers { get; set; } = new();
-
-        // The specific variant we clicked on to edit its suppliers
         [ObservableProperty] private ItemVariant? _selectedVariantForSupplierEdit;
-
-        // The specific suppliers attached to the clicked variant
         public ObservableCollection<ItemSupplier> SelectedVariantSuppliers { get; set; } = new();
 
-        // Inputs for adding a new supplier to the grid
         [ObservableProperty] private Supplier? _supplierToAdd;
         [ObservableProperty] private string _supplierItemCodeInput = string.Empty;
         [ObservableProperty] private decimal _supplierCostInput = 0m;
-        [ObservableProperty] private bool _isPrimarySupplierInput = true;
-
 
         // --- LOOKUPS ---
         public ObservableCollection<Category> Categories { get; set; } = new();
@@ -107,14 +93,14 @@ namespace POS.BackOffice.UI.ViewModels
             SubCategoryRepository subCategoryRepository,
             AttributeRepository attributeRepository,
             UnitOfMeasureRepository uomRepository,
-            SupplierRepository supplierRepository) // ✅ Injected!
+            SupplierRepository supplierRepository)
         {
             _itemMasterRepository = itemMasterRepository;
             _categoryRepository = categoryRepository;
             _subCategoryRepository = subCategoryRepository;
             _attributeRepository = attributeRepository;
             _uomRepository = uomRepository;
-            _supplierRepository = supplierRepository; // ✅ Injected!
+            _supplierRepository = supplierRepository;
 
             _ = InitializeAsync();
         }
@@ -129,17 +115,12 @@ namespace POS.BackOffice.UI.ViewModels
             var dbUoms = await _uomRepository.GetAllAsync();
             foreach (var uom in dbUoms.Where(u => u.IsActive)) Uoms.Add(uom.UomCode);
 
-            // ✅ Load Master Supplier List for the dropdown
             AvailableSuppliers.Clear();
             var suppliers = await _supplierRepository.GetAllAsync();
             foreach (var sup in suppliers.Where(s => !s.IsDeactivated)) AvailableSuppliers.Add(sup);
 
             await LoadMasterGridAsync();
         }
-
-        // ==========================================
-        // UI TRIGGERS & AUTO-CODING
-        // ==========================================
 
         partial void OnSelectedCategoryChanged(Category? value)
         {
@@ -174,23 +155,18 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // ✅ NEW: Triggered when a user clicks a row in the Generated Variants grid
         partial void OnSelectedVariantForSupplierEditChanged(ItemVariant? value)
         {
             SelectedVariantSuppliers.Clear();
             if (value != null && value.ItemSuppliers != null)
             {
-                // Load the suppliers for this specific variant into the UI Grid
                 foreach (var sup in value.ItemSuppliers)
                 {
                     SelectedVariantSuppliers.Add(sup);
                 }
-
-                // Pre-fill the add box with the variant's current cost
                 SupplierCostInput = value.CostPrice;
             }
         }
-
 
         private async Task LoadFullItemDetailsAsync(int parentId)
         {
@@ -221,11 +197,10 @@ namespace POS.BackOffice.UI.ViewModels
                 BulkIsSerialized = fullItem.IsSerialized;
 
                 GeneratedVariants.Clear();
-                SelectedVariantSuppliers.Clear(); // Clear supplier grid on fresh load
+                SelectedVariantSuppliers.Clear();
 
                 foreach (var variant in fullItem.Variants.Where(v => !v.IsDeactivated))
                 {
-                    // Ensure the ItemSuppliers list isn't null before adding
                     if (variant.ItemSuppliers == null) variant.ItemSuppliers = new List<ItemSupplier>();
                     GeneratedVariants.Add(variant);
                 }
@@ -274,11 +249,6 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var val in values.Where(v => !v.IsDeactivated)) PropertyValues.Add(val);
         }
 
-
-        // ==========================================
-        // ✅ NEW: SUPPLIER MANAGEMENT COMMANDS
-        // ==========================================
-
         [RelayCommand]
         private void AddSupplierToVariant()
         {
@@ -300,69 +270,38 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            // Prevent duplicate suppliers on the same item
             if (SelectedVariantSuppliers.Any(s => s.SupplierId == SupplierToAdd.Id))
             {
                 MessageBox.Show("This supplier is already attached to this variant.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            // If this is set to primary, un-check primary on all others for this variant
-            if (IsPrimarySupplierInput)
-            {
-                foreach (var s in SelectedVariantSuppliers) s.IsPrimary = false;
-            }
-            else if (!SelectedVariantSuppliers.Any())
-            {
-                // If it's the first supplier, force it to be primary
-                IsPrimarySupplierInput = true;
-            }
-
             var newBridge = new ItemSupplier
             {
                 SupplierId = SupplierToAdd.Id,
-                Supplier = SupplierToAdd, // Required for UI display
+                Supplier = SupplierToAdd,
                 ItemVariantId = SelectedVariantForSupplierEdit.Id,
                 SupplierItemCode = SupplierItemCodeInput,
                 LastCostPrice = SupplierCostInput,
-                IsPrimary = IsPrimarySupplierInput,
+                IsPrimary = false, // Ignored by UI, defaults to false to satisfy the DB constraint safely
                 MinimumOrderQuantity = 1
             };
 
-            // Add to UI Grid
             SelectedVariantSuppliers.Add(newBridge);
-
-            // Link to the actual underlying data model so EF saves it
             SelectedVariantForSupplierEdit.ItemSuppliers.Add(newBridge);
 
-            // Reset inputs for next entry
             SupplierToAdd = null;
             SupplierItemCodeInput = string.Empty;
-            IsPrimarySupplierInput = false;
         }
 
         [RelayCommand]
         private void RemoveSupplierFromVariant(ItemSupplier? itemSupplier)
         {
             if (itemSupplier == null || SelectedVariantForSupplierEdit == null) return;
-
-            // Remove from UI
             SelectedVariantSuppliers.Remove(itemSupplier);
-
-            // Remove from underlying data model
             SelectedVariantForSupplierEdit.ItemSuppliers.Remove(itemSupplier);
-
-            // If we deleted the primary, assign primary to the first available remaining supplier
-            if (itemSupplier.IsPrimary && SelectedVariantSuppliers.Any())
-            {
-                SelectedVariantSuppliers.First().IsPrimary = true;
-            }
         }
 
-
-        // ==========================================
-        // VARIANT BUILDER
-        // ==========================================
         [RelayCommand]
         private void AddProperty()
         {
@@ -396,7 +335,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             GeneratedVariants.Clear();
-            SelectedVariantSuppliers.Clear(); // Clear suppliers since we wiped the variants
+            SelectedVariantSuppliers.Clear();
 
             if (!DynamicProperties.Any())
             {
@@ -411,7 +350,7 @@ namespace POS.BackOffice.UI.ViewModels
                     MinimumPrice = BulkMinimumPrice,
                     MaximumPrice = BulkMaximumPrice,
                     ReorderLevel = BulkReorderLevel,
-                    ItemSuppliers = new List<ItemSupplier>() // Initialize the empty list!
+                    ItemSuppliers = new List<ItemSupplier>()
                 });
                 return;
             }
@@ -435,7 +374,7 @@ namespace POS.BackOffice.UI.ViewModels
                     MinimumPrice = BulkMinimumPrice,
                     MaximumPrice = BulkMaximumPrice,
                     ReorderLevel = BulkReorderLevel,
-                    ItemSuppliers = new List<ItemSupplier>() // Initialize the empty list!
+                    ItemSuppliers = new List<ItemSupplier>()
                 };
 
                 foreach (var prop in combo)
@@ -486,9 +425,6 @@ namespace POS.BackOffice.UI.ViewModels
             return result;
         }
 
-        // ==========================================
-        // BULK PRICING
-        // ==========================================
         partial void OnBulkCostChanged(decimal value) => CalculateRetail();
         partial void OnBulkRetailMarkupPercentChanged(decimal value) => CalculateRetail();
         partial void OnBulkWholesaleMarkupPercentChanged(decimal value) => CalculateRetail();
@@ -523,9 +459,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // ==========================================
-        // SAVE & DATABASE LOGIC
-        // ==========================================
         [RelayCommand]
         private async Task SaveAsync()
         {
@@ -619,7 +552,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             DynamicProperties.Clear();
             GeneratedVariants.Clear();
-            SelectedVariantSuppliers.Clear(); // ✅ Clear suppliers grid
+            SelectedVariantSuppliers.Clear();
             SelectedVariantForSupplierEdit = null;
 
             SelectedCategory = null;
