@@ -1,91 +1,82 @@
-﻿# Build folders
+﻿-----------------------------------------------------------------------------
+
+.NET Core & Visual Studio
+
+-----------------------------------------------------------------------------
+
 [Bb]in/
 [Oo]bj/
 
-# Visual Studio
+**/bin/
+**/obj/
+
 .vs/
 *.user
-*.suo
 *.userosscache
 *.sln.docstates
+*.suo
 
-# Rider
-.idea/
+-----------------------------------------------------------------------------
 
-# VS Code
-.vscode/
+SQLite Databases (CRITICAL)
 
-# NuGet
-packages/
-*.nupkg
+-----------------------------------------------------------------------------
 
-# Logs
-*.log
+We ignore these so your local test data isn't pushed to GitHub.
 
-# Test Results
-TestResults/
+Your team members will generate their own empty DBs using EF Migrations.
 
-# Publish output
-publish/
-Publish/
-
-# Temporary files
-*.tmp
-*.temp
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# Generated files
-*.cache
-*.pdb
-*.ilk
-
-# ReSharper
-_ReSharper*/
-*.DotSettings.user
-
-# Azure
-PublishProfiles/
-
-# Entity Framework
-*.dbmdl
-
-# Local database files
-*.mdf
-*.ldf
-
-# SQLite databases (optional)
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
 
-# Backup files
-*.bak
+-----------------------------------------------------------------------------
 
-# JetBrains Rider
-.idea/
+Publish & Deployment
 
-# Visual Studio Code
-.history/
+-----------------------------------------------------------------------------
 
-# WPF generated files
-*.g.cs
-*.g.i.cs
-*.baml
+*.publishproj
+[Pp]ublish/
+[Pp]ublished/
+[Aa]rtifacts/
 
-# DotNet CLI
-artifacts/
+-----------------------------------------------------------------------------
 
-# Node.js (if used)
-node_modules/
+Packages
 
-# Environment files
-.env
-.env.*
+-----------------------------------------------------------------------------
 
-# Coverage
-coverage/
-*.coverage
-*.coveragexml
+*.nupkg
+*.snupkg
+/[Pp]ackages/
+!*/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+-----------------------------------------------------------------------------
+
+OS Generated Files
+
+-----------------------------------------------------------------------------
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+-----------------------------------------------------------------------------
+
+Logs & Caches
+
+-----------------------------------------------------------------------------
+
+.log
+.err
+[Tt]est[Rr]esult/
+[Bb]uild[Ll]og.
