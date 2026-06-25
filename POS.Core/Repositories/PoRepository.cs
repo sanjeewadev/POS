@@ -20,6 +20,7 @@ namespace POS.Core.Repositories
         public string Status { get; set; } = string.Empty;
         public string CreatedBy { get; set; } = string.Empty;
     }
+
     public class PoRepository
     {
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
@@ -71,7 +72,6 @@ namespace POS.Core.Repositories
                     sequence.NextSequenceNumber++;
                     sequence.UpdatedAt = DateTime.Now;
 
-                    // CRITICAL FIX: Only Add if new, otherwise Update. Do not mix states.
                     if (isNewSequence)
                         await context.DocumentSequences.AddAsync(sequence);
                     else
@@ -142,23 +142,48 @@ namespace POS.Core.Repositories
             }
         }
 
-        // --- PO DASHBOARD ENGINE ---
-        public async Task<IEnumerable<PoSummaryDto>> GetPoSummariesAsync(string searchTerm = "")
+        // ==============================================================================
+        // --- PO DASHBOARD ENGINE WITH ADVANCED ENTERPRISE FILTERS ---
+        // ==============================================================================
+        public async Task<IEnumerable<PoSummaryDto>> GetPoSummariesAsync(
+            string searchTerm = "",
+            int? supplierId = null,
+            string statusFilter = "All",
+            DateTime? startDate = null,
+            DateTime? endDate = null)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            var query = context.PoHeaders.AsNoTracking();
+            var query = context.PoHeaders.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 var search = searchTerm.ToLower();
                 query = query.Where(p =>
                     p.PoNumber.ToLower().Contains(search) ||
-                    p.Supplier.SupplierName.ToLower().Contains(search) ||
-                    p.Status.ToLower().Contains(search));
+                    p.Supplier.SupplierName.ToLower().Contains(search));
             }
 
-            // Project directly into the lightweight DTO to save RAM and increase speed
+            if (supplierId.HasValue && supplierId.Value > 0)
+            {
+                query = query.Where(p => p.SupplierId == supplierId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All")
+            {
+                query = query.Where(p => p.Status == statusFilter);
+            }
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(p => p.OrderDate >= startDate.Value.Date);
+            }
+            if (endDate.HasValue)
+            {
+                var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(p => p.OrderDate <= endOfDay);
+            }
+
             return await query
                 .OrderByDescending(p => p.OrderDate)
                 .Select(p => new PoSummaryDto
@@ -173,6 +198,45 @@ namespace POS.Core.Repositories
                     CreatedBy = p.CreatedBy
                 })
                 .ToListAsync();
+        }
+
+        // ==============================================================================
+        // --- THE DETAIL FETCH ENGINE (For the Master-Detail Slide-out Panel) ---
+        // ==============================================================================
+        public async Task<PoHeader?> GetPurchaseOrderDetailsAsync(int poId)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.PoHeaders
+                .Include(p => p.Supplier)
+                .Include(p => p.PoLines)
+                    .ThenInclude(l => l.ItemVariant)
+                        .ThenInclude(v => v.ItemParent)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == poId);
+        }
+
+        // ==============================================================================
+        // ✅ NEW: CANCEL PURCHASE ORDER ENGINE
+        // ==============================================================================
+        public async Task CancelPurchaseOrderAsync(int poId)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var po = await context.PoHeaders.FirstOrDefaultAsync(p => p.Id == poId);
+
+            if (po != null)
+            {
+                // Architectural Safeguard: You cannot cancel a PO that is already fully fulfilled.
+                if (po.Status == "Closed")
+                {
+                    throw new InvalidOperationException("Cannot cancel a Purchase Order that has already been fully received and closed.");
+                }
+
+                po.Status = "Canceled";
+                context.PoHeaders.Update(po);
+                await context.SaveChangesAsync();
+            }
         }
     }
 }

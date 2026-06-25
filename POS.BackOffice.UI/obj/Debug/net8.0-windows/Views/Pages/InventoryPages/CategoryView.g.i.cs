@@ -92,7 +92,8 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryPages {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;component/views/pages/inventorypages/categoryview.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/POS.BackOffice.UI;V1.0.0.0;component/views/pages/inventorypages/categoryview.xam" +
+                    "l", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\..\Views\Pages\InventoryPages\CategoryView.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

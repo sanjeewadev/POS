@@ -47,6 +47,9 @@
     <Compile Update="Views\Pages\InventoryOperations\GrnView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Update="Views\Pages\InventoryOperations\PriceManagementView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="Views\Pages\InventoryOperations\StockAdjustmentView.xaml.cs">
       <SubType>Code</SubType>
     </Compile>

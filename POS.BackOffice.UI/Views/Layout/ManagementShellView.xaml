@@ -45,6 +45,7 @@
                 <MenuItem Header="Supplier Return" Command="{Binding NavigateToSupplierReturnCommand}" />
                 <MenuItem Header="Barcode Management" Command="{Binding NavigateToBarcodeManagementCommand}" />
                 <MenuItem Header="Barcode Printer" Command="{Binding NavigateToBarcodePrinterCommand}" />
+                <Button Content="Pricing" Command="{Binding NavigateToPriceManagementCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Purchasing">

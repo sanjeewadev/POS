@@ -11,7 +11,7 @@ using System.Windows.Media.Imaging;
 using POS.Core.Models;
 using POS.Core.Services;
 using ZXing;
-using ZXing.Windows.Compatibility; // Requires NuGet package
+using ZXing.Windows.Compatibility;
 
 namespace POS.BackOffice.UI.Services
 {
@@ -31,7 +31,7 @@ namespace POS.BackOffice.UI.Services
             }
             catch (Exception)
             {
-                // Fallback if PrintServer access is denied by Windows
+                // Fallback if PrintServer access is denied by strict Windows IT policies
                 printers.Add("Microsoft Print to PDF");
             }
             return printers;
@@ -40,39 +40,39 @@ namespace POS.BackOffice.UI.Services
         public async Task PrintLabelsAsync(List<BarcodePrintJobItem> items, LabelSettings settings)
         {
             if (string.IsNullOrWhiteSpace(settings.PrinterName))
-                throw new InvalidOperationException("Please select a printer.");
+                throw new InvalidOperationException("Please select a valid printer.");
 
             if (!items.Any())
-                throw new InvalidOperationException("No items selected for printing.");
+                throw new InvalidOperationException("No items provided for printing.");
 
-            // Run WPF rendering on the UI thread dispatcher
+            // WPF requires UI elements (like Document and Canvas) to be created on the main UI Thread (STA)
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // 1. Create a spoolable batch document
                 var fixedDoc = new FixedDocument();
 
-                // Convert mm settings to WPF screen pixels
+                // Convert mm physical settings to WPF screen pixels
                 double widthDip = settings.WidthMm * MmToDip;
                 double heightDip = settings.HeightMm * MmToDip;
                 var pageSize = new Size(widthDip, heightDip);
 
-                // Initialize the Barcode Generator (Code128 is retail standard for alphanumeric)
+                // Initialize the Barcode Generator (Code128 is the retail standard for alphanumeric data)
                 var barcodeWriter = new BarcodeWriter
                 {
                     Format = BarcodeFormat.CODE_128,
                     Options = new ZXing.Common.EncodingOptions
                     {
                         Width = (int)widthDip,
-                        Height = (int)(heightDip * 0.4), // Barcode takes up 40% of label height
+                        Height = (int)(heightDip * 0.4), // Barcode takes up roughly 40% of the physical label height
                         Margin = 0,
-                        PureBarcode = true // We will draw the text ourselves for better clarity
+                        PureBarcode = true // Forces ZXing to NOT draw text, so we can draw it ourselves with custom fonts
                     }
                 };
 
                 // 2. Build Pages for the Print Queue
                 foreach (var item in items)
                 {
-                    // If they want 5 labels, generate 5 identical pages in the document
+                    // Generate exact number of requested copies for this specific item
                     for (int i = 0; i < item.PrintQuantity; i++)
                     {
                         var pageContent = new PageContent();
@@ -83,12 +83,12 @@ namespace POS.BackOffice.UI.Services
                             Background = Brushes.White
                         };
 
-                        // Build the visual label UI
+                        // Build the visual label UI layout
                         var labelCanvas = CreateLabelVisual(item, settings, barcodeWriter, pageSize);
 
                         fixedPage.Children.Add(labelCanvas);
 
-                        // Force WPF to measure and arrange the layout before printing
+                        // Force WPF to measure and arrange the layout perfectly before freezing it for the spooler
                         fixedPage.Measure(pageSize);
                         fixedPage.Arrange(new Rect(new Point(), pageSize));
                         fixedPage.UpdateLayout();
@@ -98,7 +98,7 @@ namespace POS.BackOffice.UI.Services
                     }
                 }
 
-                // 3. Send to Print Spooler silently (No Dialog Box!)
+                // 3. Send to Print Spooler silently (Bypassing the Windows Print Dialog Box)
                 using var printServer = new LocalPrintServer();
                 var printQueue = printServer.GetPrintQueue(settings.PrinterName);
 
@@ -117,10 +117,9 @@ namespace POS.BackOffice.UI.Services
             {
                 Width = pageSize.Width,
                 Height = pageSize.Height,
-                Margin = new Thickness(2) // 2px safe margin from edge
+                Margin = new Thickness(2) // 2px safe margin from the sticker edge to prevent cutoff
             };
 
-            // Define 4 vertical rows: Store Name, Item Name, Barcode Image, Price
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -128,6 +127,7 @@ namespace POS.BackOffice.UI.Services
 
             int currentRow = 0;
 
+            // 1. Store Header
             if (settings.PrintStoreName)
             {
                 var txtStore = new TextBlock
@@ -142,6 +142,7 @@ namespace POS.BackOffice.UI.Services
                 grid.Children.Add(txtStore);
             }
 
+            // 2. Item Name
             if (settings.PrintItemName)
             {
                 var txtItem = new TextBlock
@@ -157,7 +158,7 @@ namespace POS.BackOffice.UI.Services
                 grid.Children.Add(txtItem);
             }
 
-            // Generate and attach the Barcode Image
+            // 3. Generate and attach the physical Barcode Image
             try
             {
                 var bitmap = writer.Write(item.Barcode);
@@ -177,13 +178,13 @@ namespace POS.BackOffice.UI.Services
             }
             catch
             {
-                // Fallback if barcode generation fails (e.g. invalid characters)
+                // Fallback if barcode generation fails (e.g., missing data)
                 var txtError = new TextBlock { Text = "[Invalid Barcode]", FontSize = 8, Foreground = Brushes.Red, HorizontalAlignment = HorizontalAlignment.Center };
                 Grid.SetRow(txtError, currentRow++);
                 grid.Children.Add(txtError);
             }
 
-            // Footer: Price and/or Item Code
+            // 4. Footer: Price and/or Item Code
             var footerPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
 
             if (settings.PrintItemCode)

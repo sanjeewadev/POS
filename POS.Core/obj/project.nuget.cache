@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "+OgH7Oq3uMs=",
+  "dgSpecHash": "DoI5FUUAD2M=",
   "success": true,
   "projectFilePath": "C:\\Users\\Sanjeewa\\Dev\\MyProjects\\POS\\POS.Core\\POS.Core.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\Sanjeewa\\.nuget\\packages\\communitytoolkit.mvvm\\8.4.2\\communitytoolkit.mvvm.8.4.2.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\6.0.0\\microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",
     "C:\\Users\\Sanjeewa\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.3\\microsoft.codeanalysis.analyzers.3.3.3.nupkg.sha512",

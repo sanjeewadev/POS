@@ -9,7 +9,7 @@ namespace POS.Core.Services
         // Fetches all installed printers on the Windows machine
         List<string> GetInstalledPrinters();
 
-        // The core batch printing engine
+        // The core batch printing engine that sends jobs silently to the spooler
         Task PrintLabelsAsync(List<BarcodePrintJobItem> items, LabelSettings settings);
     }
 }

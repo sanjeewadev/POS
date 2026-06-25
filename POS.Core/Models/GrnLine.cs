@@ -1,6 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema; // Add this using statement
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace POS.Core.Models
 {
@@ -15,7 +15,7 @@ namespace POS.Core.Models
         public int ItemVariantId { get; set; }
         public ItemVariant ItemVariant { get; set; } = null!;
 
-        // --- UI HELPERS (Not saved to DB, just for the DataGrid) ---
+        // --- UI HELPERS (Not saved to DB, just for the WPF DataGrid) ---
         [NotMapped] public string ItemCode { get; set; } = string.Empty;
         [NotMapped] public string VariantDescription { get; set; } = string.Empty;
         [NotMapped] public string Description { get; set; } = string.Empty;
@@ -33,23 +33,11 @@ namespace POS.Core.Models
         // --- QUANTITIES ---
         public decimal OrderedQty { get; set; } = 0m;
         public decimal ReceivedQty { get; set; } = 0m;
-        public decimal FocQty { get; set; } = 0m;
 
-        // --- PRICING & MATH ---
+        // --- PRICING & MATH (Pure Cost Data) ---
         public decimal UnitCost { get; set; } = 0m;
         public decimal LineDiscount { get; set; } = 0m;
-
-        [MaxLength(20)]
-        public string TaxCode { get; set; } = string.Empty;
-        public decimal TaxAmount { get; set; } = 0m;
-
         public decimal LandedCost { get; set; } = 0m;
-
         public decimal LineTotal { get; set; } = 0m;
-
-        // --- SELLING PRICE UPDATES ---
-        public decimal RetailPrice { get; set; } = 0m;
-        public decimal WholesalePrice { get; set; } = 0m;
-        public decimal MinimumPrice { get; set; } = 0m;
     }
 }

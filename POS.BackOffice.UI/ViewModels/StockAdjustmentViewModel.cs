@@ -46,18 +46,29 @@ namespace POS.BackOffice.UI.ViewModels
 
         // --- ZONE 1: HEADER & STATE ---
         [ObservableProperty] private DateTime _adjustmentDate = DateTime.Now;
-        [ObservableProperty] private string _authorizedBy = "Admin";
+        [ObservableProperty] private string _authorizedBy = "Admin"; // TODO: Bind to Auth Service later
         [ObservableProperty] private string _reference = string.Empty;
         [ObservableProperty] private string _remarks = string.Empty;
         [ObservableProperty] private string _documentStatus = "DRAFT / PENDING";
-        [ObservableProperty] private bool _isDocumentLocked = false; // Locks UI when posted
+        [ObservableProperty] private bool _isDocumentLocked = false;
 
         // --- ZONE 2: ENTRY CONSOLE ---
         [ObservableProperty] private string _scanBarcode = string.Empty;
 
-        // --- ZONE 3: GRIDS ---
+        // --- ZONE 3: GRIDS & DROPDOWNS ---
         public ObservableCollection<AdjustmentMatrixDto> ActiveMatrixVariants { get; set; } = new();
         public ObservableCollection<StockAdjustmentLine> AdjustmentLines { get; set; } = new();
+
+        // Standardized Accounting Reason Codes
+        public ObservableCollection<string> ReasonCodes { get; } = new(new[]
+        {
+            "Data Entry Error",
+            "Damaged / Broken",
+            "Expired / Spoiled",
+            "Stolen / Missing",
+            "Found Stock",
+            "Promotional Giveaway"
+        });
 
         [ObservableProperty] private StockAdjustmentLine? _selectedLine;
 
@@ -132,6 +143,7 @@ namespace POS.BackOffice.UI.ViewModels
                 TotalImpact = 0m;
                 return;
             }
+            // Aggregates the Net Financial Impact (Negative = Shrinkage Loss, Positive = Found Stock Gain)
             TotalImpact = AdjustmentLines.Sum(l => l.CostImpact);
         }
 
@@ -141,6 +153,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (IsDocumentLocked) return;
 
+            // Only grab items where the user actually changed the count
             var itemsToAdd = ActiveMatrixVariants.Where(v => v.Variance != 0).ToList();
 
             if (!itemsToAdd.Any())
@@ -151,6 +164,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var item in itemsToAdd)
             {
+                // Prevent duplicate batch additions
                 if (AdjustmentLines.Any(l => l.ItemBatchId == item.ItemBatchId)) continue;
 
                 var newLine = new StockAdjustmentLine
@@ -166,7 +180,8 @@ namespace POS.BackOffice.UI.ViewModels
                     VarianceQty = item.Variance,
                     UnitCost = item.UnitCost,
                     CostImpact = item.CostImpact,
-                    ReasonCode = "Data Entry Error"
+                    // Leaving ReasonCode empty intentionally to force the user to select one
+                    ReasonCode = string.Empty
                 };
 
                 AdjustmentLines.Add(newLine);
@@ -199,7 +214,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // --- SAVING EXECUTION ---
+        // --- SAVING EXECUTION & STRICT VALIDATION ---
         [RelayCommand]
         private async Task SaveDraftAsync() => await SaveAdjustmentExecutionAsync(isDraft: true);
 
@@ -212,11 +227,25 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (!AdjustmentLines.Any())
             {
-                MessageBox.Show("Cannot save an empty Adjustment.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Cannot save an empty Adjustment. Please scan an item and log a variance.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            string actionText = isDraft ? "Save this adjustment as a Draft?" : "CRITICAL: Post Adjustment?\n\nThis will permanently deduct the selected batches and post the loss to the P&L.";
+            // ✅ THE ENTERPRISE AUDIT GATE: Strict Reason Code Validation
+            if (!isDraft)
+            {
+                var missingReasons = AdjustmentLines.Where(l => string.IsNullOrWhiteSpace(l.ReasonCode)).ToList();
+                if (missingReasons.Any())
+                {
+                    MessageBox.Show($"Audit Failure: {missingReasons.Count} item(s) are missing a Reason Code.\n\nYou must select a valid Reason Code for every adjusted item before posting to the P&L.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            string actionText = isDraft
+                ? "Save this adjustment as a Draft?"
+                : "CRITICAL: Post Adjustment?\n\nThis will permanently deduct the selected batches and post the loss/gain to the P&L ledger. This cannot be undone.";
+
             var result = MessageBox.Show(actionText, "Confirm Save", MessageBoxButton.YesNo, isDraft ? MessageBoxImage.Question : MessageBoxImage.Warning);
 
             if (result == MessageBoxResult.Yes)
@@ -235,7 +264,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                     await _adjustmentRepository.SaveAdjustmentAsync(header, AdjustmentLines.ToList(), isDraft);
 
-                    MessageBox.Show(isDraft ? "Draft Saved." : "Adjustment Posted! Physical batches updated.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(isDraft ? "Draft Saved Successfully." : "Adjustment Posted! Physical batches updated.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
                     if (!isDraft)
                     {
