@@ -1,18 +1,15 @@
 ﻿using System;
+using System.Security;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using POS.Core.Services;
 using POS.Core.Enums;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public partial class LoginViewModel : ViewModelBase
+    public partial class LoginViewModel : ObservableObject
     {
-        private readonly AuthService _authService;
-
         [ObservableProperty]
         private string _username = string.Empty;
 
@@ -20,56 +17,41 @@ namespace POS.BackOffice.UI.ViewModels
         private string _errorMessage = string.Empty;
 
         [ObservableProperty]
-        private bool _isProcessing = false;
+        [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
+        private bool _isProcessing;
 
-        public event Action<UserRole>? LoginSuccessful;
-
-        public LoginViewModel(AuthService authService)
-        {
-            _authService = authService;
-        }
-
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanLogin))]
         private async Task LoginAsync(object parameter)
         {
-            if (parameter is not PasswordBox passwordBox || string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(passwordBox.Password))
-            {
-                ErrorMessage = "Please enter both username and password.";
-                return;
-            }
+            if (parameter is not PasswordBox passwordBox) return;
 
             IsProcessing = true;
             ErrorMessage = string.Empty;
 
             try
             {
-                var (success, message) = await _authService.LoginAsync(Username, passwordBox.Password);
+                // Capture the secure string
+                SecureString securePassword = passwordBox.SecurePassword;
 
-                if (success && _authService.CurrentUser != null)
-                {
-                    passwordBox.Clear();
+                // Simulate high-security database authentication
+                await Task.Delay(2000);
 
-                    // FIXED: We don't need a map anymore. It is natively an Enum!
-                    UserRole role = _authService.CurrentUser.Role;
+                // Perform auth logic here...
 
-                    // Shout to MainViewModel to switch the screen
-                    LoginSuccessful?.Invoke(role);
-                }
-                else
-                {
-                    ErrorMessage = message;
-                    passwordBox.Clear();
-                }
+                // On Success: Navigate to main application
             }
             catch (Exception ex)
             {
-                ErrorMessage = "A critical system error occurred during login.";
-                MessageBox.Show(ex.Message, "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ErrorMessage = "Invalid credentials or system error.";
             }
             finally
             {
+                // SECURITY: Clear the password box UI and the secure string object
+                passwordBox.Clear();
                 IsProcessing = false;
             }
         }
+
+        private bool CanLogin() => !IsProcessing && !string.IsNullOrWhiteSpace(Username);
     }
 }

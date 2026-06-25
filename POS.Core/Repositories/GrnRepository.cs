@@ -23,7 +23,34 @@ namespace POS.Core.Repositories
             return await context.Suppliers.Where(s => !s.IsDeactivated).AsNoTracking().ToListAsync();
         }
 
-        // --- ATOMIC POSTING ENGINE (HYBRID BATCH UPGRADED) ---
+        // ==============================================================================
+        // --- PO LOOKUP ENGINE ---
+        // ==============================================================================
+        public async Task<IEnumerable<PoHeader>> GetOpenPurchaseOrdersAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.PoHeaders
+                                .Where(p => p.Status == "Approved" || p.Status == "Partially Received")
+                                .AsNoTracking()
+                                .ToListAsync();
+        }
+
+        public async Task<PoHeader?> GetApprovedPoDetailsAsync(int poId)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.PoHeaders
+                .Include(p => p.Supplier)
+                .Include(p => p.PoLines)
+                    .ThenInclude(l => l.ItemVariant)
+                        .ThenInclude(v => v.ItemParent)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == poId && (p.Status == "Approved" || p.Status == "Partially Received"));
+        }
+
+        // ==============================================================================
+        // --- ATOMIC POSTING ENGINE (PURIFIED ENTERPRISE VERSION) ---
+        // ==============================================================================
         public async Task PostGrnAsync(GrnHeader header, List<GrnLine> lines)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
@@ -47,14 +74,46 @@ namespace POS.Core.Repositories
                 header.Status = "Posted";
                 header.CreatedAt = DateTime.Now;
                 await context.GrnHeaders.AddAsync(header);
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(); // Save early to generate the Header ID
 
-                // 3. Process Lines, Inventory, MAC, and HYBRID BATCH BUCKETS
+                // 2.5 LOAD LINKED PO (If applicable)
+                PoHeader? linkedPo = null;
+                if (header.PurchaseOrderId.HasValue && header.PurchaseOrderId.Value > 0)
+                {
+                    linkedPo = await context.PoHeaders
+                        .Include(p => p.PoLines)
+                        .FirstOrDefaultAsync(p => p.Id == header.PurchaseOrderId.Value);
+                }
+
+                // 3. Process Lines: Inventory, MAC, and BATCH BUCKETS
                 foreach (var line in lines)
                 {
                     line.GrnHeaderId = header.Id;
                     await context.GrnLines.AddAsync(line);
 
+                    // ✅ FULFILLMENT: Update the linked Purchase Order
+                    if (linkedPo != null)
+                    {
+                        var poLine = linkedPo.PoLines.FirstOrDefault(pl => pl.ItemVariantId == line.ItemVariantId);
+                        if (poLine != null)
+                        {
+                            poLine.ReceivedQty += line.ReceivedQty;
+                            context.PoLines.Update(poLine);
+                        }
+                    }
+
+                    // ✅ SUPPLIER PRICE SYNC: Update Vendor's specific catalog price
+                    var itemSupplier = await context.ItemSuppliers
+                        .FirstOrDefaultAsync(s => s.SupplierId == header.SupplierId && s.ItemVariantId == line.ItemVariantId);
+
+                    if (itemSupplier != null)
+                    {
+                        itemSupplier.LastCostPrice = line.UnitCost;
+                        itemSupplier.UpdatedAt = DateTime.Now;
+                        context.ItemSuppliers.Update(itemSupplier);
+                    }
+
+                    // ✅ INVENTORY & MOVING AVERAGE COST (MAC) ENGINE
                     var variant = await context.ItemVariants.FindAsync(line.ItemVariantId);
                     if (variant != null)
                     {
@@ -64,10 +123,10 @@ namespace POS.Core.Repositories
                             .ToListAsync();
 
                         decimal currentStock = stockTransactions.Sum();
-                        decimal totalPhysicalReceived = line.ReceivedQty + line.FocQty;
+                        decimal totalPhysicalReceived = line.ReceivedQty;
                         decimal newTotalQty = currentStock + totalPhysicalReceived;
 
-                        // --- THE RETAIL MATH: MOVING AVERAGE COST (MAC) ---
+                        // Calculate Moving Average Cost (MAC)
                         if (newTotalQty > 0)
                         {
                             decimal oldTotalValue = currentStock * variant.AverageCost;
@@ -76,16 +135,11 @@ namespace POS.Core.Repositories
                             variant.AverageCost = Math.Round((oldTotalValue + newReceivedValue) / newTotalQty, 2);
                         }
 
-                        // Update Global Selling Prices for fast retail flow
+                        // Update Global Cost (We deliberately DO NOT update retail/wholesale prices here)
                         variant.CostPrice = line.LandedCost;
-                        variant.RetailPrice = line.RetailPrice;
-                        variant.WholesalePrice = line.WholesalePrice;
-                        variant.MinimumPrice = line.MinimumPrice;
-
                         context.ItemVariants.Update(variant);
 
-                        // --- NEW: THE BATCH BUCKET ENGINE ---
-                        // If user didn't type a batch, auto-generate one tied to this specific GRN receipt
+                        // --- THE STRICT BATCH BUCKET ENGINE ---
                         string targetBatchNo = string.IsNullOrWhiteSpace(line.BatchNo)
                             ? $"SYS-{header.GrnNumber}"
                             : line.BatchNo.Trim();
@@ -95,26 +149,21 @@ namespace POS.Core.Repositories
 
                         if (batchBucket == null)
                         {
-                            // Create a brand new bucket for this distinct batch
                             batchBucket = new ItemBatch
                             {
                                 ItemVariantId = variant.Id,
                                 BatchNo = targetBatchNo,
                                 ExpiryDate = line.ExpiryDate,
                                 ReceivedDate = header.ReceivedDate,
-                                CostPrice = line.LandedCost,
-                                RetailPrice = line.RetailPrice,
-                                WholesalePrice = line.WholesalePrice,
+                                CostPrice = line.LandedCost, // Batch cost is strictly Landed Cost
                                 CurrentStock = totalPhysicalReceived
                             };
                             await context.ItemBatches.AddAsync(batchBucket);
                         }
                         else
                         {
-                            // If the supplier sent more of the exact same batch, just pour it in the existing bucket
                             batchBucket.CurrentStock += totalPhysicalReceived;
-                            batchBucket.CostPrice = line.LandedCost; // Update to latest landed cost
-                            batchBucket.RetailPrice = line.RetailPrice;
+                            batchBucket.CostPrice = line.LandedCost;
                             context.ItemBatches.Update(batchBucket);
                         }
 
@@ -127,14 +176,22 @@ namespace POS.Core.Repositories
                             ReferenceDocument = header.GrnNumber,
                             Quantity = totalPhysicalReceived,
                             UnitCost = line.LandedCost,
-                            CreatedBy = "System",
+                            CreatedBy = header.CreatedBy,
                             Remarks = $"GRN Receipt via Invoice: {header.SupplierInvoiceNo} | Batch: {targetBatchNo}"
                         };
                         await context.InventoryTransactions.AddAsync(inventoryTx);
                     }
                 }
 
-                // 4. Hit the Accounts Payable (Supplier Ledger)
+                // ✅ CLOSE PURCHASE ORDER
+                if (linkedPo != null)
+                {
+                    bool allFullyReceived = linkedPo.PoLines.All(pl => pl.ReceivedQty >= pl.OrderQty);
+                    linkedPo.Status = allFullyReceived ? "Closed" : "Partially Received";
+                    context.PoHeaders.Update(linkedPo);
+                }
+
+                // 4. HIT THE ACCOUNTS PAYABLE (Supplier Ledger)
                 var supplier = await context.Suppliers.FindAsync(header.SupplierId);
                 if (supplier != null)
                 {
@@ -144,7 +201,7 @@ namespace POS.Core.Repositories
                         TransactionDate = header.ReceivedDate,
                         TransactionType = "GRN",
                         ReferenceDocument = header.GrnNumber,
-                        ChargeAmount = header.NetPayable,
+                        ChargeAmount = header.NetPayable, // The exact final total they billed us
                         PaymentAmount = 0m,
                         DueDate = header.DueDate,
                         Remarks = $"Supplier Invoice: {header.SupplierInvoiceNo}"

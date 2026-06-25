@@ -98,6 +98,9 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void NavigateToSupplierReturn() => CurrentPage = _serviceProvider.GetRequiredService<SupplierReturnViewModel>();
 
+        [RelayCommand]
+        private void NavigateToPriceManagement() => CurrentPage = _serviceProvider.GetRequiredService<PriceManagementViewModel>();
+
         // ==========================================
         // 3. PURCHASING COMMANDS (Active)
         // ==========================================

@@ -771,6 +771,7 @@
       },
       "POS.Core/1.0.0": {
         "dependencies": {
+          "CommunityToolkit.Mvvm": "8.4.2",
           "Microsoft.EntityFrameworkCore": "8.0.28",
           "Microsoft.EntityFrameworkCore.Sqlite": "8.0.28"
         },
