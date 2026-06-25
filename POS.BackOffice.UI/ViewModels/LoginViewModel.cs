@@ -1,16 +1,21 @@
 ﻿using System;
 using System.Security;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.Core.Services;
 using POS.Core.Enums;
 
 namespace POS.BackOffice.UI.ViewModels
 {
     public partial class LoginViewModel : ObservableObject
     {
+        private readonly AuthService _authService;
+
         [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(LoginCommand))] // <-- FIX: Wakes up the button when you type!
         private string _username = string.Empty;
 
         [ObservableProperty]
@@ -19,6 +24,14 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
         private bool _isProcessing;
+
+        // RESTORED: The event that MainViewModel and LoginWindow are looking for!
+        public event Action<UserRole>? LoginSuccessful;
+
+        public LoginViewModel(AuthService authService)
+        {
+            _authService = authService;
+        }
 
         [RelayCommand(CanExecute = nameof(CanLogin))]
         private async Task LoginAsync(object parameter)
@@ -30,23 +43,29 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                // Capture the secure string
-                SecureString securePassword = passwordBox.SecurePassword;
+                // REAL LOGIC: Call your actual database Auth Service!
+                var (success, message) = await _authService.LoginAsync(Username, passwordBox.Password);
 
-                // Simulate high-security database authentication
-                await Task.Delay(2000);
+                if (success && _authService.CurrentUser != null)
+                {
+                    UserRole role = _authService.CurrentUser.Role;
 
-                // Perform auth logic here...
-
-                // On Success: Navigate to main application
+                    // SHOUT TO THE UI: Triggers the window to close and MainViewModel to navigate
+                    LoginSuccessful?.Invoke(role);
+                }
+                else
+                {
+                    ErrorMessage = message;
+                }
             }
             catch (Exception ex)
             {
-                ErrorMessage = "Invalid credentials or system error.";
+                ErrorMessage = "A critical system error occurred during login.";
+                MessageBox.Show(ex.Message, "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                // SECURITY: Clear the password box UI and the secure string object
+                // SECURITY: Clear the password box UI so it doesn't linger in RAM
                 passwordBox.Clear();
                 IsProcessing = false;
             }
