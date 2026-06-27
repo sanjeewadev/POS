@@ -4,13 +4,14 @@ using POS.Cashier.UI.ViewModels;
 
 namespace POS.Cashier.UI.Dialogs
 {
-    public partial class CashMovementDialogView : Window
+    public partial class FloatCashDialog : Window
     {
-        public CashMovementDialogView(CashMovementViewModel viewModel)
+        public FloatCashDialog(FloatCashViewModel viewModel)
         {
             InitializeComponent();
             this.DataContext = viewModel;
 
+            // Listens for the successful database execution to close itself
             viewModel.ActionCompleted += OnActionCompleted;
         }
 
@@ -23,15 +24,16 @@ namespace POS.Cashier.UI.Dialogs
             }
         }
 
-        private void CancelBtn_Click(object sender, RoutedEventArgs e)
+        private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;
             this.Close();
         }
 
+        // Prevent memory leaks!
         protected override void OnClosed(EventArgs e)
         {
-            if (this.DataContext is CashMovementViewModel viewModel)
+            if (this.DataContext is FloatCashViewModel viewModel)
             {
                 viewModel.ActionCompleted -= OnActionCompleted;
             }

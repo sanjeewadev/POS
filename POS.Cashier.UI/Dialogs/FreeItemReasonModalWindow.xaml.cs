@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using POS.Cashier.UI.ViewModels.Dialogs;
+using POS.Cashier.UI.ViewModels;
 
 namespace POS.Cashier.UI.Dialogs
 {

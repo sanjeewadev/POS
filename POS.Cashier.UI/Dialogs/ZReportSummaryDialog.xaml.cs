@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Media;
 
-namespace POS.Cashier.UI.Views.Dialogs
+namespace POS.Cashier.UI.Dialogs
 {
     public partial class ZReportSummaryDialog : Window
     {

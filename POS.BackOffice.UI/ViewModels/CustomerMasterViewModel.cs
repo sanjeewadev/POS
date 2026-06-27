@@ -1,112 +1,96 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
+using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public class CustomerMasterViewModel : ViewModelBase
+    public partial class CustomerMasterViewModel : ObservableObject
     {
-        private readonly CustomerAdminRepository _repository;
+        private readonly CustomerRepository _repository;
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         // ==========================================
         // TOP BAR CONTROLS
         // ==========================================
         public ObservableCollection<CustomerMaster> CustomersList { get; set; } = new();
 
-        private string _selectedTypeFilter = "All Customers";
-        public string SelectedTypeFilter
-        {
-            get => _selectedTypeFilter;
-            set { _selectedTypeFilter = value; OnPropertyChanged(nameof(SelectedTypeFilter)); }
-        }
+        [ObservableProperty] private string _selectedTypeFilter = "All Customers";
+        [ObservableProperty] private string _searchKeyword = string.Empty;
 
-        private string _searchKeyword = string.Empty;
-        public string SearchKeyword
-        {
-            get => _searchKeyword;
-            set { _searchKeyword = value; OnPropertyChanged(nameof(SearchKeyword)); }
-        }
-
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsCustomerSelected))]
         private CustomerMaster? _selectedCustomer;
-        public CustomerMaster? SelectedCustomer
-        {
-            get => _selectedCustomer;
-            set
-            {
-                _selectedCustomer = value;
-                OnPropertyChanged(nameof(SelectedCustomer));
-                OnPropertyChanged(nameof(IsCustomerSelected));
-                if (value != null) PopulateFormFromSelected(value);
-            }
-        }
 
         public bool IsCustomerSelected => SelectedCustomer != null;
 
         // ==========================================
         // FORM INPUT PROPERTIES
         // ==========================================
-        private int _currentCustomerId = 0;
-        private string _inputCustomerCode = "[ AUTO ]";
-        public string InputCustomerCode { get => _inputCustomerCode; set { _inputCustomerCode = value; OnPropertyChanged(nameof(InputCustomerCode)); } }
+        [ObservableProperty] private int _currentCustomerId = 0;
+        [ObservableProperty] private string _inputCustomerCode = "[ AUTO ]";
+        [ObservableProperty] private string _inputFullName = string.Empty;
+        [ObservableProperty] private string _inputPhone = string.Empty;
+        [ObservableProperty] private string _inputEmail = string.Empty;
+        [ObservableProperty] private string _inputAddress = string.Empty;
+        [ObservableProperty] private string _inputCompanyName = string.Empty;
+        [ObservableProperty] private string _inputVatNumber = string.Empty;
+        [ObservableProperty] private string _inputCustomerType = "Retail";
+        [ObservableProperty] private bool _inputIsActive = true;
+        [ObservableProperty] private decimal _inputCreditLimit = 0m;
+        [ObservableProperty] private int _inputCreditDays = 0;
+        [ObservableProperty] private bool _inputIsCreditLocked = false;
 
-        private string _inputFullName = string.Empty;
-        public string InputFullName { get => _inputFullName; set { _inputFullName = value; OnPropertyChanged(nameof(InputFullName)); } }
+        // --- NEW: THE DISCOUNT & LOYALTY BRIDGE ---
+        public ObservableCollection<LoyaltyDiscountProfile> AvailableLoyaltyGroups { get; set; } = new();
+        [ObservableProperty] private LoyaltyDiscountProfile? _inputLoyaltyGroup;
 
-        private string _inputPhone = string.Empty;
-        public string InputPhone { get => _inputPhone; set { _inputPhone = value; OnPropertyChanged(nameof(InputPhone)); } }
-
-        private string _inputEmail = string.Empty;
-        public string InputEmail { get => _inputEmail; set { _inputEmail = value; OnPropertyChanged(nameof(InputEmail)); } }
-
-        private string _inputAddress = string.Empty;
-        public string InputAddress { get => _inputAddress; set { _inputAddress = value; OnPropertyChanged(nameof(InputAddress)); } }
-
-        private string _inputCompanyName = string.Empty;
-        public string InputCompanyName { get => _inputCompanyName; set { _inputCompanyName = value; OnPropertyChanged(nameof(InputCompanyName)); } }
-
-        private string _inputVatNumber = string.Empty;
-        public string InputVatNumber { get => _inputVatNumber; set { _inputVatNumber = value; OnPropertyChanged(nameof(InputVatNumber)); } }
-
-        private string _inputCustomerType = "Retail";
-        public string InputCustomerType { get => _inputCustomerType; set { _inputCustomerType = value; OnPropertyChanged(nameof(InputCustomerType)); } }
-
-        private bool _inputIsActive = true;
-        public bool InputIsActive { get => _inputIsActive; set { _inputIsActive = value; OnPropertyChanged(nameof(InputIsActive)); } }
-
-        private decimal _inputCreditLimit = 0m;
-        public decimal InputCreditLimit { get => _inputCreditLimit; set { _inputCreditLimit = value; OnPropertyChanged(nameof(InputCreditLimit)); } }
-
-        private int _inputCreditDays = 0;
-        public int InputCreditDays { get => _inputCreditDays; set { _inputCreditDays = value; OnPropertyChanged(nameof(InputCreditDays)); } }
-
-        private bool _inputIsCreditLocked = false;
-        public bool InputIsCreditLocked { get => _inputIsCreditLocked; set { _inputIsCreditLocked = value; OnPropertyChanged(nameof(InputIsCreditLocked)); } }
-
-        // ==========================================
-        // COMMANDS
-        // ==========================================
-        public ICommand RefreshDataCommand { get; }
-        public ICommand AddNewCustomerCommand { get; }
-        public ICommand SaveCustomerCommand { get; }
-
-        public CustomerMasterViewModel(CustomerAdminRepository repository)
+        public CustomerMasterViewModel(CustomerRepository repository, IDbContextFactory<AppDbContext> contextFactory)
         {
             _repository = repository;
+            _contextFactory = contextFactory;
 
-            RefreshDataCommand = new RelayCommand(async (o) => await LoadDataAsync());
-            AddNewCustomerCommand = new RelayCommand((o) => PrepareNewCustomer());
-            SaveCustomerCommand = new RelayCommand(async (o) => await SaveCustomerAsync());
+            _ = InitializeAsync();
+        }
 
-            _ = LoadDataAsync();
+        private async Task InitializeAsync()
+        {
+            // 1. Load the available Discount/Loyalty Profiles for the dropdown
+            try
+            {
+                using var context = await _contextFactory.CreateDbContextAsync();
+                var profiles = await context.LoyaltyDiscountProfiles.AsNoTracking().ToListAsync();
+                foreach (var p in profiles) AvailableLoyaltyGroups.Add(p);
+            }
+            catch
+            {
+                // Silently bypass if the LoyaltyDiscountProfiles table is empty or missing during initial setup
+            }
+
+            // 2. Load the initial customer grid
+            await LoadDataAsync();
+        }
+
+        // ==========================================
+        // SMART TRIGGERS
+        // ==========================================
+        partial void OnSelectedCustomerChanged(CustomerMaster? value)
+        {
+            if (value != null) PopulateFormFromSelected(value);
         }
 
         // ==========================================
         // LOGIC METHODS
         // ==========================================
+        [RelayCommand]
         private async Task LoadDataAsync()
         {
             var data = await _repository.GetFilteredCustomersAsync(SelectedTypeFilter, SearchKeyword);
@@ -114,27 +98,11 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var item in data) CustomersList.Add(item);
         }
 
-        private void PopulateFormFromSelected(CustomerMaster c)
-        {
-            _currentCustomerId = c.Id;
-            InputCustomerCode = c.CustomerCode;
-            InputFullName = c.FullName;
-            InputPhone = c.Phone;
-            InputEmail = c.Email ?? string.Empty;
-            InputAddress = c.Address ?? string.Empty;
-            InputCompanyName = c.CompanyName ?? string.Empty;
-            InputVatNumber = c.VatRegistrationNumber ?? string.Empty;
-            InputCustomerType = c.CustomerType;
-            InputIsActive = c.IsActive;
-            InputCreditLimit = c.CreditLimit;
-            InputCreditDays = c.CreditDays;
-            InputIsCreditLocked = c.IsCreditLocked;
-        }
-
+        [RelayCommand]
         private void PrepareNewCustomer()
         {
             SelectedCustomer = null;
-            _currentCustomerId = 0;
+            CurrentCustomerId = 0;
             InputCustomerCode = "[ AUTO ]";
             InputFullName = string.Empty;
             InputPhone = string.Empty;
@@ -147,11 +115,40 @@ namespace POS.BackOffice.UI.ViewModels
             InputCreditLimit = 0m;
             InputCreditDays = 0;
             InputIsCreditLocked = false;
+            InputLoyaltyGroup = null; // Clear the dropdown
 
             // Force the UI to unlock the form grids
             OnPropertyChanged(nameof(IsCustomerSelected));
         }
 
+        private void PopulateFormFromSelected(CustomerMaster c)
+        {
+            CurrentCustomerId = c.Id;
+            InputCustomerCode = c.CustomerCode;
+            InputFullName = c.FullName;
+            InputPhone = c.Phone;
+            InputEmail = c.Email ?? string.Empty;
+            InputAddress = c.Address ?? string.Empty;
+            InputCompanyName = c.CompanyName ?? string.Empty;
+            InputVatNumber = c.VatRegistrationNumber ?? string.Empty;
+            InputCustomerType = c.CustomerType;
+            InputIsActive = c.IsActive;
+            InputCreditLimit = c.CreditLimit;
+            InputCreditDays = c.CreditDays;
+            InputIsCreditLocked = c.IsCreditLocked;
+
+            // Re-select the correct Discount Profile in the dropdown
+            if (c.LoyaltyDiscountProfileId.HasValue)
+            {
+                InputLoyaltyGroup = AvailableLoyaltyGroups.FirstOrDefault(p => p.Id == c.LoyaltyDiscountProfileId.Value);
+            }
+            else
+            {
+                InputLoyaltyGroup = null;
+            }
+        }
+
+        [RelayCommand]
         private async Task SaveCustomerAsync()
         {
             if (string.IsNullOrWhiteSpace(InputFullName) || string.IsNullOrWhiteSpace(InputPhone))
@@ -164,8 +161,8 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 var customerToSave = new CustomerMaster
                 {
-                    Id = _currentCustomerId,
-                    CustomerCode = _currentCustomerId == 0 ? string.Empty : InputCustomerCode,
+                    Id = CurrentCustomerId,
+                    CustomerCode = CurrentCustomerId == 0 ? string.Empty : InputCustomerCode,
                     FullName = InputFullName.Trim(),
                     Phone = InputPhone.Trim(),
                     Email = InputEmail.Trim(),
@@ -176,7 +173,10 @@ namespace POS.BackOffice.UI.ViewModels
                     IsActive = InputIsActive,
                     CreditLimit = InputCreditLimit,
                     CreditDays = InputCreditDays,
-                    IsCreditLocked = InputIsCreditLocked
+                    IsCreditLocked = InputIsCreditLocked,
+
+                    // NEW: Pass the selected ID to the repository!
+                    LoyaltyDiscountProfileId = InputLoyaltyGroup?.Id
                 };
 
                 await _repository.SaveCustomerProfileAsync(customerToSave);

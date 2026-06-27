@@ -5,8 +5,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using POS.Cashier.UI.Messages;
 using POS.Cashier.UI.Models;
 using POS.Core.Models;
+using POS.Core.Models.DTOs; // Added for CustomerSearchDto
 using POS.Core.Repositories;
 using POS.Cashier.UI.Services;
 
@@ -27,21 +30,32 @@ namespace POS.Cashier.UI.ViewModels
         [ObservableProperty] private int _totalItems = 0;
         [ObservableProperty] private int _totalPieces = 0;
 
-        [ObservableProperty] private string _customerName = "Walk-In";
-        [ObservableProperty] private int _loyaltyPoints = 0;
-
         [ObservableProperty] private string _terminalNo = "01";
         [ObservableProperty] private string _cashierName = "Pending...";
         [ObservableProperty] private string _invoiceNo = "PENDING...";
         [ObservableProperty] private DateTime _currentDate = DateTime.Now;
+
+        // --- NEW: GLOBAL TERMINAL INPUT (HYBRID DISPLAY) ---
+        [ObservableProperty] private string _terminalInput = string.Empty;
+
+        // --- NEW: B2B & WHOLESALE ENGINE ---
+        [ObservableProperty] private string _customerName = "Walk-In";
+        [ObservableProperty] private int _loyaltyPoints = 0;
+        [ObservableProperty] private bool _isWholesaleMode = false;
+        [ObservableProperty] private CustomerSearchDto? _activeB2BCustomer;
 
         // --- NEW: SECURITY & PRIVILEGE ESCALATION PROPERTIES ---
         [ObservableProperty] private bool _isManagerModeActive = false;
         [ObservableProperty] private string _securityStatusMode = "CASHIER MODE";
         [ObservableProperty] private bool _isTerminalLocked = false;
 
+        // --- NEW: TOP-BAR NOTIFICATION ENGINE ---
+        [ObservableProperty] private string _notificationMessage = string.Empty;
+        [ObservableProperty] private string _notificationColor = "#10B981"; // Default Green
+        [ObservableProperty] private bool _isNotificationVisible = false;
+
         private int _currentShiftId = 0;
-        public int CurrentShiftId => _currentShiftId; // Accessible by other dialogs if needed
+        public int CurrentShiftId => _currentShiftId;
         private string _printerName = "POS-80";
 
         public SalesViewModel(
@@ -57,6 +71,32 @@ namespace POS.Cashier.UI.ViewModels
 
             Cart.CollectionChanged += (s, e) => RecalculateTotals();
             _ = LoadActiveShiftAsync();
+
+            // EXPRESS ITEMS LISTENER
+            WeakReferenceMessenger.Default.Register<AddToCartMessage>(this, (r, m) =>
+            {
+                System.Media.SystemSounds.Beep.Play();
+                _ = ProcessBarcodeAsync(m.Value);
+            });
+
+            // TOP-BAR NOTIFICATION LISTENER
+            WeakReferenceMessenger.Default.Register<TopBarNotificationMessage>(this, (r, m) =>
+            {
+                _ = ShowNotificationAsync(m.Value.Message, m.Value.ColorHex);
+            });
+        }
+
+        // ==========================================
+        // NOTIFICATION ANIMATION ENGINE
+        // ==========================================
+        public async Task ShowNotificationAsync(string message, string colorHex = "#10B981")
+        {
+            NotificationMessage = message;
+            NotificationColor = colorHex;
+            IsNotificationVisible = true;
+
+            await Task.Delay(3000);
+            IsNotificationVisible = false;
         }
 
         public async Task LoadActiveShiftAsync()
@@ -83,45 +123,91 @@ namespace POS.Cashier.UI.ViewModels
         }
 
         // ==========================================
+        // WHOLESALE & B2B ENGINE
+        // ==========================================
+        public void AttachB2BCustomer(CustomerSearchDto customer)
+        {
+            ActiveB2BCustomer = customer;
+            CustomerName = string.IsNullOrWhiteSpace(customer.CompanyName) ? customer.FullName : customer.CompanyName;
+
+            if (customer.CustomerType == "Wholesale")
+            {
+                IsWholesaleMode = true;
+                _ = ShowNotificationAsync($"WHOLESALE MODE ACTIVATED: {CustomerName}", "#3B82F6"); // Blue Alert
+
+                // TODO: Future Implementation! 
+                // If ItemVariant has a "WholesalePrice" column, loop through Cart here 
+                // and swap unit prices from Retail to Wholesale.
+            }
+            else
+            {
+                IsWholesaleMode = false;
+                _ = ShowNotificationAsync($"Retail Account Linked: {CustomerName}", "#10B981"); // Green Alert
+            }
+        }
+
+        [RelayCommand]
+        public void DetachCustomer()
+        {
+            ActiveB2BCustomer = null;
+            CustomerName = "Walk-In";
+            IsWholesaleMode = false;
+
+            // TODO: If you swapped prices to wholesale, swap them back to retail here!
+            RecalculateTotals();
+
+            _ = ShowNotificationAsync("Customer detached. Returned to Standard Retail Mode.", "#F59E0B"); // Orange Alert
+        }
+
+        // ==========================================
         // SECURITY & SECURITY ELEVATION ENGINES
         // ==========================================
-
-        /// <summary>
-        /// Explicitly toggles persistent manager administration sessions.
-        /// </summary>
         public void SetManagerMode(bool activate)
         {
             IsManagerModeActive = activate;
             SecurityStatusMode = activate ? "⚠️ MANAGER MODE ACTIVE" : "CASHIER MODE";
         }
 
-        /// <summary>
-        /// Native intercept handler to quickly evaluate authorization permissions.
-        /// </summary>
         public bool VerifyActionPermission()
         {
-            // If already inside an active manager session, seamlessly allow the action
             if (IsManagerModeActive) return true;
-
-            // Otherwise, trigger the native override intercept request
             return false;
+        }
+
+        // ==========================================
+        // TERMINAL INPUT COMMANDS
+        // ==========================================
+        [RelayCommand]
+        public void ClearTerminalInput()
+        {
+            TerminalInput = string.Empty;
         }
 
         // ==========================================
         // SHIFT & SESSION TASK MANAGEMENT COMMANDS
         // ==========================================
-
         [RelayCommand]
         public async Task AddFloatAsync()
         {
-            // Shift menu calls this directly
-            var floatDialog = new POS.Cashier.UI.Views.Dialogs.CashDenominationDialog();
-            if (floatDialog.ShowDialog() == true)
+            if (_currentShiftId == 0)
             {
-                decimal floatAmount = floatDialog.FinalTotal;
-                await _tillRepository.InjectFloatAsync(_currentShiftId, floatAmount, IsManagerModeActive ? "Manager" : "Cashier");
-                MessageBox.Show($"Float of Rs. {floatAmount:N2} injected successfully.", "Float Added", MessageBoxButton.OK, MessageBoxImage.Information);
+                _ = ShowNotificationAsync("No active shift found. Please log in properly.", "#EF4444");
+                return;
             }
+
+            if (!VerifyActionPermission())
+            {
+                var authVM = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<POS.Cashier.UI.ViewModels.ManagerAuthViewModel>(App.Services!);
+                var authDialog = new POS.Cashier.UI.Dialogs.ManagerAuthDialogView(authVM);
+
+                if (authDialog.ShowDialog() != true) return;
+            }
+
+            var floatVM = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<POS.Cashier.UI.ViewModels.FloatCashViewModel>(App.Services!);
+            floatVM.Initialize(_currentShiftId);
+
+            var floatDialog = new POS.Cashier.UI.Dialogs.FloatCashDialog(floatVM);
+            floatDialog.ShowDialog();
         }
 
         [RelayCommand]
@@ -137,24 +223,7 @@ namespace POS.Cashier.UI.ViewModels
         [RelayCommand]
         public async Task ProcessZReportAsync()
         {
-            var counterDialog = new POS.Cashier.UI.Views.Dialogs.CashDenominationDialog();
-            if (counterDialog.ShowDialog() == true)
-            {
-                decimal countedCash = counterDialog.FinalTotal;
-                var summary = await _tillRepository.GetShiftSummaryAsync(_currentShiftId);
-                decimal expectedCash = summary?.ExpectedCash ?? 0m;
-
-                var summaryDialog = new POS.Cashier.UI.Views.Dialogs.ZReportSummaryDialog(expectedCash, countedCash);
-                if (summaryDialog.ShowDialog() == true)
-                {
-                    await _tillRepository.CloseShiftAsync(_currentShiftId, countedCash);
-                    MessageBox.Show("Shift Closed successfully. Z-Report Printed. Logging out.", "Shift Closed", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    // Drop security state before window shutdown
-                    SetManagerMode(false);
-                    Application.Current.MainWindow.Close();
-                }
-            }
+            // Logic handled when Shift Close dialog is finalized
         }
 
         // ==========================================
@@ -166,7 +235,7 @@ namespace POS.Cashier.UI.ViewModels
 
             if (_currentShiftId == 0)
             {
-                MessageBox.Show("Critical Error: No active shift found in database. Please log out and contact a manager.", "Action Blocked", MessageBoxButton.OK, MessageBoxImage.Warning);
+                _ = ShowNotificationAsync("Action Blocked: No active shift found in database.", "#EF4444");
                 return;
             }
 
@@ -184,10 +253,11 @@ namespace POS.Cashier.UI.ViewModels
 
                 if (dbItem == null)
                 {
-                    MessageBox.Show($"Unrecognized Barcode: {barcode}", "Item Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _ = ShowNotificationAsync($"Unrecognized Barcode: {barcode}", "#F59E0B");
                     return;
                 }
 
+                // TODO: If IsWholesaleMode == true, use dbItem.WholesalePrice instead!
                 Cart.Add(new CartItem
                 {
                     ItemId = dbItem.Id,
@@ -200,7 +270,7 @@ namespace POS.Cashier.UI.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Database Error: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = ShowNotificationAsync($"Database Error: {ex.Message}", "#EF4444");
             }
         }
 
@@ -233,7 +303,7 @@ namespace POS.Cashier.UI.ViewModels
 
             if (_currentShiftId == 0)
             {
-                MessageBox.Show("No active shift found. Please log in properly.", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = ShowNotificationAsync("No active shift found. Please log in properly.", "#EF4444");
                 return false;
             }
 
@@ -244,7 +314,7 @@ namespace POS.Cashier.UI.ViewModels
                     ShiftSessionId = _currentShiftId,
                     CashierName = this.CashierName,
                     TerminalNo = this.TerminalNo,
-                    CustomerName = this.CustomerName,
+                    CustomerName = this.CustomerName, // Optionally link ActiveB2BCustomer.Id to a DB column here
                     GrossTotal = Cart.Sum(c => c.UnitPrice * c.Quantity),
                     TotalDiscount = this.TotalDiscount,
                     NetTotal = this.NetValue,
@@ -268,18 +338,16 @@ namespace POS.Cashier.UI.ViewModels
 
                 await _printService.PrintReceiptAsync(savedReceipt, _printerName);
 
-                MessageBox.Show("Payment Successful! Ready for next customer.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                _ = ShowNotificationAsync("Payment Successful! Ready for next customer.", "#10B981");
 
                 ClearCart();
-
-                // AUTOMATIC AUTO-LOCK INTERCEPT: Strips temporary privilege elevation instantly when a transaction finishes
                 SetManagerMode(false);
 
                 return true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Transaction Failed: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = ShowNotificationAsync($"Transaction Failed: {ex.Message}", "#EF4444");
                 return false;
             }
         }
@@ -291,7 +359,12 @@ namespace POS.Cashier.UI.ViewModels
         public void ClearCart()
         {
             Cart.Clear();
+
+            // Wipe B2B / Wholesale state
+            ActiveB2BCustomer = null;
             CustomerName = "Walk-In";
+            IsWholesaleMode = false;
+
             LoyaltyPoints = 0;
             InvoiceNo = "PENDING...";
         }
@@ -300,12 +373,6 @@ namespace POS.Cashier.UI.ViewModels
         public void RemoveItem(CartItem item)
         {
             if (item != null && Cart.Contains(item)) Cart.Remove(item);
-        }
-
-        public void AssignCustomer(string name, int points)
-        {
-            CustomerName = string.IsNullOrWhiteSpace(name) ? "Walk-In" : name;
-            LoyaltyPoints = points;
         }
 
         public void ApplyGlobalDiscount(decimal value, bool isPercentage)
@@ -327,36 +394,25 @@ namespace POS.Cashier.UI.ViewModels
             RecalculateTotals();
         }
 
-        // ==========================================
-        // MANUAL ENTRY & SEEK ENGINE
-        // ==========================================
-        // ==========================================
-        // MANUAL ENTRY & SEEK ENGINE
-        // ==========================================
         public async Task<bool> AddSpecificItemToCartAsync(string barcode, int quantity)
         {
             if (string.IsNullOrWhiteSpace(barcode) || quantity <= 0) return false;
-
-            // 1. HARD GATE: Prevent adding if the shift is closed, but fail silently.
             if (_currentShiftId == 0) return false;
 
             try
             {
-                // 2. QUICK ADD: If already in cart, just bump the quantity
                 var existingItem = Cart.FirstOrDefault(c => c.Barcode == barcode);
                 if (existingItem != null)
                 {
                     existingItem.Quantity += quantity;
                     RecalculateTotals();
-                    return true; // Success
+                    return true;
                 }
 
-                // 3. NEW ITEM: Fetch from database
                 var dbItem = await _itemRepository.GetItemByBarcodeAsync(barcode);
-
-                // Fail silently if not found (the UI already validated it, so this is a double-check)
                 if (dbItem == null) return false;
 
+                // TODO: Check IsWholesaleMode here too for price swap!
                 Cart.Add(new CartItem
                 {
                     ItemId = dbItem.Id,
@@ -368,30 +424,20 @@ namespace POS.Cashier.UI.ViewModels
                 });
 
                 RecalculateTotals();
-                return true; // Success
+                return true;
             }
             catch
             {
-                // CRITICAL FAIL-SAFE: If the database glitches, catch it silently 
-                // so the POS doesn't lock up with an unhandled exception during a rush.
                 return false;
             }
         }
 
         public void ApplyFreeItemLogic(dynamic item, string reasonCode)
         {
-            // 1. Drop the price to zero
             item.UnitPrice = 0m;
             item.LineAmount = 0m;
             item.DiscountPercentage = 100m;
-
-            // 2. We tag the item with the reason. 
-            // You will need to add a string property called 'FreeReasonCode' to your CartItemDto!
             item.FreeReasonCode = reasonCode;
-
-            // 3. Force the UI to recalculate the main Net Total
-            // RecalculateTotals(); 
         }
     }
-
 }

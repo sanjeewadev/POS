@@ -10,6 +10,8 @@
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
         <Style TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -62,50 +64,24 @@
         <!-- HEADER -->
         <Border Grid.Row="0" Background="{StaticResource HeaderBgBrush}" Margin="0,0,0,2" BorderBrush="#222222" BorderThickness="1">
             <Grid>
-                <TextBlock Text="BANDULA TRADE CENTER" Foreground="White" FontSize="22" FontWeight="Heavy" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <!-- Existing Title -->
+                <TextBlock Text="BANDULA TRADE CENTER" Foreground="White" FontSize="20" FontWeight="Bold" HorizontalAlignment="Left" Margin="20,0,0,0" VerticalAlignment="Center"/>
+
+                <!-- NEW: NON-BLOCKING NOTIFICATION BANNER -->
+                <Border Background="{Binding NotificationColor}" 
+                        Visibility="{Binding IsNotificationVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" 
+                        Padding="40,5" CornerRadius="4" MinWidth="400">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Black" BlurRadius="5" ShadowDepth="2" Opacity="0.5"/>
+                    </Border.Effect>
+                    <TextBlock Text="{Binding NotificationMessage}" Foreground="White" FontSize="18" FontWeight="Heavy" TextAlignment="Center"/>
+                </Border>
+
+                <!-- Existing Clock -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
                     <TextBlock Text="2026-06-01 09:27:56" Foreground="#FFB84D" FontSize="18" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
                 </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- INFO PANEL -->
-        <Border Grid.Row="1" Background="{StaticResource InfoPanelBgBrush}" Padding="8" Margin="0,0,0,2" BorderBrush="{StaticResource HeaderBgBrush}" BorderThickness="1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="32"/>
-                    <RowDefinition Height="32"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Text="Terminal No" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="0"/>
-                <TextBox Text="1" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="1"/>
-                <TextBlock Text="Location" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="0"/>
-                <TextBox Text="CB" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="1"/>
-
-                <TextBlock Text="Date" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="2"/>
-                <TextBox Text="2026-06-01" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="3"/>
-                <TextBlock Text="Cashier" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="2"/>
-                <TextBox Text="Cashier Pos" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="3"/>
-
-                <TextBlock Text="Customer" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="4"/>
-                <TextBox Text="Walk-In" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="5" Background="White" IsReadOnly="False" Focusable="True"/>
-                <TextBlock Text="Salesman" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="4"/>
-                <TextBox Text="0" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="5" Background="White" IsReadOnly="False" Focusable="True"/>
-
-                <TextBlock Text="Invoice No" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="6"/>
-                <TextBox Text="INCB1002003" Style="{StaticResource LockedInput}" Foreground="#8B0000" Grid.Row="0" Grid.Column="7" />
-                <TextBlock Text="Order No" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="6"/>
-                <TextBox Text="ORCB1000096" Style="{StaticResource LockedInput}" Foreground="#8B0000" Grid.Row="1" Grid.Column="7" />
             </Grid>
         </Border>
 
@@ -126,12 +102,53 @@
                 <!-- TOP LEFT: Item Table -->
                 <Grid Grid.Column="0" Margin="0,0,2,0">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
+                    <!-- INFO PANEL -->
+                    <Border Grid.Row="0" Background="{StaticResource InfoPanelBgBrush}" Padding="8" Margin="0,0,0,2" BorderBrush="{StaticResource HeaderBgBrush}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="32"/>
+                                <RowDefinition Height="32"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Terminal No" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="0"/>
+                            <TextBox Text="1" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="1"/>
+                            <TextBlock Text="Location" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="0"/>
+                            <TextBox Text="CB" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="1"/>
+
+                            <TextBlock Text="Date" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="2"/>
+                            <TextBox Text="2026-06-01" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="3"/>
+                            <TextBlock Text="Cashier" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="2"/>
+                            <TextBox Text="Cashier Pos" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="3"/>
+
+                            <TextBlock Text="Customer" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="4"/>
+                            <TextBox Text="Walk-In" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="5" Background="White" IsReadOnly="False" Focusable="True"/>
+                            <TextBlock Text="Salesman" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="4"/>
+                            <TextBox Text="0" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="5" Background="White" IsReadOnly="False" Focusable="True"/>
+
+                            <TextBlock Text="Invoice No" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="6"/>
+                            <TextBox Text="INCB1002003" Style="{StaticResource LockedInput}" Foreground="#8B0000" Grid.Row="0" Grid.Column="7" />
+                            <TextBlock Text="Order No" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="6"/>
+                            <TextBox Text="ORCB1000096" Style="{StaticResource LockedInput}" Foreground="#8B0000" Grid.Row="1" Grid.Column="7" />
+                        </Grid>
+                    </Border>
+
                     <!-- DataGrid -->
-                    <DataGrid x:Name="CartDataGrid" ItemsSource="{Binding Cart}" SelectionChanged="CartDataGrid_SelectionChanged" Grid.Row="0" Background="White" AutoGenerateColumns="False" HeadersVisibility="Column" RowHeight="50" FontSize="18" BorderBrush="{StaticResource HeaderBgBrush}" BorderThickness="1" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#D0D0D0">
+                    <DataGrid x:Name="CartDataGrid" ItemsSource="{Binding Cart}" SelectionChanged="CartDataGrid_SelectionChanged" Grid.Row="1" Background="White" AutoGenerateColumns="False" HeadersVisibility="Column" RowHeight="50" FontSize="18" BorderBrush="{StaticResource HeaderBgBrush}" BorderThickness="1" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#D0D0D0">
                         <DataGrid.Resources>
                             <Style TargetType="DataGridColumnHeader">
                                 <Setter Property="Background" Value="{StaticResource HeaderBgBrush}"/>
@@ -153,19 +170,8 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <!-- Contextual Qty Panel -->
-                    <Border x:Name="ContextualQtyPanel" Grid.Row="0" VerticalAlignment="Bottom" Background="{StaticResource InfoPanelBgBrush}" BorderBrush="{StaticResource HeaderBgBrush}" BorderThickness="1" Margin="3" Padding="10" Visibility="Collapsed" HorizontalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Edit Qty:" Foreground="Black" FontWeight="Bold" FontSize="20" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                            <Button Content="-" Width="60" Height="45" FontSize="28" Background="{StaticResource NumpadBtnBrush}" Click="QtyMinusBtn_Click"/>
-                            <TextBox x:Name="txtQtyInput" Width="100" Height="45" FontSize="24" FontWeight="Bold" TextAlignment="Center" Margin="2,0"/>
-                            <Button Content="+" Width="60" Height="45" FontSize="28" Background="{StaticResource NumpadBtnBrush}" Click="QtyPlusBtn_Click"/>
-                            <Button Content="OK" Width="100" Height="45" FontSize="20" Background="{StaticResource SystemBtnBrush}" Click="HideQtyPanel_Click" Margin="20,0,0,0"/>
-                        </StackPanel>
-                    </Border>
-
                     <!-- NET VALUE & Totals Bar -->
-                    <Border Grid.Row="1" Background="{StaticResource TotalsPanelBgBrush}" Padding="15" BorderBrush="#222222" BorderThickness="1" Margin="0,2,0,0">
+                    <Border Grid.Row="2" Background="{StaticResource TotalsPanelBgBrush}" Padding="15" BorderBrush="#222222" BorderThickness="1" Margin="0,2,0,0">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -224,7 +230,7 @@
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Recall" Click="SuspendRecallBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Dis. Price" FontSize="14" Click="DiscountBtn_Click"/>
 
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Add Float" FontSize="14" Command="{Binding AddFloatCommand}"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Float Cash" FontSize="14" Click="FloatCashBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="%" Click="DiscountBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Drawer"/>
 
@@ -235,8 +241,8 @@
 
                     <!-- Numpad -->
                     <UniformGrid Grid.Row="1" Columns="3" Rows="6" Margin="0,0,0,0">
-                        <Button Background="{StaticResource NumpadBtnBrush}" Content="(-)" Click="QtyMinusBtn_Click"/>
-                        <Button Background="{StaticResource NumpadBtnBrush}" Content="+" Click="QtyPlusBtn_Click"/>
+                        <Button Background="{StaticResource NumpadBtnBrush}" Content="(-)" />
+                        <Button Background="{StaticResource NumpadBtnBrush}" Content="+" />
                         <Button Background="{StaticResource NumpadBtnBrush}" Content="*" Click="Button_Click"/>
                         <Button Background="{StaticResource NumpadBtnBrush}" Content="/"/>
                         <Button Background="{StaticResource NumpadBtnBrush}" Content="-"/>
@@ -268,25 +274,21 @@
 
                 <!-- BOTTOM LEFT: Action Buttons (6x3 grid) -->
                 <UniformGrid Grid.Column="0" Columns="5" Rows="3" Margin="0,0,2,0">
-                    
+
                     <Button Background="{StaticResource SystemBtnBrush}" Content="Reports" FontSize="14" Click="ReportsBtn_Click"/>
                     <Button Background="{StaticResource SystemBtnBrush}" Content="Today's Sales" FontSize="14" Click="ReportsBtn_Click"/>
                     <Button Background="{StaticResource SystemBtnBrush}" Content="Paid In" FontSize="14" Click="PaidInBtn_Click"/>
                     <Button Background="{StaticResource SystemBtnBrush}" Content="Paid Out" FontSize="14" Click="PaidOutBtn_Click"/>
 
-
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Discount Type" FontSize="13" Click="DiscountBtn_Click"/>
-                    
+
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Stock Inq." FontSize="14" Click="StockInquiryBtn_Click"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Customer" FontSize="14" Click="CustomerBtn_Click"/>
                     <Button Background="{StaticResource LoyaltyBgBrush}" Foreground="#FFD700" Content="LOYALTY" FontSize="14" Click="LoyaltyBtn_Click"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Reload" FontSize="14"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="Retail" FontSize="14"/>
 
-
-                    
                     <Button Background="#007BFF" Foreground="White" Content="SHIFT MENU" FontSize="14" Click="ShiftMenuBtn_Click"/>
-
 
                     <Button Background="{StaticResource ActionBtnBrush}" Content="No Sale" FontSize="14"/>
                     <Button Background="{StaticResource ActionBtnBrush}" Content="New Price" FontSize="14" Click="PriceOverrideBtn_Click"/>
@@ -305,16 +307,15 @@
 
                     <UniformGrid Grid.Column="0" Columns="4" Rows="2" Margin="0,0,2,0">
                         <Button Background="{StaticResource PaymentDarkOrangeBrush}" Foreground="Black" Content="Cust Credit" FontSize="15" Click="PayBtn_Click"/>
-                       
+
                         <Button Background="#EEEEEE" Foreground="#CC0000" Content="MasterCard" FontSize="16" FontWeight="Bold" Click="PayBtn_Click"/>
                         <Button Background="#EEEEEE" Foreground="#1A1F71" Content="VISA" FontSize="20" FontWeight="Heavy" Click="PayBtn_Click"/>
                         <Button Background="#EEEEEE" Foreground="#2A71D0" Content="AMEX" FontSize="18" FontWeight="Heavy" Click="PayBtn_Click"/>
                         <Button Background="{StaticResource PaymentDarkOrangeBrush}" Foreground="Black" Content="Credit Note" FontSize="15" Click="PayBtn_Click"/>
                         <Button Background="{StaticResource PaymentOrangeBrush}" Foreground="Black" Content="Cheque" FontSize="14" Click="PayBtn_Click"/>
-                  
+
                         <Button Background="{StaticResource LoyaltyBgBrush}" Foreground="#FFD700" Content="LOYALTY" FontSize="16" Click="PayBtn_Click"/>
                         <Button Background="{StaticResource PaymentOrangeBrush}" Foreground="Black" Content="Gift Voucher" FontSize="13" Click="PayBtn_Click"/>
-
 
                     </UniformGrid>
 
@@ -325,7 +326,7 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Background="{StaticResource PluBtnBrush}" Content="PLU" FontSize="22" Margin="0,0,0,1"/>
+                        <Button Grid.Row="0" Background="{StaticResource PluBtnBrush}" Content="PLU" FontSize="22" Margin="0,0,0,1" Click="SeekBtn_Click"/>
                         <Button Grid.Row="1" Background="{StaticResource CashBtnBrush}" Content="Cash" FontSize="30" FontWeight="Heavy" Click="PayBtn_Click" Margin="0"/>
                     </Grid>
                 </Grid>

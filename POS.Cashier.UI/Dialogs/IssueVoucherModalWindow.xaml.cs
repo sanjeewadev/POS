@@ -1,4 +1,4 @@
-﻿using POS.Cashier.UI.ViewModels.Dialogs;
+﻿using POS.Cashier.UI.ViewModels;
 using System.Windows;
 
 namespace POS.Cashier.UI.Dialogs

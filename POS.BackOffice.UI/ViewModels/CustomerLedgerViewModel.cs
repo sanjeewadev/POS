@@ -3,36 +3,26 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models;
-using POS.Core.Repositories; // Ensure you have a repository that can fetch Ledger entries
+using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public class CustomerLedgerViewModel : ViewModelBase
+    public partial class CustomerLedgerViewModel : ObservableObject
     {
-        private readonly CustomerAdminRepository _repository; // Reusing your admin repo, or a dedicated LedgerRepo
+        private readonly CustomerRepository _repository;
 
         // ==========================================
         // PROPERTIES: CUSTOMER SELECTION
         // ==========================================
         public ObservableCollection<CustomerMaster> AvailableCustomers { get; set; } = new();
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsCustomerSelected))]
+        [NotifyPropertyChangedFor(nameof(HasPositiveCredit))]
         private CustomerMaster? _selectedCustomer;
-        public CustomerMaster? SelectedCustomer
-        {
-            get => _selectedCustomer;
-            set
-            {
-                _selectedCustomer = value;
-                OnPropertyChanged(nameof(SelectedCustomer));
-                OnPropertyChanged(nameof(IsCustomerSelected));
-                OnPropertyChanged(nameof(HasPositiveCredit));
-
-                // Clear the ledger when a new customer is selected until they hit "LOAD"
-                LedgerEntries.Clear();
-            }
-        }
 
         public bool IsCustomerSelected => SelectedCustomer != null;
 
@@ -44,39 +34,24 @@ namespace POS.BackOffice.UI.ViewModels
         // ==========================================
         public ObservableCollection<CustomerLedger> LedgerEntries { get; set; } = new();
 
-        private DateTime? _filterStartDate = DateTime.Today.AddDays(-30); // Default to last 30 days
-        public DateTime? FilterStartDate
-        {
-            get => _filterStartDate;
-            set { _filterStartDate = value; OnPropertyChanged(nameof(FilterStartDate)); }
-        }
+        [ObservableProperty] private DateTime? _filterStartDate = DateTime.Today.AddDays(-30);
+        [ObservableProperty] private DateTime? _filterEndDate = DateTime.Today;
 
-        private DateTime? _filterEndDate = DateTime.Today;
-        public DateTime? FilterEndDate
-        {
-            get => _filterEndDate;
-            set { _filterEndDate = value; OnPropertyChanged(nameof(FilterEndDate)); }
-        }
-
-        // ==========================================
-        // COMMANDS
-        // ==========================================
-        public ICommand LoadLedgerCommand { get; }
-        public ICommand FilterStatementCommand { get; }
-        public ICommand PrintStatementCommand { get; }
-        public ICommand OpenReceivePaymentDialogCommand { get; }
-
-        public CustomerLedgerViewModel(CustomerAdminRepository repository)
+        public CustomerLedgerViewModel(CustomerRepository repository)
         {
             _repository = repository;
 
-            LoadLedgerCommand = new RelayCommand(async (o) => await ExecuteLoadLedger());
-            FilterStatementCommand = new RelayCommand(async (o) => await ExecuteFilterStatement());
-            PrintStatementCommand = new RelayCommand((o) => ExecutePrintStatement());
-            OpenReceivePaymentDialogCommand = new RelayCommand((o) => ExecuteReceivePayment());
-
             // Load the dropdown list immediately when the page opens
             _ = LoadCustomersAsync();
+        }
+
+        // ==========================================
+        // TRIGGERS
+        // ==========================================
+        partial void OnSelectedCustomerChanged(CustomerMaster? value)
+        {
+            // Clear the ledger when a new customer is selected until they hit "LOAD"
+            LedgerEntries.Clear();
         }
 
         // ==========================================
@@ -84,13 +59,14 @@ namespace POS.BackOffice.UI.ViewModels
         // ==========================================
         private async Task LoadCustomersAsync()
         {
-            // Fetching all customers (or specifically Wholesale/Credit customers)
+            // Fetch all customers for the dropdown
             var data = await _repository.GetFilteredCustomersAsync("All Customers", "");
             AvailableCustomers.Clear();
             foreach (var item in data) AvailableCustomers.Add(item);
         }
 
-        private async Task ExecuteLoadLedger()
+        [RelayCommand]
+        private async Task LoadLedgerAsync()
         {
             if (SelectedCustomer == null)
             {
@@ -112,7 +88,8 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private async Task ExecuteFilterStatement()
+        [RelayCommand]
+        private async Task FilterStatementAsync()
         {
             if (SelectedCustomer == null) return;
             if (FilterStartDate == null || FilterEndDate == null)
@@ -135,7 +112,8 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private void ExecutePrintStatement()
+        [RelayCommand]
+        private void PrintStatement()
         {
             if (SelectedCustomer == null || !LedgerEntries.Any())
             {
@@ -143,11 +121,12 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            // TODO: Hook up to your PDF reporting engine (e.g., Crystal Reports, iTextSharp, or standard PrintDialog)
+            // TODO: Hook up to your PDF reporting engine later
             MessageBox.Show($"Sending statement for {SelectedCustomer.FullName} to printer...", "Print Job Started", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void ExecuteReceivePayment()
+        [RelayCommand]
+        private void OpenReceivePaymentDialog()
         {
             if (SelectedCustomer == null)
             {
@@ -155,7 +134,7 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            // TODO: Phase 3 - Open the "Receive Payment" popup dialog so the manager can enter Cheque/Cash details
+            // TODO: Open the "Receive Payment" popup dialog later
             MessageBox.Show($"Open Payment Dialog for {SelectedCustomer.FullName}.\nCurrent Balance: Rs. {SelectedCustomer.CurrentBalance:N2}",
                             "Payment Gateway", MessageBoxButton.OK, MessageBoxImage.Information);
         }

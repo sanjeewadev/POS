@@ -8,7 +8,7 @@ using POS.Core.Data;
 
 namespace POS.Core.Repositories
 {
-    // Existing DTO for the Item Master Grid
+    // Existing DTO for the Admin Item Master Grid
     public class ItemMasterSummaryDto
     {
         public int ParentId { get; set; }
@@ -20,26 +20,27 @@ namespace POS.Core.Repositories
         public string StatusText { get; set; } = string.Empty;
     }
 
-    // Lightweight container for Barcode Management Grid
-    public class BarcodeManagementDto
+    // ==========================================================
+    // NEW: DUAL-TABLE DTOs FOR THE CASHIER PLU / SEEK SCREEN
+    // ==========================================================
+
+    // Represents Table 1: The Generic "Parent" Item
+    public class ParentSeekDto
     {
-        public int VariantId { get; set; }
+        public int ParentId { get; set; }
         public string ItemCode { get; set; } = string.Empty;
         public string ItemName { get; set; } = string.Empty;
-        public string VariantDescription { get; set; } = string.Empty;
-        public string Barcode { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
-        public bool IsDeactivated { get; set; }
-
-        public bool IsSelected { get; set; } = false;
+        public int ActiveVariantsCount { get; set; }
     }
 
-    // Lightweight container for the Live-Add Seek Window
-    public class ProductSeekDto
+    // Represents Table 2: The Specific "Variants" (Sizes/Colors)
+    public class VariantSeekDto
     {
+        public int VariantId { get; set; }
+        public string SkuCode { get; set; } = string.Empty;
         public string Barcode { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string CategoryName { get; set; } = string.Empty;
+        public string VariantDescription { get; set; } = string.Empty;
         public decimal RetailPrice { get; set; }
         public decimal StockOnHand { get; set; }
     }
@@ -54,7 +55,7 @@ namespace POS.Core.Repositories
         }
 
         // ==============================================================================
-        // --- MASTER GRID DATA : LIGHTWEIGHT SUMMARY FETCH ---
+        // --- ADMIN GRID DATA : LIGHTWEIGHT SUMMARY FETCH ---
         // ==============================================================================
         public async Task<IEnumerable<ItemMasterSummaryDto>> GetSummariesAsync(string searchTerm = "")
         {
@@ -107,7 +108,7 @@ namespace POS.Core.Repositories
         }
 
         // ==============================================================================
-        // --- FULL MATRIX FETCH (NEW: For editing and viewing in the UI) ---
+        // --- FULL MATRIX FETCH (For editing and viewing in the Admin UI) ---
         // ==============================================================================
         public async Task<ItemParent?> GetFullMatrixByIdAsync(int parentId)
         {
@@ -143,7 +144,6 @@ namespace POS.Core.Repositories
 
             try
             {
-                // Sever the tie to the children to prevent recursive tracking errors
                 parent.Variants = null!;
 
                 if (parent.Id == 0)
@@ -169,7 +169,6 @@ namespace POS.Core.Repositories
 
                 foreach (var variant in variants)
                 {
-                    // Reset IDs to force a brand new INSERT
                     variant.Id = 0;
                     variant.ItemParentId = parent.Id;
 
@@ -177,7 +176,7 @@ namespace POS.Core.Repositories
                     {
                         foreach (var map in variant.PropertyMappings)
                         {
-                            map.ItemVariant = null!; // Prevent circular tracking loops
+                            map.ItemVariant = null!;
                         }
                     }
 
@@ -185,8 +184,8 @@ namespace POS.Core.Repositories
                     {
                         foreach (var bridge in variant.ItemSuppliers)
                         {
-                            bridge.Id = 0; // Force Insert for the Supplier bridge
-                            bridge.Supplier = null!; // Prevent UNIQUE constraint crash
+                            bridge.Id = 0;
+                            bridge.Supplier = null!;
                             bridge.ItemVariant = null!;
                         }
                     }
@@ -194,7 +193,6 @@ namespace POS.Core.Repositories
                     await context.ItemVariants.AddAsync(variant);
                 }
                 await context.SaveChangesAsync();
-
                 await transaction.CommitAsync();
             }
             catch (Exception)
@@ -230,7 +228,6 @@ namespace POS.Core.Repositories
             using var context = await _contextFactory.CreateDbContextAsync();
             return await context.ItemVariants
                 .Include(v => v.ItemParent)
-                // ✅ NEW: Added Include so PO Scanner pulls supplier costs and codes!
                 .Include(v => v.ItemSuppliers)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(v => !v.IsDeactivated &&
@@ -249,183 +246,100 @@ namespace POS.Core.Repositories
         }
 
         // ==============================================================================
-        // --- BARCODE MANAGEMENT ENGINE ---
+        // --- NEW: DUAL-TABLE PLU / SEEK ENGINE FOR CASHIER UI ---
         // ==============================================================================
 
-        public async Task<List<BarcodeManagementDto>> GetBarcodeManagementListAsync(string searchTerm = "", int? categoryId = null, bool activeOnly = true)
+        /// <summary>
+        /// Populates Table 1: Searches for Parent items by Name, Code, or their Variants' Barcodes.
+        /// </summary>
+        public async Task<List<ParentSeekDto>> SearchSeekParentsAsync(string searchTerm, string categoryFilter = "ALL CATEGORIES")
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            var query = context.ItemVariants
-                .Include(v => v.ItemParent)
-                .ThenInclude(p => p.Category)
-                .AsNoTracking()
-                .AsQueryable();
-
-            if (activeOnly)
-            {
-                query = query.Where(v => !v.IsDeactivated && !v.ItemParent.IsDeactivated);
-            }
+            var query = context.ItemParents
+                .Include(p => p.Category)
+                .Include(p => p.Variants)
+                .Where(p => !p.IsDeactivated)
+                .AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
-                var search = searchTerm.ToLower();
-                query = query.Where(v =>
-                    (v.Barcode != null && v.Barcode.ToLower().Contains(search)) ||
-                    v.ItemParent.ItemCode.ToLower().Contains(search) ||
-                    v.ItemParent.ItemName.ToLower().Contains(search) ||
-                    v.VariantDescription.ToLower().Contains(search));
-            }
-
-            if (categoryId.HasValue && categoryId.Value > 0)
-            {
-                query = query.Where(v => v.ItemParent.CategoryId == categoryId.Value);
-            }
-
-            return await query
-                .Select(v => new BarcodeManagementDto
-                {
-                    VariantId = v.Id,
-                    ItemCode = v.ItemParent.ItemCode,
-                    ItemName = v.ItemParent.ItemName,
-                    VariantDescription = v.VariantDescription,
-                    Barcode = v.Barcode ?? string.Empty,
-                    CategoryName = v.ItemParent.Category.CategoryName,
-                    IsDeactivated = v.IsDeactivated,
-                    IsSelected = false
-                })
-                .OrderBy(v => v.ItemCode)
-                .ToListAsync();
-        }
-
-        public async Task UpdateBarcodeAsync(int variantId, string newBarcode)
-        {
-            using var context = await _contextFactory.CreateDbContextAsync();
-
-            var variant = await context.ItemVariants.FindAsync(variantId);
-            if (variant == null) throw new Exception("CRITICAL: Variant not found in database.");
-
-            string formattedBarcode = newBarcode?.Trim() ?? string.Empty;
-
-            if (!string.IsNullOrWhiteSpace(formattedBarcode))
-            {
-                bool exists = await context.ItemVariants.AnyAsync(v => v.Barcode == formattedBarcode && v.Id != variantId);
-                if (exists)
-                {
-                    throw new Exception($"The barcode '{formattedBarcode}' is already assigned to another item in your system.");
-                }
-            }
-
-            variant.Barcode = formattedBarcode;
-            context.ItemVariants.Update(variant);
-            await context.SaveChangesAsync();
-        }
-
-        public async Task AutoGenerateBarcodesAsync(List<int> variantIds)
-        {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
-
-            try
-            {
-                var variants = await context.ItemVariants
-                    .Where(v => variantIds.Contains(v.Id) && string.IsNullOrWhiteSpace(v.Barcode))
-                    .ToListAsync();
-
-                foreach (var variant in variants)
-                {
-                    string generatedSku = $"20{variant.Id.ToString("D8")}";
-
-                    while (await context.ItemVariants.AnyAsync(v => v.Barcode == generatedSku))
-                    {
-                        generatedSku = $"20{new Random().Next(10000000, 99999999)}";
-                    }
-
-                    variant.Barcode = generatedSku;
-                    context.ItemVariants.Update(variant);
-                }
-
-                await context.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
-
-        // ==============================================================================
-        // --- CONTINUOUS SEEK SEARCH ENGINE ---
-        // ==============================================================================
-
-        public async Task<List<ProductSeekDto>> SearchSeekItemsAsync(string nameFilter, string barcodeFilter, string categoryFilter)
-        {
-            using var context = await _contextFactory.CreateDbContextAsync();
-
-            var query = context.ItemVariants
-                .Include(v => v.ItemParent)
-                .ThenInclude(p => p.Category)
-                .Where(v => !v.IsDeactivated && !v.ItemParent.IsDeactivated)
-                .AsNoTracking();
-
-            if (!string.IsNullOrWhiteSpace(nameFilter))
-            {
-                query = query.Where(v => v.ItemParent.ItemName.ToLower().Contains(nameFilter) ||
-                                        (v.VariantDescription != null && v.VariantDescription.ToLower().Contains(nameFilter)));
-            }
-
-            if (!string.IsNullOrWhiteSpace(barcodeFilter))
-            {
-                query = query.Where(v => (v.Barcode != null && v.Barcode.ToLower().Contains(barcodeFilter)) ||
-                                         (v.SkuCode != null && v.SkuCode.ToLower().Contains(barcodeFilter)));
+                var term = searchTerm.ToLower().Trim();
+                // Match parent name, parent code, OR any of its variants' SKUs/Barcodes
+                query = query.Where(p =>
+                    p.ItemName.ToLower().Contains(term) ||
+                    p.ItemCode.ToLower().Contains(term) ||
+                    p.Variants.Any(v => !v.IsDeactivated && (v.SkuCode.ToLower() == term || v.Barcode.ToLower() == term))
+                );
             }
 
             if (!string.IsNullOrWhiteSpace(categoryFilter) && categoryFilter != "ALL CATEGORIES")
             {
-                query = query.Where(v => v.ItemParent.Category.CategoryName == categoryFilter);
+                query = query.Where(p => p.Category.CategoryName == categoryFilter);
             }
 
-            var rawResults = await query
+            return await query
+                .Select(p => new ParentSeekDto
+                {
+                    ParentId = p.Id,
+                    ItemCode = p.ItemCode,
+                    ItemName = p.ItemName,
+                    CategoryName = p.Category.CategoryName,
+                    ActiveVariantsCount = p.Variants.Count(v => !v.IsDeactivated)
+                })
+                .Take(100) // Performance cap
+                .OrderBy(p => p.ItemName)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Populates Table 2: Gets specific sizes, colors, pricing, and live stock for a Parent.
+        /// </summary>
+        public async Task<List<VariantSeekDto>> GetSeekVariantsAsync(int parentId)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var variants = await context.ItemVariants
+                .Where(v => v.ItemParentId == parentId && !v.IsDeactivated)
                 .Select(v => new
                 {
-                    VariantId = v.Id,
-                    RawBarcode = v.Barcode,
-                    RawSku = v.SkuCode,
-                    ParentName = v.ItemParent.ItemName,
-                    VariantDesc = v.VariantDescription,
-                    CategoryName = v.ItemParent.Category.CategoryName,
-                    RetailPrice = v.RetailPrice
+                    v.Id,
+                    v.SkuCode,
+                    v.Barcode,
+                    v.VariantDescription,
+                    v.RetailPrice
                 })
-                .Take(100)
+                .AsNoTracking()
                 .ToListAsync();
 
-            if (rawResults.Any())
+            if (!variants.Any()) return new List<VariantSeekDto>();
+
+            var variantIds = variants.Select(v => v.Id).ToList();
+
+            // Calculate exact physical stock currently sitting in active batches
+            var stockData = await context.ItemBatches
+                .Where(b => variantIds.Contains(b.ItemVariantId) && !b.IsDeactivated)
+                .GroupBy(b => b.ItemVariantId)
+                .Select(g => new { VariantId = g.Key, TotalStock = g.Sum(b => b.CurrentStock) })
+                .ToListAsync();
+
+            var results = new List<VariantSeekDto>();
+
+            foreach (var v in variants)
             {
-                var variantIds = rawResults.Select(r => r.VariantId).ToList();
-
-                var stockData = await context.ItemBatches
-                    .Where(b => variantIds.Contains(b.ItemVariantId) && !b.IsDeactivated)
-                    .Select(b => new { b.ItemVariantId, b.CurrentStock })
-                    .ToListAsync();
-
-                var finalResults = rawResults.Select(r => new ProductSeekDto
+                var stock = stockData.FirstOrDefault(s => s.VariantId == v.Id)?.TotalStock ?? 0m;
+                results.Add(new VariantSeekDto
                 {
-                    Barcode = string.IsNullOrWhiteSpace(r.RawBarcode) ? r.RawSku : r.RawBarcode,
-                    Description = string.IsNullOrWhiteSpace(r.VariantDesc)
-                                  ? r.ParentName
-                                  : r.ParentName + " - " + r.VariantDesc,
-                    CategoryName = r.CategoryName,
-                    RetailPrice = r.RetailPrice,
-                    StockOnHand = stockData.Where(s => s.ItemVariantId == r.VariantId).Sum(s => s.CurrentStock)
-                })
-                .OrderBy(dto => dto.Description)
-                .ToList();
-
-                return finalResults;
+                    VariantId = v.Id,
+                    SkuCode = v.SkuCode,
+                    Barcode = v.Barcode ?? string.Empty,
+                    VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription) ? "Standard / Base" : v.VariantDescription,
+                    RetailPrice = v.RetailPrice,
+                    StockOnHand = stock
+                });
             }
 
-            return new List<ProductSeekDto>();
+            return results.OrderBy(v => v.VariantDescription).ToList();
         }
     }
 }
