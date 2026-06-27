@@ -1,7 +1,8 @@
-﻿using System.Windows;
+﻿using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.ViewModels;
+using System.Windows;
 
-namespace POS.Cashier.UI.Views.Dialogs
+namespace POS.Cashier.UI.Dialogs
 {
     public partial class ShiftMenuView : Window
     {
@@ -41,11 +42,11 @@ namespace POS.Cashier.UI.Views.Dialogs
         private void LockTerminalBtn_Click(object sender, RoutedEventArgs e)
         {
             // 1. Close the menu
-            this.Close();
+            //this.Close();
 
-            // 2. Open the full-screen lock we built in File 3
-            var lockScreen = new LockScreenView(_viewModel.CashierName);
-            lockScreen.ShowDialog();
+            //// 2. Open the full-screen lock we built in File 3
+            //var lockScreen = new LockScreenView(_viewModel.CashierName);
+            //lockScreen.ShowDialog();
         }
 
         private void ToggleManagerBtn_Click(object sender, RoutedEventArgs e)
@@ -59,15 +60,15 @@ namespace POS.Cashier.UI.Views.Dialogs
             else
             {
                 // Require PIN to elevate privileges
-                var authDialog = new ManagerAuthDialog();
-                if (authDialog.ShowDialog() == true)
-                {
-                    _viewModel.SetManagerMode(true);
-                    RefreshStatusUI();
+                //var authDialog = new ManagerAuthDialogView();
+                //if (authDialog.ShowDialog() == true)
+                //{
+                //    _viewModel.SetManagerMode(true);
+                //    RefreshStatusUI();
 
-                    // Optional: Auto-close the menu once elevated so they can get to work
-                    this.Close();
-                }
+                //    // Optional: Auto-close the menu once elevated so they can get to work
+                //    this.Close();
+                //}
             }
         }
 

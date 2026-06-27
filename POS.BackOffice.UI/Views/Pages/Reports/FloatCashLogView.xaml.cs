@@ -1,28 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+﻿using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.Reports
 {
-    /// <summary>
-    /// Interaction logic for FloatCashLogView.xaml
-    /// </summary>
     public partial class FloatCashLogView : UserControl
     {
         public FloatCashLogView()
         {
             InitializeComponent();
+
+            // Wire up the ViewModel via Dependency Injection
+            if (App.Services != null)
+            {
+                this.DataContext = App.Services.GetRequiredService<FloatCashLogViewModel>();
+            }
         }
     }
 }

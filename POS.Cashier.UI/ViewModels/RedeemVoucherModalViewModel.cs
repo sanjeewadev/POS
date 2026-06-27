@@ -5,7 +5,7 @@ using POS.Core.Repositories;
 using System;
 using System.Threading.Tasks;
 
-namespace POS.Cashier.UI.ViewModels.Dialogs
+namespace POS.Cashier.UI.ViewModels
 {
     public partial class RedeemVoucherModalViewModel : ObservableObject
     {

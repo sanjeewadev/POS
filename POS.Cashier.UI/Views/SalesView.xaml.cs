@@ -2,7 +2,6 @@
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.ViewModels;
-using POS.Cashier.UI.ViewModels.Dialogs;
 using POS.Core.Enums;
 using System;
 using System.Text;
@@ -15,8 +14,8 @@ namespace POS.Cashier.UI.Views
 {
     public partial class SalesView : Window
     {
+        // THIS IS THE INVISIBLE BUFFER!
         private StringBuilder _barcodeBuffer = new StringBuilder();
-        private DateTime _lastKeystroke = DateTime.Now;
 
         private DispatcherTimer _inactivityTimer;
         private const int INACTIVITY_TIMEOUT_MINUTES = 3;
@@ -52,118 +51,109 @@ namespace POS.Cashier.UI.Views
             PerformLogOff();
         }
 
+        // ==========================================
+        // INVISIBLE HYBRID INPUT ENGINE 
+        // ==========================================
         private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
+            // Do not capture if the user is typing into a real text box
             if (e.OriginalSource is TextBox) return;
 
-            TimeSpan elapsed = DateTime.Now - _lastKeystroke;
-            if (elapsed.TotalMilliseconds > 50)
-            {
-                _barcodeBuffer.Clear();
-            }
-
+            // FIX: Removed the 50ms trap entirely! 
+            // Manual typing is now perfectly safe and captured.
             _barcodeBuffer.Append(e.Text);
-            _lastKeystroke = DateTime.Now;
             e.Handled = true;
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter && _barcodeBuffer.Length > 0)
+            if (e.OriginalSource is TextBox) return;
+
+            // 1. EXECUTE BARCODE SCAN (Triggered by 'Enter')
+            if (e.Key == Key.Enter)
             {
-                string scannedCode = _barcodeBuffer.ToString().Trim();
-                _barcodeBuffer.Clear();
-
-                if (this.DataContext is SalesViewModel viewModel)
+                if (_barcodeBuffer.Length > 0)
                 {
-                    _ = viewModel.ProcessBarcodeAsync(scannedCode);
-                }
+                    string scannedCode = _barcodeBuffer.ToString().Trim();
+                    _barcodeBuffer.Clear();
 
+                    if (this.DataContext is SalesViewModel viewModel)
+                    {
+                        _ = viewModel.ProcessBarcodeAsync(scannedCode);
+                    }
+                }
+                e.Handled = true;
+                return;
+            }
+            // 2. HANDLE BACKSPACE (To correct manual typing mistakes invisibly)
+            else if (e.Key == Key.Back)
+            {
+                if (_barcodeBuffer.Length > 0)
+                {
+                    _barcodeBuffer.Length--; // Remove the last character typed
+                }
                 e.Handled = true;
                 return;
             }
 
-            if (e.OriginalSource is not TextBox)
+            // 3. HARDWARE SHORTCUTS
+            if (e.Key == Key.F12)
             {
-                if (e.Key == Key.F12)
-                {
-                    PayBtn_Click(this, new RoutedEventArgs());
-                    e.Handled = true;
-                }
-                else if (e.Key == Key.Escape)
-                {
-                    CancelSaleBtn_Click(this, new RoutedEventArgs());
-                    e.Handled = true;
-                }
+                PayBtn_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                _barcodeBuffer.Clear(); // Added clear buffer to Escape key just in case!
+                CancelSaleBtn_Click(this, new RoutedEventArgs());
+                e.Handled = true;
             }
         }
 
-        private void CartDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (CartDataGrid.SelectedItem != null)
-            {
-                ContextualQtyPanel.Visibility = Visibility.Visible;
-                txtQtyInput.Text = "1";
-                txtQtyInput.Focus();
-                txtQtyInput.SelectAll();
-            }
-            else
-            {
-                ContextualQtyPanel.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private void HideQtyPanel_Click(object sender, RoutedEventArgs e)
-        {
-            ContextualQtyPanel.Visibility = Visibility.Collapsed;
-            CartDataGrid.SelectedItem = null;
-        }
-
+        // ==========================================
+        // ON-SCREEN NUMPAD ROUTING
+        // ==========================================
         private void NumpadBtn_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Content != null)
             {
                 string value = btn.Content.ToString() ?? "";
-
-                if (ContextualQtyPanel.Visibility == Visibility.Visible)
-                {
-                    txtQtyInput.Text += value;
-                }
+                _barcodeBuffer.Append(value); // Route touch clicks to the same invisible buffer
             }
         }
 
         private void ClearBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (ContextualQtyPanel.Visibility == Visibility.Visible)
+            _barcodeBuffer.Clear();
+            if (this.DataContext is SalesViewModel viewModel)
             {
-                txtQtyInput.Text = "";
+                _ = viewModel.ShowNotificationAsync("Input cleared.", "#F59E0B"); // Orange alert
             }
+        }
+
+        // ==========================================
+        // GRID AND CART ACTIONS
+        // ==========================================
+        private void CartDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Contextual Qty Removed as requested
         }
 
         private void SeekBtn_Click(object sender, RoutedEventArgs e)
         {
-            var currentViewModel = this.DataContext as POS.Cashier.UI.ViewModels.SalesViewModel;
-            if (currentViewModel == null) return;
+            if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
 
-            var itemRepo = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<POS.Core.Repositories.ItemMasterRepository>(App.Services!);
-
-            var seekDialog = new POS.Cashier.UI.Views.Dialogs.ProductSeekDialog(currentViewModel, itemRepo);
-            seekDialog.ShowDialog();
-        }
-
-        private void QtyPlusBtn_Click(object sender, RoutedEventArgs e)
-        {
-            if (ContextualQtyPanel.Visibility == Visibility.Visible && int.TryParse(txtQtyInput.Text, out int qty))
+            try
             {
-                txtQtyInput.Text = (qty + 1).ToString();
+                // Simply spawn the new Window. 
+                // The WeakReferenceMessenger handles sending the item to the cart silently!
+                var seekDialog = new POS.Cashier.UI.Dialogs.ProductSeekDialog();
+                seekDialog.Owner = this;
+                seekDialog.ShowDialog();
             }
-        }
-
-        private void QtyMinusBtn_Click(object sender, RoutedEventArgs e)
-        {
-            if (ContextualQtyPanel.Visibility == Visibility.Visible && int.TryParse(txtQtyInput.Text, out int qty) && qty > 1)
+            finally
             {
-                txtQtyInput.Text = (qty - 1).ToString();
+                if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -173,14 +163,17 @@ namespace POS.Cashier.UI.Views
 
             try
             {
-                var b2bDialog = new POS.Cashier.UI.Views.Dialogs.B2BCustomerDialogView();
+                var b2bDialog = new POS.Cashier.UI.Dialogs.B2BCustomerDialogView();
                 bool? result = b2bDialog.ShowDialog();
 
-                if (result == true && b2bDialog.SelectedCustomer != null)
+                // Check if the dialog closed with "true" AND if the ViewModel inside it actually selected a customer
+                if (result == true && b2bDialog.ViewModel?.SelectedCustomer != null)
                 {
-                    var customer = b2bDialog.SelectedCustomer;
-                    MessageBox.Show($"B2B Account Attached:\n{customer.CompanyName}\nAvailable Credit: Rs. {customer.RemainingCredit:N2}",
-                                    "Wholesale Link Active", MessageBoxButton.OK, MessageBoxImage.Information);
+                    // Pass the DTO safely over to the SalesViewModel!
+                    if (this.DataContext is SalesViewModel salesVM)
+                    {
+                        salesVM.AttachB2BCustomer(b2bDialog.ViewModel.SelectedCustomer);
+                    }
                 }
             }
             finally
@@ -190,22 +183,27 @@ namespace POS.Cashier.UI.Views
         }
 
         private void DiscountBtn_Click(object sender, RoutedEventArgs e)
-            => new POS.Cashier.UI.Views.Dialogs.PriceDiscountDialog().ShowDialog();
+            => new POS.Cashier.UI.Dialogs.PriceDiscountDialog().ShowDialog();
 
         private void PriceOverrideBtn_Click(object sender, RoutedEventArgs e)
-            => new POS.Cashier.UI.Views.Dialogs.PriceDiscountDialog().ShowDialog();
+            => new POS.Cashier.UI.Dialogs.PriceOverrideDialog().ShowDialog();
 
         private void SuspendRecallBtn_Click(object sender, RoutedEventArgs e)
-            => new POS.Cashier.UI.Views.Dialogs.SuspendedCartsDialog().ShowDialog();
+            => new POS.Cashier.UI.Dialogs.HoldRecallDialog().ShowDialog();
 
-        private void AddFloatBtn_Click(object sender, RoutedEventArgs e)
-            => new POS.Cashier.UI.Views.Dialogs.AddFloatDialog().ShowDialog();
+        private void FloatCashBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is POS.Cashier.UI.ViewModels.SalesViewModel viewModel)
+            {
+                viewModel.AddFloatCommand.Execute(null);
+            }
+        }
 
         private void StockInquiryBtn_Click(object sender, RoutedEventArgs e)
-            => MessageBox.Show("Stock Inquiry Dialog coming soon.");
+            => new POS.Cashier.UI.Dialogs.StockInquiryDialog().ShowDialog();
 
         private void ReturnBtn_Click(object sender, RoutedEventArgs e)
-            => MessageBox.Show("Return Dialog coming soon.");
+            => new POS.Cashier.UI.Dialogs.ReturnInvoiceDialog().ShowDialog();
 
         private void ReportsBtn_Click(object sender, RoutedEventArgs e)
             => MessageBox.Show("Reports Dialog coming soon.");
@@ -222,26 +220,23 @@ namespace POS.Cashier.UI.Views
                 switch (buttonText)
                 {
                     case "Cash":
-                        dialog = new POS.Cashier.UI.Views.Dialogs.CashTenderDialog();
                         break;
                     case "VISA":
                     case "MasterCard":
                     case "AMEX":
-                        dialog = new POS.Cashier.UI.Views.Dialogs.CardAuthDialog();
+                        dialog = new POS.Cashier.UI.Dialogs.CardPaymentDialog();
                         break;
                     case "Cheque":
-                    case "Credit Note":
-                        dialog = new POS.Cashier.UI.Views.Dialogs.DocumentTenderDialog();
-                        break;
+                    //case "Credit Note":
+                    //    dialog = new POS.Cashier.UI.Dialogs.ChequePaymentDialog();
+                    //    break;
                     case "Gift Voucher":
-                        // SPINS UP THE NEW DIALOG!
-                        var voucherVM = App.Services!.GetRequiredService<RedeemVoucherModalViewModel>();
+                        var voucherVM = App.Services!.GetRequiredService<POS.Cashier.UI.ViewModels.RedeemVoucherModalViewModel>();
                         voucherVM.Initialize(viewModel.NetValue);
                         dialog = new POS.Cashier.UI.Dialogs.RedeemVoucherModalWindow(voucherVM);
                         break;
                     case "Cust Credit":
                     case "LOYALTY":
-                        dialog = new POS.Cashier.UI.Views.Dialogs.CustomerAccountDialog();
                         break;
                     case "Sub\nTotal":
                         MessageBox.Show("Unified Split Checkout View coming soon.");
@@ -252,7 +247,6 @@ namespace POS.Cashier.UI.Views
 
                 if (dialog != null)
                 {
-                    // Darken screen if the dialog isn't managing it natively yet
                     if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
 
                     try
@@ -274,13 +268,16 @@ namespace POS.Cashier.UI.Views
 
         private void RemoveBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (CartDataGrid.SelectedItem != null && this.DataContext is SalesViewModel viewModel)
+            if (this.DataContext is SalesViewModel viewModel)
             {
-                viewModel.RemoveItemCommand.Execute(CartDataGrid.SelectedItem);
-            }
-            else
-            {
-                MessageBox.Show("Please select an item to remove.", "Action Required", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (CartDataGrid.SelectedItem != null)
+                {
+                    viewModel.RemoveItemCommand.Execute(CartDataGrid.SelectedItem);
+                }
+                else
+                {
+                    _ = viewModel.ShowNotificationAsync("Please select an item to remove.", "#F59E0B");
+                }
             }
         }
 
@@ -301,23 +298,72 @@ namespace POS.Cashier.UI.Views
             }
         }
 
+        // ==========================================
+        // PREFIX INPUT: PAID IN / PAID OUT ROUTING
+        // ==========================================
         private void PaidInBtn_Click(object sender, RoutedEventArgs e)
         {
-            DimmingCurtain.Visibility = Visibility.Visible;
-            try
+            if (this.DataContext is SalesViewModel viewModel)
             {
-                var cashDialog = new POS.Cashier.UI.Dialogs.CashMovementDialogView(POS.Cashier.UI.Dialogs.MovementType.PaidIn);
-                cashDialog.ShowDialog();
-            }
-            finally
-            {
-                DimmingCurtain.Visibility = Visibility.Collapsed;
+                // Reads the invisible buffer!
+                if (decimal.TryParse(_barcodeBuffer.ToString(), out decimal amount) && amount > 0)
+                {
+                    _barcodeBuffer.Clear();
+                    OpenCashMovementDialog("Paid In", amount, viewModel);
+                }
+                else
+                {
+                    _ = viewModel.ShowNotificationAsync("Amount required: Type an amount before clicking Paid In.", "#F59E0B");
+                    _barcodeBuffer.Clear();
+                }
             }
         }
 
         private void PaidOutBtn_Click(object sender, RoutedEventArgs e)
-            => new POS.Cashier.UI.Dialogs.CashMovementDialogView(POS.Cashier.UI.Dialogs.MovementType.PaidOut).ShowDialog();
+        {
+            if (this.DataContext is SalesViewModel viewModel)
+            {
+                if (decimal.TryParse(_barcodeBuffer.ToString(), out decimal amount) && amount > 0)
+                {
+                    _barcodeBuffer.Clear();
+                    OpenCashMovementDialog("Paid Out", amount, viewModel);
+                }
+                else
+                {
+                    _ = viewModel.ShowNotificationAsync("Amount required: Type an amount before clicking Paid Out.", "#F59E0B");
+                    _barcodeBuffer.Clear();
+                }
+            }
+        }
 
+        private void OpenCashMovementDialog(string type, decimal amount, SalesViewModel viewModel)
+        {
+            if (viewModel.CurrentShiftId == 0)
+            {
+                _ = viewModel.ShowNotificationAsync("Action blocked: No active shift found.", "#EF4444");
+                return;
+            }
+
+            if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var cashVM = App.Services!.GetRequiredService<POS.Cashier.UI.ViewModels.CashMovementViewModel>();
+                cashVM.Initialize(type, amount, viewModel.CurrentShiftId, viewModel.CashierName);
+
+                var cashDialog = new POS.Cashier.UI.Dialogs.CashMovementDialogView(cashVM);
+                cashDialog.Owner = this;
+                cashDialog.ShowDialog();
+            }
+            finally
+            {
+                if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // ==========================================
+        // SYSTEM LOGOFF & NAVIGATION
+        // ==========================================
         private void LogOffBtn_Click(object sender, RoutedEventArgs e)
         {
             MessageBoxResult result = MessageBox.Show(
@@ -336,7 +382,7 @@ namespace POS.Cashier.UI.Views
         {
             _inactivityTimer.Stop();
 
-            var loginViewModel = App.Services?.GetService<LoginViewModel>();
+            var loginViewModel = App.Services?.GetService<POS.Cashier.UI.ViewModels.LoginViewModel>();
             if (loginViewModel != null)
             {
                 loginViewModel.LoginSuccessful += delegate ()
@@ -367,7 +413,7 @@ namespace POS.Cashier.UI.Views
 
             if (currentViewModel != null)
             {
-                var shiftMenu = new POS.Cashier.UI.Views.Dialogs.ShiftMenuView(currentViewModel);
+                var shiftMenu = new POS.Cashier.UI.Dialogs.ShiftMenuView(currentViewModel);
                 shiftMenu.ShowDialog();
             }
             else
@@ -382,7 +428,7 @@ namespace POS.Cashier.UI.Views
 
             try
             {
-                var loyaltyDialog = new POS.Cashier.UI.Views.Dialogs.LoyaltyCustomerDialogView();
+                var loyaltyDialog = new POS.Cashier.UI.Dialogs.LoyaltyCustomerDialogView();
                 bool? result = loyaltyDialog.ShowDialog();
 
                 if (result == true && loyaltyDialog.SelectedCustomer != null)
@@ -404,17 +450,9 @@ namespace POS.Cashier.UI.Views
 
             try
             {
-                var expressDialog = new POS.Cashier.UI.Views.Dialogs.ExpressItemDialogView();
-                bool? result = expressDialog.ShowDialog();
-
-                if (result == true && !string.IsNullOrWhiteSpace(expressDialog.SelectedSkuCode))
-                {
-                    System.Media.SystemSounds.Beep.Play();
-                    if (this.DataContext is SalesViewModel viewModel)
-                    {
-                        _ = viewModel.ProcessBarcodeAsync(expressDialog.SelectedSkuCode);
-                    }
-                }
+                var expressDialog = new POS.Cashier.UI.Dialogs.ExpressItemDialogView();
+                expressDialog.Owner = this;
+                expressDialog.ShowDialog();
             }
             finally
             {
@@ -426,36 +464,28 @@ namespace POS.Cashier.UI.Views
         {
             if (this.DataContext is SalesViewModel viewModel)
             {
-                // 1. Check if they actually selected an item in the grid!
                 if (CartDataGrid.SelectedItem == null)
                 {
-                    MessageBox.Show("Please select an item from the cart to make it free.", "Select Item", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _ = viewModel.ShowNotificationAsync("Please select an item from the cart to make it free.", "#F59E0B");
                     return;
                 }
 
-                // We use 'dynamic' here temporarily, but you should cast this to your actual CartItemDto class (e.g., as CartItemDto)
                 dynamic selectedItem = CartDataGrid.SelectedItem;
 
-                // 2. Darken Screen
                 if (DimmingCurtain != null) DimmingCurtain.Visibility = Visibility.Visible;
 
                 try
                 {
-                    // 3. Spin up the ViewModel and hand it the item details
-                    var reasonVM = App.Services!.GetRequiredService<FreeItemReasonModalViewModel>();
+                    var reasonVM = App.Services!.GetRequiredService<POS.Cashier.UI.ViewModels.FreeItemReasonModalViewModel>();
 
-                    // Pass the description and price to the popup
                     reasonVM.Initialize(selectedItem.Description, selectedItem.UnitPrice);
 
-                    // 4. Show Window
                     var dialog = new POS.Cashier.UI.Dialogs.FreeItemReasonModalWindow(reasonVM);
                     dialog.Owner = this;
                     bool? result = dialog.ShowDialog();
 
-                    // 5. If they tapped a reason, apply the math!
                     if (result == true)
                     {
-                        // Trigger the logic in your SalesViewModel to zero out the price
                         viewModel.ApplyFreeItemLogic(selectedItem, reasonVM.SelectedReason);
                     }
                 }

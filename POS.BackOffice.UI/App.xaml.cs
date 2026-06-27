@@ -54,7 +54,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<SupplierReturnRepository>();
             services.AddTransient<ExpressItemRepository>();
             services.AddTransient<LoyaltyDiscountRepository>();
-            services.AddTransient<CustomerAdminRepository>();
+            services.AddTransient<CustomerRepository>();
             services.AddTransient<SupplierLedgerRepository>();
             services.AddTransient<SupplierReportRepository>();
             services.AddTransient<FreeItemClaimRepository>();

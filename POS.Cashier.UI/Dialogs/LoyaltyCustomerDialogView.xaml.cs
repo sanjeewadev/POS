@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using POS.Core.Repositories;
 using POS.Core.DTOs;
 
-namespace POS.Cashier.UI.Views.Dialogs
+namespace POS.Cashier.UI.Dialogs
 {
     public partial class LoyaltyCustomerDialogView : Window
     {

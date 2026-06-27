@@ -1,32 +1,69 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Models;
+using POS.Core.Models.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-// using POS.Core.Data; // Ensure this points to your AppDbContext
 
 namespace POS.Core.Repositories
 {
-    public class CustomerAdminRepository
+    // Renamed from CustomerAdminRepository to be the unified Hub for both Cashier and Admin
+    public class CustomerRepository
     {
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-        public CustomerAdminRepository(IDbContextFactory<AppDbContext> contextFactory)
+        public CustomerRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
             _contextFactory = contextFactory;
         }
 
         // ==========================================
-        // 1. DATA GRID POPULATION & FILTERING
+        // 1. CASHIER ENGINE: LIGHTNING FAST SEARCH
+        // ==========================================
+        public async Task<List<CustomerSearchDto>> SearchB2BCustomersAsync(string searchTerm)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Only search Active customers for the POS terminal
+            var query = context.CustomerMasters.AsNoTracking().Where(c => c.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.ToLower().Trim();
+                query = query.Where(c =>
+                    c.FullName.ToLower().Contains(term) ||
+                    c.Phone.Contains(term) ||
+                    c.CustomerCode.ToLower().Contains(term) ||
+                    (!string.IsNullOrWhiteSpace(c.CompanyName) && c.CompanyName.ToLower().Contains(term))
+                );
+            }
+
+            // Map to the lightweight DTO and limit to 50 results to prevent UI lag
+            return await query.Take(50).Select(c => new CustomerSearchDto
+            {
+                Id = c.Id,
+                CustomerCode = c.CustomerCode,
+                FullName = c.FullName,
+                CompanyName = c.CompanyName ?? string.Empty,
+                Phone = c.Phone,
+                CustomerType = c.CustomerType,
+                CreditLimit = c.CreditLimit,
+                CurrentBalance = c.CurrentBalance,
+                IsCreditLocked = c.IsCreditLocked,
+                LoyaltyDiscountProfileId = c.LoyaltyDiscountProfileId
+            }).ToListAsync();
+        }
+
+        // ==========================================
+        // 2. ADMIN ENGINE: GRID POPULATION & FILTERING
         // ==========================================
         public async Task<List<CustomerMaster>> GetFilteredCustomersAsync(string filterType, string searchTerm)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            // Start with active customers
-            var query = context.CustomerMasters.AsNoTracking().Where(c => c.IsActive);
+            var query = context.CustomerMasters.AsNoTracking().AsQueryable();
 
             // Apply Type Filter
             if (filterType == "Retail")
@@ -51,7 +88,7 @@ namespace POS.Core.Repositories
         }
 
         // ==========================================
-        // 2. PROFILE SAVING & FINANCIAL UPDATES
+        // 3. ADMIN ENGINE: PROFILE SAVING 
         // ==========================================
         public async Task<CustomerMaster> SaveCustomerProfileAsync(CustomerMaster customer)
         {
@@ -70,8 +107,6 @@ namespace POS.Core.Repositories
             }
             else
             {
-                // We do not want to accidentally overwrite CurrentBalance when saving demographics,
-                // so we fetch the existing record and update only the safe fields.
                 var existing = await context.CustomerMasters.FindAsync(customer.Id);
                 if (existing == null) throw new Exception("Customer record not found in database.");
 
@@ -85,6 +120,9 @@ namespace POS.Core.Repositories
                 existing.CustomerGroupId = customer.CustomerGroupId;
                 existing.IsActive = customer.IsActive;
 
+                // BUG FIX: Actually save the Loyalty/Discount Profile ID!
+                existing.LoyaltyDiscountProfileId = customer.LoyaltyDiscountProfileId;
+
                 // Financial Updates
                 existing.CreditLimit = customer.CreditLimit;
                 existing.CreditDays = customer.CreditDays;
@@ -95,20 +133,20 @@ namespace POS.Core.Repositories
             return customer;
         }
 
+        // ==========================================
+        // 4. ADMIN ENGINE: LEDGER HISTORY
+        // ==========================================
         public async Task<List<CustomerLedger>> GetCustomerLedgerAsync(int customerId, DateTime? startDate = null, DateTime? endDate = null)
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             var query = context.CustomerLedgers.AsNoTracking().Where(l => l.CustomerMasterId == customerId);
 
-            // If a start date is provided, filter out older records
             if (startDate.HasValue)
                 query = query.Where(l => l.TransactionDate >= startDate.Value.Date);
 
-            // If an end date is provided, filter out newer records
             if (endDate.HasValue)
                 query = query.Where(l => l.TransactionDate <= endDate.Value.Date.AddDays(1).AddTicks(-1));
 
-            // Return the list sorted by date (newest first)
             return await query.OrderByDescending(l => l.TransactionDate).ToListAsync();
         }
     }

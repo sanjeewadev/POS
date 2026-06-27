@@ -42,25 +42,31 @@ namespace POS.Cashier.UI
             services.AddTransient<ItemMasterRepository>();
             services.AddTransient<SalesRepository>();
             services.AddTransient<TillRepository>();
+            services.AddTransient<CustomerRepository>();
+
             services.AddSingleton<AuthService>();
             services.AddTransient<IReceiptPrintService, EscPosReceiptPrintService>();
 
-
             // ViewModels
-            services.AddTransient<LoginViewModel>();
-            services.AddTransient<SalesViewModel>();
-            services.AddTransient<OpenCloseShiftViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.LoginViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.SalesViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.OpenCloseShiftViewModel>();
 
-            // Tells the app: When a UI asks for ICashMovementService, give it the CashMovementService logic.
-            // FIXED NAMESPACE HERE
-            services.AddTransient<ICashMovementService, POS.Core.Services.CashMovementService>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.CashMovementViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.B2BCustomerViewModel>();
 
-            // NEW: Express Items Repository (Required for the popup to load buttons)
+            // Dialog ViewModels (Flattened structure)
+            services.AddTransient<POS.Cashier.UI.ViewModels.ManagerAuthViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.FloatCashViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.ExpressMenuViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.FreeItemReasonModalViewModel>();
+            services.AddTransient<POS.Cashier.UI.ViewModels.RedeemVoucherModalViewModel>();
+
+            services.AddTransient<POS.Cashier.UI.ViewModels.PluSearchViewModel>();
+
+            // Services
             services.AddTransient<POS.Core.Repositories.ExpressItemRepository>();
-
-            // Tells the app: When a UI asks for IReceiptPrinterService, use the real hardware.
             services.AddSingleton<IReceiptPrinterService, POS.Hardware.Services.ReceiptPrinterService>();
-
             services.AddTransient<POS.Core.Repositories.LoyaltyCustomerRepository>();
 
             return services.BuildServiceProvider();
@@ -83,7 +89,7 @@ namespace POS.Cashier.UI
             var activeShift = tillRepo.GetActiveShiftAsync("01").GetAwaiter().GetResult();
 
             // 3. Setup Login ViewModel and pass the lock state
-            var loginViewModel = Services.GetRequiredService<LoginViewModel>();
+            var loginViewModel = Services.GetRequiredService<POS.Cashier.UI.ViewModels.LoginViewModel>();
             loginViewModel.InitializeShiftState(activeShift);
 
             var loginWindow = new LoginView { DataContext = loginViewModel };

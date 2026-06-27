@@ -2,7 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using System;
 
-namespace POS.Cashier.UI.ViewModels.Dialogs
+namespace POS.Cashier.UI.ViewModels
 {
     public partial class FreeItemReasonModalViewModel : ObservableObject
     {

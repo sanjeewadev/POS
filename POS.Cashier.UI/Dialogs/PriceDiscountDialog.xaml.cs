@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace POS.Cashier.UI.Views.Dialogs
+namespace POS.Cashier.UI.Dialogs
 {
     public partial class PriceDiscountDialog : Window
     {
