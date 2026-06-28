@@ -1,11 +1,14 @@
 ﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryPages.ItemPropertyView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="1200"
-             Background="{DynamicResource WindowBackgroundBrush}" FontFamily="Segoe UI" FontSize="12">
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="700"
+             d:DesignWidth="1200"
+             Background="{DynamicResource WindowBackgroundBrush}"
+             FontFamily="Segoe UI"
+             FontSize="12">
 
     <UserControl.Resources>
 
@@ -36,6 +39,11 @@
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                </Trigger>
+                <Trigger Property="IsReadOnly" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -54,7 +62,7 @@
                     <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.5"/>
+                    <Setter Property="Opacity" Value="0.55"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -78,6 +86,15 @@
             <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
 
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        </Style>
+
         <Style TargetType="DataGridCell" x:Key="BaseCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -91,62 +108,87 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
     </UserControl.Resources>
 
     <Grid Margin="5">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="450"/>
+            <ColumnDefinition Width="455"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
+        <!-- LEFT SIDE: ATTRIBUTE GROUPS -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="170"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- GROUP DEFINITION -->
             <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
                 <StackPanel>
-                    <TextBlock Text="1. ATTRIBUTE GROUP DEFINITION" Style="{StaticResource HeaderLabel}" Margin="0,0,0,10"/>
+                    <TextBlock Text="1. ATTRIBUTE GROUP DEFINITION"
+                               Style="{StaticResource HeaderLabel}"
+                               Margin="0,0,0,8"/>
 
-                    <Grid Margin="0,0,0,8">
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="105"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Group Name *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
-                        <TextBox Grid.Column="1" Text="{Binding GroupNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" FontWeight="Bold" ToolTip="e.g., Color, Size, Storage"/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Group Name *"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="{DynamicResource WarningTextBrush}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding GroupNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 FontWeight="Bold"
+                                 MaxLength="50"
+                                 ToolTip="Examples: Color, Size, Storage, Flavour, Material"/>
                     </Grid>
 
-                    <CheckBox Content="Deactivate Group" IsChecked="{Binding IsGroupDeactivated, Mode=TwoWay}" FontWeight="Bold" Foreground="{DynamicResource WarningTextBrush}" Margin="100,0,0,10"/>
-
-                    <Grid Margin="0,5,0,5">
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="105"/>
+                            <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Assign to Categories:" Style="{StaticResource InlineLabel}" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding CategorySearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                 Style="{StaticResource ClassicInput}" Height="22" Margin="10,0,0,0" ToolTip="Search categories..."/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Display Order"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding GroupDisplayOrder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                 Style="{StaticResource ClassicInput}"
+                                 HorizontalContentAlignment="Right"
+                                 ToolTip="Lower numbers show first. Example: Color = 10, Size = 20."/>
+
+                        <CheckBox Grid.Column="2"
+                                  Content="Deactivate Group"
+                                  IsChecked="{Binding IsGroupDeactivated, Mode=TwoWay}"
+                                  FontWeight="Bold"
+                                  Foreground="{DynamicResource WarningTextBrush}"
+                                  Margin="15,3,0,0"/>
                     </Grid>
 
-                    <Border Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource InputBoxBorderBrush}" BorderThickness="1" Height="120" Margin="0,0,0,10">
-                        <ListBox ItemsSource="{Binding Categories}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <CheckBox Content="{Binding CategoryName}" 
-                                              IsChecked="{Binding IsSelected, Mode=TwoWay}" 
-                                              Margin="5,2" 
-                                              Cursor="Hand" 
-                                              VerticalContentAlignment="Center"
-                                              Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Border>
+                    <TextBlock Text="Groups define variant dimensions. Example: Color, Size, Storage. Values are added on the right after selecting a group."
+                               FontSize="10"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="105,0,0,8"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
 
-                    <Border Background="{DynamicResource WindowBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="5">
+                    <Border Background="{DynamicResource WindowBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            Padding="5">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -154,15 +196,101 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteGroupCommand}" Style="{StaticResource ClassicBtn}" Foreground="{DynamicResource WarningTextBrush}" BorderBrush="{DynamicResource WarningTextBrush}" Padding="10,0"/>
-                            <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearGroupCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,5,0" Padding="10,0"/>
-                            <Button Grid.Column="3" Content="💾 SAVE GROUP" Command="{Binding SaveGroupCommand}" Style="{StaticResource ActionBtn}" Padding="15,0"/>
+
+                            <Button Grid.Column="0"
+                                    Content="DELETE"
+                                    Command="{Binding DeleteGroupCommand}"
+                                    Style="{StaticResource ClassicBtn}"
+                                    Foreground="{DynamicResource WarningTextBrush}"
+                                    BorderBrush="{DynamicResource WarningTextBrush}"
+                                    Padding="10,0"
+                                    ToolTip="Deletes only if this group is not used."/>
+
+                            <Button Grid.Column="2"
+                                    Content="CLEAR"
+                                    Command="{Binding ClearGroupCommand}"
+                                    Style="{StaticResource ClassicBtn}"
+                                    Margin="0,0,5,0"
+                                    Padding="10,0"/>
+
+                            <Button Grid.Column="3"
+                                    Content="SAVE GROUP"
+                                    Command="{Binding SaveGroupCommand}"
+                                    Style="{StaticResource ActionBtn}"
+                                    Padding="15,0"/>
                         </Grid>
                     </Border>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="1" Background="{DynamicResource HeaderTextBrush}" Padding="5" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <!-- CATEGORY ASSIGNMENTS -->
+            <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="2. ASSIGN GROUP TO CATEGORIES"
+                               Style="{StaticResource HeaderLabel}"
+                               Margin="0,0,0,5"/>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="105"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Search Cat."
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding CategorySearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 Height="22"
+                                 ToolTip="Search categories by code or name."/>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Background="{DynamicResource WhiteBackgroundBrush}"
+                            BorderBrush="{DynamicResource InputBoxBorderBrush}"
+                            BorderThickness="1">
+                        <ListBox ItemsSource="{Binding Categories}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Visibility"
+                                            Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding DisplayName}"
+                                              IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              Margin="5,2"
+                                              Cursor="Hand"
+                                              VerticalContentAlignment="Center"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- GROUPS DATABASE -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource HeaderTextBrush}"
+                    Padding="5"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -173,31 +301,84 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="GROUPS DATABASE" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Text="{Binding GroupSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                 Style="{StaticResource ClassicInput}" Height="22" Margin="10,0,5,0" ToolTip="Search groups..."/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="GROUPS DATABASE"
+                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding GroupSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 Height="24"
+                                 Margin="0,0,8,0"
+                                 ToolTip="Search groups. Press Enter or click Search.">
+
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding SearchGroupsCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+
+                        <Button Grid.Column="2"
+                                Content="SEARCH"
+                                Command="{Binding SearchGroupsCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Height="24"
+                                Padding="10,0"
+                                Margin="0,0,5,0"/>
+
+                        <Button Grid.Column="3"
+                                Content="REFRESH"
+                                Command="{Binding LoadGroupsCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Height="24"
+                                Padding="10,0"/>
                     </Grid>
 
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding AttributeGroups}" SelectedItem="{Binding SelectedAttributeGroup, Mode=TwoWay}" 
-                              AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
-                              HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
-                              RowHeight="26" HeadersVisibility="Column" Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
-                              SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding AttributeGroups}"
+                              SelectedItem="{Binding SelectedAttributeGroup, Mode=TwoWay}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="All"
+                              HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                              VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                              RowHeight="26"
+                              HeadersVisibility="Column"
+                              Background="{DynamicResource WhiteBackgroundBrush}"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1"
+                              SelectionMode="Single"
+                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+
                         <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="5"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                            </Style>
                             <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                         </DataGrid.Resources>
+
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Group Name" Binding="{Binding GroupName}" Width="*" IsReadOnly="True" FontWeight="Bold"/>
-                            <DataGridCheckBoxColumn Header="Status (Deactivated)" Binding="{Binding IsDeactivated}" Width="130">
+                            <DataGridTextColumn Header="Order"
+                                                Binding="{Binding DisplayOrder}"
+                                                Width="60"
+                                                IsReadOnly="True"/>
+
+                            <DataGridTextColumn Header="Group Name"
+                                                Binding="{Binding GroupName}"
+                                                Width="*"
+                                                IsReadOnly="True"
+                                                FontWeight="Bold"/>
+
+                            <DataGridCheckBoxColumn Header="Deactivated"
+                                                    Binding="{Binding IsDeactivated}"
+                                                    Width="105">
                                 <DataGridCheckBoxColumn.ElementStyle>
                                     <Style TargetType="CheckBox">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -210,32 +391,98 @@
                     </DataGrid>
                 </Grid>
             </Border>
+
+            <!-- STATUS -->
+            <Border Grid.Row="3"
+                    Background="{DynamicResource PanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    Padding="8"
+                    Margin="0,5,0,0">
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+            </Border>
         </Grid>
 
+        <!-- RIGHT SIDE: ATTRIBUTE VALUES -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}" IsEnabled="{Binding IsValueManagerEnabled}">
+            <!-- VALUE DEFINITION -->
+            <Border Grid.Row="0"
+                    Style="{StaticResource ClassicGroupBox}"
+                    IsEnabled="{Binding IsValueManagerEnabled}">
                 <StackPanel>
-                    <TextBlock Text="2. ATTRIBUTE VALUES (Rapid Entry)" Style="{StaticResource HeaderLabel}" Foreground="{DynamicResource SuccessBorderBrush}" Margin="0,0,0,10"/>
+                    <TextBlock Text="3. ATTRIBUTE VALUES"
+                               Style="{StaticResource HeaderLabel}"
+                               Margin="0,0,0,8"/>
 
-                    <TextBlock Text="{Binding ValueManagerHeader, TargetNullValue='Please select a Group from the left to add values.'}" FontSize="11" FontStyle="Italic" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding ValueManagerHeader}"
+                               FontSize="11"
+                               FontStyle="Italic"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="0,0,0,10"/>
 
-                    <Grid Margin="0,0,0,8">
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="100"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Value Name *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
-                        <TextBox Grid.Column="1" Text="{Binding ValueNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Background="{DynamicResource HighlightBackgroundBrush}" FontWeight="Bold" ToolTip="e.g., Red, XL, 512GB"/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Value Name *"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="{DynamicResource WarningTextBrush}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding ValueNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 FontWeight="Bold"
+                                 MaxLength="50"
+                                 ToolTip="Examples: Red, Blue, XL, 32, 256GB"/>
                     </Grid>
 
-                    <CheckBox Content="Deactivate Value" IsChecked="{Binding IsValueDeactivated, Mode=TwoWay}" FontWeight="Bold" Foreground="{DynamicResource WarningTextBrush}" Margin="100,0,0,10"/>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <Border Background="{DynamicResource WindowBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="5">
+                        <TextBlock Grid.Column="0"
+                                   Text="Display Order"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding ValueDisplayOrder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                 Style="{StaticResource ClassicInput}"
+                                 HorizontalContentAlignment="Right"
+                                 ToolTip="Lower numbers show first. Example: 10, 20, 30."/>
+
+                        <CheckBox Grid.Column="2"
+                                  Content="Deactivate Value"
+                                  IsChecked="{Binding IsValueDeactivated, Mode=TwoWay}"
+                                  FontWeight="Bold"
+                                  Foreground="{DynamicResource WarningTextBrush}"
+                                  Margin="15,3,0,0"/>
+                    </Grid>
+
+                    <TextBlock Text="Values belong to the selected group. Example: Group Size can have values 30, 32, 34, 36."
+                               FontSize="10"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="100,0,0,8"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+
+                    <Border Background="{DynamicResource WindowBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            Padding="5">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -243,15 +490,40 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteValueCommand}" Style="{StaticResource ClassicBtn}" Foreground="{DynamicResource WarningTextBrush}" BorderBrush="{DynamicResource WarningTextBrush}" Padding="10,0"/>
-                            <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearValueCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,5,0" Padding="10,0"/>
-                            <Button Grid.Column="3" Content="💾 SAVE VALUE" Command="{Binding SaveValueCommand}" Style="{StaticResource ActionBtn}" Padding="15,0"/>
+
+                            <Button Grid.Column="0"
+                                    Content="DELETE"
+                                    Command="{Binding DeleteValueCommand}"
+                                    Style="{StaticResource ClassicBtn}"
+                                    Foreground="{DynamicResource WarningTextBrush}"
+                                    BorderBrush="{DynamicResource WarningTextBrush}"
+                                    Padding="10,0"
+                                    ToolTip="Deletes only if this value is not used."/>
+
+                            <Button Grid.Column="2"
+                                    Content="CLEAR"
+                                    Command="{Binding ClearValueCommand}"
+                                    Style="{StaticResource ClassicBtn}"
+                                    Margin="0,0,5,0"
+                                    Padding="10,0"/>
+
+                            <Button Grid.Column="3"
+                                    Content="SAVE VALUE"
+                                    Command="{Binding SaveValueCommand}"
+                                    Style="{StaticResource ActionBtn}"
+                                    Padding="15,0"/>
                         </Grid>
                     </Border>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="1" Background="{DynamicResource HeaderTextBrush}" Padding="5" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,5,0,0">
+            <!-- VALUES DATABASE -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource HeaderTextBrush}"
+                    Padding="5"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    Margin="0,5,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -262,34 +534,91 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="VALUES DATABASE" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,15,0"/>
-                        <TextBox Grid.Column="2" Text="{Binding ValueSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Height="24" Padding="5,0" Margin="0,0,5,0" ToolTip="Search Values..."/>
-                        <Button Grid.Column="3" Content="SEARCH" Command="{Binding SearchValuesCommand}" Style="{StaticResource ClassicBtn}" Height="24" Padding="10,0"/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="VALUES DATABASE"
+                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   Margin="5,0,15,0"/>
+
+                        <TextBox Grid.Column="2"
+                                 Text="{Binding ValueSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 Height="24"
+                                 Padding="5,0"
+                                 Margin="0,0,5,0"
+                                 ToolTip="Search values. Press Enter or click Search.">
+
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding SearchValuesCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+
+                        <Button Grid.Column="3"
+                                Content="SEARCH"
+                                Command="{Binding SearchValuesCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Height="24"
+                                Padding="10,0"
+                                Margin="0,0,5,0"/>
+
+                        <Button Grid.Column="4"
+                                Content="REFRESH"
+                                Command="{Binding LoadValuesCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Height="24"
+                                Padding="10,0"/>
                     </Grid>
 
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding AttributeValues}" SelectedItem="{Binding SelectedAttributeValue, Mode=TwoWay}" 
-                              AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="All" 
-                              HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
-                              RowHeight="26" HeadersVisibility="Column" Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
-                              SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding AttributeValues}"
+                              SelectedItem="{Binding SelectedAttributeValue, Mode=TwoWay}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="All"
+                              HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                              VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                              RowHeight="26"
+                              HeadersVisibility="Column"
+                              Background="{DynamicResource WhiteBackgroundBrush}"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1"
+                              SelectionMode="Single"
+                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+
                         <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="5"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                            </Style>
                             <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                         </DataGrid.Resources>
 
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Value Name" Binding="{Binding ValueName}" Width="*" IsReadOnly="True" FontWeight="Bold"/>
-                            <DataGridCheckBoxColumn Header="Status (Deactivated)" Binding="{Binding IsDeactivated}" Width="130">
+                            <DataGridTextColumn Header="Order"
+                                                Binding="{Binding DisplayOrder}"
+                                                Width="60"
+                                                IsReadOnly="True"/>
+
+                            <DataGridTextColumn Header="Value Name"
+                                                Binding="{Binding ValueName}"
+                                                Width="*"
+                                                IsReadOnly="True"
+                                                FontWeight="Bold"/>
+
+                            <DataGridTextColumn Header="Group"
+                                                Binding="{Binding AttributeGroup.GroupName}"
+                                                Width="140"
+                                                IsReadOnly="True"/>
+
+                            <DataGridCheckBoxColumn Header="Deactivated"
+                                                    Binding="{Binding IsDeactivated}"
+                                                    Width="105">
                                 <DataGridCheckBoxColumn.ElementStyle>
                                     <Style TargetType="CheckBox">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -298,6 +627,16 @@
                                     </Style>
                                 </DataGridCheckBoxColumn.ElementStyle>
                             </DataGridCheckBoxColumn>
+
+                            <DataGridTextColumn Header="Created"
+                                                Binding="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                                Width="135"
+                                                IsReadOnly="True"/>
+
+                            <DataGridTextColumn Header="Updated"
+                                                Binding="{Binding UpdatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                                Width="135"
+                                                IsReadOnly="True"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

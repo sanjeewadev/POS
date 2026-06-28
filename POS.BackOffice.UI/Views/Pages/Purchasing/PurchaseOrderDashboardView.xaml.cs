@@ -1,6 +1,4 @@
 ﻿using System.Windows.Controls;
-using Microsoft.Extensions.DependencyInjection;
-using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.Purchasing
 {
@@ -9,11 +7,6 @@ namespace POS.BackOffice.UI.Views.Pages.Purchasing
         public PurchaseOrderDashboardView()
         {
             InitializeComponent();
-
-            if (App.Services != null)
-            {
-                this.DataContext = App.Services.GetRequiredService<PurchaseOrderDashboardViewModel>();
-            }
         }
     }
 }

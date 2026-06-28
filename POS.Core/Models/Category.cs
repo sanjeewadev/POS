@@ -16,12 +16,21 @@ namespace POS.Core.Models
         [MaxLength(100)]
         public string CategoryName { get; set; } = string.Empty;
 
-        // Perfectly aligned with your new XAML UI logic
+        // Used instead of hard delete.
+        // Deactivated categories should not appear when creating new items.
         public bool IsDeactivated { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Navigation property for Matrix/Variants
-        public ICollection<AttributeGroup> AttributeGroups { get; set; } = new List<AttributeGroup>();
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        public DateTime? DeactivatedAt { get; set; }
+
+        // One Category can have many SubCategories.
+        public ICollection<SubCategory> SubCategories { get; set; } = new List<SubCategory>();
+
+        // Explicit many-to-many relationship:
+        // Category -> CategoryAttributeGroup -> AttributeGroup
+        public ICollection<CategoryAttributeGroup> CategoryAssignments { get; set; } = new List<CategoryAttributeGroup>();
     }
 }

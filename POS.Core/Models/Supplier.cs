@@ -36,28 +36,39 @@ namespace POS.Core.Models
         [MaxLength(250)]
         public string Address { get; set; } = string.Empty;
 
-        // Financial & Tax Setup
+        // =========================================================
+        // FINANCIAL / TAX SETUP
+        // =========================================================
+
         public bool HasVat { get; set; }
 
         [MaxLength(50)]
         public string VatNumber { get; set; } = string.Empty;
 
+        // Used by PO / GRN payment due date calculation.
+        // Example:
+        // Supplier invoice date: 2026-06-27
+        // DefaultCreditDays: 30
+        // Due date: 2026-07-27
         public int DefaultCreditDays { get; set; } = 30;
 
-        // Driven by accounting, read-only on the Supplier Master UI
+        // Driven by accounting/ledger.
+        // Supplier Master should display this, but should not directly update it.
         public decimal CurrentBalance { get; set; } = 0m;
 
+        // Used instead of hard delete when supplier is already linked to documents.
         public bool IsDeactivated { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Computed Property for the DataGrid - Not saved to the DB
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        public DateTime? DeactivatedAt { get; set; }
+
         [NotMapped]
         public string StatusText => IsDeactivated ? "Suspended" : "Active";
 
-        // ==========================================
-        // NEW: Navigation for Items supplied by this vendor
-        // ==========================================
+        // Items supplied by this vendor.
         public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
     }
 }

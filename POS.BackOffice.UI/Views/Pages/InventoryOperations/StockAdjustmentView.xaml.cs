@@ -1,5 +1,6 @@
-﻿using System.Windows.Controls;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using System.Windows.Controls;
+using System.Windows.Threading;
 using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
@@ -9,11 +10,16 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
         public StockAdjustmentView()
         {
             InitializeComponent();
+        }
 
-            // Wire up the ViewModel via Dependency Injection
-            if (App.Services != null)
+        private void DgAdjustmentLines_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (DataContext is StockAdjustmentViewModel viewModel)
             {
-                this.DataContext = App.Services.GetRequiredService<StockAdjustmentViewModel>();
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    viewModel.RecalculateImpact();
+                }), DispatcherPriority.Background);
             }
         }
     }

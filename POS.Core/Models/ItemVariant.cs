@@ -9,48 +9,84 @@ namespace POS.Core.Models
     {
         public int Id { get; set; }
 
-        // Foreign Key linking back to the Parent Blueprint
+        // =========================================================
+        // PARENT LINK
+        // =========================================================
+
         public int ItemParentId { get; set; }
+
         public ItemParent ItemParent { get; set; } = null!;
+
+        // =========================================================
+        // VARIANT IDENTITY
+        // =========================================================
 
         [Required]
         [MaxLength(100)]
         public string SkuCode { get; set; } = string.Empty;
 
+        // Example:
+        // Red / Medium
+        // 256GB / Black
+        // Standard
         [MaxLength(250)]
         public string VariantDescription { get; set; } = string.Empty;
 
+        // Internal barcode or supplier/manufacturer barcode.
+        // Must be unique when not empty.
         [MaxLength(100)]
         public string Barcode { get; set; } = string.Empty;
 
-        // Financials (Isolated per variant)
+        // =========================================================
+        // PRICING
+        // =========================================================
+
+        [Column(TypeName = "decimal(18,2)")]
         public decimal AverageCost { get; set; } = 0m;
+
+        [Column(TypeName = "decimal(18,2)")]
         public decimal CostPrice { get; set; } = 0m;
+
+        [Column(TypeName = "decimal(18,2)")]
         public decimal RetailPrice { get; set; } = 0m;
+
+        [Column(TypeName = "decimal(18,2)")]
         public decimal WholesalePrice { get; set; } = 0m;
+
+        [Column(TypeName = "decimal(18,2)")]
         public decimal MinimumPrice { get; set; } = 0m;
 
+        [Column(TypeName = "decimal(18,2)")]
         public decimal MaximumPrice { get; set; } = 0m;
+
         public int ReorderLevel { get; set; } = 0;
 
+        // Used instead of hard delete after the variant has history.
         public bool IsDeactivated { get; set; } = false;
 
-        // Transient property for the UI DataGrid. 
-        // Actual stock is calculated dynamically from GRNs and Sales.
+        // Display-only for UI. Actual stock should be calculated from batches/transactions.
         [NotMapped]
         public decimal TotalStockOnHand { get; set; } = 0m;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Navigation: The specific attributes (Color: Red, Size: XL) this variant possesses
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        public DateTime? DeactivatedAt { get; set; }
+
+        // =========================================================
+        // NAVIGATION
+        // =========================================================
+
+        // Example:
+        // Color -> Red
+        // Size  -> Medium
         public ICollection<ItemPropertyMapping> PropertyMappings { get; set; } = new List<ItemPropertyMapping>();
 
-        // Navigation: One Variant contains many distinct stock batches
+        // One variant can have many physical stock batches.
         public ICollection<ItemBatch> ItemBatches { get; set; } = new List<ItemBatch>();
 
-        // ==========================================
-        // NEW: Navigation for Approved Suppliers
-        // ==========================================
-        public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
+        // Approved suppliers for this specific variant.
+        public ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();
     }
 }

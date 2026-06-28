@@ -19,37 +19,62 @@ namespace POS.Core.Models
         [MaxLength(50)]
         public string PrintName { get; set; } = string.Empty;
 
-        // Foreign Keys for Classification
+        // =========================================================
+        // CLASSIFICATION
+        // =========================================================
+
         public int CategoryId { get; set; }
         public Category Category { get; set; } = null!;
 
         public int? SubCategoryId { get; set; }
         public SubCategory? SubCategory { get; set; }
 
+        // =========================================================
+        // UNIT OF MEASURE
+        // =========================================================
+        // New correct relationship.
+        // Item Master should save this value from the UOM dropdown.
+        public int UnitOfMeasureId { get; set; } = 1;
+
+        public UnitOfMeasure UnitOfMeasure { get; set; } = null!;
+
+        // Temporary legacy field.
+        // Keep this only until Item Master ViewModel/XAML/Repository are fully moved to UnitOfMeasureId.
+        // New code should not use this.
         [MaxLength(20)]
         public string BaseUom { get; set; } = string.Empty;
+
+        // =========================================================
+        // TAX / LOGISTICS / POS RULES
+        // =========================================================
 
         [MaxLength(20)]
         public string TaxCode { get; set; } = string.Empty;
 
-        // Physical Logistics Options
         public bool IsScaleItem { get; set; }
+
         public bool HasBatchExpiry { get; set; }
+
         public bool IsSerialized { get; set; }
 
-        // POS Matrix Restrictions
         public bool AllowCashierDiscount { get; set; }
 
-        // THE FIX: Put this back so the database doesn't crash. 
-        // It stays hidden from the UI.
         public bool IsPurchaseLocked { get; set; }
 
         public bool IsSaleLocked { get; set; }
+
         public bool IsDeactivated { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Navigation: One Parent dictates Many Variants
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        public DateTime? DeactivatedAt { get; set; }
+
+        // One Parent dictates many Variants.
+        // Example:
+        // Parent: T-Shirt
+        // Variants: T-Shirt / Red / M, T-Shirt / Blue / L
         public ICollection<ItemVariant> Variants { get; set; } = new List<ItemVariant>();
     }
 }

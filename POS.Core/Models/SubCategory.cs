@@ -7,10 +7,10 @@ namespace POS.Core.Models
     {
         public int Id { get; set; }
 
-        // Foreign Key
+        // Foreign key to Category
         public int CategoryId { get; set; }
 
-        // Navigation Property (Crucial for UI Joins and Entity Framework)
+        // Navigation property
         public Category Category { get; set; } = null!;
 
         [Required]
@@ -21,9 +21,14 @@ namespace POS.Core.Models
         [MaxLength(100)]
         public string SubCategoryName { get; set; } = string.Empty;
 
-        // Perfectly aligned with your XAML UI logic
+        // Used instead of hard delete.
+        // Deactivated sub-categories should not appear when creating new items.
         public bool IsDeactivated { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        public DateTime? DeactivatedAt { get; set; }
     }
 }

@@ -5,20 +5,32 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    // Wrapper for ListBox Checkboxes
+    // Wrapper for ListBox category checkboxes.
     public partial class CategorySelectionWrapper : ObservableObject
     {
         public int CategoryId { get; set; }
+
+        public string CategoryCode { get; set; } = string.Empty;
+
         public string CategoryName { get; set; } = string.Empty;
 
-        [ObservableProperty] private bool _isSelected;
-        [ObservableProperty] private bool _isVisible = true; // For the search filter
+        public bool IsDeactivated { get; set; }
+
+        public string DisplayName =>
+            IsDeactivated
+                ? $"{CategoryCode} - {CategoryName} (Deactivated)"
+                : $"{CategoryCode} - {CategoryName}";
+
+        [ObservableProperty]
+        private bool _isSelected;
+
+        [ObservableProperty]
+        private bool _isVisible = true;
     }
 
     public partial class ItemPropertyViewModel : ViewModelBase
@@ -26,53 +38,130 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly AttributeRepository _attributeRepository;
         private readonly CategoryRepository _categoryRepository;
 
-        // --- GROUP FIELDS (Left Side) ---
-        [ObservableProperty] private string _groupNameInput = string.Empty;
-        [ObservableProperty] private bool _isGroupDeactivated = false;
-        [ObservableProperty] private string _groupSearchText = string.Empty;
-        [ObservableProperty] private string _categorySearchText = string.Empty;
-        [ObservableProperty] private AttributeGroup? _selectedAttributeGroup;
+        private bool _isApplyingSelection = false;
 
-        // --- VALUE FIELDS (Right Side) ---
-        [ObservableProperty] private bool _isValueManagerEnabled = false;
-        [ObservableProperty] private string _valueManagerHeader = string.Empty;
-        [ObservableProperty] private string _valueNameInput = string.Empty;
-        [ObservableProperty] private bool _isValueDeactivated = false;
-        [ObservableProperty] private string _valueSearchText = string.Empty;
-        [ObservableProperty] private AttributeValue? _selectedAttributeValue;
+        // =========================================================
+        // GROUP FIELDS
+        // =========================================================
 
-        // --- COLLECTIONS ---
-        public ObservableCollection<AttributeGroup> AttributeGroups { get; set; } = new();
-        public ObservableCollection<AttributeValue> AttributeValues { get; set; } = new();
-        public ObservableCollection<CategorySelectionWrapper> Categories { get; set; } = new();
+        [ObservableProperty]
+        private string _groupNameInput = string.Empty;
 
-        public ItemPropertyViewModel(AttributeRepository attributeRepository, CategoryRepository categoryRepository)
+        [ObservableProperty]
+        private int _groupDisplayOrder = 0;
+
+        [ObservableProperty]
+        private bool _isGroupDeactivated = false;
+
+        [ObservableProperty]
+        private string _groupSearchText = string.Empty;
+
+        [ObservableProperty]
+        private string _categorySearchText = string.Empty;
+
+        [ObservableProperty]
+        private AttributeGroup? _selectedAttributeGroup;
+
+        // =========================================================
+        // VALUE FIELDS
+        // =========================================================
+
+        [ObservableProperty]
+        private bool _isValueManagerEnabled = false;
+
+        [ObservableProperty]
+        private string _valueManagerHeader = "Please select a group from the left to add values.";
+
+        [ObservableProperty]
+        private string _valueNameInput = string.Empty;
+
+        [ObservableProperty]
+        private int _valueDisplayOrder = 0;
+
+        [ObservableProperty]
+        private bool _isValueDeactivated = false;
+
+        [ObservableProperty]
+        private string _valueSearchText = string.Empty;
+
+        [ObservableProperty]
+        private AttributeValue? _selectedAttributeValue;
+
+        // =========================================================
+        // UI STATE
+        // =========================================================
+
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _statusMessage = "Ready.";
+
+        // =========================================================
+        // COLLECTIONS
+        // =========================================================
+
+        public ObservableCollection<AttributeGroup> AttributeGroups { get; } = new();
+
+        public ObservableCollection<AttributeValue> AttributeValues { get; } = new();
+
+        public ObservableCollection<CategorySelectionWrapper> Categories { get; } = new();
+
+        public ItemPropertyViewModel(
+            AttributeRepository attributeRepository,
+            CategoryRepository categoryRepository)
         {
             _attributeRepository = attributeRepository;
             _categoryRepository = categoryRepository;
+
             _ = InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
-            await LoadCategoriesForCheckboxesAsync();
-            await LoadGroupsAsync();
+            IsBusy = true;
+
+            try
+            {
+                await LoadCategoriesInternalAsync();
+                await LoadGroupsInternalAsync();
+
+                StatusMessage = "Item property page loaded.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to initialize item property page.";
+
+                MessageBox.Show(
+                    $"Failed to initialize item property page:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
-        // ==========================================
+        // =========================================================
         // CATEGORY CHECKBOX LOGIC
-        // ==========================================
-        private async Task LoadCategoriesForCheckboxesAsync()
+        // =========================================================
+
+        private async Task LoadCategoriesInternalAsync()
         {
             Categories.Clear();
-            var activeCategories = (await _categoryRepository.GetAllAsync()).Where(c => !c.IsDeactivated);
 
-            foreach (var cat in activeCategories)
+            var categories = await _categoryRepository.GetAllAsync();
+
+            foreach (var cat in categories.OrderBy(c => c.CategoryName))
             {
                 Categories.Add(new CategorySelectionWrapper
                 {
                     CategoryId = cat.Id,
-                    CategoryName = cat.CategoryName,
+                    CategoryCode = cat.CategoryCode ?? string.Empty,
+                    CategoryName = cat.CategoryName ?? string.Empty,
+                    IsDeactivated = cat.IsDeactivated,
                     IsSelected = false,
                     IsVisible = true
                 });
@@ -81,86 +170,172 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnCategorySearchTextChanged(string value)
         {
-            var search = value?.ToLower() ?? string.Empty;
+            string search = (value ?? string.Empty).Trim().ToLower();
+
             foreach (var cat in Categories)
             {
-                cat.IsVisible = string.IsNullOrWhiteSpace(search) || cat.CategoryName.ToLower().Contains(search);
+                cat.IsVisible =
+                    string.IsNullOrWhiteSpace(search) ||
+                    cat.CategoryCode.ToLower().Contains(search) ||
+                    cat.CategoryName.ToLower().Contains(search) ||
+                    cat.DisplayName.ToLower().Contains(search);
             }
         }
 
-        // ==========================================
-        // GROUP MANAGEMENT (Left Side)
-        // ==========================================
+        // =========================================================
+        // GROUP MANAGEMENT
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task LoadGroupsAsync()
         {
+            IsBusy = true;
+
             try
             {
-                AttributeGroups.Clear();
-                var groups = await _attributeRepository.GetAllGroupsAsync(GroupSearchText);
-                foreach (var g in groups) { AttributeGroups.Add(g); }
+                await LoadGroupsInternalAsync();
+                StatusMessage = $"{AttributeGroups.Count} group record(s) loaded.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load groups: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Failed to load groups.";
+
+                MessageBox.Show(
+                    $"Failed to load groups:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        partial void OnGroupSearchTextChanged(string value) => _ = LoadGroupsAsync();
+        private async Task LoadGroupsInternalAsync()
+        {
+            AttributeGroups.Clear();
+
+            var groups = await _attributeRepository.GetAllGroupsAsync(GroupSearchText);
+
+            foreach (var group in groups)
+            {
+                AttributeGroups.Add(group);
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private async Task SearchGroupsAsync()
+        {
+            await LoadGroupsAsync();
+        }
+
+        partial void OnGroupSearchTextChanged(string value)
+        {
+            // Do not hit the database on every key press.
+            // The updated XAML will use Search button or Enter key.
+            StatusMessage = "Type search text and click SEARCH.";
+        }
 
         partial void OnSelectedAttributeGroupChanged(AttributeGroup? value)
         {
-            if (value != null)
-            {
-                // Populate Group Form
-                GroupNameInput = value.GroupName ?? string.Empty;
-                IsGroupDeactivated = value.IsDeactivated;
+            if (_isApplyingSelection)
+                return;
 
-                // Enable Right Side
-                IsValueManagerEnabled = true;
-                ValueManagerHeader = $"Adding values to: {value.GroupName}";
-
-                // Sync Checkboxes
-                _ = SyncCheckboxesToSelectedGroupAsync(value.Id);
-
-                // Load Values for this specific group
-                _ = LoadValuesAsync();
-            }
-            else
-            {
-                IsValueManagerEnabled = false;
-                ValueManagerHeader = "Please select a Group from the left to add values.";
-                AttributeValues.Clear();
-                foreach (var cat in Categories) { cat.IsSelected = false; }
-            }
+            _ = ApplySelectedGroupAsync(value);
         }
 
-        private async Task SyncCheckboxesToSelectedGroupAsync(int groupId)
+        private async Task ApplySelectedGroupAsync(AttributeGroup? value)
         {
-            foreach (var cat in Categories) { cat.IsSelected = false; }
-            var assignedIds = await _attributeRepository.GetAssignedCategoryIdsForGroupAsync(groupId);
-            foreach (var cat in Categories)
+            try
             {
-                if (assignedIds.Contains(cat.CategoryId)) { cat.IsSelected = true; }
+                if (value != null)
+                {
+                    _isApplyingSelection = true;
+
+                    GroupNameInput = value.GroupName ?? string.Empty;
+                    GroupDisplayOrder = value.DisplayOrder;
+                    IsGroupDeactivated = value.IsDeactivated;
+
+                    IsValueManagerEnabled = true;
+                    ValueManagerHeader = $"Adding values to: {value.GroupName}";
+
+                    SelectedAttributeValue = null;
+                    ValueNameInput = string.Empty;
+                    ValueDisplayOrder = 0;
+                    IsValueDeactivated = false;
+
+                    foreach (var cat in Categories)
+                    {
+                        cat.IsSelected = false;
+                    }
+
+                    var assignedIds = await _attributeRepository.GetAssignedCategoryIdsForGroupAsync(value.Id);
+
+                    foreach (var cat in Categories)
+                    {
+                        cat.IsSelected = assignedIds.Contains(cat.CategoryId);
+                    }
+
+                    await LoadValuesInternalAsync();
+
+                    StatusMessage = $"Editing group: {value.GroupName}";
+
+                    _isApplyingSelection = false;
+                }
+                else
+                {
+                    AttributeValues.Clear();
+                    IsValueManagerEnabled = false;
+                    ValueManagerHeader = "Please select a group from the left to add values.";
+
+                    foreach (var cat in Categories)
+                    {
+                        cat.IsSelected = false;
+                    }
+                }
             }
+            catch (Exception ex)
+            {
+                _isApplyingSelection = false;
+                StatusMessage = "Failed to apply selected group.";
+
+                MessageBox.Show(
+                    $"Failed to load selected group details:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+
+            SaveGroupCommand.NotifyCanExecuteChanged();
+            DeleteGroupCommand.NotifyCanExecuteChanged();
+            SaveValueCommand.NotifyCanExecuteChanged();
+            DeleteValueCommand.NotifyCanExecuteChanged();
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanSaveGroup))]
         private async Task SaveGroupAsync()
         {
-            if (string.IsNullOrWhiteSpace(GroupNameInput))
-            {
-                MessageBox.Show("Group Name is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            string groupName = NormalizeName(GroupNameInput);
+
+            if (!ValidateGroupInput(groupName, GroupDisplayOrder))
                 return;
-            }
+
+            IsBusy = true;
 
             try
             {
                 int currentId = SelectedAttributeGroup?.Id ?? 0;
-                bool isUnique = await _attributeRepository.IsGroupUniqueAsync(GroupNameInput, currentId);
+
+                bool isUnique = await _attributeRepository.IsGroupUniqueAsync(groupName, currentId);
 
                 if (!isUnique)
                 {
-                    MessageBox.Show($"The Group '{GroupNameInput}' already exists.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(
+                        $"The group '{groupName}' already exists.",
+                        "Duplicate Group",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
                     return;
                 }
 
@@ -170,113 +345,266 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     savedGroup = new AttributeGroup
                     {
-                        GroupName = GroupNameInput.Trim(),
+                        GroupName = groupName,
+                        DisplayOrder = GroupDisplayOrder,
                         IsDeactivated = IsGroupDeactivated
                     };
-                    await _attributeRepository.AddGroupAsync(savedGroup);
+
+                    savedGroup = await _attributeRepository.AddGroupAsync(savedGroup);
                 }
                 else
                 {
-                    SelectedAttributeGroup.GroupName = GroupNameInput.Trim();
-                    SelectedAttributeGroup.IsDeactivated = IsGroupDeactivated;
-                    await _attributeRepository.UpdateGroupAsync(SelectedAttributeGroup);
-                    savedGroup = SelectedAttributeGroup;
+                    savedGroup = new AttributeGroup
+                    {
+                        Id = SelectedAttributeGroup.Id,
+                        GroupName = groupName,
+                        DisplayOrder = GroupDisplayOrder,
+                        IsDeactivated = IsGroupDeactivated
+                    };
+
+                    await _attributeRepository.UpdateGroupAsync(savedGroup);
                 }
 
-                // Sync the Checkboxes to the Group
-                var checkedCategoryIds = Categories.Where(c => c.IsSelected).Select(c => c.CategoryId).ToList();
+                var checkedCategoryIds = Categories
+                    .Where(c => c.IsSelected)
+                    .Select(c => c.CategoryId)
+                    .ToList();
+
                 await _attributeRepository.SyncGroupToCategoriesAsync(savedGroup.Id, checkedCategoryIds);
 
-                await LoadGroupsAsync();
+                await LoadGroupsInternalAsync();
                 ClearGroup();
-                MessageBox.Show("Group saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                StatusMessage = "Group saved successfully.";
+
+                MessageBox.Show(
+                    "Group saved successfully.",
+                    "Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving group: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Group save failed.";
+
+                MessageBox.Show(
+                    $"Error saving group:\n\n{ex.Message}",
+                    "Save Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
         [RelayCommand]
         private void ClearGroup()
         {
+            _isApplyingSelection = true;
+
             SelectedAttributeGroup = null;
             GroupNameInput = string.Empty;
+            GroupDisplayOrder = 0;
             IsGroupDeactivated = false;
-            foreach (var cat in Categories) { cat.IsSelected = false; }
+            CategorySearchText = string.Empty;
+
+            foreach (var cat in Categories)
+            {
+                cat.IsSelected = false;
+                cat.IsVisible = true;
+            }
+
+            SelectedAttributeValue = null;
+            ValueNameInput = string.Empty;
+            ValueDisplayOrder = 0;
+            IsValueDeactivated = false;
+            AttributeValues.Clear();
+
+            IsValueManagerEnabled = false;
+            ValueManagerHeader = "Please select a group from the left to add values.";
+
+            _isApplyingSelection = false;
+
+            StatusMessage = "Ready for new group.";
+
+            SaveGroupCommand.NotifyCanExecuteChanged();
+            DeleteGroupCommand.NotifyCanExecuteChanged();
+            SaveValueCommand.NotifyCanExecuteChanged();
+            DeleteValueCommand.NotifyCanExecuteChanged();
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanDeleteGroup))]
         private async Task DeleteGroupAsync()
         {
-            if (SelectedAttributeGroup == null) return;
+            if (SelectedAttributeGroup == null)
+                return;
 
-            var result = MessageBox.Show($"Delete the group '{SelectedAttributeGroup.GroupName}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (result == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    await _attributeRepository.DeleteGroupAsync(SelectedAttributeGroup.Id);
-                    await LoadGroupsAsync();
-                    ClearGroup();
-                }
-                catch (DbUpdateException)
-                {
-                    MessageBox.Show("Cannot delete this group because items in your inventory currently use its values. Please Deactivate it instead.", "Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
+            var result = MessageBox.Show(
+                $"Delete group '{SelectedAttributeGroup.GroupName}'?\n\n" +
+                "This only works if the group has no values, no category assignments, and no item variant usage.\n\n" +
+                "If it is already used, deactivate it instead.",
+                "Confirm Safe Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
 
-        // ==========================================
-        // VALUE MANAGEMENT (Right Side)
-        // ==========================================
-        private async Task LoadValuesAsync()
-        {
-            if (SelectedAttributeGroup == null) return;
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            IsBusy = true;
 
             try
             {
-                AttributeValues.Clear();
-                var data = await _attributeRepository.GetAllValuesFilteredAsync(SelectedAttributeGroup.Id, ValueSearchText);
-                foreach (var item in data) { AttributeValues.Add(item); }
+                await _attributeRepository.DeleteGroupAsync(SelectedAttributeGroup.Id);
+
+                await LoadGroupsInternalAsync();
+                ClearGroup();
+
+                StatusMessage = "Group deleted successfully.";
+
+                MessageBox.Show(
+                    "Group deleted successfully.",
+                    "Deleted",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (InvalidOperationException ex)
+            {
+                StatusMessage = "Delete blocked.";
+
+                MessageBox.Show(
+                    $"{ex.Message}\n\nTo hide this group, tick 'Deactivate Group' and click SAVE.",
+                    "Delete Blocked",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load values: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Delete failed.";
+
+                MessageBox.Show(
+                    $"Error deleting group:\n\n{ex.Message}",
+                    "Delete Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        [RelayCommand]
-        private async Task SearchValuesAsync() => await LoadValuesAsync();
+        // =========================================================
+        // VALUE MANAGEMENT
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanRunValueCommand))]
+        private async Task LoadValuesAsync()
+        {
+            IsBusy = true;
+
+            try
+            {
+                await LoadValuesInternalAsync();
+                StatusMessage = $"{AttributeValues.Count} value record(s) loaded.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load values.";
+
+                MessageBox.Show(
+                    $"Failed to load values:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task LoadValuesInternalAsync()
+        {
+            AttributeValues.Clear();
+
+            if (SelectedAttributeGroup == null)
+                return;
+
+            var values = await _attributeRepository.GetAllValuesFilteredAsync(
+                SelectedAttributeGroup.Id,
+                ValueSearchText);
+
+            foreach (var value in values)
+            {
+                AttributeValues.Add(value);
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanRunValueCommand))]
+        private async Task SearchValuesAsync()
+        {
+            await LoadValuesAsync();
+        }
+
+        partial void OnValueSearchTextChanged(string value)
+        {
+            // Do not hit the database on every key press.
+            // The updated XAML will use Search button or Enter key.
+        }
 
         partial void OnSelectedAttributeValueChanged(AttributeValue? value)
         {
             if (value != null)
             {
                 ValueNameInput = value.ValueName ?? string.Empty;
+                ValueDisplayOrder = value.DisplayOrder;
                 IsValueDeactivated = value.IsDeactivated;
+
+                StatusMessage = $"Editing value: {value.ValueName}";
             }
+
+            SaveValueCommand.NotifyCanExecuteChanged();
+            DeleteValueCommand.NotifyCanExecuteChanged();
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanSaveValue))]
         private async Task SaveValueAsync()
         {
-            if (SelectedAttributeGroup == null) return;
-
-            if (string.IsNullOrWhiteSpace(ValueNameInput))
+            if (SelectedAttributeGroup == null)
             {
-                MessageBox.Show("Value Name is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Please select an attribute group before adding values.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
+
+            string valueName = NormalizeName(ValueNameInput);
+
+            if (!ValidateValueInput(valueName, ValueDisplayOrder))
+                return;
+
+            IsBusy = true;
 
             try
             {
                 int currentId = SelectedAttributeValue?.Id ?? 0;
-                bool isUnique = await _attributeRepository.IsValueUniqueAsync(ValueNameInput, SelectedAttributeGroup.Id, currentId);
+
+                bool isUnique = await _attributeRepository.IsValueUniqueAsync(
+                    valueName,
+                    SelectedAttributeGroup.Id,
+                    currentId);
 
                 if (!isUnique)
                 {
-                    MessageBox.Show($"The value '{ValueNameInput}' already exists in this group.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(
+                        $"The value '{valueName}' already exists in this group.",
+                        "Duplicate Value",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
                     return;
                 }
 
@@ -285,25 +613,48 @@ namespace POS.BackOffice.UI.ViewModels
                     var newValue = new AttributeValue
                     {
                         AttributeGroupId = SelectedAttributeGroup.Id,
-                        ValueName = ValueNameInput.Trim(),
+                        ValueName = valueName,
+                        DisplayOrder = ValueDisplayOrder,
                         IsDeactivated = IsValueDeactivated
                     };
+
                     await _attributeRepository.AddValueAsync(newValue);
+                    StatusMessage = "Value created successfully.";
                 }
                 else
                 {
-                    SelectedAttributeValue.ValueName = ValueNameInput.Trim();
-                    SelectedAttributeValue.IsDeactivated = IsValueDeactivated;
-                    await _attributeRepository.UpdateValueAsync(SelectedAttributeValue);
+                    var updatedValue = new AttributeValue
+                    {
+                        Id = SelectedAttributeValue.Id,
+
+                        // AttributeGroupId is kept stable by the repository.
+                        AttributeGroupId = SelectedAttributeValue.AttributeGroupId,
+
+                        ValueName = valueName,
+                        DisplayOrder = ValueDisplayOrder,
+                        IsDeactivated = IsValueDeactivated
+                    };
+
+                    await _attributeRepository.UpdateValueAsync(updatedValue);
+                    StatusMessage = "Value updated successfully.";
                 }
 
-                await LoadValuesAsync();
+                await LoadValuesInternalAsync();
                 ClearValue();
-                // Notice we do NOT clear the SelectedAttributeGroup here, allowing for rapid-fire data entry!
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Database Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Value save failed.";
+
+                MessageBox.Show(
+                    $"Database Error:\n\n{ex.Message}",
+                    "Save Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -312,28 +663,221 @@ namespace POS.BackOffice.UI.ViewModels
         {
             SelectedAttributeValue = null;
             ValueNameInput = string.Empty;
+            ValueDisplayOrder = 0;
             IsValueDeactivated = false;
+
+            StatusMessage = SelectedAttributeGroup == null
+                ? "Please select a group first."
+                : $"Ready to add values to: {SelectedAttributeGroup.GroupName}";
+
+            SaveValueCommand.NotifyCanExecuteChanged();
+            DeleteValueCommand.NotifyCanExecuteChanged();
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanDeleteValue))]
         private async Task DeleteValueAsync()
         {
-            if (SelectedAttributeValue == null) return;
+            if (SelectedAttributeValue == null)
+                return;
 
-            var result = MessageBox.Show($"Delete the attribute value '{SelectedAttributeValue.ValueName}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (result == MessageBoxResult.Yes)
+            var result = MessageBox.Show(
+                $"Delete value '{SelectedAttributeValue.ValueName}'?\n\n" +
+                "This only works if the value is not used by item variants.\n\n" +
+                "If it is already used, deactivate it instead.",
+                "Confirm Safe Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            IsBusy = true;
+
+            try
             {
-                try
-                {
-                    await _attributeRepository.DeleteValueAsync(SelectedAttributeValue.Id);
-                    await LoadValuesAsync();
-                    ClearValue();
-                }
-                catch (DbUpdateException)
-                {
-                    MessageBox.Show("Cannot delete this value because items in your inventory currently use it. Please Deactivate it instead.", "Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                await _attributeRepository.DeleteValueAsync(SelectedAttributeValue.Id);
+
+                await LoadValuesInternalAsync();
+                ClearValue();
+
+                StatusMessage = "Value deleted successfully.";
+
+                MessageBox.Show(
+                    "Value deleted successfully.",
+                    "Deleted",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
+            catch (InvalidOperationException ex)
+            {
+                StatusMessage = "Delete blocked.";
+
+                MessageBox.Show(
+                    $"{ex.Message}\n\nTo hide this value, tick 'Deactivate Value' and click SAVE.",
+                    "Delete Blocked",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Delete failed.";
+
+                MessageBox.Show(
+                    $"Error deleting value:\n\n{ex.Message}",
+                    "Delete Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        // =========================================================
+        // COMMAND STATE
+        // =========================================================
+
+        partial void OnGroupNameInputChanged(string value)
+        {
+            SaveGroupCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnGroupDisplayOrderChanged(int value)
+        {
+            SaveGroupCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnValueNameInputChanged(string value)
+        {
+            SaveValueCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnValueDisplayOrderChanged(int value)
+        {
+            SaveValueCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            LoadGroupsCommand.NotifyCanExecuteChanged();
+            SearchGroupsCommand.NotifyCanExecuteChanged();
+            SaveGroupCommand.NotifyCanExecuteChanged();
+            DeleteGroupCommand.NotifyCanExecuteChanged();
+
+            LoadValuesCommand.NotifyCanExecuteChanged();
+            SearchValuesCommand.NotifyCanExecuteChanged();
+            SaveValueCommand.NotifyCanExecuteChanged();
+            DeleteValueCommand.NotifyCanExecuteChanged();
+        }
+
+        private bool CanRunCommand()
+        {
+            return !IsBusy;
+        }
+
+        private bool CanRunValueCommand()
+        {
+            return !IsBusy && SelectedAttributeGroup != null;
+        }
+
+        private bool CanSaveGroup()
+        {
+            return !IsBusy;
+        }
+
+        private bool CanDeleteGroup()
+        {
+            return !IsBusy && SelectedAttributeGroup != null;
+        }
+
+        private bool CanSaveValue()
+        {
+            return !IsBusy && SelectedAttributeGroup != null && IsValueManagerEnabled;
+        }
+
+        private bool CanDeleteValue()
+        {
+            return !IsBusy && SelectedAttributeValue != null;
+        }
+
+        // =========================================================
+        // VALIDATION HELPERS
+        // =========================================================
+
+        private static string NormalizeName(string value)
+        {
+            return (value ?? string.Empty).Trim();
+        }
+
+        private static bool ValidateGroupInput(string groupName, int displayOrder)
+        {
+            if (string.IsNullOrWhiteSpace(groupName))
+            {
+                MessageBox.Show(
+                    "Group Name is required.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (groupName.Length > 50)
+            {
+                MessageBox.Show(
+                    "Group Name cannot be longer than 50 characters.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (displayOrder < 0)
+            {
+                MessageBox.Show(
+                    "Group Display Order cannot be negative.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool ValidateValueInput(string valueName, int displayOrder)
+        {
+            if (string.IsNullOrWhiteSpace(valueName))
+            {
+                MessageBox.Show(
+                    "Value Name is required.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (valueName.Length > 50)
+            {
+                MessageBox.Show(
+                    "Value Name cannot be longer than 50 characters.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (displayOrder < 0)
+            {
+                MessageBox.Show(
+                    "Value Display Order cannot be negative.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
         }
     }
 }

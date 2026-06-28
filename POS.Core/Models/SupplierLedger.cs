@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace POS.Core.Models
 {
@@ -9,44 +10,60 @@ namespace POS.Core.Models
 
         [Required]
         public int SupplierId { get; set; }
+
         public Supplier Supplier { get; set; } = null!;
+
+        // Optional direct GRN link.
+        public int? GrnHeaderId { get; set; }
+
+        public GrnHeader? GrnHeader { get; set; }
 
         [Required]
         public DateTime TransactionDate { get; set; } = DateTime.Now;
 
-        // e.g., "GRN", "PAYMENT", "DEBIT_NOTE"
+        // GRN, PAYMENT, DEBIT_NOTE, CREDIT_NOTE, OPENING_BALANCE.
         [Required]
-        [MaxLength(20)]
+        [MaxLength(30)]
         public string TransactionType { get; set; } = string.Empty;
 
-        // e.g., "GRN-20260613-0001" or "PAY-000001"
         [Required]
         [MaxLength(50)]
         public string ReferenceDocument { get; set; } = string.Empty;
 
-        // Debt goes up (We received goods)
+        // Supplier debt increases.
+        [Column(TypeName = "decimal(18,2)")]
         public decimal ChargeAmount { get; set; } = 0m;
 
-        // Debt goes down (We paid the supplier)
+        // Supplier debt decreases.
+        [Column(TypeName = "decimal(18,2)")]
         public decimal PaymentAmount { get; set; } = 0m;
 
-        // Snapshot of balance for easy audit trail
+        // Snapshot after this transaction.
+        [Column(TypeName = "decimal(18,2)")]
         public decimal BalanceAfterTransaction { get; set; } = 0m;
 
-        // --- NEW PAYMENT TRACKING FIELDS ---
         [MaxLength(50)]
-        public string PaymentMethod { get; set; } = string.Empty; // Cash, Cheque, Credit / Debit Card, Direct Bank Transfer
+        public string PaymentMethod { get; set; } = string.Empty;
 
         [MaxLength(100)]
         public string BankName { get; set; } = string.Empty;
 
         [MaxLength(50)]
-        public string ReferenceNumber { get; set; } = string.Empty; // Cheque No, Transaction ID
+        public string ReferenceNumber { get; set; } = string.Empty;
 
         public DateTime? DueDate { get; set; }
+
         public bool IsPaid { get; set; } = false;
 
         [MaxLength(250)]
         public string Remarks { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string CreatedBy { get; set; } = string.Empty;
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [NotMapped]
+        public decimal NetMovement => ChargeAmount - PaymentAmount;
     }
 }
