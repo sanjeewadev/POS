@@ -6,34 +6,45 @@ namespace POS.Core.Models
 {
     public class ItemSupplier
     {
-        [Key]
         public int Id { get; set; }
 
-        // ==========================================
-        // 1. THE FOREIGN KEYS (The Bridge)
-        // ==========================================
+        // =========================================================
+        // BRIDGE KEYS
+        // =========================================================
 
         public int ItemVariantId { get; set; }
-        [ForeignKey("ItemVariantId")]
-        public virtual ItemVariant ItemVariant { get; set; }
+
+        public ItemVariant ItemVariant { get; set; } = null!;
 
         public int SupplierId { get; set; }
-        [ForeignKey("SupplierId")]
-        public virtual Supplier Supplier { get; set; }
 
-        // ==========================================
-        // 2. SUPPLIER-SPECIFIC DATA
-        // ==========================================
+        public Supplier Supplier { get; set; } = null!;
 
+        // =========================================================
+        // SUPPLIER-SPECIFIC ITEM DATA
+        // =========================================================
+
+        // What the supplier calls this item in their invoice/catalog.
+        // Example:
+        // Your SKU: TSHIRT-RED-M
+        // Supplier SKU: ABC-7788
         [MaxLength(100)]
-        public string? SupplierItemCode { get; set; } // What the supplier calls this item in their catalog
+        public string SupplierItemCode { get; set; } = string.Empty;
 
+        // Last known cost from this supplier.
+        // GRN should update this later when real purchase cost changes.
         [Column(TypeName = "decimal(18,2)")]
-        public decimal LastCostPrice { get; set; } // The specific price THIS supplier charges you
+        public decimal LastCostPrice { get; set; } = 0m;
 
-        public bool IsPrimary { get; set; } // True if this is the default supplier for auto-generating POs
+        // True if this supplier is the preferred/default supplier for this variant.
+        // AppDbContext will enforce only one primary supplier per variant.
+        public bool IsPrimary { get; set; } = false;
 
-        public int MinimumOrderQuantity { get; set; } = 1; // Supplier's MOQ (e.g., "Must order in boxes of 12")
+        // Supplier's minimum order quantity.
+        // Example: must order at least 12 pieces.
+        public int MinimumOrderQuantity { get; set; } = 1;
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }

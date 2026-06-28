@@ -14,4 +14,10 @@
     <ProjectReference Include="..\POS.Core\POS.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Barcode\" />
+    <Folder Include="CashDrawer\" />
+    <Folder Include="Printers\" />
+  </ItemGroup>
+
 </Project>

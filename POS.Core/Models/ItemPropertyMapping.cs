@@ -1,16 +1,26 @@
-﻿using System;
-
-namespace POS.Core.Models
+﻿namespace POS.Core.Models
 {
     public class ItemPropertyMapping
     {
-        // Composite Key will be defined in AppDbContext (ItemVariantId + AttributeValueId)
+        // This mapping connects one item variant to one selected value from one group.
+        //
+        // Example:
+        // Variant: Men Short / Red / 32
+        //
+        // Mapping 1:
+        // AttributeGroup: Color
+        // AttributeValue: Red
+        //
+        // Mapping 2:
+        // AttributeGroup: Size
+        // AttributeValue: 32
 
         public int ItemVariantId { get; set; }
         public ItemVariant ItemVariant { get; set; } = null!;
 
-        // Storing the GroupId here acts as an incredibly fast database index
-        // so we don't have to JOIN three tables just to find out what "Group" the value belongs to.
+        // Stored directly for fast filtering and validation.
+        // AppDbContext should enforce:
+        // one ItemVariant can have only one value per AttributeGroup.
         public int AttributeGroupId { get; set; }
         public AttributeGroup AttributeGroup { get; set; } = null!;
 

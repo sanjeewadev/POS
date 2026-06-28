@@ -1,11 +1,15 @@
 ﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryPages.UnitOfMeasureView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="1200"
-             Background="{DynamicResource WindowBackgroundBrush}" FontFamily="Segoe UI" FontSize="12">
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="700"
+             d:DesignWidth="1200"
+             Background="{DynamicResource WindowBackgroundBrush}"
+             FontFamily="Segoe UI"
+             FontSize="12">
+
     <UserControl.Resources>
 
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
@@ -35,14 +39,11 @@
                     <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
                     <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                 </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                </Trigger>
             </Style.Triggers>
-        </Style>
-
-        <Style TargetType="ComboBox" x:Key="ClassicCombo">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
@@ -57,6 +58,9 @@
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.55"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -80,6 +84,15 @@
             <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
 
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        </Style>
+
         <Style TargetType="DataGridCell" x:Key="BaseCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -93,6 +106,7 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
     </UserControl.Resources>
 
     <Grid Margin="5">
@@ -102,111 +116,321 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
+        <!-- LEFT SIDE: ENTRY FORM -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- UOM DETAILS -->
             <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
                 <StackPanel>
-                    <TextBlock Text="1. UNIT OF MEASURE DETAILS" Style="{StaticResource HeaderLabel}" Margin="0,0,0,5"/>
+                    <TextBlock Text="1. UNIT OF MEASURE DETAILS"
+                               Style="{StaticResource HeaderLabel}"
+                               Margin="0,0,0,5"/>
 
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="105"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="UOM Code *" Style="{StaticResource InlineLabel}" Foreground="{DynamicResource WarningTextBrush}"/>
-                        <TextBox Grid.Column="1" x:Name="txtUomCode" Text="{Binding UomCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsCodeReadOnly}" Style="{StaticResource ClassicInput}" FontWeight="Bold" MaxLength="10" ToolTip="e.g., PCS, KG, LTR, BOX. Cannot be changed after saving."/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="UOM Code *"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="{DynamicResource WarningTextBrush}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding UomCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsCodeReadOnly}"
+                                 Style="{StaticResource ClassicInput}"
+                                 FontWeight="Bold"
+                                 MaxLength="10"
+                                 CharacterCasing="Upper"
+                                 ToolTip="Examples: PCS, KG, LTR, BOX. Cannot be changed after saving."/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="105"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Description *"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding UomDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 FontWeight="Bold"
+                                 MaxLength="100"
+                                 ToolTip="Examples: Pieces, Kilograms, Liters"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="105"/>
+                            <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Description *" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="1" x:Name="txtUomDescription" Text="{Binding UomDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" FontWeight="Bold" MaxLength="100" ToolTip="e.g., Pieces, Kilograms, Liters"/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Display Order"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding DisplayOrder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                 Style="{StaticResource ClassicInput}"
+                                 HorizontalContentAlignment="Right"
+                                 ToolTip="Lower numbers show first. Example: PCS = 10, KG = 20."/>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="Lower number shows first"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"
+                                   FontStyle="Italic"/>
                     </Grid>
+
+                    <TextBlock Text="UOM Code supports A-Z, 0-9, dash, and underscore only."
+                               FontSize="10"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="105,2,0,0"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}" VerticalAlignment="Top">
+            <!-- INVENTORY RULES -->
+            <Border Grid.Row="1"
+                    Style="{StaticResource ClassicGroupBox}"
+                    VerticalAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="2. INVENTORY RULES" Style="{StaticResource HeaderLabel}" Foreground="{DynamicResource SuccessBorderBrush}" Margin="0,0,0,5"/>
-                    <CheckBox x:Name="chkAllowDecimals" Content="Allow Decimal Quantities (e.g., 1.5 KG)" IsChecked="{Binding AllowDecimals, Mode=TwoWay}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,5,0,0"/>
-                    <TextBlock Text="(Do not check this for items sold strictly in whole numbers like Shirts or PCS)" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="20,2,0,8" FontStyle="Italic" TextWrapping="Wrap"/>
+                    <TextBlock Text="2. INVENTORY RULES"
+                               Style="{StaticResource HeaderLabel}"
+                               Foreground="{DynamicResource SuccessBorderBrush}"
+                               Margin="0,0,0,5"/>
 
-                    <CheckBox x:Name="chkIsActive" Content="Unit is Active" IsChecked="{Binding IsActive, Mode=TwoWay}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                    <CheckBox Content="Allow Decimal Quantities"
+                              IsChecked="{Binding AllowDecimals, Mode=TwoWay}"
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource PrimaryTextBrush}"
+                              Margin="0,5,0,0"/>
+
+                    <TextBlock Text="Use this for KG, LTR, METER, etc. Do not enable it for PCS, BOX, shirts, phones, books, and other whole-number items."
+                               FontSize="10"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="20,2,0,8"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+
+                    <CheckBox Content="Unit is Active"
+                              IsChecked="{Binding IsActive, Mode=TwoWay}"
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource PrimaryTextBrush}"/>
+
+                    <TextBlock Text="Inactive UOMs will not appear when creating new items, but existing item history remains safe."
+                               FontSize="10"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="20,2,0,0"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="2" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="10" Margin="0,5,0,0">
+            <!-- EMPTY SPACE / GUIDANCE -->
+            <Border Grid.Row="2"
+                    Style="{StaticResource ClassicGroupBox}"
+                    VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="3. USAGE NOTE"
+                               Style="{StaticResource HeaderLabel}"
+                               Foreground="{DynamicResource WarningTextBrush}"
+                               Margin="0,0,0,5"/>
+
+                    <TextBlock Text="After this update, Item Master should save UnitOfMeasureId instead of a plain UOM text value. We will update Item Master later."
+                               FontSize="11"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="Safe delete works only for unused UOMs. If a UOM is already assigned to items, make it inactive instead."
+                               FontSize="10"
+                               Foreground="{DynamicResource WarningTextBrush}"
+                               Margin="0,8,0,0"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ACTIONS / STATUS -->
+            <Border Grid.Row="3"
+                    Background="{DynamicResource PanelBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    Padding="10"
+                    Margin="0,5,0,0">
+
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <Button Grid.Column="0" Content="🗑️ DELETE" Command="{Binding DeleteCommand}" Style="{StaticResource ClassicBtn}" Foreground="{DynamicResource WarningTextBrush}" BorderBrush="{DynamicResource WarningTextBrush}" Padding="15,0" Height="30"/>
+                    <TextBlock Grid.Row="0"
+                               Text="{Binding StatusMessage}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               FontSize="11"
+                               Margin="0,0,0,8"
+                               TextWrapping="Wrap"/>
 
-                    <Button Grid.Column="2" Content="CLEAR" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0" Padding="15,0" Height="30"/>
-                    <Button Grid.Column="3" Content="💾 SAVE UOM" Command="{Binding SaveCommand}" Style="{StaticResource ActionBtn}" Padding="20,0" Height="30" FontSize="13"/>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Content="DELETE"
+                                Command="{Binding DeleteCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Foreground="{DynamicResource WarningTextBrush}"
+                                BorderBrush="{DynamicResource WarningTextBrush}"
+                                Padding="15,0"
+                                Height="30"
+                                ToolTip="Deletes only if the UOM is not assigned to item records."/>
+
+                        <Button Grid.Column="2"
+                                Content="CLEAR"
+                                Command="{Binding ClearCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Margin="0,0,10,0"
+                                Padding="15,0"
+                                Height="30"/>
+
+                        <Button Grid.Column="3"
+                                Content="SAVE UOM"
+                                Command="{Binding SaveCommand}"
+                                Style="{StaticResource ActionBtn}"
+                                Padding="20,0"
+                                Height="30"
+                                FontSize="13"/>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
 
+        <!-- RIGHT SIDE: UOM DATABASE -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="{DynamicResource HeaderTextBrush}" Padding="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <!-- SEARCH HEADER -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource HeaderTextBrush}"
+                    Padding="10"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1">
+
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="UOM DATABASE" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,15,0" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="0"
+                               Text="UOM DATABASE"
+                               Foreground="{DynamicResource WhiteBackgroundBrush}"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Margin="0,0,15,0"
+                               VerticalAlignment="Center"/>
 
-                    <TextBox Grid.Column="1" x:Name="txtSearch" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ClassicInput}" Height="28" Padding="5,0" Margin="0,0,15,0" ToolTip="Search by Code or Description..."/>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}"
+                             Height="28"
+                             Padding="5,0"
+                             Margin="0,0,10,0"
+                             ToolTip="Search by code or description. Press Enter or click Search.">
 
-                    <Button Grid.Column="2" Content="SEARCH &amp; REFRESH" Command="{Binding SearchCommand}" Style="{StaticResource ClassicBtn}" Height="28" Padding="15,0"/>
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter"
+                                        Command="{Binding SearchCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <Button Grid.Column="2"
+                            Content="SEARCH"
+                            Command="{Binding SearchCommand}"
+                            Style="{StaticResource ClassicBtn}"
+                            Height="28"
+                            Padding="15,0"
+                            Margin="0,0,8,0"/>
+
+                    <Button Grid.Column="3"
+                            Content="REFRESH"
+                            Command="{Binding RefreshCommand}"
+                            Style="{StaticResource ClassicBtn}"
+                            Height="28"
+                            Padding="15,0"/>
                 </Grid>
             </Border>
 
-            <DataGrid Grid.Row="1" x:Name="dgUom" ItemsSource="{Binding Uoms}" SelectedItem="{Binding SelectedUom, Mode=TwoWay}" 
-                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                      IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="All" 
-                      HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}" VerticalGridLinesBrush="{DynamicResource LightBorderBrush}" 
-                      RowHeight="26" Background="{DynamicResource WhiteBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,1,1" 
-                      SelectionMode="Single" AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+            <!-- DATA GRID -->
+            <DataGrid Grid.Row="1"
+                      ItemsSource="{Binding Uoms}"
+                      SelectedItem="{Binding SelectedUom, Mode=TwoWay}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="All"
+                      HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                      VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                      RowHeight="26"
+                      Background="{DynamicResource WhiteBackgroundBrush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="1,0,1,1"
+                      SelectionMode="Single"
+                      AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
 
                 <DataGrid.Resources>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackground}"/>
-                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Padding" Value="5"/>
-                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                    </Style>
                     <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                 </DataGrid.Resources>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="UOM Code" Binding="{Binding UomCode}" Width="120" IsReadOnly="True" FontWeight="Bold"/>
-                    <DataGridTextColumn Header="Description" Binding="{Binding UomDescription}" Width="*" IsReadOnly="True" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Order"
+                                        Binding="{Binding DisplayOrder}"
+                                        Width="70"
+                                        IsReadOnly="True"/>
 
-                    <DataGridCheckBoxColumn Header="Allows Decimals" Binding="{Binding AllowDecimals}" Width="110">
+                    <DataGridTextColumn Header="UOM Code"
+                                        Binding="{Binding UomCode}"
+                                        Width="120"
+                                        IsReadOnly="True"
+                                        FontWeight="Bold"/>
+
+                    <DataGridTextColumn Header="Description"
+                                        Binding="{Binding UomDescription}"
+                                        Width="*"
+                                        IsReadOnly="True"
+                                        FontWeight="SemiBold"/>
+
+                    <DataGridCheckBoxColumn Header="Decimals"
+                                            Binding="{Binding AllowDecimals}"
+                                            Width="90">
                         <DataGridCheckBoxColumn.ElementStyle>
                             <Style TargetType="CheckBox">
                                 <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -216,7 +440,9 @@
                         </DataGridCheckBoxColumn.ElementStyle>
                     </DataGridCheckBoxColumn>
 
-                    <DataGridCheckBoxColumn Header="Active Status" Binding="{Binding IsActive}" Width="100">
+                    <DataGridCheckBoxColumn Header="Active"
+                                            Binding="{Binding IsActive}"
+                                            Width="80">
                         <DataGridCheckBoxColumn.ElementStyle>
                             <Style TargetType="CheckBox">
                                 <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -225,6 +451,16 @@
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                     </DataGridCheckBoxColumn>
+
+                    <DataGridTextColumn Header="Created"
+                                        Binding="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                        Width="135"
+                                        IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Updated"
+                                        Binding="{Binding UpdatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                        Width="135"
+                                        IsReadOnly="True"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

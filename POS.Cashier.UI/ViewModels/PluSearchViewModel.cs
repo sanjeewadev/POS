@@ -13,32 +13,28 @@ namespace POS.Cashier.UI.ViewModels
     {
         private readonly ItemMasterRepository _itemRepository;
 
-        // ==========================================
-        // UI BINDING PROPERTIES
-        // ==========================================
-        [ObservableProperty] private string _searchText = string.Empty;
+        [ObservableProperty]
+        private string _searchText = string.Empty;
 
-        [ObservableProperty] private string _statusText = "Type an item name, SKU, or Barcode and hit Enter to search...";
-        [ObservableProperty] private string _statusColorHex = "#555555"; // Gray
+        [ObservableProperty]
+        private string _statusText = "Type item name, item code, SKU, or barcode and press Enter.";
 
-        // Controls if the "ADD TO CART" button is clickable
-        [ObservableProperty] private bool _canAddVariant = false;
+        [ObservableProperty]
+        private string _statusColorHex = "#555555";
 
-        // Represents Table 1 (The Master Catalog)
+        [ObservableProperty]
+        private bool _canAddVariant = false;
+
         public ObservableCollection<ParentSeekDto> ParentResults { get; } = new();
 
-        // Represents Table 2 (The Specific Sizes/Colors in Stock)
         public ObservableCollection<VariantSeekDto> VariantResults { get; } = new();
 
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(CanAddVariant))]
         private ParentSeekDto? _selectedParent;
 
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(CanAddVariant))]
         private VariantSeekDto? _selectedVariant;
 
-        // The View listens to this so it knows when to close the window
         public event Action<bool>? ActionCompleted;
 
         public PluSearchViewModel(ItemMasterRepository itemRepository)
@@ -46,13 +42,11 @@ namespace POS.Cashier.UI.ViewModels
             _itemRepository = itemRepository;
         }
 
-        // ==========================================
-        // TABLE TRIGGERS
-        // ==========================================
-
-        // When the Cashier clicks a row in Table 1, instantly populate Table 2!
         partial void OnSelectedParentChanged(ParentSeekDto? value)
         {
+            SelectedVariant = null;
+            CanAddVariant = false;
+
             if (value != null)
             {
                 _ = LoadVariantsAsync(value.ParentId);
@@ -63,58 +57,61 @@ namespace POS.Cashier.UI.ViewModels
             }
         }
 
-        // Validate that a specific size/color is selected before allowing Add To Cart
         partial void OnSelectedVariantChanged(VariantSeekDto? value)
         {
-            if (value != null)
-            {
-                CanAddVariant = true;
-
-                if (value.StockOnHand <= 0)
-                {
-                    StatusText = "⚠️ WARNING: This item is currently OUT OF STOCK.";
-                    StatusColorHex = "#D97706"; // Orange warning
-                }
-                else
-                {
-                    StatusText = $"Selected: {value.VariantDescription}. Ready to add!";
-                    StatusColorHex = "#10B981"; // Green Success
-                }
-            }
-            else
+            if (value == null)
             {
                 CanAddVariant = false;
+                return;
             }
+
+            if (value.StockOnHand <= 0)
+            {
+                CanAddVariant = false;
+                StatusText = "OUT OF STOCK. This variant cannot be added.";
+                StatusColorHex = "#D97706";
+                return;
+            }
+
+            CanAddVariant = true;
+            StatusText = $"Selected: {value.VariantDescription}. Ready to add.";
+            StatusColorHex = "#10B981";
         }
 
-        // ==========================================
-        // COMMANDS & EXECUTION
-        // ==========================================
         [RelayCommand]
         public async Task SearchAsync()
         {
-            if (string.IsNullOrWhiteSpace(SearchText)) return;
+            if (string.IsNullOrWhiteSpace(SearchText))
+                return;
 
             try
             {
                 ParentResults.Clear();
                 VariantResults.Clear();
-                SelectedParent = null;
 
-                var results = await _itemRepository.SearchSeekParentsAsync(SearchText);
+                SelectedParent = null;
+                SelectedVariant = null;
+                CanAddVariant = false;
+
+                var results = await _itemRepository.SearchSeekParentsAsync(SearchText.Trim());
 
                 foreach (var parent in results)
-                {
                     ParentResults.Add(parent);
+
+                if (ParentResults.Count == 0)
+                {
+                    StatusText = "No matching items found.";
+                    StatusColorHex = "#D97706";
+                    return;
                 }
 
-                StatusText = $"Found {ParentResults.Count} matching items.";
-                StatusColorHex = "#003366"; // Blue info
+                StatusText = $"Found {ParentResults.Count} matching item(s). Select one.";
+                StatusColorHex = "#003366";
             }
             catch (Exception ex)
             {
-                StatusText = "Database Search Failed.";
-                StatusColorHex = "#DC3545"; // Red Error
+                StatusText = $"Search failed: {ex.Message}";
+                StatusColorHex = "#DC3545";
             }
         }
 
@@ -123,31 +120,53 @@ namespace POS.Cashier.UI.ViewModels
             try
             {
                 VariantResults.Clear();
+                SelectedVariant = null;
+                CanAddVariant = false;
+
                 var variants = await _itemRepository.GetSeekVariantsAsync(parentId);
 
-                foreach (var v in variants)
+                foreach (var variant in variants)
+                    VariantResults.Add(variant);
+
+                if (VariantResults.Count == 0)
                 {
-                    VariantResults.Add(v);
+                    StatusText = "No sellable variants found for this item.";
+                    StatusColorHex = "#D97706";
+                    return;
                 }
+
+                StatusText = $"Loaded {VariantResults.Count} variant(s). Select exact item.";
+                StatusColorHex = "#003366";
             }
-            catch
+            catch (Exception ex)
             {
-                StatusText = "Failed to load variants.";
-                StatusColorHex = "#DC3545"; // Red Error
+                StatusText = $"Failed to load variants: {ex.Message}";
+                StatusColorHex = "#DC3545";
             }
         }
 
         [RelayCommand]
         public void AddToCart()
         {
-            if (SelectedVariant == null) return;
+            if (SelectedVariant == null)
+                return;
 
-            // THE SILENT BROADCASTER:
-            // This shouts out the SKU code across the entire app. 
-            // The Sales Screen catches it instantly and does all the math!
-            WeakReferenceMessenger.Default.Send(new AddToCartMessage(SelectedVariant.SkuCode));
+            if (SelectedVariant.StockOnHand <= 0)
+            {
+                StatusText = "Cannot add out-of-stock item.";
+                StatusColorHex = "#DC3545";
+                CanAddVariant = false;
+                return;
+            }
 
-            // Tell the View to close the dialog successfully
+            WeakReferenceMessenger.Default.Send(
+                new AddToCartMessage(
+                    new AddToCartRequest(
+                        itemVariantId: SelectedVariant.VariantId,
+                        skuCode: SelectedVariant.SkuCode,
+                        barcode: SelectedVariant.Barcode,
+                        quantity: 1)));
+
             ActionCompleted?.Invoke(true);
         }
 

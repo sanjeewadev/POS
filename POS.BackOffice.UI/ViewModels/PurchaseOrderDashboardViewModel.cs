@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using POS.Core.Models;
 using POS.Core.Repositories;
-using Microsoft.Extensions.DependencyInjection; // Used for the Clone example
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -15,30 +16,70 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly PoRepository _poRepository;
         private readonly SupplierRepository _supplierRepository;
 
-        // --- FILTERS ---
-        [ObservableProperty] private string _searchText = string.Empty;
-        [ObservableProperty] private Supplier? _selectedSupplierFilter;
-        [ObservableProperty] private string _selectedStatusFilter = "All";
-        [ObservableProperty] private DateTime? _filterStartDate;
-        [ObservableProperty] private DateTime? _filterEndDate;
+        // =========================================================
+        // FILTERS
+        // =========================================================
 
-        // --- STATE & SELECTIONS ---
-        [ObservableProperty] private PoSummaryDto? _selectedPo;
+        [ObservableProperty]
+        private string _searchText = string.Empty;
 
-        // The state object for our slide-out Detail Panel
-        [ObservableProperty] private PoHeader? _viewingPoDetails;
+        [ObservableProperty]
+        private Supplier? _selectedSupplierFilter;
 
-        // --- COLLECTIONS ---
-        public ObservableCollection<PoSummaryDto> PurchaseOrders { get; set; } = new();
-        public ObservableCollection<Supplier> FilterSuppliers { get; set; } = new();
-        public ObservableCollection<string> FilterStatuses { get; set; } = new(new[] { "All", "Draft", "Approved", "Partially Received", "Closed", "Canceled" });
+        [ObservableProperty]
+        private string _selectedStatusFilter = "All";
 
-        public PurchaseOrderDashboardViewModel(PoRepository poRepository, SupplierRepository supplierRepository)
+        [ObservableProperty]
+        private DateTime? _filterStartDate;
+
+        [ObservableProperty]
+        private DateTime? _filterEndDate;
+
+        // =========================================================
+        // SELECTION / DETAILS
+        // =========================================================
+
+        [ObservableProperty]
+        private PoSummaryDto? _selectedPo;
+
+        [ObservableProperty]
+        private PoHeader? _viewingPoDetails;
+
+        // =========================================================
+        // COLLECTIONS
+        // =========================================================
+
+        public ObservableCollection<PoSummaryDto> PurchaseOrders { get; } = new();
+
+        public ObservableCollection<Supplier> FilterSuppliers { get; } = new();
+
+        public ObservableCollection<string> FilterStatuses { get; } = new(new[]
+        {
+            "All",
+            "Draft",
+            "Approved",
+            "Partially Received",
+            "Closed",
+            "Cancelled"
+        });
+
+        // =========================================================
+        // UI STATE
+        // =========================================================
+
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _statusMessage = "Ready.";
+
+        public PurchaseOrderDashboardViewModel(
+            PoRepository poRepository,
+            SupplierRepository supplierRepository)
         {
             _poRepository = poRepository;
             _supplierRepository = supplierRepository;
 
-            // Set default date range to the last 30 days
             FilterStartDate = DateTime.Now.AddDays(-30);
             FilterEndDate = DateTime.Now;
 
@@ -47,29 +88,143 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task InitializeAsync()
         {
-            FilterSuppliers.Clear();
-            var suppliers = await _supplierRepository.GetAllAsync();
-            foreach (var sup in suppliers)
-            {
-                FilterSuppliers.Add(sup);
-            }
+            IsBusy = true;
 
+            try
+            {
+                await LoadFilterSuppliersAsync();
+                await LoadDataInternalAsync();
+
+                StatusMessage = $"{PurchaseOrders.Count} purchase order(s) loaded.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to initialize PO dashboard.";
+
+                MessageBox.Show(
+                    $"Failed to initialize PO dashboard:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task LoadFilterSuppliersAsync()
+        {
+            FilterSuppliers.Clear();
+
+            var suppliers = await _supplierRepository.GetAllAsync();
+
+            foreach (var supplier in suppliers
+                         .Where(s => !s.IsDeactivated)
+                         .OrderBy(s => s.SupplierName))
+            {
+                FilterSuppliers.Add(supplier);
+            }
+        }
+
+        // =========================================================
+        // FILTER CHANGE EVENTS
+        // =========================================================
+
+        partial void OnSearchTextChanged(string value)
+        {
+            StatusMessage = "Search text changed. Press Enter or click SEARCH.";
+        }
+
+        partial void OnSelectedSupplierFilterChanged(Supplier? value)
+        {
+            StatusMessage = "Supplier filter changed. Click SEARCH.";
+        }
+
+        partial void OnSelectedStatusFilterChanged(string value)
+        {
+            StatusMessage = "Status filter changed. Click SEARCH.";
+        }
+
+        partial void OnFilterStartDateChanged(DateTime? value)
+        {
+            StatusMessage = "Date filter changed. Click SEARCH.";
+        }
+
+        partial void OnFilterEndDateChanged(DateTime? value)
+        {
+            StatusMessage = "Date filter changed. Click SEARCH.";
+        }
+
+        partial void OnViewingPoDetailsChanged(PoHeader? value)
+        {
+            CancelPoCommand.NotifyCanExecuteChanged();
+            ClonePoCommand.NotifyCanExecuteChanged();
+            PrintPoCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            SearchCommand.NotifyCanExecuteChanged();
+            RefreshDatabaseCommand.NotifyCanExecuteChanged();
+            ClearFiltersCommand.NotifyCanExecuteChanged();
+            ViewDetailsCommand.NotifyCanExecuteChanged();
+            CancelPoCommand.NotifyCanExecuteChanged();
+            ClonePoCommand.NotifyCanExecuteChanged();
+            PrintPoCommand.NotifyCanExecuteChanged();
+        }
+
+        // =========================================================
+        // LOAD / SEARCH
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private async Task SearchAsync()
+        {
             await LoadDataAsync();
         }
 
-        // ==========================================
-        // FILTER TRIGGERS
-        // ==========================================
-        partial void OnSearchTextChanged(string value) => _ = LoadDataAsync();
-        partial void OnSelectedSupplierFilterChanged(Supplier? value) => _ = LoadDataAsync();
-        partial void OnSelectedStatusFilterChanged(string value) => _ = LoadDataAsync();
-        partial void OnFilterStartDateChanged(DateTime? value) => _ = LoadDataAsync();
-        partial void OnFilterEndDateChanged(DateTime? value) => _ = LoadDataAsync();
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private async Task RefreshDatabaseAsync()
+        {
+            await LoadDataAsync();
+        }
 
-        [RelayCommand]
         private async Task LoadDataAsync()
         {
+            IsBusy = true;
+
+            try
+            {
+                await LoadDataInternalAsync();
+                StatusMessage = $"{PurchaseOrders.Count} purchase order(s) loaded.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load purchase orders.";
+
+                MessageBox.Show(
+                    $"Failed to load purchase orders:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task LoadDataInternalAsync()
+        {
             PurchaseOrders.Clear();
+
+            if (FilterStartDate.HasValue &&
+                FilterEndDate.HasValue &&
+                FilterEndDate.Value.Date < FilterStartDate.Value.Date)
+            {
+                throw new InvalidOperationException("Filter end date cannot be before start date.");
+            }
 
             var data = await _poRepository.GetPoSummariesAsync(
                 SearchText,
@@ -84,7 +239,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task ClearFiltersAsync()
         {
             SearchText = string.Empty;
@@ -96,33 +251,48 @@ namespace POS.BackOffice.UI.ViewModels
             await LoadDataAsync();
         }
 
-        [RelayCommand]
-        private async Task RefreshDatabaseAsync()
-        {
-            await LoadDataAsync();
-        }
+        // =========================================================
+        // DETAILS
+        // =========================================================
 
-        // ==========================================
-        // MASTER-DETAIL UI COMMANDS
-        // ==========================================
-
-        [RelayCommand]
-        private async Task ViewDetailsAsync(PoSummaryDto summary)
+        [RelayCommand(CanExecute = nameof(CanViewDetails))]
+        private async Task ViewDetailsAsync(PoSummaryDto? summary)
         {
-            if (summary == null) return;
+            if (summary == null)
+                return;
+
+            IsBusy = true;
 
             try
             {
                 var fullPo = await _poRepository.GetPurchaseOrderDetailsAsync(summary.PoHeaderId);
 
-                if (fullPo != null)
+                if (fullPo == null)
                 {
-                    ViewingPoDetails = fullPo;
+                    MessageBox.Show(
+                        "Selected Purchase Order was not found.",
+                        "Not Found",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
                 }
+
+                ViewingPoDetails = fullPo;
+                StatusMessage = $"Viewing {fullPo.PoNumber}.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load PO details: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Failed to load PO details.";
+
+                MessageBox.Show(
+                    $"Failed to load PO details:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -130,102 +300,223 @@ namespace POS.BackOffice.UI.ViewModels
         private void CloseDetails()
         {
             ViewingPoDetails = null;
+            StatusMessage = "Returned to dashboard.";
         }
 
-        // ==========================================
-        // ✅ NEW: ACTION COMMANDS
-        // ==========================================
+        // =========================================================
+        // ACTIONS
+        // =========================================================
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanCancelPo))]
         private async Task CancelPoAsync()
         {
-            if (ViewingPoDetails == null) return;
+            if (ViewingPoDetails == null)
+                return;
 
             var result = MessageBox.Show(
-                $"Are you sure you want to permanently cancel PO '{ViewingPoDetails.PoNumber}'?\n\nThis will release expected stock reservations. This action cannot be undone.",
-                "Confirm Cancellation",
+                $"Cancel Purchase Order '{ViewingPoDetails.PoNumber}'?\n\n" +
+                "This is only allowed if no quantities have been received.",
+                "Confirm PO Cancellation",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
-            if (result == MessageBoxResult.Yes)
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            IsBusy = true;
+
+            try
             {
-                try
-                {
-                    await _poRepository.CancelPurchaseOrderAsync(ViewingPoDetails.Id);
+                await _poRepository.CancelPurchaseOrderAsync(
+                    ViewingPoDetails.Id,
+                    cancelledBy: "Admin",
+                    reason: "Cancelled from PO dashboard.");
 
-                    MessageBox.Show("Purchase Order has been canceled successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    "Purchase Order cancelled successfully.",
+                    "Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
 
-                    // Close the overlay and refresh the master grid to show the new "Canceled" status
-                    CloseDetails();
-                    await LoadDataAsync();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to cancel PO: {ex.Message}", "Action Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                ViewingPoDetails = null;
+                await LoadDataInternalAsync();
+
+                StatusMessage = "Purchase Order cancelled.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                StatusMessage = "Cancellation blocked.";
+
+                MessageBox.Show(
+                    ex.Message,
+                    "Action Blocked",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to cancel PO.";
+
+                MessageBox.Show(
+                    $"Failed to cancel PO:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        [RelayCommand]
-        private void ClonePo()
+        [RelayCommand(CanExecute = nameof(CanClonePo))]
+        private async Task ClonePoAsync()
         {
-            if (ViewingPoDetails == null) return;
+            if (ViewingPoDetails == null)
+                return;
 
             var result = MessageBox.Show(
-                $"Do you want to clone '{ViewingPoDetails.PoNumber}' into a new Purchase Order draft?",
+                $"Clone '{ViewingPoDetails.PoNumber}' into a new Purchase Order?",
                 "Clone PO",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
-            if (result == MessageBoxResult.Yes)
-            {
-                // 1. Resolve both the Target ViewModel and your Main Navigation ViewModel
-                var createPoViewModel = App.Services!.GetRequiredService<PurchaseOrderViewModel>();
-                var mainViewModel = App.Services.GetRequiredService<MainViewModel>();
+            if (result != MessageBoxResult.Yes)
+                return;
 
-                // 2. Pre-fill the header data
-                createPoViewModel.SelectedSupplier = createPoViewModel.Suppliers.FirstOrDefault(s => s.Id == ViewingPoDetails.SupplierId);
+            try
+            {
+                if (App.Services == null)
+                {
+                    MessageBox.Show(
+                        "Application service container is not available.",
+                        "Clone Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                var createPoViewModel = App.Services.GetRequiredService<PurchaseOrderViewModel>();
+
+                // Give the target ViewModel a short chance to finish async lookup loading.
+                for (int i = 0; i < 10 && !createPoViewModel.Suppliers.Any(); i++)
+                {
+                    await Task.Delay(100);
+                }
+
+                createPoViewModel.ClearCommand.Execute(null);
+
+                var supplier = createPoViewModel.Suppliers
+                    .FirstOrDefault(s => s.Id == ViewingPoDetails.SupplierId);
+
+                if (supplier == null)
+                {
+                    MessageBox.Show(
+                        "Cannot clone because the supplier is inactive or not loaded.",
+                        "Clone Blocked",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                createPoViewModel.SelectedSupplier = supplier;
                 createPoViewModel.SelectedTerms = ViewingPoDetails.Terms;
                 createPoViewModel.CreditDaysInput = ViewingPoDetails.CreditDays;
-                createPoViewModel.Remarks = $"[Cloned from {ViewingPoDetails.PoNumber}]\n" + ViewingPoDetails.Remarks;
+                createPoViewModel.OrderDate = DateTime.Now;
+                createPoViewModel.ExpectedDate = DateTime.Now.AddDays(7);
+                createPoViewModel.Remarks =
+                    $"[Cloned from {ViewingPoDetails.PoNumber}]\n{ViewingPoDetails.Remarks}".Trim();
 
-                // 3. Pre-fill the line items
                 createPoViewModel.PoLines.Clear();
+
                 foreach (var line in ViewingPoDetails.PoLines)
                 {
                     createPoViewModel.PoLines.Add(new PoLine
                     {
                         ItemVariantId = line.ItemVariantId,
-                        ItemCode = line.ItemVariant.ItemParent.ItemCode,
-                        VariantDescription = line.ItemVariant.VariantDescription,
-                        Description = line.ItemVariant.ItemParent.ItemName,
+                        ItemCode = !string.IsNullOrWhiteSpace(line.ItemCode)
+                            ? line.ItemCode
+                            : line.ItemVariant?.ItemParent?.ItemCode ?? string.Empty,
+                        VariantDescription = !string.IsNullOrWhiteSpace(line.VariantDescription)
+                            ? line.VariantDescription
+                            : line.ItemVariant?.VariantDescription ?? "Standard",
+                        Description = !string.IsNullOrWhiteSpace(line.Description)
+                            ? line.Description
+                            : line.ItemVariant?.ItemParent?.ItemName ?? string.Empty,
+                        Barcode = line.ItemVariant?.Barcode ?? string.Empty,
+                        Uom = line.Uom,
                         OrderQty = line.OrderQty,
                         ExpectedCost = line.ExpectedCost,
                         LineDiscount = line.LineDiscount,
                         TaxCode = line.TaxCode,
-                        SupplierItemCode = line.SupplierItemCode
+                        SupplierItemCode = line.SupplierItemCode,
+                        Moq = 1
                     });
                 }
 
-                // 4. Force it to recalculate the totals
                 createPoViewModel.RecalculateTotals();
 
-                // 5. Trigger the screen switch using your exact property name!
+                var mainViewModel = App.Services.GetRequiredService<MainViewModel>();
                 mainViewModel.CurrentPage = createPoViewModel;
 
-                // Close the overlay on the dashboard so it's clean if the user comes back
-                CloseDetails();
+                ViewingPoDetails = null;
+                StatusMessage = "PO cloned into new Purchase Order form.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to clone PO:\n\n{ex.Message}",
+                    "Clone Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanPrintPo))]
         private void PrintPo()
         {
-            if (ViewingPoDetails != null)
-            {
-                // Passes the fully-loaded object (including all Line Items and Supplier info) to the future PDF Engine
-                MessageBox.Show($"Generating PDF for {ViewingPoDetails.PoNumber} to Supplier: {ViewingPoDetails.Supplier.SupplierName}...", "Print Engine", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+            if (ViewingPoDetails == null)
+                return;
+
+            MessageBox.Show(
+                $"PDF export for {ViewingPoDetails.PoNumber} will be connected after the PO and GRN workflow is stable.",
+                "PDF Export",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        // =========================================================
+        // COMMAND STATE
+        // =========================================================
+
+        private bool CanRunCommand()
+        {
+            return !IsBusy;
+        }
+
+        private bool CanViewDetails(PoSummaryDto? summary)
+        {
+            return !IsBusy && summary != null;
+        }
+
+        private bool CanCancelPo()
+        {
+            if (IsBusy || ViewingPoDetails == null)
+                return false;
+
+            return ViewingPoDetails.Status != "Closed" &&
+                   ViewingPoDetails.Status != "Cancelled" &&
+                   !ViewingPoDetails.PoLines.Any(l => l.ReceivedQty > 0);
+        }
+
+        private bool CanClonePo()
+        {
+            return !IsBusy && ViewingPoDetails != null;
+        }
+
+        private bool CanPrintPo()
+        {
+            return !IsBusy && ViewingPoDetails != null;
         }
     }
 }
