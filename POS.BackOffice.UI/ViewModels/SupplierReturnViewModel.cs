@@ -10,30 +10,51 @@ using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    // DTO for Matrix Rapid Entry to isolate UI state from Database Models
     public partial class ReturnMatrixDto : ObservableObject
     {
-        public int ItemVariantId { get; set; }
+        public int GrnHeaderId { get; set; }
+        public int GrnLineId { get; set; }
 
-        // CRITICAL: We need this to tell the repository exactly which bucket of stock to deduct
+        public int ItemVariantId { get; set; }
         public int ItemBatchId { get; set; }
 
-        public string ItemCode { get; set; } = string.Empty;
-        public string VariantDescription { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
+        public string GrnNumber { get; set; } = string.Empty;
+        public string SupplierInvoiceNo { get; set; } = string.Empty;
 
-        public decimal CurrentSOH { get; set; } = 0m;
-        public decimal HistoricalCost { get; set; } = 0m;
+        public string ItemCode { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string VariantDescription { get; set; } = string.Empty;
+
+        public string BatchNo { get; set; } = string.Empty;
+        public DateTime? ExpiryDate { get; set; }
+
+        public decimal ReceivedQty { get; set; }
+        public decimal AlreadyReturnedQty { get; set; }
+        public decimal CurrentBatchStock { get; set; }
+        public decimal MaxReturnQty { get; set; }
+
+        public decimal HistoricalCost { get; set; }
 
         [ObservableProperty]
         private decimal _returnQty = 0m;
+
+        [ObservableProperty]
+        private string _reasonCode = "Damaged / Defective";
+
+        [ObservableProperty]
+        private string _lineRemarks = string.Empty;
+
+        public decimal CreditValue => Math.Round(ReturnQty * HistoricalCost, 2);
     }
 
     public partial class SupplierReturnViewModel : ViewModelBase
     {
         private readonly SupplierReturnRepository _returnRepository;
 
-        // --- ZONE 1: HEADER ---
+        // =========================================================
+        // HEADER
+        // =========================================================
+
         [ObservableProperty]
         private Supplier? _selectedSupplier;
 
@@ -49,18 +70,27 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _remarks = string.Empty;
 
-        // --- ZONE 2: ENTRY CONSOLE ---
-        [ObservableProperty]
-        private string _scanBarcode = string.Empty;
+        // =========================================================
+        // DATA COLLECTIONS
+        // =========================================================
 
-        // --- ZONE 3: GRIDS ---
-        public ObservableCollection<ReturnMatrixDto> ActiveMatrixVariants { get; set; } = new();
-        public ObservableCollection<SupplierReturnLine> ReturnLines { get; set; } = new();
+        public ObservableCollection<Supplier> Suppliers { get; } = new();
+
+        public ObservableCollection<GrnHeader> SupplierInvoices { get; } = new();
+
+        public ObservableCollection<ReturnMatrixDto> ActiveMatrixVariants { get; } = new();
+
+        public ObservableCollection<SupplierReturnLine> ReturnLines { get; } = new();
+
+        public ObservableCollection<string> ReasonCodes { get; } = new();
 
         [ObservableProperty]
         private SupplierReturnLine? _selectedLine;
 
-        // --- FINANCIAL TOTALS ---
+        // =========================================================
+        // FINANCIAL TOTALS
+        // =========================================================
+
         [ObservableProperty]
         private decimal _grossCredit = 0m;
 
@@ -70,237 +100,574 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private decimal _netCredit = 0m;
 
-        public ObservableCollection<Supplier> Suppliers { get; set; } = new();
-        public ObservableCollection<GrnHeader> SupplierInvoices { get; set; } = new();
+        // =========================================================
+        // UI STATE
+        // =========================================================
+
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _statusMessage = "Ready.";
 
         public SupplierReturnViewModel(SupplierReturnRepository returnRepository)
         {
             _returnRepository = returnRepository;
+
+            foreach (var reason in _returnRepository.GetReasonCodes())
+                ReasonCodes.Add(reason);
+
             _ = InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
-            var suppliers = await _returnRepository.GetActiveSuppliersAsync();
-            foreach (var sup in suppliers) Suppliers.Add(sup);
+            IsBusy = true;
+
+            try
+            {
+                Suppliers.Clear();
+
+                var suppliers = await _returnRepository.GetActiveSuppliersAsync();
+
+                foreach (var supplier in suppliers)
+                    Suppliers.Add(supplier);
+
+                StatusMessage = $"Loaded {Suppliers.Count} active supplier(s).";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to initialize supplier return page.";
+
+                MessageBox.Show(
+                    $"Failed to load suppliers:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
-        // --- AUTO-TRIGGERS & MATH ENGINE ---
+        // =========================================================
+        // AUTO EVENTS
+        // =========================================================
 
         partial void OnSelectedSupplierChanged(Supplier? value)
         {
+            SupplierInvoices.Clear();
+            ActiveMatrixVariants.Clear();
+            ReturnLines.Clear();
+
+            SelectedInvoice = null;
+            RecalculateTotals();
+
             if (value != null)
             {
                 _ = LoadSupplierInvoicesAsync(value.Id);
             }
-            else
-            {
-                SupplierInvoices.Clear();
-            }
+        }
+
+        partial void OnSelectedInvoiceChanged(GrnHeader? value)
+        {
+            ActiveMatrixVariants.Clear();
+        }
+
+        partial void OnRestockingFeeChanged(decimal value)
+        {
+            if (value < 0)
+                RestockingFee = 0m;
+
+            RecalculateTotals();
         }
 
         private async Task LoadSupplierInvoicesAsync(int supplierId)
         {
-            SupplierInvoices.Clear();
-            var invoices = await _returnRepository.GetSupplierInvoicesAsync(supplierId);
-            foreach (var inv in invoices) SupplierInvoices.Add(inv);
-        }
+            IsBusy = true;
 
-        partial void OnRestockingFeeChanged(decimal value) => RecalculateTotals();
-
-        private void RecalculateTotals()
-        {
-            if (!ReturnLines.Any())
+            try
             {
-                GrossCredit = 0m;
-                NetCredit = 0m;
-                return;
+                SupplierInvoices.Clear();
+
+                var invoices = await _returnRepository.GetSupplierInvoicesAsync(supplierId);
+
+                foreach (var invoice in invoices)
+                    SupplierInvoices.Add(invoice);
+
+                StatusMessage = $"Loaded {SupplierInvoices.Count} posted invoice(s) for selected supplier.";
             }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load supplier invoices.";
 
-            // Sums the exact historical cost credit values
-            GrossCredit = ReturnLines.Sum(l => l.CreditValue);
-
-            // Subtract supplier penalties to get the true ledger impact
-            NetCredit = GrossCredit - RestockingFee;
+                MessageBox.Show(
+                    $"Failed to load supplier invoices:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
-        // --- GRID ACTIONS ---
+        // =========================================================
+        // LOAD GRN BATCH LINES
+        // =========================================================
 
         [RelayCommand]
         private async Task LoadInvoiceAsync()
         {
-            if (SelectedInvoice == null) return;
+            if (SelectedSupplier == null)
+            {
+                MessageBox.Show(
+                    "Please select a supplier first.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (SelectedInvoice == null)
+            {
+                MessageBox.Show(
+                    "Please select a posted GRN / supplier invoice.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            IsBusy = true;
 
             try
             {
                 ActiveMatrixVariants.Clear();
-                var historicalLines = await _returnRepository.GetHistoricalInvoiceLinesAsync(SelectedInvoice.Id);
 
-                foreach (var line in historicalLines)
+                var rows = await _returnRepository.GetReturnableBatchesForGrnAsync(SelectedInvoice.Id);
+
+                foreach (var row in rows)
                 {
-                    // In a highly strict system, you'd match this to the specific ItemBatch created by this GRN.
-                    // For UI purposes, we project the historical cost we paid on that invoice.
                     ActiveMatrixVariants.Add(new ReturnMatrixDto
                     {
-                        ItemVariantId = line.ItemVariantId,
-                        ItemBatchId = 0, // In production, map this to the Batch ID generated by the GRN
-                        ItemCode = line.ItemVariant?.ItemParent?.ItemCode ?? "UNKNOWN",
-                        Description = line.ItemVariant?.ItemParent?.ItemName ?? "Unknown Item",
-                        VariantDescription = line.ItemVariant?.VariantDescription ?? string.Empty,
-                        HistoricalCost = line.UnitCost,
-                        CurrentSOH = 999m, // In production, fetch this from the ItemBatch
-                        ReturnQty = 0
+                        GrnHeaderId = row.GrnHeaderId,
+                        GrnLineId = row.GrnLineId,
+
+                        ItemVariantId = row.ItemVariantId,
+                        ItemBatchId = row.ItemBatchId,
+
+                        GrnNumber = row.GrnNumber,
+                        SupplierInvoiceNo = row.SupplierInvoiceNo,
+
+                        ItemCode = row.ItemCode,
+                        Description = row.Description,
+                        VariantDescription = row.VariantDescription,
+
+                        BatchNo = row.BatchNo,
+                        ExpiryDate = row.ExpiryDate,
+
+                        ReceivedQty = row.ReceivedQty,
+                        AlreadyReturnedQty = row.AlreadyReturnedQty,
+                        CurrentBatchStock = row.CurrentBatchStock,
+                        MaxReturnQty = row.MaxReturnQty,
+
+                        HistoricalCost = row.HistoricalCost,
+                        ReturnQty = 0m,
+                        ReasonCode = ReasonCodes.FirstOrDefault() ?? "Damaged / Defective"
                     });
                 }
 
-                MessageBox.Show($"Loaded historical items and costs for Invoice: {SelectedInvoice.SupplierInvoiceNo}", "Invoice Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                StatusMessage = $"Loaded {ActiveMatrixVariants.Count} returnable batch line(s).";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load invoice history: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Failed to load GRN returnable batches.";
+
+                MessageBox.Show(
+                    $"Failed to load invoice history:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
+
+        // =========================================================
+        // ADD TO RETURN CART
+        // =========================================================
 
         [RelayCommand]
         private void AddMatrix()
         {
-            var itemsToAdd = ActiveMatrixVariants.Where(v => v.ReturnQty > 0).ToList();
+            var itemsToAdd = ActiveMatrixVariants
+                .Where(v => v.ReturnQty > 0)
+                .ToList();
 
             if (!itemsToAdd.Any())
             {
-                MessageBox.Show("Please enter a Return Qty for at least one variant.", "No Qty Entered", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    "Enter a return quantity for at least one batch line.",
+                    "No Quantity",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
             foreach (var item in itemsToAdd)
             {
-                // CRITICAL SHIELD: Stock On Hand Validation
-                if (item.ReturnQty > item.CurrentSOH)
+                if (item.ItemBatchId <= 0)
                 {
-                    MessageBox.Show($"Cannot return {item.ReturnQty} units of '{item.VariantDescription}'. You only have {item.CurrentSOH} in stock.", "Stock Limit Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(
+                        $"Batch is missing for item '{item.Description}'.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
                     return;
                 }
 
-                // Check if already in the grid to prevent duplicates
-                if (ReturnLines.Any(l => l.ItemVariantId == item.ItemVariantId))
+                if (item.ReturnQty <= 0)
+                {
+                    MessageBox.Show(
+                        $"Return quantity must be greater than zero for '{item.Description}'.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (item.ReturnQty > item.MaxReturnQty)
+                {
+                    MessageBox.Show(
+                        $"Cannot return {item.ReturnQty:N3} of '{item.Description}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
+                        "Return Quantity Exceeded",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.ReasonCode))
+                {
+                    MessageBox.Show(
+                        $"Please select a reason for '{item.Description}'.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                var existingLine = ReturnLines.FirstOrDefault(l => l.ItemBatchId == item.ItemBatchId);
+
+                if (existingLine != null)
+                {
+                    decimal newQty = existingLine.ReturnQty + item.ReturnQty;
+
+                    if (newQty > item.MaxReturnQty)
+                    {
+                        MessageBox.Show(
+                            $"Cannot add more quantity for '{item.Description}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
+                            "Return Quantity Exceeded",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    existingLine.ReturnQty = newQty;
+                    existingLine.CreditValue = Math.Round(existingLine.ReturnQty * existingLine.HistoricalCost, 2);
+                    existingLine.ReasonCode = item.ReasonCode;
+                    existingLine.LineRemarks = item.LineRemarks;
+
+                    RefreshReturnLine(existingLine);
                     continue;
+                }
 
                 var newLine = new SupplierReturnLine
                 {
+                    GrnLineId = item.GrnLineId,
                     ItemVariantId = item.ItemVariantId,
                     ItemBatchId = item.ItemBatchId,
+
+                    BatchNo = item.BatchNo,
+                    ExpiryDate = item.ExpiryDate,
+
                     ReturnQty = item.ReturnQty,
                     HistoricalCost = item.HistoricalCost,
-                    CreditValue = item.ReturnQty * item.HistoricalCost,
-                    ReasonCode = "Damaged / Defective", // Default reason
+                    CreditValue = Math.Round(item.ReturnQty * item.HistoricalCost, 2),
 
-                    // UI Helpers
+                    ReasonCode = item.ReasonCode,
+                    LineRemarks = item.LineRemarks,
+                    LineStatus = "Open",
+
                     ItemCode = item.ItemCode,
                     Description = item.Description,
-                    VariantDescription = item.VariantDescription
+                    VariantDescription = item.VariantDescription,
+                    CurrentBatchStock = item.CurrentBatchStock,
+                    MaxReturnQty = item.MaxReturnQty
                 };
 
                 ReturnLines.Add(newLine);
             }
 
-            ActiveMatrixVariants.Clear();
+            foreach (var item in itemsToAdd)
+                item.ReturnQty = 0m;
+
             RecalculateTotals();
+
+            StatusMessage = $"Return cart contains {ReturnLines.Count} line(s).";
         }
 
         [RelayCommand]
-        private void RemoveLine(SupplierReturnLine line)
+        private void RemoveLine(SupplierReturnLine? line)
         {
-            if (line != null)
-            {
-                ReturnLines.Remove(line);
-                RecalculateTotals();
-            }
+            if (line == null)
+                return;
+
+            ReturnLines.Remove(line);
+            RecalculateTotals();
+
+            StatusMessage = $"Removed line. Return cart contains {ReturnLines.Count} line(s).";
         }
 
         [RelayCommand]
         private void UpdateLine()
         {
-            if (SelectedLine != null)
-            {
-                // Recalculate Credit Value when the user edits the line directly
-                SelectedLine.CreditValue = SelectedLine.ReturnQty * SelectedLine.HistoricalCost;
-                RecalculateTotals();
+            if (SelectedLine == null)
+                return;
 
-                // Force DataGrid to visually refresh
-                var index = ReturnLines.IndexOf(SelectedLine);
-                if (index >= 0)
-                {
-                    ReturnLines[index] = SelectedLine;
-                }
+            if (SelectedLine.ReturnQty <= 0)
+            {
+                MessageBox.Show(
+                    "Return quantity must be greater than zero.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (SelectedLine.ReturnQty > SelectedLine.MaxReturnQty)
+            {
+                MessageBox.Show(
+                    $"Maximum returnable quantity is {SelectedLine.MaxReturnQty:N3}.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedLine.ReasonCode))
+            {
+                MessageBox.Show(
+                    "Reason code is required.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            SelectedLine.CreditValue = Math.Round(SelectedLine.ReturnQty * SelectedLine.HistoricalCost, 2);
+
+            RefreshReturnLine(SelectedLine);
+            RecalculateTotals();
+        }
+
+        private void RefreshReturnLine(SupplierReturnLine line)
+        {
+            int index = ReturnLines.IndexOf(line);
+
+            if (index >= 0)
+            {
+                ReturnLines[index] = line;
+                SelectedLine = line;
             }
         }
 
-        // --- SAVING EXECUTION ---
-        [RelayCommand]
-        private async Task SaveDraftAsync() => await SaveReturnExecutionAsync(isDraft: true);
+        // =========================================================
+        // TOTALS
+        // =========================================================
 
-        // Map this to the POST button
+        private void RecalculateTotals()
+        {
+            GrossCredit = Math.Round(ReturnLines.Sum(l => l.CreditValue), 2);
+
+            if (RestockingFee < 0)
+                RestockingFee = 0m;
+
+            if (RestockingFee > GrossCredit && GrossCredit > 0)
+                RestockingFee = GrossCredit;
+
+            NetCredit = Math.Round(GrossCredit - RestockingFee, 2);
+
+            if (NetCredit < 0)
+                NetCredit = 0m;
+        }
+
+        // =========================================================
+        // SAVE / POST
+        // =========================================================
+
         [RelayCommand]
-        private async Task PostReturnAsync() => await SaveReturnExecutionAsync(isDraft: false);
+        private async Task SaveDraftAsync()
+        {
+            await SaveReturnExecutionAsync(isDraft: true);
+        }
+
+        [RelayCommand]
+        private async Task PostReturnAsync()
+        {
+            await SaveReturnExecutionAsync(isDraft: false);
+        }
 
         private async Task SaveReturnExecutionAsync(bool isDraft)
         {
             if (SelectedSupplier == null)
             {
-                MessageBox.Show("Please select a Supplier.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Please select a supplier.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
 
             if (!ReturnLines.Any())
             {
-                MessageBox.Show("Cannot save an empty Return Note.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Cannot save an empty supplier return.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
 
-            string actionText = isDraft ? "Save this Return as a Draft?" : $"CRITICAL: Post Return Note?\nThis will deduct physical stock and decrease supplier debt by Rs. {NetCredit:N2}.";
-            var result = MessageBox.Show(actionText, "Confirm Save", MessageBoxButton.YesNo, isDraft ? MessageBoxImage.Question : MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
+            if (string.IsNullOrWhiteSpace(AuthorizedBy))
             {
-                try
+                MessageBox.Show(
+                    "Authorized by is required.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            RecalculateTotals();
+
+            string message = isDraft
+                ? "Save this supplier return as a draft?"
+                : $"Post supplier return?\n\nThis will deduct physical batch stock and reduce supplier balance by Rs. {NetCredit:N2}.";
+
+            var result = MessageBox.Show(
+                message,
+                isDraft ? "Save Draft" : "Post Supplier Return",
+                MessageBoxButton.YesNo,
+                isDraft ? MessageBoxImage.Question : MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            IsBusy = true;
+
+            try
+            {
+                var header = new SupplierReturnHeader
                 {
-                    var header = new SupplierReturnHeader
+                    SupplierId = SelectedSupplier.Id,
+                    GrnHeaderId = SelectedInvoice?.Id,
+                    OriginalInvoiceNo = SelectedInvoice?.SupplierInvoiceNo ?? string.Empty,
+
+                    ReturnDate = ReturnDate,
+                    AuthorizedBy = AuthorizedBy.Trim(),
+                    Remarks = Remarks.Trim(),
+
+                    GrossCredit = GrossCredit,
+                    RestockingFee = RestockingFee,
+                    NetCredit = NetCredit,
+
+                    CreatedBy = "Admin",
+                    PostedBy = isDraft ? string.Empty : AuthorizedBy.Trim()
+                };
+
+                var lines = ReturnLines
+                    .Select(l => new SupplierReturnLine
                     {
-                        SupplierId = SelectedSupplier.Id,
-                        OriginalInvoiceNo = SelectedInvoice?.SupplierInvoiceNo ?? string.Empty,
-                        ReturnDate = this.ReturnDate,
-                        AuthorizedBy = this.AuthorizedBy.Trim(),
-                        Remarks = this.Remarks.Trim(),
-                        GrossCredit = this.GrossCredit,
-                        RestockingFee = this.RestockingFee,
-                        NetCredit = this.NetCredit,
-                        CreatedBy = "Admin"
-                    };
+                        GrnLineId = l.GrnLineId,
+                        ItemVariantId = l.ItemVariantId,
+                        ItemBatchId = l.ItemBatchId,
 
-                    await _returnRepository.SaveSupplierReturnAsync(header, ReturnLines.ToList(), isDraft);
+                        BatchNo = l.BatchNo,
+                        ExpiryDate = l.ExpiryDate,
 
-                    MessageBox.Show(isDraft ? "Draft Saved Successfully." : "Debit Note Posted! Physical stock and ledger updated.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    Clear();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Database Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                        ReturnQty = l.ReturnQty,
+                        HistoricalCost = l.HistoricalCost,
+                        CreditValue = Math.Round(l.ReturnQty * l.HistoricalCost, 2),
+
+                        ReasonCode = l.ReasonCode,
+                        LineRemarks = l.LineRemarks,
+                        LineStatus = "Open",
+
+                        ItemCode = l.ItemCode,
+                        Description = l.Description,
+                        VariantDescription = l.VariantDescription,
+                        CurrentBatchStock = l.CurrentBatchStock,
+                        MaxReturnQty = l.MaxReturnQty
+                    })
+                    .ToList();
+
+                await _returnRepository.SaveSupplierReturnAsync(header, lines, isDraft);
+
+                MessageBox.Show(
+                    isDraft
+                        ? "Supplier return draft saved successfully."
+                        : "Supplier return posted successfully. Stock and supplier ledger were updated.",
+                    "Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                Clear();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Supplier return save/post failed.";
+
+                MessageBox.Show(
+                    $"Database Error:\n\n{ex.Message}",
+                    "Supplier Return Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
+
+        // =========================================================
+        // CLEAR
+        // =========================================================
 
         [RelayCommand]
         private void Clear()
         {
             SelectedSupplier = null;
             SelectedInvoice = null;
+
+            ReturnDate = DateTime.Now;
+            AuthorizedBy = "Admin";
             Remarks = string.Empty;
-            ScanBarcode = string.Empty;
+
             RestockingFee = 0m;
 
-            ReturnLines.Clear();
+            SupplierInvoices.Clear();
             ActiveMatrixVariants.Clear();
+            ReturnLines.Clear();
+
             RecalculateTotals();
+
+            StatusMessage = "Ready.";
         }
     }
 }

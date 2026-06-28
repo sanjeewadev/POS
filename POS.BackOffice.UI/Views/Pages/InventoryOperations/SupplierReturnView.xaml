@@ -1,18 +1,21 @@
 ﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.SupplierReturnView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="850" d:DesignWidth="1400"
-             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="850"
+             d:DesignWidth="1400"
+             Background="#D4D0C8"
+             FontFamily="Segoe UI"
+             FontSize="12">
 
     <UserControl.Resources>
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="#003366"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
         <Style TargetType="TextBlock" x:Key="InlineLabel">
@@ -24,8 +27,8 @@
         </Style>
 
         <Style TargetType="TextBox" x:Key="ClassicInput">
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Height" Value="27"/>
+            <Setter Property="Padding" Value="5,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -33,14 +36,14 @@
         </Style>
 
         <Style TargetType="ComboBox" x:Key="ClassicCombo">
-            <Setter Property="Height" Value="28"/>
+            <Setter Property="Height" Value="27"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="Background" Value="White"/>
         </Style>
 
         <Style TargetType="DatePicker" x:Key="ClassicDate">
-            <Setter Property="Height" Value="28"/>
+            <Setter Property="Height" Value="27"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
         </Style>
@@ -50,7 +53,7 @@
             <Setter Property="Background" Value="#E0E0E0"/>
             <Setter Property="Foreground" Value="Black"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Padding" Value="15,0"/>
+            <Setter Property="Padding" Value="14,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -62,24 +65,38 @@
             <Setter Property="BorderBrush" Value="#003333"/>
         </Style>
 
-        <Style TargetType="Button" x:Key="ReturnBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style TargetType="Button" x:Key="PostBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#A94044"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#822E31"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="DraftBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#F59E0B"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="#B45309"/>
         </Style>
 
         <Style TargetType="Border" x:Key="ClassicGroupBox">
             <Setter Property="BorderBrush" Value="#A0A0A0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="Padding" Value="12"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
         </Style>
 
         <Style TargetType="DataGridCell" x:Key="BaseCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Padding" Value="5,0"/>
             <Setter Property="Foreground" Value="Black"/>
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
@@ -95,106 +112,282 @@
             <Setter Property="Foreground" Value="#991B1B"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
+
+        <Style TargetType="TextBlock" x:Key="RightText">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="CenterText">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="10">
+    <Grid Margin="8">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="520"/>
-            <ColumnDefinition Width="10"/>
+            <ColumnDefinition Width="560"/>
+            <ColumnDefinition Width="8"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ======================================================== -->
-        <!-- LEFT COLUMN: INTAKE & INVOICE HISTORY                    -->
-        <!-- ======================================================== -->
+        <!-- LEFT SIDE -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- ZONE 1: DOCUMENT HEADER -->
-            <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
+            <!-- HEADER -->
+            <Border Grid.Row="0"
+                    Style="{StaticResource ClassicGroupBox}"
+                    Margin="0,0,0,8">
+
                 <StackPanel>
-                    <TextBlock Text="1. DEBIT NOTE HEADER" Style="{StaticResource HeaderLabel}"/>
-
-                    <Grid Margin="0,0,0,10">
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Target Supplier *" Style="{StaticResource InlineLabel}" Foreground="#991B1B"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" DisplayMemberPath="CompanyName" Style="{StaticResource ClassicCombo}" Background="#FFFFE0" FontWeight="Bold"/>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="1. SUPPLIER RETURN / DEBIT NOTE HEADER"
+                                   Style="{StaticResource HeaderLabel}"/>
+
+                        <Border Grid.Column="1"
+                                Background="#E0FFFF"
+                                BorderBrush="#005555"
+                                BorderThickness="1"
+                                Padding="8,2"
+                                VerticalAlignment="Top">
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       Foreground="#003366"
+                                       FontWeight="SemiBold"
+                                       FontSize="11"/>
+                        </Border>
                     </Grid>
 
-                    <Grid Margin="0,0,0,10">
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="115"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Supplier *"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="#991B1B"/>
+
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding Suppliers}"
+                                  SelectedItem="{Binding SelectedSupplier, Mode=TwoWay}"
+                                  DisplayMemberPath="SupplierName"
+                                  IsTextSearchEnabled="True"
+                                  Style="{StaticResource ClassicCombo}"
+                                  Background="#FFFFE0"
+                                  FontWeight="Bold"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="85"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="GRN / Invoice *"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding SupplierInvoices}"
+                                  SelectedItem="{Binding SelectedInvoice, Mode=TwoWay}"
+                                  DisplayMemberPath="SupplierInvoiceNo"
+                                  IsTextSearchEnabled="True"
+                                  Style="{StaticResource ClassicCombo}"
+                                  ToolTip="Select posted GRN / supplier invoice."/>
+
+                        <Button Grid.Column="3"
+                                Content="LOAD"
+                                Command="{Binding LoadInvoiceCommand}"
+                                Style="{StaticResource ActionBtn}"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="15"/>
                             <ColumnDefinition Width="80"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Link to GRN/Inv:" Style="{StaticResource InlineLabel}"/>
-                        <ComboBox Grid.Column="1" IsEditable="True" ItemsSource="{Binding SupplierInvoices}" SelectedItem="{Binding SelectedInvoice}" DisplayMemberPath="SupplierInvoiceNo" Style="{StaticResource ClassicCombo}" ToolTip="Select historical invoice to pull exact unit costs"/>
-                        <Button Grid.Column="3" Content="LOAD" Command="{Binding LoadInvoiceCommand}" Style="{StaticResource ActionBtn}"/>
-                    </Grid>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="20"/>
-                            <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Return Date *" Style="{StaticResource InlineLabel}"/>
-                        <DatePicker Grid.Column="1" SelectedDate="{Binding ReturnDate}" Style="{StaticResource ClassicDate}"/>
 
-                        <TextBlock Grid.Column="3" Text="Auth By *" Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Column="4" Text="{Binding AuthorizedBy}" Style="{StaticResource ClassicInput}"/>
+                        <TextBlock Grid.Column="0"
+                                   Text="Return Date *"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <DatePicker Grid.Column="1"
+                                    SelectedDate="{Binding ReturnDate, Mode=TwoWay}"
+                                    Style="{StaticResource ClassicDate}"/>
+
+                        <TextBlock Grid.Column="3"
+                                   Text="Auth By *"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="4"
+                                 Text="{Binding AuthorizedBy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"/>
                     </Grid>
+
+                    <TextBlock Text="Load a posted GRN first. Return will deduct stock from the exact GRN-created batch."
+                               Foreground="#666"
+                               FontStyle="Italic"
+                               FontSize="11"/>
                 </StackPanel>
             </Border>
 
-            <!-- ZONE 2: RAPID ENTRY MATRIX -->
-            <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}" Background="#E6F2F2" BorderBrush="#005555">
+            <!-- RETURNABLE BATCH MATRIX -->
+            <Border Grid.Row="1"
+                    Style="{StaticResource ClassicGroupBox}"
+                    Background="#E6F2F2"
+                    BorderBrush="#005555">
+
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="2. HISTORICAL INVOICE MATRIX" Style="{StaticResource HeaderLabel}" Foreground="#005555"/>
-                    <TextBlock DockPanel.Dock="Top" Text="Enter the quantity you wish to return into the highlighted column below." Foreground="#555" FontStyle="Italic" Margin="0,0,0,10"/>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="2. RETURNABLE GRN BATCH LINES"
+                               Style="{StaticResource HeaderLabel}"
+                               Foreground="#005555"/>
 
-                    <Button DockPanel.Dock="Bottom" Content="⚡ ADD TO DEBIT NOTE" Command="{Binding AddMatrixCommand}" Style="{StaticResource ActionBtn}" Background="#0066CC" BorderBrush="#004C99" Height="36" Margin="0,10,0,0" FontSize="13"/>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Enter return quantity, reason, and remarks for the batch lines to return."
+                               Foreground="#555"
+                               FontStyle="Italic"
+                               Margin="0,0,0,8"/>
 
-                    <DataGrid ItemsSource="{Binding ActiveMatrixVariants}" AutoGenerateColumns="False" CanUserAddRows="False" 
-                              HeadersVisibility="Column" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" 
-                              RowHeight="32" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0"
-                              SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                    <Button DockPanel.Dock="Bottom"
+                            Content="ADD SELECTED QUANTITIES TO RETURN CART"
+                            Command="{Binding AddMatrixCommand}"
+                            Style="{StaticResource ActionBtn}"
+                            Background="#0066CC"
+                            BorderBrush="#004C99"
+                            Height="36"
+                            Margin="0,8,0,0"
+                            FontSize="13"/>
+
+                    <DataGrid ItemsSource="{Binding ActiveMatrixVariants}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              HeadersVisibility="Column"
+                              Background="White"
+                              BorderBrush="#A0A0A0"
+                              BorderThickness="1"
+                              RowHeight="31"
+                              GridLinesVisibility="All"
+                              HorizontalGridLinesBrush="#E0E0E0"
+                              VerticalGridLinesBrush="#E0E0E0"
+                              SelectionMode="Single"
+                              AlternatingRowBackground="#F9F9F9"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+
                         <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#E5E5E5"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="6"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                            </Style>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                         </DataGrid.Resources>
+
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Item Details" Binding="{Binding Description}" Width="*" IsReadOnly="True" FontWeight="SemiBold" CellStyle="{StaticResource BaseCell}"/>
-                            <DataGridTextColumn Header="Variant" Binding="{Binding VariantDescription}" Width="100" IsReadOnly="True" Foreground="#555" CellStyle="{StaticResource BaseCell}"/>
+                            <DataGridTextColumn Header="Item"
+                                                Binding="{Binding ItemCode}"
+                                                Width="75"
+                                                IsReadOnly="True"/>
 
-                            <DataGridTextColumn Header="Hist. Cost" Binding="{Binding HistoricalCost, StringFormat=N2}" Width="80" IsReadOnly="True" Foreground="#005500" CellStyle="{StaticResource BaseCell}">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Description"
+                                                Binding="{Binding Description}"
+                                                Width="170"
+                                                IsReadOnly="True"
+                                                FontWeight="SemiBold"/>
 
-                            <DataGridTemplateColumn Header="Return Qty *" Width="90">
+                            <DataGridTextColumn Header="Variant"
+                                                Binding="{Binding VariantDescription}"
+                                                Width="100"
+                                                IsReadOnly="True"/>
+
+                            <DataGridTextColumn Header="Batch"
+                                                Binding="{Binding BatchNo}"
+                                                Width="95"
+                                                IsReadOnly="True"
+                                                FontWeight="Bold"/>
+
+                            <DataGridTextColumn Header="Expiry"
+                                                Binding="{Binding ExpiryDate, StringFormat=d}"
+                                                Width="85"
+                                                IsReadOnly="True"/>
+
+                            <DataGridTextColumn Header="Received"
+                                                Binding="{Binding ReceivedQty, StringFormat=N3}"
+                                                Width="80"
+                                                IsReadOnly="True"
+                                                ElementStyle="{StaticResource CenterText}"/>
+
+                            <DataGridTextColumn Header="Returned"
+                                                Binding="{Binding AlreadyReturnedQty, StringFormat=N3}"
+                                                Width="80"
+                                                IsReadOnly="True"
+                                                ElementStyle="{StaticResource CenterText}"/>
+
+                            <DataGridTextColumn Header="Stock"
+                                                Binding="{Binding CurrentBatchStock, StringFormat=N3}"
+                                                Width="75"
+                                                IsReadOnly="True"
+                                                ElementStyle="{StaticResource CenterText}"/>
+
+                            <DataGridTextColumn Header="Max"
+                                                Binding="{Binding MaxReturnQty, StringFormat=N3}"
+                                                Width="75"
+                                                IsReadOnly="True"
+                                                ElementStyle="{StaticResource CenterText}"/>
+
+                            <DataGridTextColumn Header="Cost"
+                                                Binding="{Binding HistoricalCost, StringFormat=N2}"
+                                                Width="75"
+                                                IsReadOnly="True"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTemplateColumn Header="Return Qty *" Width="95">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBox Text="{Binding ReturnQty, UpdateSourceTrigger=PropertyChanged}" 
-                                                 HorizontalContentAlignment="Center" VerticalContentAlignment="Center" 
-                                                 FontWeight="Bold" Background="#FFFFE0" BorderBrush="#A0A0A0" BorderThickness="1" Margin="2"/>
+                                        <TextBox Text="{Binding ReturnQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 HorizontalContentAlignment="Center"
+                                                 VerticalContentAlignment="Center"
+                                                 FontWeight="Bold"
+                                                 Background="#FFFFE0"
+                                                 BorderBrush="#A0A0A0"
+                                                 BorderThickness="1"
+                                                 Margin="2"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="Reason *" Width="160">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.ReasonCodes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  SelectedItem="{Binding ReasonCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  Height="24"
+                                                  Margin="2"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="Line Remarks" Width="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding LineRemarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Height="24"
+                                                 Margin="2"
+                                                 BorderBrush="#A0A0A0"
+                                                 BorderThickness="1"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -204,9 +397,7 @@
             </Border>
         </Grid>
 
-        <!-- ======================================================== -->
-        <!-- RIGHT COLUMN: DEBIT NOTE CART & FINANCIALS               -->
-        <!-- ======================================================== -->
+        <!-- RIGHT SIDE -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -214,65 +405,177 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Background="#003366" Padding="15,12" BorderBrush="#002244" BorderThickness="1" Margin="0,0,0,10">
+            <!-- TITLE BAR -->
+            <Border Grid.Row="0"
+                    Background="#003366"
+                    Padding="12"
+                    BorderBrush="#002244"
+                    BorderThickness="1"
+                    Margin="0,0,0,8">
+
                 <Grid>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="PENDING DEBIT NOTE / RETURN CART" Foreground="White" FontSize="15" FontWeight="Bold"/>
-                    </StackPanel>
-                    <Border Background="#FFD700" Padding="15,4" HorizontalAlignment="Right">
-                        <TextBlock Text="DRAFT STATUS" FontWeight="Bold" Foreground="Black" FontSize="12"/>
+                    <TextBlock Text="PENDING SUPPLIER RETURN CART"
+                               Foreground="White"
+                               FontSize="15"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+
+                    <Border Background="#FFD700"
+                            Padding="12,4"
+                            HorizontalAlignment="Right">
+                        <TextBlock Text="DRAFT / UNPOSTED"
+                                   FontWeight="Bold"
+                                   Foreground="Black"
+                                   FontSize="12"/>
                     </Border>
                 </Grid>
             </Border>
 
-            <!-- THE RETURN LINES DATAGRID -->
-            <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}" Padding="0">
-                <DataGrid x:Name="dgReturnLines" ItemsSource="{Binding ReturnLines}" SelectedItem="{Binding SelectedLine}" 
-                          AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="Horizontal" IsReadOnly="True"
-                          HorizontalGridLinesBrush="#E0E0E0" BorderThickness="0" RowHeight="34" Background="White" AlternatingRowBackground="#F9F9F9">
+            <!-- RETURN CART -->
+            <Border Grid.Row="1"
+                    Style="{StaticResource ClassicGroupBox}"
+                    Padding="0"
+                    Margin="0,0,0,8">
+
+                <DataGrid x:Name="dgReturnLines"
+                          ItemsSource="{Binding ReturnLines}"
+                          SelectedItem="{Binding SelectedLine, Mode=TwoWay}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          GridLinesVisibility="All"
+                          IsReadOnly="False"
+                          HorizontalGridLinesBrush="#E0E0E0"
+                          VerticalGridLinesBrush="#E0E0E0"
+                          BorderThickness="0"
+                          RowHeight="32"
+                          Background="White"
+                          AlternatingRowBackground="#F9F9F9"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+
                     <DataGrid.Resources>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#F0F0F0"/>
-                            <Setter Property="Foreground" Value="#333"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="Padding" Value="8"/>
-                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                            <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                        </Style>
+                        <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                     </DataGrid.Resources>
+
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="90" Foreground="#666" CellStyle="{StaticResource BaseCell}"/>
-                        <DataGridTextColumn Header="Description &amp; Variant" Binding="{Binding Description}" Width="*" FontWeight="SemiBold" CellStyle="{StaticResource BaseCell}"/>
+                        <DataGridTextColumn Header="Item Code"
+                                            Binding="{Binding ItemCode}"
+                                            Width="85"
+                                            IsReadOnly="True"/>
 
-                        <DataGridTextColumn Header="Return Qty" Binding="{Binding ReturnQty}" Width="80" FontWeight="Bold" Foreground="#005500" CellStyle="{StaticResource BaseCell}">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="HorizontalAlignment" Value="Center"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Description"
+                                            Binding="{Binding Description}"
+                                            Width="180"
+                                            IsReadOnly="True"
+                                            FontWeight="SemiBold"/>
 
-                        <DataGridTextColumn Header="Unit Cost" Binding="{Binding HistoricalCost, StringFormat=N2}" Width="90" Foreground="#666" CellStyle="{StaticResource BaseCell}">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="HorizontalAlignment" Value="Right"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Variant"
+                                            Binding="{Binding VariantDescription}"
+                                            Width="105"
+                                            IsReadOnly="True"/>
 
-                        <DataGridTextColumn Header="Credit Value" Binding="{Binding CreditValue, StringFormat=N2}" Width="110" CellStyle="{StaticResource CreditCell}">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="HorizontalAlignment" Value="Right"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Batch"
+                                            Binding="{Binding BatchNo}"
+                                            Width="95"
+                                            IsReadOnly="True"
+                                            FontWeight="Bold"/>
 
-                        <DataGridTemplateColumn Header="Drop" Width="60">
+                        <DataGridTextColumn Header="Expiry"
+                                            Binding="{Binding ExpiryDate, StringFormat=d}"
+                                            Width="85"
+                                            IsReadOnly="True"/>
+
+                        <DataGridTemplateColumn Header="Return Qty"
+                                                Width="95">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Content="✖" Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                            CommandParameter="{Binding}" Background="#A94044" Foreground="White" BorderThickness="0" Cursor="Hand" Width="26" Height="26" FontWeight="Bold"/>
+                                    <TextBox Text="{Binding ReturnQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             HorizontalContentAlignment="Center"
+                                             FontWeight="Bold"
+                                             Background="#FFFFE0"
+                                             BorderBrush="#A0A0A0"
+                                             BorderThickness="1"
+                                             Margin="2"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Max"
+                                            Binding="{Binding MaxReturnQty, StringFormat=N3}"
+                                            Width="75"
+                                            IsReadOnly="True"
+                                            ElementStyle="{StaticResource CenterText}"/>
+
+                        <DataGridTextColumn Header="Unit Cost"
+                                            Binding="{Binding HistoricalCost, StringFormat=N2}"
+                                            Width="85"
+                                            IsReadOnly="True"
+                                            ElementStyle="{StaticResource RightText}"/>
+
+                        <DataGridTemplateColumn Header="Reason"
+                                                Width="155">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding DataContext.ReasonCodes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              SelectedItem="{Binding ReasonCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              Height="24"
+                                              Margin="2"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="Remarks"
+                                                Width="160">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding LineRemarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Height="24"
+                                             Margin="2"
+                                             BorderBrush="#A0A0A0"
+                                             BorderThickness="1"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Credit Value"
+                                            Binding="{Binding CreditValue, StringFormat=N2}"
+                                            Width="105"
+                                            IsReadOnly="True"
+                                            CellStyle="{StaticResource CreditCell}"
+                                            ElementStyle="{StaticResource RightText}"/>
+
+                        <DataGridTemplateColumn Header="Update"
+                                                Width="65">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="OK"
+                                            Command="{Binding DataContext.UpdateLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            Background="#005555"
+                                            Foreground="White"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            Width="42"
+                                            Height="24"
+                                            FontWeight="Bold"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="Drop"
+                                                Width="60">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="X"
+                                            Command="{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"
+                                            Background="#A94044"
+                                            Foreground="White"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            Width="28"
+                                            Height="24"
+                                            FontWeight="Bold"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -280,63 +583,156 @@
                 </DataGrid>
             </Border>
 
-            <!-- ZONE 4: FINANCIAL SETTLEMENT -->
-            <Border Grid.Row="2" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" Margin="0,0,0,0" Padding="15">
+            <!-- FOOTER -->
+            <Border Grid.Row="2"
+                    Background="White"
+                    BorderBrush="#A0A0A0"
+                    BorderThickness="1"
+                    Padding="12">
+
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="12"/>
                         <ColumnDefinition Width="280"/>
-                        <ColumnDefinition Width="15"/>
-                        <ColumnDefinition Width="340"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="360"/>
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Remarks / Dispatch Notes:" Style="{StaticResource InlineLabel}" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" Height="70" Style="{StaticResource ClassicInput}"/>
+                        <TextBlock Text="Remarks / Dispatch Notes:"
+                                   Style="{StaticResource InlineLabel}"
+                                   Margin="0,0,0,5"/>
+
+                        <TextBox Text="{Binding Remarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 Height="75"
+                                 Padding="5"
+                                 BorderBrush="#808080"
+                                 BorderThickness="1"/>
                     </StackPanel>
 
-                    <Rectangle Grid.Column="1" Width="1" Fill="#E0E0E0" Margin="7,0"/>
+                    <Rectangle Grid.Column="1"
+                               Width="1"
+                               Fill="#E0E0E0"
+                               Margin="6,0"/>
 
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                        <TextBlock Text="FINANCIAL DEDUCTIONS" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,15"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Restocking Fee (-)" Style="{StaticResource InlineLabel}" Foreground="#991B1B"/>
-                            <TextBox Grid.Column="1" Text="{Binding RestockingFee, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Style="{StaticResource ClassicInput}" HorizontalContentAlignment="Right" Background="#FEF2F2" FontWeight="Bold" Foreground="#991B1B" ToolTip="Supplier penalty for returning stock"/>
-                        </Grid>
-                    </StackPanel>
+                    <StackPanel Grid.Column="2"
+                                VerticalAlignment="Center">
 
-                    <Rectangle Grid.Column="3" Width="1" Fill="#E0E0E0" Margin="7,0"/>
-
-                    <StackPanel Grid.Column="4" VerticalAlignment="Center">
-                        <Grid Margin="0,0,0,6">
-                            <TextBlock Text="GROSS RETURN VALUE:" Foreground="#666" FontSize="13" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding GrossCredit, StringFormat=Rs. \{0:N2\}}" HorizontalAlignment="Right" FontSize="14" FontWeight="Bold" Foreground="#333"/>
-                        </Grid>
-                        <Grid Margin="0,0,0,10">
-                            <TextBlock Text="RESTOCKING PENALTY:" Foreground="#991B1B" FontSize="13" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding RestockingFee, StringFormat=- Rs. \{0:N2\}}" HorizontalAlignment="Right" Foreground="#991B1B" FontSize="14" FontWeight="Bold"/>
-                        </Grid>
-
-                        <Rectangle Height="2" Fill="#333" Margin="0,0,0,10"/>
-
-                        <Grid Margin="0,0,0,15">
-                            <TextBlock Text="TOTAL NET CREDIT:" Foreground="#003366" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding NetCredit, StringFormat=Rs. \{0:N2\}}" Foreground="#005500" FontSize="28" FontWeight="ExtraBold" HorizontalAlignment="Right" ToolTip="Exact amount deducted from Supplier Ledger"/>
-                        </Grid>
+                        <TextBlock Text="DEDUCTIONS"
+                                   FontWeight="Bold"
+                                   Foreground="#003366"
+                                   Margin="0,0,0,10"/>
 
                         <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="2*"/>
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="Clear" Command="{Binding ClearCommand}" Style="{StaticResource ClassicBtn}" Height="40"/>
-                            <Button Grid.Column="2" Content="POST DEBIT NOTE" Command="{Binding PostReturnCommand}" Style="{StaticResource ReturnBtn}" Height="40" FontSize="14" ToolTip="Warning: Reduces physical stock and posts Debit Note to ledger"/>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="Restocking Fee"
+                                       Style="{StaticResource InlineLabel}"
+                                       Foreground="#991B1B"/>
+
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding RestockingFee, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                     Style="{StaticResource ClassicInput}"
+                                     HorizontalContentAlignment="Right"
+                                     Background="#FEF2F2"
+                                     FontWeight="Bold"
+                                     Foreground="#991B1B"/>
+                        </Grid>
+
+                        <TextBlock Text="Fee reduces the supplier credit amount."
+                                   Foreground="#777"
+                                   FontSize="11"
+                                   FontStyle="Italic"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="3"
+                               Width="1"
+                               Fill="#E0E0E0"
+                               Margin="6,0"/>
+
+                    <StackPanel Grid.Column="4"
+                                VerticalAlignment="Center">
+
+                        <Grid Margin="0,0,0,5">
+                            <TextBlock Text="GROSS RETURN VALUE:"
+                                       Foreground="#666"
+                                       FontSize="13"
+                                       FontWeight="Bold"/>
+
+                            <TextBlock Text="{Binding GrossCredit, StringFormat=Rs. \{0:N2\}}"
+                                       HorizontalAlignment="Right"
+                                       FontSize="14"
+                                       FontWeight="Bold"
+                                       Foreground="#333"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,8">
+                            <TextBlock Text="RESTOCKING FEE:"
+                                       Foreground="#991B1B"
+                                       FontSize="13"
+                                       FontWeight="Bold"/>
+
+                            <TextBlock Text="{Binding RestockingFee, StringFormat=- Rs. \{0:N2\}}"
+                                       HorizontalAlignment="Right"
+                                       Foreground="#991B1B"
+                                       FontSize="14"
+                                       FontWeight="Bold"/>
+                        </Grid>
+
+                        <Rectangle Height="2"
+                                   Fill="#333"
+                                   Margin="0,0,0,8"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <TextBlock Text="NET SUPPLIER CREDIT:"
+                                       Foreground="#003366"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"/>
+
+                            <TextBlock Text="{Binding NetCredit, StringFormat=Rs. \{0:N2\}}"
+                                       Foreground="#005500"
+                                       FontSize="26"
+                                       FontWeight="ExtraBold"
+                                       HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.5*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0"
+                                    Content="Clear"
+                                    Command="{Binding ClearCommand}"
+                                    Style="{StaticResource ClassicBtn}"
+                                    Height="38"/>
+
+                            <Button Grid.Column="2"
+                                    Content="Save Draft"
+                                    Command="{Binding SaveDraftCommand}"
+                                    Style="{StaticResource DraftBtn}"
+                                    Height="38"/>
+
+                            <Button Grid.Column="4"
+                                    Content="POST DEBIT NOTE"
+                                    Command="{Binding PostReturnCommand}"
+                                    Style="{StaticResource PostBtn}"
+                                    Height="38"
+                                    FontSize="13"
+                                    ToolTip="Deducts exact batch stock and posts supplier ledger debit note."/>
                         </Grid>
                     </StackPanel>
                 </Grid>

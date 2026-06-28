@@ -69,6 +69,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<POS.Core.Repositories.GiftVoucherRepository>();
             services.AddTransient<PriceManagementRepository>();
             services.AddTransient<BarcodeManagementRepository>();
+            services.AddTransient<BarcodePrinterRepository>();
 
             // 4. Register ALL ViewModels
             services.AddSingleton<MainViewModel>();

@@ -745,6 +745,154 @@ namespace POS.Core.Data
             });
 
             // =========================================================
+            // SUPPLIER RETURN HEADER
+            // =========================================================
+            modelBuilder.Entity<SupplierReturnHeader>(entity =>
+            {
+                entity.ToTable("SupplierReturnHeaders");
+
+                entity.Property(r => r.ReturnNumber)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.OriginalInvoiceNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.AuthorizedBy)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(r => r.Remarks)
+                    .HasMaxLength(500);
+
+                entity.Property(r => r.GrossCredit)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.RestockingFee)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.NetCredit)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.Status)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.CreatedBy)
+                    .HasMaxLength(50);
+
+                entity.Property(r => r.PostedBy)
+                    .HasMaxLength(50);
+
+                entity.Property(r => r.CancelledBy)
+                    .HasMaxLength(50);
+
+                entity.Property(r => r.CancellationReason)
+                    .HasMaxLength(250);
+
+                entity.HasOne(r => r.Supplier)
+                    .WithMany()
+                    .HasForeignKey(r => r.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.GrnHeader)
+                    .WithMany()
+                    .HasForeignKey(r => r.GrnHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(r => r.ReturnNumber)
+                    .IsUnique();
+
+                entity.HasIndex(r => r.SupplierId);
+
+                entity.HasIndex(r => r.GrnHeaderId);
+
+                entity.HasIndex(r => r.OriginalInvoiceNo);
+
+                entity.HasIndex(r => r.ReturnDate);
+
+                entity.HasIndex(r => r.Status);
+            });
+
+
+            // =========================================================
+            // SUPPLIER RETURN LINE
+            // =========================================================
+            modelBuilder.Entity<SupplierReturnLine>(entity =>
+            {
+                entity.ToTable("SupplierReturnLines");
+
+                entity.Property(l => l.BatchNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.ReturnQty)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(l => l.HistoricalCost)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.CreditValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.ReasonCode)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.LineRemarks)
+                    .HasMaxLength(250);
+
+                entity.Property(l => l.LineStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.HasOne(l => l.ReturnHeader)
+                    .WithMany(h => h.ReturnLines)
+                    .HasForeignKey(l => l.ReturnHeaderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(l => l.GrnLine)
+                    .WithMany()
+                    .HasForeignKey(l => l.GrnLineId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.ItemVariant)
+                    .WithMany()
+                    .HasForeignKey(l => l.ItemVariantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.ItemBatch)
+                    .WithMany()
+                    .HasForeignKey(l => l.ItemBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(l => l.ReturnHeaderId);
+
+                entity.HasIndex(l => l.GrnLineId);
+
+                entity.HasIndex(l => l.ItemVariantId);
+
+                entity.HasIndex(l => l.ItemBatchId);
+
+                entity.HasIndex(l => l.ReasonCode);
+
+                entity.HasIndex(l => l.LineStatus);
+
+                // Same physical batch should appear only once in one supplier return document.
+                entity.HasIndex(l => new
+                {
+                    l.ReturnHeaderId,
+                    l.ItemBatchId
+                })
+                .IsUnique();
+            });
+
+            // =========================================================
             // DOCUMENT SEQUENCES
             // =========================================================
             modelBuilder.Entity<DocumentSequence>(entity =>
@@ -789,6 +937,14 @@ namespace POS.Core.Data
                     {
                         DocumentType = "ADJ",
                         Prefix = "ADJ-",
+                        NextSequenceNumber = 1,
+                        PaddingLength = 5,
+                        UpdatedAt = seedDate
+                    },
+                    new DocumentSequence
+                    {
+                        DocumentType = "RTN",
+                        Prefix = "RTN-",
                         NextSequenceNumber = 1,
                         PaddingLength = 5,
                         UpdatedAt = seedDate
