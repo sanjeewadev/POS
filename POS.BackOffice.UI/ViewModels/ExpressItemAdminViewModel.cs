@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using POS.Core.Models;
+using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
@@ -12,164 +14,418 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class ExpressItemAdminViewModel : ObservableObject
     {
         private readonly ExpressItemRepository _repository;
+        private readonly DispatcherTimer _searchDebounceTimer;
 
-        // ==========================================
-        // PROPERTIES: LEFT PANE (VARIANT SEARCH)
-        // ==========================================
-        public ObservableCollection<ItemVariant> SearchResults { get; } = new();
+        private bool _isLoadingLayoutSelection = false;
 
-        [ObservableProperty] private string _searchText = string.Empty;
+        // =========================================================
+        // SEARCH / ITEM SELECTION
+        // =========================================================
 
-        [ObservableProperty] private ItemVariant? _selectedVariant;
+        public ObservableCollection<ExpressItemSearchDto> SearchResults { get; } = new();
 
-        // ==========================================
-        // PROPERTIES: RIGHT PANE (LAYOUT SETUP)
-        // ==========================================
-        public ObservableCollection<ExpressItemLayout> Layouts { get; } = new();
+        [ObservableProperty]
+        private string _searchText = string.Empty;
 
-        [ObservableProperty] private ExpressItemLayout _currentLayout = new ExpressItemLayout();
+        [ObservableProperty]
+        private ExpressItemSearchDto? _selectedSearchItem;
 
-        [ObservableProperty] private ExpressItemLayout? _selectedLayout;
+        // =========================================================
+        // EXPRESS BUTTON SETUP
+        // =========================================================
 
-        // Color Palette choices for the manager to design their POS screens
+        public ObservableCollection<ExpressItemLayoutDto> Layouts { get; } = new();
+
+        [ObservableProperty]
+        private ExpressItemLayoutDto _currentLayout = new();
+
+        [ObservableProperty]
+        private ExpressItemLayoutDto? _selectedLayout;
+
         public ObservableCollection<string> AvailableColors { get; } = new(new[]
         {
-            "#005555", "#8B0000", "#D97706", "#059669", "#1E3A8A",
-            "#4C1D95", "#B91C1C", "#333333", "#0F766E", "#BE123C"
+            "#005555",
+            "#8B0000",
+            "#D97706",
+            "#059669",
+            "#1E3A8A",
+            "#4C1D95",
+            "#B91C1C",
+            "#333333",
+            "#0F766E",
+            "#BE123C",
+            "#2563EB",
+            "#7C2D12"
         });
+
+        public ObservableCollection<string> AvailableTextColors { get; } = new(new[]
+        {
+            "#FFFFFF",
+            "#000000",
+            "#FFFF00",
+            "#FFD700"
+        });
+
+        // =========================================================
+        // UI STATE
+        // =========================================================
+
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _statusMessage = "Ready.";
+
+        [ObservableProperty]
+        private int _searchResultCount = 0;
+
+        [ObservableProperty]
+        private int _layoutCount = 0;
+
+        [ObservableProperty]
+        private int _activeButtonCount = 0;
+
+        public bool IsEditMode => CurrentLayout.LayoutId > 0;
 
         public ExpressItemAdminViewModel(ExpressItemRepository repository)
         {
             _repository = repository;
-            _ = LoadLayoutsAsync();
+
+            _searchDebounceTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(350)
+            };
+
+            _searchDebounceTimer.Tick += async (_, _) =>
+            {
+                _searchDebounceTimer.Stop();
+                await SearchAsync();
+            };
+
+            _ = InitializeAsync();
         }
 
-        // ==========================================
-        // SMART UI TRIGGERS
-        // ==========================================
+        // =========================================================
+        // INITIALIZE
+        // =========================================================
 
-        // Fires automatically when a manager clicks a searched item
-        partial void OnSelectedVariantChanged(ItemVariant? value)
+        private async Task InitializeAsync()
         {
-            if (value != null && string.IsNullOrWhiteSpace(CurrentLayout.DisplayLabel))
+            IsBusy = true;
+            StatusMessage = "Loading express item admin page...";
+
+            try
             {
-                // Auto-generate the button label based on Parent Name + Variant Description
-                string autoName = string.IsNullOrWhiteSpace(value.VariantDescription)
-                    ? value.ItemParent?.ItemName ?? ""
-                    : $"{value.ItemParent?.ItemName} {value.VariantDescription}";
+                await LoadLayoutsAsync();
+                await PrepareBlankLayoutAsync();
 
-                // Truncate to exactly 20 characters so it fits nicely on a square POS touch button
-                CurrentLayout.DisplayLabel = autoName.Length > 20 ? autoName.Substring(0, 20).Trim() : autoName;
+                StatusMessage = "Express item admin page ready.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load express item admin page.";
 
-                // Force UI to refresh the form to show the newly generated name
-                OnPropertyChanged(nameof(CurrentLayout));
+                MessageBox.Show(
+                    $"Failed to load express item admin page:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        // Fires automatically when a manager selects an existing layout to edit
-        partial void OnSelectedLayoutChanged(ExpressItemLayout? value)
-        {
-            if (value != null)
-            {
-                // We CLONE the object. This prevents live UI edits from corrupting 
-                // the DataGrid display until the user actually hits "Save".
-                CurrentLayout = new ExpressItemLayout
-                {
-                    Id = value.Id,
-                    ItemVariantId = value.ItemVariantId,
-                    TabCategory = value.TabCategory,
-                    DisplayLabel = value.DisplayLabel,
-                    ButtonColorHex = value.ButtonColorHex,
-                    TextColorHex = value.TextColorHex,
-                    GridRow = value.GridRow,
-                    GridColumn = value.GridColumn,
-                    IsActive = value.IsActive,
-                    ItemVariant = value.ItemVariant
-                };
-            }
-        }
+        // =========================================================
+        // SEARCH
+        // =========================================================
 
-        // ==========================================
-        // COMMANDS & EXECUTION
-        // ==========================================
+        partial void OnSearchTextChanged(string value)
+        {
+            _searchDebounceTimer.Stop();
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                SearchResults.Clear();
+                SearchResultCount = 0;
+                return;
+            }
+
+            _searchDebounceTimer.Start();
+        }
 
         [RelayCommand]
         private async Task SearchAsync()
         {
-            if (string.IsNullOrWhiteSpace(SearchText)) return;
+            string search = (SearchText ?? string.Empty).Trim();
 
-            var data = await _repository.SearchVariantsAsync(SearchText);
-            SearchResults.Clear();
-            foreach (var item in data) SearchResults.Add(item);
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                SearchResults.Clear();
+                SearchResultCount = 0;
+                StatusMessage = "Search text is empty.";
+                return;
+            }
+
+            IsBusy = true;
+            StatusMessage = "Searching sellable items...";
+
+            try
+            {
+                SearchResults.Clear();
+
+                var results = await _repository.SearchSellableItemsAsync(search);
+
+                foreach (var item in results)
+                    SearchResults.Add(item);
+
+                SearchResultCount = SearchResults.Count;
+
+                StatusMessage = $"Found {SearchResultCount} item(s).";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Item search failed.";
+
+                MessageBox.Show(
+                    $"Item search failed:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
+
+        partial void OnSelectedSearchItemChanged(ExpressItemSearchDto? value)
+        {
+            if (value == null)
+                return;
+
+            if (_isLoadingLayoutSelection)
+                return;
+
+            _ = StartNewButtonFromSelectedItemAsync(value);
+        }
+
+        private async Task StartNewButtonFromSelectedItemAsync(ExpressItemSearchDto item)
+        {
+            try
+            {
+                var position = await _repository.GetNextAvailablePositionAsync();
+
+                CurrentLayout = ExpressItemLayoutDto.FromSearchItem(
+                    item,
+                    position.Row,
+                    position.Column);
+
+                SelectedLayout = null;
+
+                OnPropertyChanged(nameof(IsEditMode));
+
+                StatusMessage = $"Prepared new express button for {item.ItemCode}.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to prepare express button:\n\n{ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        // =========================================================
+        // LAYOUT SELECTION
+        // =========================================================
+
+        partial void OnSelectedLayoutChanged(ExpressItemLayoutDto? value)
+        {
+            if (value == null)
+                return;
+
+            _isLoadingLayoutSelection = true;
+
+            CurrentLayout = value.Clone();
+            SelectedSearchItem = null;
+
+            _isLoadingLayoutSelection = false;
+
+            OnPropertyChanged(nameof(IsEditMode));
+
+            StatusMessage = $"Editing express button: {CurrentLayout.DisplayLabel}.";
+        }
+
+        // =========================================================
+        // SAVE
+        // =========================================================
 
         [RelayCommand]
         private async Task SaveAsync()
         {
-            // 1. Basic Validation
-            if (CurrentLayout.Id == 0 && SelectedVariant == null)
+            var errors = CurrentLayout.ValidateForSave();
+
+            if (errors.Any())
             {
-                MessageBox.Show("Please search and select an Item Variant from the left pane first.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Cannot save express button because validation failed:\n\n" +
+                    string.Join("\n", errors),
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(CurrentLayout.TabCategory) || string.IsNullOrWhiteSpace(CurrentLayout.DisplayLabel))
-            {
-                MessageBox.Show("Tab Category and Button Display Label are strictly required.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            IsBusy = true;
+            StatusMessage = "Saving express button...";
 
             try
             {
-                // Assign variant ID if it's a brand new button layout
-                if (CurrentLayout.Id == 0)
-                {
-                    CurrentLayout.ItemVariantId = SelectedVariant!.Id;
-                }
-
                 await _repository.SaveLayoutAsync(CurrentLayout);
-                MessageBox.Show("Express POS button successfully mapped and saved.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                MessageBox.Show(
+                    "Express item button saved successfully.",
+                    "Saved",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
 
                 await LoadLayoutsAsync();
-                Clear();
+                await PrepareBlankLayoutAsync();
+
+                StatusMessage = "Express button saved.";
             }
             catch (InvalidOperationException ex)
             {
-                // Catch the strict Grid Collision rule we built into the repository!
-                MessageBox.Show(ex.Message, "Grid Collision Detected", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Express button validation failed.";
+
+                MessageBox.Show(
+                    ex.Message,
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to save layout: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Failed to save express button.";
+
+                MessageBox.Show(
+                    $"Failed to save express button:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
+
+        // =========================================================
+        // DELETE
+        // =========================================================
 
         [RelayCommand]
         private async Task DeleteAsync()
         {
-            if (SelectedLayout == null || SelectedLayout.Id == 0) return;
-
-            if (MessageBox.Show($"Are you sure you want to completely remove the '{SelectedLayout.DisplayLabel}' button from the POS?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (SelectedLayout == null || SelectedLayout.LayoutId <= 0)
             {
-                await _repository.DeleteLayoutAsync(SelectedLayout.Id);
+                MessageBox.Show(
+                    "Please select an existing express button to delete.",
+                    "Selection Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"Delete express button '{SelectedLayout.DisplayLabel}'?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            IsBusy = true;
+            StatusMessage = "Deleting express button...";
+
+            try
+            {
+                await _repository.DeleteLayoutAsync(SelectedLayout.LayoutId);
+
                 await LoadLayoutsAsync();
-                Clear();
+                await PrepareBlankLayoutAsync();
+
+                StatusMessage = "Express button deleted.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to delete express button.";
+
+                MessageBox.Show(
+                    $"Failed to delete express button:\n\n{ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
+        // =========================================================
+        // CLEAR / RELOAD
+        // =========================================================
+
         [RelayCommand]
-        private void Clear()
+        private async Task ClearAsync()
         {
-            CurrentLayout = new ExpressItemLayout();
+            await PrepareBlankLayoutAsync();
+
             SelectedLayout = null;
-            SelectedVariant = null;
+            SelectedSearchItem = null;
+
+            StatusMessage = "Form cleared.";
+        }
+
+        [RelayCommand]
+        private async Task RefreshAsync()
+        {
+            await LoadLayoutsAsync();
+            StatusMessage = "Express button list refreshed.";
+        }
+
+        private async Task PrepareBlankLayoutAsync()
+        {
+            var position = await _repository.GetNextAvailablePositionAsync();
+
+            CurrentLayout = new ExpressItemLayoutDto
+            {
+                ButtonColorHex = "#005555",
+                TextColorHex = "#FFFFFF",
+                GridRow = position.Row,
+                GridColumn = position.Column,
+                IsActive = true
+            };
+
+            OnPropertyChanged(nameof(IsEditMode));
         }
 
         private async Task LoadLayoutsAsync()
         {
-            var data = await _repository.GetAllLayoutsAsync();
             Layouts.Clear();
-            foreach (var item in data) Layouts.Add(item);
+
+            var rows = await _repository.GetAdminLayoutsAsync();
+
+            foreach (var row in rows)
+                Layouts.Add(row);
+
+            LayoutCount = Layouts.Count;
+            ActiveButtonCount = Layouts.Count(x => x.IsActive);
         }
     }
 }

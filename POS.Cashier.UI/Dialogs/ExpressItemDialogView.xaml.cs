@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.ViewModels;
 
@@ -10,18 +11,26 @@ namespace POS.Cashier.UI.Dialogs
         {
             InitializeComponent();
 
-            // Wire up the ViewModel via Dependency Injection
             if (App.Services != null)
             {
-                this.DataContext = App.Services.GetRequiredService<ExpressMenuViewModel>();
+                DataContext = App.Services.GetRequiredService<ExpressMenuViewModel>();
             }
         }
 
         private void CloseBtn_Click(object sender, RoutedEventArgs e)
         {
-            // Rapid-Fire mode: The window stays open until the cashier explicitly closes it
-            this.DialogResult = true;
-            this.Close();
+            DialogResult = true;
+            Close();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                DialogResult = true;
+                Close();
+                e.Handled = true;
+            }
         }
     }
 }

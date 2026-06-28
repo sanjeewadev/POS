@@ -4,45 +4,71 @@ using Microsoft.EntityFrameworkCore;
 
 namespace POS.Core.Models
 {
-    // CRITICAL RULE: Ensures no two buttons can overlap on the exact same row/col on the same tab.
-    // This makes it mathematically impossible to corrupt the POS touch UI layout.
+    // Hidden internal group is kept only for database/index compatibility.
+    // The admin and cashier UI will not show categories/tabs.
     [Index(nameof(TabCategory), nameof(GridRow), nameof(GridColumn), IsUnique = true)]
     public class ExpressItemLayout
     {
+        public const string MainTabCategory = "MAIN";
+
         [Key]
         public int Id { get; set; }
 
-        // Link directly to the specific sellable item
         [Required]
         public int ItemVariantId { get; set; }
 
-        [ForeignKey("ItemVariantId")]
+        [ForeignKey(nameof(ItemVariantId))]
         public virtual ItemVariant? ItemVariant { get; set; }
 
-        // Grouping for the POS screen (e.g., "Bakery", "Beverages", "Produce")
         [Required]
         [MaxLength(50)]
-        public string TabCategory { get; set; } = "General";
+        public string TabCategory { get; set; } = MainTabCategory;
 
-        // The short text printed on the touch button
         [Required]
         [MaxLength(50)]
         public string DisplayLabel { get; set; } = string.Empty;
 
-        // Visual design for the cashier
         [MaxLength(9)]
         public string ButtonColorHex { get; set; } = "#005555";
 
         [MaxLength(9)]
         public string TextColorHex { get; set; } = "#FFFFFF";
 
-        // Grid Positioning (X, Y coordinates on the screen)
+        // User-facing position:
+        // Row = Y position, Column = X position.
+        // Recommended cashier grid: 5 columns, multiple rows.
         [Required]
-        public int GridRow { get; set; }
+        public int GridRow { get; set; } = 1;
 
         [Required]
-        public int GridColumn { get; set; }
+        public int GridColumn { get; set; } = 1;
 
         public bool IsActive { get; set; } = true;
+
+        [NotMapped]
+        public string PositionText => $"[{GridRow}, {GridColumn}]";
+
+        [NotMapped]
+        public string ItemDisplayName
+        {
+            get
+            {
+                if (ItemVariant?.ItemParent == null)
+                    return string.Empty;
+
+                if (string.IsNullOrWhiteSpace(ItemVariant.VariantDescription) ||
+                    ItemVariant.VariantDescription.Equals("Standard", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return ItemVariant.ItemParent.ItemName;
+                }
+
+                return $"{ItemVariant.ItemParent.ItemName} - {ItemVariant.VariantDescription}";
+            }
+        }
+
+        public void ForceMainTab()
+        {
+            TabCategory = MainTabCategory;
+        }
     }
 }
