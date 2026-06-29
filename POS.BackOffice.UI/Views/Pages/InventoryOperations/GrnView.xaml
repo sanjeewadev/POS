@@ -11,12 +11,11 @@
              FontSize="12">
 
     <UserControl.Resources>
-
         <Style TargetType="TextBlock" x:Key="HeaderLabel">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="#003366"/>
-            <Setter Property="Margin" Value="0,5,0,5"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
 
         <Style TargetType="TextBlock" x:Key="InlineLabel">
@@ -28,8 +27,8 @@
         </Style>
 
         <Style TargetType="TextBox" x:Key="ClassicInput">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Height" Value="25"/>
+            <Setter Property="Padding" Value="5,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -37,30 +36,30 @@
             <Style.Triggers>
                 <Trigger Property="IsReadOnly" Value="True">
                     <Setter Property="Background" Value="#E5E5E5"/>
-                    <Setter Property="Foreground" Value="#555"/>
+                    <Setter Property="Foreground" Value="#555555"/>
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Background" Value="#E5E5E5"/>
-                    <Setter Property="Foreground" Value="#555"/>
+                    <Setter Property="Foreground" Value="#555555"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
         <Style TargetType="ComboBox" x:Key="ClassicCombo">
-            <Setter Property="Height" Value="24"/>
+            <Setter Property="Height" Value="25"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="Background" Value="White"/>
         </Style>
 
         <Style TargetType="DatePicker" x:Key="ClassicDate">
-            <Setter Property="Height" Value="24"/>
+            <Setter Property="Height" Value="25"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
-            <Setter Property="Height" Value="26"/>
+            <Setter Property="Height" Value="28"/>
             <Setter Property="Background" Value="#E0E0E0"/>
             <Setter Property="Foreground" Value="Black"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -68,25 +67,19 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#CCCCCC"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.55"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
 
         <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#005555"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#003333"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#007777"/>
-                </Trigger>
-            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="PostBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005500"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003300"/>
+            <Setter Property="FontSize" Value="14"/>
         </Style>
 
         <Style TargetType="Border" x:Key="ClassicGroupBox">
@@ -94,7 +87,6 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="#F0F0F0"/>
             <Setter Property="Padding" Value="10"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
@@ -122,21 +114,62 @@
 
         <Style TargetType="DataGridCell" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
         <Style TargetType="DataGridCell" x:Key="EditableCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#FFFFE0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="HighlightCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="DataGridCell" x:Key="CostCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#FFF7ED"/>
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
+        <Style TargetType="TextBlock" x:Key="RightText">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="CenterText">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="GridQtyBox">
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#FFFFE0"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="GridMoneyBox">
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#FFFFE0"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="GridTextBox">
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#FFFFE0"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="5"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -160,14 +193,15 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0"
-                               Text="1. GRN &amp; SUPPLIER INVOICE SETUP"
+                               Text="1. GOODS RECEIVED NOTE - SUPPLIER INVOICE SETUP"
                                Style="{StaticResource HeaderLabel}"/>
 
                     <TextBlock Grid.Column="1"
                                Text="{Binding StatusMessage}"
                                VerticalAlignment="Center"
-                               Foreground="#666"
+                               Foreground="#666666"
                                FontSize="11"
+                               FontWeight="SemiBold"
                                Margin="15,0"/>
 
                     <Border Grid.Column="2"
@@ -185,11 +219,11 @@
                 <WrapPanel Orientation="Horizontal" Margin="0,5,0,0">
 
                     <!-- PO LINK -->
-                    <Border Margin="0,0,30,5"
+                    <Border Margin="0,0,22,5"
                             Background="#E6F2F2"
                             BorderBrush="#A0A0A0"
                             BorderThickness="1"
-                            Padding="5">
+                            Padding="6">
 
                         <StackPanel>
                             <TextBlock Text="Link Approved PO"
@@ -198,17 +232,18 @@
 
                             <Grid Margin="0,4,0,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="220"/>
-                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="300"/>
+                                    <ColumnDefinition Width="8"/>
                                     <ColumnDefinition Width="75"/>
                                 </Grid.ColumnDefinitions>
 
                                 <ComboBox Grid.Column="0"
                                           ItemsSource="{Binding OpenPurchaseOrders}"
                                           SelectedItem="{Binding SelectedPO, Mode=TwoWay}"
-                                          DisplayMemberPath="PoNumber"
+                                          DisplayMemberPath="DisplayText"
                                           IsEditable="True"
                                           IsTextSearchEnabled="True"
+                                          TextSearch.TextPath="DisplayText"
                                           Style="{StaticResource ClassicCombo}"
                                           ToolTip="Leave blank for Direct GRN."/>
 
@@ -216,21 +251,21 @@
                                         Content="LOAD"
                                         Command="{Binding LoadPoCommand}"
                                         Style="{StaticResource ActionBtn}"
-                                        Height="24"/>
+                                        Height="25"/>
                             </Grid>
                         </StackPanel>
                     </Border>
 
                     <!-- SUPPLIER + INVOICE -->
-                    <StackPanel Margin="0,0,30,5">
-                        <TextBlock Text="Supplier &amp; Invoice No *"
+                    <StackPanel Margin="0,0,22,5">
+                        <TextBlock Text="Supplier &amp; Supplier Invoice No *"
                                    Style="{StaticResource InlineLabel}"/>
 
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="200"/>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="210"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="145"/>
                             </Grid.ColumnDefinitions>
 
                             <ComboBox Grid.Column="0"
@@ -240,6 +275,7 @@
                                       IsEnabled="{Binding IsSupplierSelectionEnabled}"
                                       IsEditable="True"
                                       IsTextSearchEnabled="True"
+                                      TextSearch.TextPath="SupplierName"
                                       Style="{StaticResource ClassicCombo}"/>
 
                             <TextBox Grid.Column="2"
@@ -247,21 +283,21 @@
                                      Style="{StaticResource ClassicInput}"
                                      Background="#FFFFE0"
                                      FontWeight="Bold"
-                                     ToolTip="Supplier invoice number. Duplicate invoice number is blocked per supplier."/>
+                                     ToolTip="Duplicate invoice number is blocked per supplier."/>
                         </Grid>
                     </StackPanel>
 
                     <!-- DATES -->
-                    <StackPanel Margin="0,0,30,5">
+                    <StackPanel Margin="0,0,22,5">
                         <TextBlock Text="Invoice / Received / Due Dates"
                                    Style="{StaticResource InlineLabel}"/>
 
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="115"/>
-                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="115"/>
-                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="115"/>
                             </Grid.ColumnDefinitions>
 
@@ -281,13 +317,12 @@
                                         ToolTip="Supplier payment due date."/>
                         </Grid>
                     </StackPanel>
-
                 </WrapPanel>
             </StackPanel>
         </Border>
 
         <!-- LEFT SIDE: ITEM ENTRY -->
-        <Border Grid.Row="1"
+        <Border Grid.Row="2"
                 Grid.Column="0"
                 Style="{StaticResource ClassicGroupBox}"
                 VerticalAlignment="Stretch">
@@ -303,8 +338,7 @@
                 <TextBlock Grid.Row="0"
                            Text="2. ITEM ENTRY CONSOLE"
                            Style="{StaticResource HeaderLabel}"
-                           Foreground="#005555"
-                           Margin="0,0,0,5"/>
+                           Foreground="#005555"/>
 
                 <!-- BARCODE / ITEM SEARCH -->
                 <Border Grid.Row="1"
@@ -312,12 +346,12 @@
                         Padding="8"
                         BorderBrush="#1E293B"
                         BorderThickness="1"
-                        Margin="0,0,0,10">
+                        Margin="0,0,0,8">
 
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="65"/>
+                                <ColumnDefinition Width="70"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
@@ -328,7 +362,7 @@
 
                             <TextBox Grid.Column="1"
                                      Text="{Binding ScanBarcode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="26"
+                                     Height="27"
                                      FontSize="13"
                                      FontWeight="Bold"
                                      ToolTip="Scan barcode or type SKU and press Enter.">
@@ -341,9 +375,9 @@
 
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="65"/>
+                                <ColumnDefinition Width="70"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="45"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
@@ -359,7 +393,7 @@
                                       IsEditable="True"
                                       IsTextSearchEnabled="True"
                                       TextSearch.TextPath="ItemCode"
-                                      Height="26"
+                                      Height="27"
                                       Margin="0,0,10,0"/>
 
                             <TextBlock Grid.Column="2"
@@ -374,8 +408,8 @@
                                       IsEditable="True"
                                       IsTextSearchEnabled="True"
                                       TextSearch.TextPath="ItemName"
-                                      Height="26"
-                                      ToolTip="Select standard item or matrix parent."/>
+                                      Height="27"
+                                      ToolTip="Select item parent to load variants."/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -408,13 +442,13 @@
 
                             <TextBox Grid.Column="1"
                                      Text="{Binding MatrixFilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Width="180"
-                                     Height="24"
+                                     Width="185"
+                                     Height="25"
                                      Padding="4,0"
                                      Background="White"
                                      BorderBrush="#A0A0A0"
                                      BorderThickness="1"
-                                     ToolTip="Search loaded variants by item, attributes, or barcode."/>
+                                     ToolTip="Search loaded variants by item, attributes, SKU, or barcode."/>
                         </Grid>
 
                         <Grid Grid.Row="1" Margin="0,0,0,8">
@@ -433,7 +467,7 @@
                             <TextBox Grid.Column="1"
                                      Text="{Binding MatrixBatchNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ClassicInput}"
-                                     ToolTip="Leave blank for system generated batch number."/>
+                                     ToolTip="Leave blank for system-generated GRN batch number."/>
 
                             <TextBlock Grid.Column="3"
                                        Text="Expiry:"
@@ -454,7 +488,7 @@
                                   Background="White"
                                   BorderBrush="#A0A0A0"
                                   BorderThickness="1"
-                                  RowHeight="28"
+                                  RowHeight="30"
                                   GridLinesVisibility="All"
                                   HorizontalGridLinesBrush="#E0E0E0"
                                   VerticalGridLinesBrush="#E0E0E0"
@@ -468,20 +502,18 @@
                             </DataGrid.Resources>
 
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Attributes"
-                                                    Binding="{Binding VariantDescription}"
+                                <DataGridTextColumn Header="Variant"
+                                                    Binding="{Binding VariantDescription, Mode=OneWay}"
                                                     Width="*"
                                                     IsReadOnly="True"
                                                     CellStyle="{StaticResource FrozenCell}"/>
 
-                                <DataGridTemplateColumn Header="Rec'd Qty" Width="80">
+                                <DataGridTemplateColumn Header="Rec'd Qty" Width="82">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBox Text="{Binding ReceivedQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                     TextAlignment="Center"
-                                                     FontWeight="Bold"
-                                                     Background="#FFFFE0"
-                                                     BorderThickness="0"/>
+                                                     Style="{StaticResource GridQtyBox}"
+                                                     Margin="2"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -489,22 +521,20 @@
                                 <DataGridTemplateColumn Header="Unit Cost" Width="90">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     TextAlignment="Right"
-                                                     Background="#FFFFE0"
-                                                     BorderThickness="0"/>
+                                            <TextBox Text="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource GridMoneyBox}"
+                                                     Margin="2"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTemplateColumn Header="Disc Rs." Width="75">
+                                <DataGridTemplateColumn Header="Disc Rs." Width="78">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding LineDiscount, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                     TextAlignment="Right"
+                                            <TextBox Text="{Binding LineDiscount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource GridMoneyBox}"
                                                      Foreground="DarkRed"
-                                                     Background="#FFFFE0"
-                                                     BorderThickness="0"/>
+                                                     Margin="2"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -519,14 +549,14 @@
                         Style="{StaticResource ActionBtn}"
                         Background="#0066CC"
                         BorderBrush="#004C99"
-                        Height="36"
-                        Margin="0,10,0,0"
+                        Height="38"
+                        Margin="0,8,0,0"
                         FontSize="13"/>
             </Grid>
         </Border>
 
         <!-- RIGHT SIDE: GRN CART -->
-        <Grid Grid.Row="1"
+        <Grid Grid.Row="2"
               Grid.Column="2">
 
             <Grid.RowDefinitions>
@@ -566,7 +596,7 @@
                     </StackPanel>
 
                     <TextBlock Grid.Column="1"
-                               Text="Posting updates inventory, batches, PO received qty, and supplier ledger"
+                               Text="Posting updates inventory, item batches, PO received qty, and supplier ledger"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center"
                                Foreground="#DEFF9A"
@@ -585,7 +615,7 @@
                     <TextBlock Text="Selected Row Actions:"
                                VerticalAlignment="Center"
                                FontWeight="Bold"
-                               Foreground="#666"
+                               Foreground="#666666"
                                Margin="0,0,10,0"/>
 
                     <Button Content="Remove Item"
@@ -593,11 +623,11 @@
                             CommandParameter="{Binding SelectedLine}"
                             Style="{StaticResource ClassicBtn}"
                             Foreground="DarkRed"
-                            Height="26"/>
+                            Height="27"/>
 
-                    <TextBlock Text="Edit highlighted cells before posting."
+                    <TextBlock Text="Yellow cells are editable. Empty batch number creates a system GRN batch."
                                VerticalAlignment="Center"
-                               Foreground="#888"
+                               Foreground="#666666"
                                FontStyle="Italic"
                                Margin="20,0,0,0"/>
                 </StackPanel>
@@ -615,14 +645,15 @@
                       IsReadOnly="False"
                       HorizontalGridLinesBrush="#C0C0C0"
                       VerticalGridLinesBrush="#D0D0D0"
-                      RowHeight="28"
+                      RowHeight="31"
                       HeadersVisibility="Column"
                       Background="White"
                       BorderBrush="#A0A0A0"
                       BorderThickness="1"
                       SelectionMode="Single"
                       AlternatingRowBackground="#F9F9F9"
-                      CellEditEnding="DgGrnLines_CellEditEnding">
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
@@ -630,117 +661,117 @@
 
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Code"
-                                        Binding="{Binding ItemCode}"
-                                        Width="85"
+                                        Binding="{Binding ItemCode, Mode=OneWay}"
+                                        Width="80"
                                         IsReadOnly="True"
-                                        Foreground="#666"
+                                        CellStyle="{StaticResource FrozenCell}"/>
+
+                    <DataGridTextColumn Header="SKU"
+                                        Binding="{Binding SkuCode, Mode=OneWay}"
+                                        Width="105"
+                                        IsReadOnly="True"
                                         CellStyle="{StaticResource FrozenCell}"/>
 
                     <DataGridTextColumn Header="Description"
-                                        Binding="{Binding Description}"
-                                        Width="*"
-                                        IsReadOnly="True"
-                                        FontWeight="SemiBold"
-                                        CellStyle="{StaticResource FrozenCell}"/>
-
-                    <DataGridTextColumn Header="Variant"
-                                        Binding="{Binding VariantDescription}"
-                                        Width="120"
+                                        Binding="{Binding DisplayName, Mode=OneWay}"
+                                        Width="230"
                                         IsReadOnly="True"
                                         CellStyle="{StaticResource FrozenCell}"/>
 
-                    <DataGridTextColumn Header="Batch"
-                                        Binding="{Binding BatchNo, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                        Width="90"
-                                        CellStyle="{StaticResource EditableCell}"/>
+                    <DataGridTemplateColumn Header="Batch"
+                                            Width="135"
+                                            CellStyle="{StaticResource EditableCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding BatchNo, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                         Style="{StaticResource GridTextBox}"
+                                         Margin="2"
+                                         ToolTip="Leave blank for system-generated batch."/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Expiry"
-                                        Binding="{Binding ExpiryDate, Mode=TwoWay, StringFormat=d, UpdateSourceTrigger=LostFocus}"
-                                        Width="90"
-                                        CellStyle="{StaticResource EditableCell}"/>
+                    <DataGridTemplateColumn Header="Expiry"
+                                            Width="115"
+                                            CellStyle="{StaticResource EditableCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <DatePicker SelectedDate="{Binding ExpiryDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Height="25"
+                                            Margin="2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridCheckBoxColumn Header="Expiry Req."
+                                            Binding="{Binding RequiresExpiry, Mode=OneWay}"
+                                            Width="80"
+                                            IsReadOnly="True"/>
 
                     <DataGridTextColumn Header="PO Qty"
-                                        Binding="{Binding OrderedQty, StringFormat=N3}"
+                                        Binding="{Binding OrderedQty, Mode=OneWay, StringFormat=N3}"
                                         Width="75"
                                         IsReadOnly="True"
-                                        Foreground="#003366"
-                                        FontWeight="Bold"
-                                        CellStyle="{StaticResource FrozenCell}">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                                        CellStyle="{StaticResource FrozenCell}"
+                                        ElementStyle="{StaticResource CenterText}"/>
 
-                    <DataGridTextColumn Header="Rec'd"
-                                        Binding="{Binding ReceivedQty, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N3}"
-                                        Width="75"
-                                        CellStyle="{StaticResource EditableCell}"
-                                        FontWeight="Bold"
-                                        Foreground="#005555">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Center"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Outstanding"
+                                        Binding="{Binding OutstandingPoQty, Mode=OneWay, StringFormat=N3}"
+                                        Width="85"
+                                        IsReadOnly="True"
+                                        CellStyle="{StaticResource FrozenCell}"
+                                        ElementStyle="{StaticResource CenterText}"/>
 
-                    <DataGridTextColumn Header="Unit Cost"
-                                        Binding="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                        Width="90"
-                                        CellStyle="{StaticResource EditableCell}">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Rec'd"
+                                            Width="78"
+                                            CellStyle="{StaticResource EditableCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ReceivedQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource GridQtyBox}"
+                                         Margin="2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Disc"
-                                        Binding="{Binding LineDiscount, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                        Width="75"
-                                        Foreground="DarkRed"
-                                        CellStyle="{StaticResource EditableCell}">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="Unit Cost"
+                                            Width="90"
+                                            CellStyle="{StaticResource EditableCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource GridMoneyBox}"
+                                         Margin="2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Disc"
+                                            Width="80"
+                                            CellStyle="{StaticResource EditableCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding LineDiscount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource GridMoneyBox}"
+                                         Foreground="DarkRed"
+                                         Margin="2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                     <DataGridTextColumn Header="Landed Cost"
-                                        Binding="{Binding LandedCost, StringFormat=N2}"
+                                        Binding="{Binding LandedCost, Mode=OneWay, StringFormat=N2}"
                                         Width="95"
                                         IsReadOnly="True"
-                                        Foreground="#D97706"
-                                        CellStyle="{StaticResource HighlightCell}">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                                        CellStyle="{StaticResource CostCell}"
+                                        ElementStyle="{StaticResource RightText}"/>
 
                     <DataGridTextColumn Header="Line Total"
-                                        Binding="{Binding LineTotal, StringFormat=N2}"
+                                        Binding="{Binding LineTotal, Mode=OneWay, StringFormat=N2}"
                                         Width="100"
                                         IsReadOnly="True"
-                                        FontWeight="Bold"
-                                        CellStyle="{StaticResource FrozenCell}">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="HorizontalAlignment" Value="Right"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                                        CellStyle="{StaticResource FrozenCell}"
+                                        ElementStyle="{StaticResource RightText}"/>
                 </DataGrid.Columns>
             </DataGrid>
 
@@ -769,7 +800,7 @@
                         <TextBox Text="{Binding Remarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  TextWrapping="Wrap"
                                  AcceptsReturn="True"
-                                 Height="75"
+                                 Height="78"
                                  Style="{StaticResource ClassicInput}"/>
                     </StackPanel>
 
@@ -788,7 +819,7 @@
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="95"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
@@ -798,7 +829,7 @@
                                        Foreground="DarkRed"/>
 
                             <TextBox Grid.Column="1"
-                                     Text="{Binding GlobalBillDiscount, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     Text="{Binding GlobalBillDiscount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ClassicInput}"
                                      HorizontalContentAlignment="Right"
                                      Background="#FEF2F2"/>
@@ -806,7 +837,7 @@
 
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="95"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
@@ -816,7 +847,7 @@
                                        Foreground="#D97706"/>
 
                             <TextBox Grid.Column="1"
-                                     Text="{Binding FreightAmount, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     Text="{Binding FreightAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      Style="{StaticResource ClassicInput}"
                                      HorizontalContentAlignment="Right"
                                      Background="#FFF7ED"
@@ -834,7 +865,7 @@
 
                         <Grid Margin="0,0,0,4">
                             <TextBlock Text="SUBTOTAL:"
-                                       Foreground="#555"
+                                       Foreground="#555555"
                                        FontSize="13"
                                        FontWeight="Bold"/>
 
@@ -871,7 +902,7 @@
                         </Grid>
 
                         <Rectangle Height="2"
-                                   Fill="#333"
+                                   Fill="#333333"
                                    Margin="0,0,0,8"/>
 
                         <Grid Margin="0,0,0,10">
@@ -904,15 +935,9 @@
                             <Button Grid.Column="2"
                                     Content="POST GRN"
                                     Command="{Binding PostGrnCommand}"
+                                    Style="{StaticResource PostBtn}"
                                     Height="40"
-                                    Background="#005500"
-                                    Foreground="White"
-                                    FontSize="14"
-                                    FontWeight="Bold"
-                                    BorderBrush="#003300"
-                                    BorderThickness="1"
-                                    Cursor="Hand"
-                                    ToolTip="Finalizes inventory, batches, supplier ledger, and PO receiving."/>
+                                    ToolTip="Finalizes inventory, item batches, supplier ledger, and PO receiving."/>
                         </Grid>
                     </StackPanel>
                 </Grid>

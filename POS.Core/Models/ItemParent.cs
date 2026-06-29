@@ -24,46 +24,69 @@ namespace POS.Core.Models
         // =========================================================
 
         public int CategoryId { get; set; }
+
         public Category Category { get; set; } = null!;
 
         public int? SubCategoryId { get; set; }
+
         public SubCategory? SubCategory { get; set; }
 
         // =========================================================
         // UNIT OF MEASURE
         // =========================================================
-        // New correct relationship.
-        // Item Master should save this value from the UOM dropdown.
+
         public int UnitOfMeasureId { get; set; } = 1;
 
         public UnitOfMeasure UnitOfMeasure { get; set; } = null!;
 
-        // Temporary legacy field.
-        // Keep this only until Item Master ViewModel/XAML/Repository are fully moved to UnitOfMeasureId.
-        // New code should not use this.
+        // Legacy helper field.
+        // Keep this while older pages still read BaseUom directly.
         [MaxLength(20)]
         public string BaseUom { get; set; } = string.Empty;
 
         // =========================================================
-        // TAX / LOGISTICS / POS RULES
+        // TAX
         // =========================================================
 
         [MaxLength(20)]
         public string TaxCode { get; set; } = string.Empty;
 
-        public bool IsScaleItem { get; set; }
+        // =========================================================
+        // STOCK / POS TRACKING RULES
+        // =========================================================
 
-        public bool HasBatchExpiry { get; set; }
+        // Correct new rule:
+        // true = this item uses stock batches/layers.
+        // Default should be true for your system because cashier sale will select batch.
+        public bool HasBatchTracking { get; set; } = true;
 
-        public bool IsSerialized { get; set; }
+        // Correct new rule:
+        // true = GRN must require expiry date.
+        // Expiry tracking is separate from batch tracking.
+        public bool HasExpiryTracking { get; set; } = false;
 
-        public bool AllowCashierDiscount { get; set; }
+        // Legacy field.
+        // Old code used this as "Batch / Expiry".
+        // Keep temporarily until GRN, stock, and reports are fully moved to
+        // HasBatchTracking + HasExpiryTracking.
+        public bool HasBatchExpiry { get; set; } = false;
 
-        public bool IsPurchaseLocked { get; set; }
+        public bool IsScaleItem { get; set; } = false;
 
-        public bool IsSaleLocked { get; set; }
+        // Keep for future serial workflow, but do not show in Item Master UI yet.
+        public bool IsSerialized { get; set; } = false;
 
-        public bool IsDeactivated { get; set; }
+        public bool AllowCashierDiscount { get; set; } = true;
+
+        public bool IsPurchaseLocked { get; set; } = false;
+
+        public bool IsSaleLocked { get; set; } = false;
+
+        public bool IsDeactivated { get; set; } = false;
+
+        // =========================================================
+        // AUDIT
+        // =========================================================
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
@@ -71,10 +94,10 @@ namespace POS.Core.Models
 
         public DateTime? DeactivatedAt { get; set; }
 
-        // One Parent dictates many Variants.
-        // Example:
-        // Parent: T-Shirt
-        // Variants: T-Shirt / Red / M, T-Shirt / Blue / L
+        // =========================================================
+        // NAVIGATION
+        // =========================================================
+
         public ICollection<ItemVariant> Variants { get; set; } = new List<ItemVariant>();
     }
 }

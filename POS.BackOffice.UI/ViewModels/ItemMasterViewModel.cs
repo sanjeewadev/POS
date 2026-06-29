@@ -85,17 +85,12 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private AttributeValue? _propertyValueInput;
 
-        // Flat list for backward compatibility and simple logic.
         public ObservableCollection<MatrixPropertySelection> DynamicProperties { get; } = new();
 
-        // Grouped list for the improved UI.
-        // Example:
-        // Color -> Red, Yellow
-        // Size  -> Medium, Large
         public ObservableCollection<MatrixPropertyGroupSelection> SelectedPropertyGroups { get; } = new();
 
         // =========================================================
-        // ZONE 3: BULK PRICING & LOGISTICS
+        // ZONE 3: BULK PRICING & TRACKING DEFAULTS
         // =========================================================
 
         [ObservableProperty]
@@ -125,9 +120,22 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private bool _bulkIsScaleItem = false;
 
+        // Correct new flag:
+        // Default ON because your cashier will sell from selected batches.
+        [ObservableProperty]
+        private bool _bulkHasBatchTracking = true;
+
+        // Correct new flag:
+        // Expiry is separate from batch.
+        [ObservableProperty]
+        private bool _bulkHasExpiryTracking = false;
+
+        // Legacy compatibility only.
+        // Old XAML/repositories used this combined "Batch / Expiry" flag.
         [ObservableProperty]
         private bool _bulkHasBatchExpiry = false;
 
+        // Kept for future serial workflow, but the new UI should not show it yet.
         [ObservableProperty]
         private bool _bulkIsSerialized = false;
 
@@ -153,7 +161,7 @@ namespace POS.BackOffice.UI.ViewModels
         private ItemVariant? _selectedVariantForSupplierEdit;
 
         // =========================================================
-        // ZONE 6: SUPPLIER MANAGEMENT
+        // ZONE 6: SINGLE VARIANT SUPPLIER MANAGEMENT
         // =========================================================
 
         public ObservableCollection<Supplier> AvailableSuppliers { get; } = new();
@@ -174,6 +182,25 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private int _supplierMinimumOrderQuantityInput = 1;
+
+        // =========================================================
+        // ZONE 7: BULK SUPPLIER ASSIGNMENT
+        // =========================================================
+
+        [ObservableProperty]
+        private Supplier? _bulkSupplierToAssign;
+
+        [ObservableProperty]
+        private string _bulkSupplierItemCodePrefix = string.Empty;
+
+        [ObservableProperty]
+        private decimal _bulkSupplierCostInput = 0m;
+
+        [ObservableProperty]
+        private int _bulkSupplierMinimumOrderQuantityInput = 1;
+
+        [ObservableProperty]
+        private bool _bulkSupplierIsPrimaryInput = true;
 
         // =========================================================
         // LOOKUPS
@@ -260,23 +287,17 @@ namespace POS.BackOffice.UI.ViewModels
             var categories = await _categoryRepository.GetAllAsync();
 
             foreach (var category in categories.Where(c => !c.IsDeactivated).OrderBy(c => c.CategoryName))
-            {
                 Categories.Add(category);
-            }
 
             var uoms = await _uomRepository.GetActiveAsync();
 
             foreach (var uom in uoms)
-            {
                 Uoms.Add(uom);
-            }
 
             var suppliers = await _supplierRepository.GetAllAsync();
 
             foreach (var supplier in suppliers.Where(s => !s.IsDeactivated).OrderBy(s => s.SupplierName))
-            {
                 AvailableSuppliers.Add(supplier);
-            }
 
             SelectedTaxCode = TaxCodes.FirstOrDefault() ?? string.Empty;
             SelectedUom = Uoms.FirstOrDefault();
@@ -302,9 +323,7 @@ namespace POS.BackOffice.UI.ViewModels
             CurrentItem.CategoryId = value.Id;
 
             if (!_isLoadingItem)
-            {
                 _ = ApplyCategoryChangeAsync(value.Id);
-            }
         }
 
         private async Task ApplyCategoryChangeAsync(int categoryId)
@@ -363,8 +382,6 @@ namespace POS.BackOffice.UI.ViewModels
 
             string categoryPrefix = categoryCode + "-";
 
-            // If sub-category code is already saved as "001-001",
-            // do not add category code again.
             if (subCategoryCode.StartsWith(categoryPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 return subCategoryCode.EndsWith("-")
@@ -372,10 +389,6 @@ namespace POS.BackOffice.UI.ViewModels
                     : subCategoryCode + "-";
             }
 
-            // Normal case:
-            // CategoryCode = 001
-            // SubCategoryCode = 001
-            // Result = 001-001-
             return $"{categoryCode}-{subCategoryCode}-";
         }
 
@@ -398,14 +411,10 @@ namespace POS.BackOffice.UI.ViewModels
             PropertyKeys.Clear();
             PropertyValues.Clear();
 
-            // Correct method:
-            // Load groups assigned to this category.
             var groups = await _attributeRepository.GetAttributeGroupsForCategoryAsync(categoryId);
 
             foreach (var group in groups)
-            {
                 PropertyKeys.Add(group);
-            }
         }
 
         partial void OnSelectedPropertyKeyChanged(AttributeGroup? value)
@@ -431,9 +440,7 @@ namespace POS.BackOffice.UI.ViewModels
                 var values = await _attributeRepository.GetAllValuesFilteredAsync(groupId, "");
 
                 foreach (var value in values.Where(v => !v.IsDeactivated))
-                {
                     PropertyValues.Add(value);
-                }
             }
             catch (Exception ex)
             {
@@ -460,13 +467,9 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             if (value != null)
-            {
                 _ = LoadFullItemDetailsAsync(value.ParentId);
-            }
             else
-            {
                 IsCodeReadOnly = false;
-            }
         }
 
         private async Task LoadFullItemDetailsAsync(int parentId)
@@ -507,7 +510,15 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedTaxCode = fullItem.TaxCode;
 
                 BulkIsScaleItem = fullItem.IsScaleItem;
-                BulkHasBatchExpiry = fullItem.HasBatchExpiry;
+
+                // New separated flags.
+                BulkHasBatchTracking = fullItem.HasBatchTracking;
+
+                // Legacy fallback:
+                // old records may only have HasBatchExpiry.
+                BulkHasExpiryTracking = fullItem.HasExpiryTracking || fullItem.HasBatchExpiry;
+                BulkHasBatchExpiry = BulkHasExpiryTracking;
+
                 BulkIsSerialized = fullItem.IsSerialized;
 
                 GeneratedVariants.Clear();
@@ -645,14 +656,10 @@ namespace POS.BackOffice.UI.ViewModels
                     .FirstOrDefault(v => v.Value.Id == selection.Value.Id);
 
                 if (valueToRemove != null)
-                {
                     groupSelection.Values.Remove(valueToRemove);
-                }
 
                 if (!groupSelection.Values.Any())
-                {
                     SelectedPropertyGroups.Remove(groupSelection);
-                }
             }
 
             StatusMessage = "Property value removed from matrix builder.";
@@ -709,6 +716,7 @@ namespace POS.BackOffice.UI.ViewModels
                 GeneratedVariants.Add(standardVariant);
 
                 StatusMessage = "1 standard variant generated.";
+                NotifyCommandStates();
                 return;
             }
 
@@ -753,6 +761,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             StatusMessage = $"{GeneratedVariants.Count} variant(s) generated.";
+            NotifyCommandStates();
         }
 
         private Dictionary<string, List<ItemSupplier>> CaptureSupplierLinksBySku()
@@ -788,9 +797,7 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             foreach (var supplier in suppliers)
-            {
                 variant.ItemSuppliers.Add(supplier);
-            }
         }
 
         private static List<List<MatrixPropertySelection>> GenerateCombinations(
@@ -870,9 +877,7 @@ namespace POS.BackOffice.UI.ViewModels
             char[] digits = new char[length];
 
             for (int i = 0; i < length; i++)
-            {
                 digits[i] = (char)('0' + _random.Next(0, 10));
-            }
 
             return new string(digits);
         }
@@ -898,6 +903,12 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnBulkCostChanged(decimal value)
         {
             CalculateBulkPricesFromMarkup();
+
+            if (BulkSupplierCostInput <= 0)
+                BulkSupplierCostInput = value;
+
+            if (SupplierCostInput <= 0)
+                SupplierCostInput = value;
         }
 
         partial void OnBulkRetailMarkupPercentChanged(decimal value)
@@ -910,13 +921,25 @@ namespace POS.BackOffice.UI.ViewModels
             CalculateBulkPricesFromMarkup();
         }
 
+        partial void OnBulkHasExpiryTrackingChanged(bool value)
+        {
+            // Legacy compatibility: old code still reads HasBatchExpiry.
+            BulkHasBatchExpiry = value;
+        }
+
+        partial void OnBulkHasBatchExpiryChanged(bool value)
+        {
+            if (BulkHasExpiryTracking != value)
+                BulkHasExpiryTracking = value;
+        }
+
         private void CalculateBulkPricesFromMarkup()
         {
             if (BulkCost < 0)
                 return;
 
-            BulkRetailPrice = BulkCost + (BulkCost * (BulkRetailMarkupPercent / 100m));
-            BulkWholesalePrice = BulkCost + (BulkCost * (BulkWholesaleMarkupPercent / 100m));
+            BulkRetailPrice = Math.Round(BulkCost + (BulkCost * (BulkRetailMarkupPercent / 100m)), 2);
+            BulkWholesalePrice = Math.Round(BulkCost + (BulkCost * (BulkWholesaleMarkupPercent / 100m)), 2);
         }
 
         [RelayCommand]
@@ -951,16 +974,22 @@ namespace POS.BackOffice.UI.ViewModels
 
         private void RefreshGeneratedVariantGrid(List<ItemVariant> variants)
         {
+            var selectedSku = SelectedVariantForSupplierEdit?.SkuCode;
+
             GeneratedVariants.Clear();
 
             foreach (var variant in variants)
-            {
                 GeneratedVariants.Add(variant);
+
+            if (!string.IsNullOrWhiteSpace(selectedSku))
+            {
+                SelectedVariantForSupplierEdit = GeneratedVariants
+                    .FirstOrDefault(v => string.Equals(v.SkuCode, selectedSku, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         // =========================================================
-        // SUPPLIER MANAGEMENT
+        // SINGLE VARIANT SUPPLIER MANAGEMENT
         // =========================================================
 
         partial void OnSelectedVariantForSupplierEditChanged(ItemVariant? value)
@@ -979,9 +1008,7 @@ namespace POS.BackOffice.UI.ViewModels
             value.ItemSuppliers ??= new List<ItemSupplier>();
 
             foreach (var supplier in value.ItemSuppliers)
-            {
                 SelectedVariantSuppliers.Add(supplier);
-            }
 
             SupplierCostInput = value.CostPrice;
             SupplierIsPrimaryInput = !SelectedVariantSuppliers.Any();
@@ -996,6 +1023,11 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         partial void OnSupplierCostInputChanged(decimal value)
+        {
+            AddSupplierToVariantCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnSupplierMinimumOrderQuantityInputChanged(int value)
         {
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
         }
@@ -1060,9 +1092,7 @@ namespace POS.BackOffice.UI.ViewModels
             if (makePrimary)
             {
                 foreach (var existing in SelectedVariantForSupplierEdit.ItemSuppliers)
-                {
                     existing.IsPrimary = false;
-                }
             }
 
             var newSupplierLink = new ItemSupplier
@@ -1114,9 +1144,144 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             foreach (var supplier in SelectedVariantForSupplierEdit.ItemSuppliers)
-            {
                 SelectedVariantSuppliers.Add(supplier);
+        }
+
+        // =========================================================
+        // BULK SUPPLIER ASSIGNMENT
+        // =========================================================
+
+        partial void OnBulkSupplierToAssignChanged(Supplier? value)
+        {
+            ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnBulkSupplierCostInputChanged(decimal value)
+        {
+            ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnBulkSupplierMinimumOrderQuantityInputChanged(int value)
+        {
+            ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
+        }
+
+        [RelayCommand(CanExecute = nameof(CanApplySupplierToAllVariants))]
+        private void ApplySupplierToAllVariants()
+        {
+            if (!GeneratedVariants.Any())
+            {
+                MessageBox.Show(
+                    "Generate variants first before assigning suppliers.",
+                    "No Variants",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
             }
+
+            if (BulkSupplierToAssign == null)
+            {
+                MessageBox.Show(
+                    "Please select a supplier.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (BulkSupplierCostInput < 0)
+            {
+                MessageBox.Show(
+                    "Supplier cost cannot be negative.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (BulkSupplierMinimumOrderQuantityInput <= 0)
+            {
+                MessageBox.Show(
+                    "Minimum order quantity must be greater than zero.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            int addedCount = 0;
+            int updatedCount = 0;
+
+            foreach (var variant in GeneratedVariants)
+            {
+                variant.ItemSuppliers ??= new List<ItemSupplier>();
+
+                if (BulkSupplierIsPrimaryInput)
+                {
+                    foreach (var existingSupplier in variant.ItemSuppliers)
+                        existingSupplier.IsPrimary = false;
+                }
+
+                string vendorCode = BuildBulkVendorItemCode(
+                    BulkSupplierItemCodePrefix,
+                    variant.SkuCode);
+
+                var existing = variant.ItemSuppliers
+                    .FirstOrDefault(s => s.SupplierId == BulkSupplierToAssign.Id);
+
+                if (existing == null)
+                {
+                    var link = new ItemSupplier
+                    {
+                        SupplierId = BulkSupplierToAssign.Id,
+                        Supplier = BulkSupplierToAssign,
+                        ItemVariantId = variant.Id,
+                        SupplierItemCode = vendorCode,
+                        LastCostPrice = BulkSupplierCostInput,
+                        MinimumOrderQuantity = BulkSupplierMinimumOrderQuantityInput,
+                        IsPrimary = BulkSupplierIsPrimaryInput || !variant.ItemSuppliers.Any()
+                    };
+
+                    variant.ItemSuppliers.Add(link);
+                    addedCount++;
+                }
+                else
+                {
+                    existing.Supplier = BulkSupplierToAssign;
+                    existing.SupplierItemCode = vendorCode;
+                    existing.LastCostPrice = BulkSupplierCostInput;
+                    existing.MinimumOrderQuantity = BulkSupplierMinimumOrderQuantityInput;
+                    existing.IsPrimary = BulkSupplierIsPrimaryInput || existing.IsPrimary;
+                    updatedCount++;
+                }
+
+                if (!variant.ItemSuppliers.Any(s => s.IsPrimary))
+                {
+                    var first = variant.ItemSuppliers.FirstOrDefault();
+                    if (first != null)
+                        first.IsPrimary = true;
+                }
+            }
+
+            if (SelectedVariantForSupplierEdit != null)
+                RebuildSelectedVariantSuppliers();
+
+            StatusMessage = $"Supplier bulk assignment completed. Added: {addedCount}, Updated: {updatedCount}.";
+        }
+
+        private static string BuildBulkVendorItemCode(string prefix, string skuCode)
+        {
+            string cleanPrefix = NormalizeText(prefix);
+            string cleanSku = NormalizeText(skuCode);
+
+            if (string.IsNullOrWhiteSpace(cleanPrefix))
+                return string.Empty;
+
+            string value = $"{cleanPrefix}-{cleanSku}";
+
+            return value.Length <= 100
+                ? value
+                : value.Substring(0, 100);
         }
 
         // =========================================================
@@ -1183,11 +1348,18 @@ namespace POS.BackOffice.UI.ViewModels
                 CurrentItem.CategoryId = SelectedCategory!.Id;
                 CurrentItem.SubCategoryId = SelectedSubCategory?.Id;
                 CurrentItem.UnitOfMeasureId = SelectedUom!.Id;
-                CurrentItem.BaseUom = SelectedUom.UomCode; // temporary legacy support
+                CurrentItem.BaseUom = SelectedUom.UomCode;
                 CurrentItem.TaxCode = SelectedTaxCode;
 
                 CurrentItem.IsScaleItem = BulkIsScaleItem;
-                CurrentItem.HasBatchExpiry = BulkHasBatchExpiry;
+
+                // New separated tracking flags.
+                CurrentItem.HasBatchTracking = BulkHasBatchTracking;
+                CurrentItem.HasExpiryTracking = BulkHasExpiryTracking;
+
+                // Legacy compatibility.
+                CurrentItem.HasBatchExpiry = BulkHasExpiryTracking;
+
                 CurrentItem.IsSerialized = BulkIsSerialized;
 
                 CurrentItem.Category = null!;
@@ -1225,10 +1397,10 @@ namespace POS.BackOffice.UI.ViewModels
                 await LoadMasterGridInternalAsync();
                 Clear();
 
-                StatusMessage = "Matrix item saved successfully.";
+                StatusMessage = "Item saved successfully.";
 
                 MessageBox.Show(
-                    "Matrix item saved successfully.",
+                    "Item saved successfully.",
                     "Success",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -1292,9 +1464,7 @@ namespace POS.BackOffice.UI.ViewModels
             var data = await _itemMasterRepository.GetSummariesAsync(MasterSearchText);
 
             foreach (var item in data)
-            {
                 Items.Add(item);
-            }
 
             StatusMessage = $"{Items.Count} item record(s) loaded.";
         }
@@ -1317,7 +1487,13 @@ namespace POS.BackOffice.UI.ViewModels
         {
             _isClearing = true;
 
-            CurrentItem = new ItemParent();
+            CurrentItem = new ItemParent
+            {
+                HasBatchTracking = true,
+                HasExpiryTracking = false,
+                HasBatchExpiry = false,
+                AllowCashierDiscount = true
+            };
 
             ItemPrefix = string.Empty;
             ItemSuffix = string.Empty;
@@ -1340,6 +1516,8 @@ namespace POS.BackOffice.UI.ViewModels
             BulkMaximumPrice = 0m;
 
             BulkIsScaleItem = false;
+            BulkHasBatchTracking = true;
+            BulkHasExpiryTracking = false;
             BulkHasBatchExpiry = false;
             BulkIsSerialized = false;
 
@@ -1355,6 +1533,12 @@ namespace POS.BackOffice.UI.ViewModels
             SupplierCostInput = 0m;
             SupplierIsPrimaryInput = false;
             SupplierMinimumOrderQuantityInput = 1;
+
+            BulkSupplierToAssign = null;
+            BulkSupplierItemCodePrefix = string.Empty;
+            BulkSupplierCostInput = 0m;
+            BulkSupplierMinimumOrderQuantityInput = 1;
+            BulkSupplierIsPrimaryInput = true;
 
             SelectedDatabaseItem = null;
 
@@ -1372,7 +1556,7 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             var result = MessageBox.Show(
-                $"Deactivate Matrix Item '{SelectedDatabaseItem.ItemName}' and all its variants?\n\n" +
+                $"Deactivate item '{SelectedDatabaseItem.ItemName}' and all its variants?\n\n" +
                 "This keeps sales, GRN, stock, and transaction history safe.",
                 "Confirm Deactivation",
                 MessageBoxButton.YesNo,
@@ -1446,7 +1630,9 @@ namespace POS.BackOffice.UI.ViewModels
 
             AddPropertyCommand.NotifyCanExecuteChanged();
             GenerateVariantsCommand.NotifyCanExecuteChanged();
+
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
+            ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
 
             SaveCommand.NotifyCanExecuteChanged();
             DeleteCommand.NotifyCanExecuteChanged();
@@ -1477,7 +1663,18 @@ namespace POS.BackOffice.UI.ViewModels
         {
             return !IsBusy &&
                    SelectedVariantForSupplierEdit != null &&
-                   SupplierToAdd != null;
+                   SupplierToAdd != null &&
+                   SupplierCostInput >= 0 &&
+                   SupplierMinimumOrderQuantityInput > 0;
+        }
+
+        private bool CanApplySupplierToAllVariants()
+        {
+            return !IsBusy &&
+                   GeneratedVariants.Any() &&
+                   BulkSupplierToAssign != null &&
+                   BulkSupplierCostInput >= 0 &&
+                   BulkSupplierMinimumOrderQuantityInput > 0;
         }
 
         private bool CanSave()
@@ -1562,6 +1759,16 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
+            if (!BulkHasBatchTracking && BulkHasExpiryTracking)
+            {
+                MessageBox.Show(
+                    "Expiry tracking requires batch tracking.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
             return true;
         }
 
@@ -1633,6 +1840,8 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var variant in GeneratedVariants)
             {
+                variant.ItemSuppliers ??= new List<ItemSupplier>();
+
                 if (variant.ItemSuppliers.Count(s => s.IsPrimary) > 1)
                 {
                     MessageBox.Show(
@@ -1641,6 +1850,43 @@ namespace POS.BackOffice.UI.ViewModels
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     return false;
+                }
+
+                var duplicateSupplier = variant.ItemSuppliers
+                    .GroupBy(s => s.SupplierId)
+                    .FirstOrDefault(g => g.Count() > 1);
+
+                if (duplicateSupplier != null)
+                {
+                    MessageBox.Show(
+                        $"Variant '{variant.SkuCode}' has the same supplier assigned more than once.",
+                        "Validation Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return false;
+                }
+
+                foreach (var supplier in variant.ItemSuppliers)
+                {
+                    if (supplier.MinimumOrderQuantity <= 0)
+                    {
+                        MessageBox.Show(
+                            $"Variant '{variant.SkuCode}' has invalid supplier MOQ.",
+                            "Validation Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return false;
+                    }
+
+                    if (supplier.LastCostPrice < 0)
+                    {
+                        MessageBox.Show(
+                            $"Variant '{variant.SkuCode}' has invalid supplier cost.",
+                            "Validation Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return false;
+                    }
                 }
             }
 
@@ -1690,7 +1936,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             return true;
-
         }
 
         private static string NormalizeCode(string value)
