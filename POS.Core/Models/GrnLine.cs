@@ -18,10 +18,15 @@ namespace POS.Core.Models
         public ItemVariant ItemVariant { get; set; } = null!;
 
         // Optional exact PO line link.
-        // This is safer than matching by ItemVariantId only.
         public int? PoLineId { get; set; }
 
         public PoLine? PoLine { get; set; }
+
+        // Exact batch created or updated by this GRN line.
+        // This is required for enterprise audit and batch-selected cashier sales.
+        public int? ItemBatchId { get; set; }
+
+        public ItemBatch? ItemBatch { get; set; }
 
         // =========================================================
         // UI HELPERS - NOT SAVED
@@ -41,6 +46,30 @@ namespace POS.Core.Models
 
         [NotMapped]
         public decimal RemainingPoQty => OrderedQty - ReceivedQty < 0 ? 0 : OrderedQty - ReceivedQty;
+
+        [NotMapped]
+        public string BatchDisplayText
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(BatchNo))
+                    return "[AUTO]";
+
+                return BatchNo;
+            }
+        }
+
+        [NotMapped]
+        public string ExpiryDisplayText
+        {
+            get
+            {
+                if (!ExpiryDate.HasValue)
+                    return "No Expiry";
+
+                return ExpiryDate.Value.ToString("yyyy-MM-dd");
+            }
+        }
 
         // =========================================================
         // LOGISTICS
@@ -74,7 +103,7 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal LineDiscount { get; set; } = 0m;
 
-        // Unit landed cost after freight and global discount allocation.
+        // Unit landed cost after freight/global discount allocation.
         [Column(TypeName = "decimal(18,2)")]
         public decimal LandedCost { get; set; } = 0m;
 

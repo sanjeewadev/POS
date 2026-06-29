@@ -11,12 +11,19 @@ namespace POS.Core.Repositories
     public class PoSummaryDto
     {
         public int PoHeaderId { get; set; }
+
         public string PoNumber { get; set; } = string.Empty;
+
         public string SupplierName { get; set; } = string.Empty;
+
         public DateTime OrderDate { get; set; }
+
         public DateTime ExpectedDate { get; set; }
+
         public decimal NetPayable { get; set; }
+
         public string Status { get; set; } = string.Empty;
+
         public string CreatedBy { get; set; } = string.Empty;
     }
 
@@ -100,6 +107,9 @@ namespace POS.Core.Repositories
                     header.Status = isDraft ? "Draft" : "Approved";
                     header.CreatedAt = now;
                     header.UpdatedAt = now;
+                    header.ApprovedAt = null;
+                    header.ClosedAt = null;
+                    header.CancelledAt = null;
 
                     if (!isDraft)
                     {
@@ -150,25 +160,7 @@ namespace POS.Core.Repositories
                     existingHeader.NetPayable = header.NetPayable;
                     existingHeader.IsTaxInclusive = header.IsTaxInclusive;
 
-                    existingHeader.Status = CalculateHeaderStatus(lines, isDraft);
                     existingHeader.UpdatedAt = now;
-
-                    if (existingHeader.Status == "Approved" && existingHeader.ApprovedAt == null)
-                    {
-                        existingHeader.ApprovedAt = now;
-                        existingHeader.ApprovedBy = string.IsNullOrWhiteSpace(header.ApprovedBy)
-                            ? header.CreatedBy
-                            : header.ApprovedBy;
-                    }
-
-                    if (existingHeader.Status == "Closed")
-                    {
-                        existingHeader.ClosedAt ??= now;
-                    }
-                    else
-                    {
-                        existingHeader.ClosedAt = null;
-                    }
 
                     var existingLines = existingHeader.PoLines.ToList();
 
@@ -221,7 +213,14 @@ namespace POS.Core.Repositories
                         existingLine.TaxCode = incomingLine.TaxCode;
                         existingLine.TaxAmount = incomingLine.TaxAmount;
                         existingLine.LineTotal = incomingLine.LineTotal;
-                        existingLine.LineStatus = CalculateLineStatus(existingLine.OrderQty, existingLine.ReceivedQty);
+
+                        // Critical safety:
+                        // ReceivedQty is owned by GRN only.
+                        // Never trust or overwrite it from PO editing UI.
+                        existingLine.LineStatus = CalculateLineStatus(
+                            existingLine.OrderQty,
+                            existingLine.ReceivedQty);
+
                         existingLine.UpdatedAt = now;
 
                         if (existingLine.LineStatus == "Closed")
@@ -229,6 +228,22 @@ namespace POS.Core.Repositories
                         else
                             existingLine.ClosedAt = null;
                     }
+
+                    existingHeader.Status = CalculateHeaderStatus(existingHeader.PoLines.ToList(), isDraft);
+                    existingHeader.UpdatedAt = now;
+
+                    if (existingHeader.Status == "Approved" && existingHeader.ApprovedAt == null)
+                    {
+                        existingHeader.ApprovedAt = now;
+                        existingHeader.ApprovedBy = string.IsNullOrWhiteSpace(header.ApprovedBy)
+                            ? header.CreatedBy
+                            : header.ApprovedBy;
+                    }
+
+                    if (existingHeader.Status == "Closed")
+                        existingHeader.ClosedAt ??= now;
+                    else
+                        existingHeader.ClosedAt = null;
                 }
 
                 await context.SaveChangesAsync();
@@ -280,10 +295,15 @@ namespace POS.Core.Repositories
             line.PoHeader = null!;
             line.ItemVariant = null!;
 
+            // Critical safety:
+            // New PO lines must start unreceived.
+            // Only GRN is allowed to increase ReceivedQty.
+            line.ReceivedQty = 0m;
+
             line.CreatedAt = now;
             line.UpdatedAt = now;
-            line.LineStatus = CalculateLineStatus(line.OrderQty, line.ReceivedQty);
-            line.ClosedAt = line.LineStatus == "Closed" ? now : null;
+            line.LineStatus = "Open";
+            line.ClosedAt = null;
         }
 
         // =========================================================
@@ -313,19 +333,13 @@ namespace POS.Core.Repositories
             }
 
             if (supplierId.HasValue && supplierId.Value > 0)
-            {
                 query = query.Where(p => p.SupplierId == supplierId.Value);
-            }
 
             if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "All")
-            {
                 query = query.Where(p => p.Status == statusFilter);
-            }
 
             if (startDate.HasValue)
-            {
                 query = query.Where(p => p.OrderDate >= startDate.Value.Date);
-            }
 
             if (endDate.HasValue)
             {
@@ -370,7 +384,9 @@ namespace POS.Core.Repositories
             {
                 line.ItemCode = line.ItemVariant.ItemParent.ItemCode;
                 line.Description = line.ItemVariant.ItemParent.ItemName;
-                line.VariantDescription = line.ItemVariant.VariantDescription;
+                line.VariantDescription = string.IsNullOrWhiteSpace(line.ItemVariant.VariantDescription)
+                    ? "Standard"
+                    : line.ItemVariant.VariantDescription;
                 line.Barcode = line.ItemVariant.Barcode;
                 line.SOH = 0m;
             }
@@ -470,6 +486,8 @@ namespace POS.Core.Repositories
 
             foreach (var line in lines)
             {
+                NormalizeLine(line);
+
                 if (line.ItemVariantId <= 0)
                     throw new InvalidOperationException("Invalid item variant in PO line.");
 
@@ -569,7 +587,6 @@ namespace POS.Core.Repositories
 
                 line.TaxAmount = Math.Round(taxAmount, 2);
                 line.LineTotal = Math.Round(lineTotal, 2);
-                line.LineStatus = CalculateLineStatus(line.OrderQty, line.ReceivedQty);
 
                 subtotal += gross;
                 lineDiscountTotal += line.LineDiscount;
@@ -635,11 +652,14 @@ namespace POS.Core.Repositories
         private static void NormalizeLines(List<PoLine> lines)
         {
             foreach (var line in lines)
-            {
-                line.Uom = NormalizeText(line.Uom);
-                line.SupplierItemCode = NormalizeText(line.SupplierItemCode);
-                line.TaxCode = NormalizeText(line.TaxCode);
-            }
+                NormalizeLine(line);
+        }
+
+        private static void NormalizeLine(PoLine line)
+        {
+            line.Uom = NormalizeText(line.Uom);
+            line.SupplierItemCode = NormalizeText(line.SupplierItemCode);
+            line.TaxCode = NormalizeText(line.TaxCode);
         }
 
         private static string NormalizeText(string? value)

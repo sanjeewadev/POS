@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models;
+using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
@@ -16,7 +18,12 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly GrnRepository _grnRepository;
         private readonly ItemMasterRepository _itemMasterRepository;
-        private readonly PoRepository _poRepository;
+        private readonly DispatcherTimer _recalculateTimer;
+
+        private readonly List<GrnLineEntryDto> _allMatrixVariants = new();
+
+        private bool _isRecalculating = false;
+        private bool _isClearing = false;
 
         // =========================================================
         // HEADER
@@ -50,10 +57,10 @@ namespace POS.BackOffice.UI.ViewModels
         // PO LINKING
         // =========================================================
 
-        public ObservableCollection<PoHeader> OpenPurchaseOrders { get; } = new();
+        public ObservableCollection<GrnPoLookupDto> OpenPurchaseOrders { get; } = new();
 
         [ObservableProperty]
-        private PoHeader? _selectedPO;
+        private GrnPoLookupDto? _selectedPO;
 
         // =========================================================
         // ENTRY
@@ -96,16 +103,14 @@ namespace POS.BackOffice.UI.ViewModels
 
         public ObservableCollection<Supplier> Suppliers { get; } = new();
 
-        public ObservableCollection<GrnLine> GrnLines { get; } = new();
+        public ObservableCollection<GrnLineEntryDto> GrnLines { get; } = new();
 
         public ObservableCollection<ItemMasterSummaryDto> AvailableItems { get; } = new();
 
-        private readonly List<GrnLine> _allMatrixVariants = new();
-
-        public ObservableCollection<GrnLine> ActiveMatrixVariants { get; } = new();
+        public ObservableCollection<GrnLineEntryDto> ActiveMatrixVariants { get; } = new();
 
         [ObservableProperty]
-        private GrnLine? _selectedLine;
+        private GrnLineEntryDto? _selectedLine;
 
         [ObservableProperty]
         private ItemMasterSummaryDto? _selectedItem;
@@ -120,6 +125,8 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
+        public bool IsPoLinked => SelectedPO != null;
+
         public GrnViewModel(
             GrnRepository grnRepository,
             ItemMasterRepository itemMasterRepository,
@@ -127,14 +134,29 @@ namespace POS.BackOffice.UI.ViewModels
         {
             _grnRepository = grnRepository;
             _itemMasterRepository = itemMasterRepository;
-            _poRepository = poRepository;
+
+            _recalculateTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(120)
+            };
+
+            _recalculateTimer.Tick += (_, _) =>
+            {
+                _recalculateTimer.Stop();
+                RecalculateTotals();
+            };
 
             _ = InitializeAsync();
         }
 
+        // =========================================================
+        // INITIALIZE
+        // =========================================================
+
         private async Task InitializeAsync()
         {
             IsBusy = true;
+            StatusMessage = "Loading GRN page...";
 
             try
             {
@@ -143,10 +165,12 @@ namespace POS.BackOffice.UI.ViewModels
                 OpenPurchaseOrders.Clear();
 
                 var suppliers = await _grnRepository.GetActiveSuppliersAsync();
+
                 foreach (var supplier in suppliers)
                     Suppliers.Add(supplier);
 
                 var items = await _itemMasterRepository.GetSummariesAsync();
+
                 foreach (var item in items)
                     AvailableItems.Add(item);
 
@@ -174,7 +198,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             OpenPurchaseOrders.Clear();
 
-            var openPos = await _poRepository.GetOpenPurchaseOrdersAsync();
+            var openPos = await _grnRepository.GetOpenPurchaseOrderLookupsAsync();
 
             foreach (var po in openPos)
                 OpenPurchaseOrders.Add(po);
@@ -186,6 +210,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedSupplierChanged(Supplier? value)
         {
+            if (_isClearing)
+                return;
+
             if (value != null)
             {
                 int creditDays = value.DefaultCreditDays > 0
@@ -217,12 +244,17 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnGlobalBillDiscountChanged(decimal value)
         {
-            RecalculateTotals();
+            QueueRecalculate();
         }
 
         partial void OnFreightAmountChanged(decimal value)
         {
-            RecalculateTotals();
+            QueueRecalculate();
+        }
+
+        partial void OnSelectedPOChanged(GrnPoLookupDto? value)
+        {
+            OnPropertyChanged(nameof(IsPoLinked));
         }
 
         // =========================================================
@@ -242,23 +274,43 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            if (GrnLines.Any())
+            {
+                var confirm = MessageBox.Show(
+                    "Loading a Purchase Order will clear the current GRN lines.\n\nContinue?",
+                    "Replace Current GRN",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (confirm != MessageBoxResult.Yes)
+                    return;
+            }
+
             IsBusy = true;
+            StatusMessage = $"Loading PO {SelectedPO.PoNumber}...";
 
             try
             {
-                var fullPo = await _grnRepository.GetApprovedPoDetailsAsync(SelectedPO.Id);
+                var poLines = await _grnRepository.GetOutstandingPoLinesAsync(
+                    SelectedPO.PoHeaderId);
 
-                if (fullPo == null)
+                if (!poLines.Any())
                 {
                     MessageBox.Show(
-                        "Selected Purchase Order is not available for receiving.",
-                        "PO Not Available",
+                        "This Purchase Order has no outstanding lines to receive.",
+                        "No Outstanding Quantity",
                         MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        MessageBoxImage.Information);
+
                     return;
                 }
 
-                SelectedSupplier = Suppliers.FirstOrDefault(s => s.Id == fullPo.SupplierId);
+                UnsubscribeGrnLineEvents();
+
+                GrnLines.Clear();
+                ClearLoadedMatrixOnly();
+
+                SelectedSupplier = Suppliers.FirstOrDefault(s => s.Id == SelectedPO.SupplierId);
                 IsSupplierSelectionEnabled = false;
 
                 if (SelectedSupplier != null)
@@ -269,35 +321,29 @@ namespace POS.BackOffice.UI.ViewModels
                             : 30);
                 }
 
-                GrnLines.Clear();
-                ClearLoadedMatrixOnly();
-
-                foreach (var poLine in fullPo.PoLines)
+                foreach (var poLine in poLines)
                 {
-                    decimal outstandingQty = poLine.OrderQty - poLine.ReceivedQty;
-
-                    if (outstandingQty <= 0)
-                        continue;
-
-                    var grnLine = new GrnLine
+                    var grnLine = new GrnLineEntryDto
                     {
-                        PoLineId = poLine.Id,
+                        PoLineId = poLine.PoLineId,
                         ItemVariantId = poLine.ItemVariantId,
-                        ItemCode = poLine.ItemVariant?.ItemParent?.ItemCode ?? string.Empty,
-                        VariantDescription = string.IsNullOrWhiteSpace(poLine.ItemVariant?.VariantDescription)
-                            ? "Standard"
-                            : poLine.ItemVariant.VariantDescription,
-                        Description = poLine.ItemVariant?.ItemParent?.ItemName ?? string.Empty,
-                        Barcode = poLine.ItemVariant?.Barcode ?? string.Empty,
-                        Uom = poLine.Uom,
-                        OrderedQty = poLine.OrderQty,
-                        ReceivedQty = outstandingQty,
+                        ItemCode = poLine.ItemCode,
+                        SkuCode = poLine.SkuCode,
+                        Barcode = poLine.Barcode,
+                        Description = poLine.Description,
+                        VariantDescription = poLine.VariantDescription,
+                        Uom = string.IsNullOrWhiteSpace(poLine.Uom) ? "PCS" : poLine.Uom,
+                        OrderedQty = poLine.OrderedQty,
+                        OutstandingPoQty = poLine.OutstandingQty,
+                        ReceivedQty = poLine.OutstandingQty,
                         UnitCost = poLine.ExpectedCost,
                         LineDiscount = 0m,
                         BatchNo = string.Empty,
-                        ExpiryDate = null
+                        ExpiryDate = null,
+                        RequiresExpiry = poLine.RequiresExpiry
                     };
 
+                    SubscribeGrnLineEvents(grnLine);
                     GrnLines.Add(grnLine);
                 }
 
@@ -327,8 +373,23 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedItemChanged(ItemMasterSummaryDto? value)
         {
+            if (_isClearing)
+                return;
+
             if (value == null)
                 return;
+
+            if (SelectedPO != null)
+            {
+                MessageBox.Show(
+                    "This GRN is linked to a Purchase Order. Use the loaded PO lines only.",
+                    "PO Linked GRN",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                SelectedItem = null;
+                return;
+            }
 
             if (SelectedSupplier == null)
             {
@@ -353,6 +414,7 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task LoadVariantsForGridAsync(int parentId)
         {
             IsBusy = true;
+            StatusMessage = "Loading item variants...";
 
             try
             {
@@ -366,6 +428,9 @@ namespace POS.BackOffice.UI.ViewModels
                     if (variant.ItemParent == null)
                         continue;
 
+                    if (variant.IsDeactivated || variant.ItemParent.IsDeactivated)
+                        continue;
+
                     if (variant.ItemParent.IsPurchaseLocked)
                         continue;
 
@@ -375,15 +440,16 @@ namespace POS.BackOffice.UI.ViewModels
                     if (supplierLink == null)
                         continue;
 
-                    var newLine = new GrnLine
+                    var newLine = new GrnLineEntryDto
                     {
                         ItemVariantId = variant.Id,
                         ItemCode = variant.ItemParent.ItemCode,
+                        SkuCode = variant.SkuCode,
+                        Barcode = variant.Barcode ?? string.Empty,
+                        Description = variant.ItemParent.ItemName,
                         VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
                             ? "Standard"
                             : variant.VariantDescription,
-                        Description = variant.ItemParent.ItemName,
-                        Barcode = variant.Barcode,
                         Uom = string.IsNullOrWhiteSpace(variant.ItemParent.BaseUom)
                             ? "PCS"
                             : variant.ItemParent.BaseUom,
@@ -392,7 +458,11 @@ namespace POS.BackOffice.UI.ViewModels
                             : variant.CostPrice,
                         ReceivedQty = 0m,
                         OrderedQty = 0m,
-                        LineDiscount = 0m
+                        OutstandingPoQty = 0m,
+                        LineDiscount = 0m,
+                        BatchNo = string.Empty,
+                        ExpiryDate = null,
+                        RequiresExpiry = variant.ItemParent.HasBatchExpiry
                     };
 
                     _allMatrixVariants.Add(newLine);
@@ -431,16 +501,18 @@ namespace POS.BackOffice.UI.ViewModels
         {
             ActiveMatrixVariants.Clear();
 
-            IEnumerable<GrnLine> query = _allMatrixVariants;
+            IEnumerable<GrnLineEntryDto> query = _allMatrixVariants;
 
             if (!string.IsNullOrWhiteSpace(MatrixFilterText))
             {
                 string search = MatrixFilterText.Trim().ToLowerInvariant();
 
                 query = query.Where(v =>
-                    v.VariantDescription.ToLowerInvariant().Contains(search) ||
-                    v.Description.ToLowerInvariant().Contains(search) ||
-                    v.Barcode.ToLowerInvariant().Contains(search));
+                    SafeLower(v.VariantDescription).Contains(search) ||
+                    SafeLower(v.Description).Contains(search) ||
+                    SafeLower(v.ItemCode).Contains(search) ||
+                    SafeLower(v.SkuCode).Contains(search) ||
+                    SafeLower(v.Barcode).Contains(search));
             }
 
             foreach (var item in query)
@@ -458,6 +530,18 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (string.IsNullOrWhiteSpace(term))
                 return;
+
+            if (SelectedPO != null)
+            {
+                MessageBox.Show(
+                    "This GRN is linked to a Purchase Order. Use the loaded PO lines only.",
+                    "PO Linked GRN",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                ScanBarcode = string.Empty;
+                return;
+            }
 
             if (SelectedSupplier == null)
             {
@@ -487,7 +571,31 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
-                if (variant.ItemParent?.IsPurchaseLocked == true)
+                if (variant.ItemParent == null)
+                {
+                    MessageBox.Show(
+                        "Selected item has no parent item record.",
+                        "Invalid Item",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    ScanBarcode = string.Empty;
+                    return;
+                }
+
+                if (variant.IsDeactivated || variant.ItemParent.IsDeactivated)
+                {
+                    MessageBox.Show(
+                        "This item is deactivated.",
+                        "Inactive Item",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    ScanBarcode = string.Empty;
+                    return;
+                }
+
+                if (variant.ItemParent.IsPurchaseLocked)
                 {
                     MessageBox.Show(
                         "This item is purchase locked.",
@@ -514,21 +622,21 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
-                var newLine = BuildGrnLineFromVariant(variant, supplierLink);
+                var newLine = BuildLineFromVariant(variant, supplierLink);
                 newLine.ReceivedQty = 1m;
 
                 if (!string.IsNullOrWhiteSpace(MatrixBatchNo))
                     newLine.BatchNo = MatrixBatchNo.Trim();
 
                 if (MatrixExpiryDate.HasValue)
-                    newLine.ExpiryDate = MatrixExpiryDate;
+                    newLine.ExpiryDate = MatrixExpiryDate.Value.Date;
 
                 MergeOrAddLine(newLine);
 
                 ScanBarcode = string.Empty;
                 RecalculateTotals();
 
-                StatusMessage = "Item added to GRN.";
+                StatusMessage = $"Item added: {newLine.DisplayName}.";
             }
             catch (Exception ex)
             {
@@ -542,19 +650,20 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private static GrnLine BuildGrnLineFromVariant(
+        private static GrnLineEntryDto BuildLineFromVariant(
             ItemVariant variant,
             ItemSupplier supplierLink)
         {
-            return new GrnLine
+            return new GrnLineEntryDto
             {
                 ItemVariantId = variant.Id,
                 ItemCode = variant.ItemParent?.ItemCode ?? string.Empty,
+                SkuCode = variant.SkuCode,
+                Barcode = variant.Barcode ?? string.Empty,
+                Description = variant.ItemParent?.ItemName ?? string.Empty,
                 VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
                     ? "Standard"
                     : variant.VariantDescription,
-                Description = variant.ItemParent?.ItemName ?? string.Empty,
-                Barcode = variant.Barcode,
                 Uom = string.IsNullOrWhiteSpace(variant.ItemParent?.BaseUom)
                     ? "PCS"
                     : variant.ItemParent.BaseUom,
@@ -562,10 +671,12 @@ namespace POS.BackOffice.UI.ViewModels
                     ? supplierLink.LastCostPrice
                     : variant.CostPrice,
                 OrderedQty = 0m,
+                OutstandingPoQty = 0m,
                 ReceivedQty = 0m,
                 LineDiscount = 0m,
                 BatchNo = string.Empty,
-                ExpiryDate = null
+                ExpiryDate = null,
+                RequiresExpiry = variant.ItemParent?.HasBatchExpiry == true
             };
         }
 
@@ -576,6 +687,16 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void AddMatrix()
         {
+            if (SelectedPO != null)
+            {
+                MessageBox.Show(
+                    "This GRN is linked to a Purchase Order. Use the loaded PO lines only.",
+                    "PO Linked GRN",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
             var itemsToAdd = _allMatrixVariants
                 .Where(v => v.ReceivedQty > 0)
                 .ToList();
@@ -592,23 +713,13 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var item in itemsToAdd)
             {
-                var newLine = new GrnLine
-                {
-                    ItemVariantId = item.ItemVariantId,
-                    ItemCode = item.ItemCode,
-                    VariantDescription = item.VariantDescription,
-                    Description = item.Description,
-                    Barcode = item.Barcode,
-                    Uom = item.Uom,
-                    OrderedQty = 0m,
-                    ReceivedQty = item.ReceivedQty,
-                    UnitCost = item.UnitCost,
-                    LineDiscount = item.LineDiscount,
-                    BatchNo = string.IsNullOrWhiteSpace(item.BatchNo)
-                        ? MatrixBatchNo.Trim()
-                        : item.BatchNo.Trim(),
-                    ExpiryDate = item.ExpiryDate ?? MatrixExpiryDate
-                };
+                var newLine = item.CloneForGrnEntry();
+
+                newLine.BatchNo = string.IsNullOrWhiteSpace(item.BatchNo)
+                    ? MatrixBatchNo.Trim()
+                    : item.BatchNo.Trim();
+
+                newLine.ExpiryDate = item.ExpiryDate ?? MatrixExpiryDate;
 
                 MergeOrAddLine(newLine);
             }
@@ -619,7 +730,7 @@ namespace POS.BackOffice.UI.ViewModels
             StatusMessage = "Matrix items added to GRN.";
         }
 
-        private void MergeOrAddLine(GrnLine newLine)
+        private void MergeOrAddLine(GrnLineEntryDto newLine)
         {
             string newBatch = NormalizeBatchKey(newLine.BatchNo);
             DateTime? newExpiry = newLine.ExpiryDate?.Date;
@@ -632,6 +743,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (existing == null)
             {
+                SubscribeGrnLineEvents(newLine);
                 GrnLines.Add(newLine);
                 return;
             }
@@ -648,10 +760,12 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
-        private void RemoveLine(GrnLine? line)
+        private void RemoveLine(GrnLineEntryDto? line)
         {
             if (line == null)
                 return;
+
+            line.PropertyChanged -= GrnLine_PropertyChanged;
 
             GrnLines.Remove(line);
             RecalculateTotals();
@@ -666,40 +780,49 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         public void RecalculateTotals()
         {
-            if (!GrnLines.Any())
-            {
-                Subtotal = 0m;
-                TotalDiscountAmount = 0m;
-                NetPayable = 0m;
-                RefreshGrnLineGrid();
+            if (_isRecalculating)
                 return;
-            }
 
-            decimal subtotal = 0m;
-            decimal lineDiscountTotal = 0m;
+            _isRecalculating = true;
 
-            foreach (var line in GrnLines)
+            try
             {
-                decimal gross = line.ReceivedQty * line.UnitCost;
-                decimal lineTotal = gross - line.LineDiscount;
+                decimal subtotal = 0m;
+                decimal lineDiscountTotal = 0m;
 
-                if (lineTotal < 0)
-                    lineTotal = 0;
+                foreach (var line in GrnLines)
+                {
+                    if (line.ReceivedQty <= 0 || line.UnitCost <= 0)
+                    {
+                        line.LineTotal = 0m;
+                        line.LandedCost = 0m;
+                        continue;
+                    }
 
-                line.LineTotal = Math.Round(lineTotal, 2);
+                    decimal gross = line.ReceivedQty * line.UnitCost;
+                    decimal lineTotal = gross - line.LineDiscount;
 
-                subtotal += line.LineTotal;
-                lineDiscountTotal += line.LineDiscount;
+                    if (lineTotal < 0)
+                        lineTotal = 0;
+
+                    line.LineTotal = Math.Round(lineTotal, 2);
+
+                    subtotal += line.LineTotal;
+                    lineDiscountTotal += line.LineDiscount;
+                }
+
+                Subtotal = Math.Round(subtotal, 2);
+                TotalDiscountAmount = Math.Round(lineDiscountTotal + GlobalBillDiscount, 2);
+
+                decimal net = subtotal - GlobalBillDiscount + FreightAmount;
+                NetPayable = Math.Round(net < 0 ? 0 : net, 2);
+
+                AllocateLandedCost();
             }
-
-            Subtotal = Math.Round(subtotal, 2);
-            TotalDiscountAmount = Math.Round(lineDiscountTotal + GlobalBillDiscount, 2);
-
-            decimal net = subtotal - GlobalBillDiscount + FreightAmount;
-            NetPayable = Math.Round(net < 0 ? 0 : net, 2);
-
-            AllocateLandedCost();
-            RefreshGrnLineGrid();
+            finally
+            {
+                _isRecalculating = false;
+            }
         }
 
         private void AllocateLandedCost()
@@ -716,21 +839,25 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var line in GrnLines)
             {
+                if (line.ReceivedQty <= 0)
+                {
+                    line.LandedCost = 0m;
+                    continue;
+                }
+
                 decimal weight = line.LineTotal / totalBaseValue;
                 decimal allocatedFreight = FreightAmount * weight;
                 decimal allocatedGlobalDiscount = GlobalBillDiscount * weight;
                 decimal landedLineTotal = line.LineTotal + allocatedFreight - allocatedGlobalDiscount;
 
-                line.LandedCost = line.ReceivedQty > 0
-                    ? Math.Round(landedLineTotal / line.ReceivedQty, 2)
-                    : 0m;
+                line.LandedCost = Math.Round(landedLineTotal / line.ReceivedQty, 2);
             }
         }
 
-        private void RefreshGrnLineGrid()
+        private void QueueRecalculate()
         {
-            CollectionViewSource.GetDefaultView(GrnLines)?.Refresh();
-            CollectionViewSource.GetDefaultView(ActiveMatrixVariants)?.Refresh();
+            _recalculateTimer.Stop();
+            _recalculateTimer.Start();
         }
 
         // =========================================================
@@ -740,11 +867,13 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task PostGrnAsync()
         {
+            RecalculateTotals();
+
             if (!ValidateBeforePost())
                 return;
 
             var result = MessageBox.Show(
-                $"Post GRN for Rs. {NetPayable:N2}?\n\nThis will update inventory, batches, supplier ledger, and PO received quantities.",
+                $"Post GRN for Rs. {NetPayable:N2}?\n\nThis will update inventory, item batches, PO received quantities, and supplier ledger.",
                 "Confirm GRN Posting",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -753,6 +882,7 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             IsBusy = true;
+            StatusMessage = "Posting GRN...";
 
             try
             {
@@ -760,17 +890,17 @@ namespace POS.BackOffice.UI.ViewModels
 
                 var validLines = GrnLines
                     .Where(l => l.ReceivedQty > 0)
-                    .Select(CloneLineForPosting)
+                    .Select(ToPostingLine)
                     .ToList();
 
                 var header = new GrnHeader
                 {
-                    PurchaseOrderId = SelectedPO?.Id,
+                    PurchaseOrderId = SelectedPO?.PoHeaderId,
                     SupplierId = SelectedSupplier!.Id,
                     SupplierInvoiceNo = SupplierInvoiceNo.Trim(),
-                    InvoiceDate = InvoiceDate,
-                    ReceivedDate = ReceivedDate,
-                    DueDate = DueDate,
+                    InvoiceDate = InvoiceDate.Date,
+                    ReceivedDate = ReceivedDate.Date,
+                    DueDate = DueDate.Date,
                     CreditDays = Math.Max(0, (DueDate.Date - InvoiceDate.Date).Days),
                     Remarks = Remarks.Trim(),
                     Subtotal = Subtotal,
@@ -792,6 +922,8 @@ namespace POS.BackOffice.UI.ViewModels
 
                 Clear();
                 await LoadOpenPurchaseOrdersAsync();
+
+                StatusMessage = "GRN posted successfully.";
             }
             catch (InvalidOperationException ex)
             {
@@ -872,69 +1004,55 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
+            if (GlobalBillDiscount > Subtotal)
+            {
+                MessageBox.Show(
+                    "Global bill discount cannot be greater than subtotal.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            var errors = new List<string>();
+
+            bool isPoLinked = SelectedPO != null;
+
             foreach (var line in GrnLines.Where(l => l.ReceivedQty > 0))
             {
-                if (line.UnitCost <= 0)
+                errors.AddRange(line.ValidateForPost(isPoLinked));
+
+                if (line.ExpiryDate.HasValue &&
+                    line.ExpiryDate.Value.Date < ReceivedDate.Date)
                 {
-                    MessageBox.Show(
-                        $"Unit cost must be greater than zero for item '{line.Description}'.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return false;
+                    errors.Add($"{line.DisplayName}: expiry date cannot be before received date.");
                 }
+            }
 
-                if (line.LineDiscount < 0)
-                {
-                    MessageBox.Show(
-                        $"Line discount cannot be negative for item '{line.Description}'.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return false;
-                }
+            if (errors.Any())
+            {
+                MessageBox.Show(
+                    "Cannot post GRN because validation failed:\n\n" +
+                    string.Join("\n", errors),
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
 
-                decimal gross = line.ReceivedQty * line.UnitCost;
-
-                if (line.LineDiscount > gross)
-                {
-                    MessageBox.Show(
-                        $"Line discount cannot be greater than line value for item '{line.Description}'.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return false;
-                }
-
-                if (SelectedPO != null)
-                {
-                    decimal outstanding = line.OrderedQty;
-
-                    // OrderedQty stores original PO order qty in the UI.
-                    // Repository performs final exact validation against current DB ReceivedQty.
-                    if (line.ReceivedQty > outstanding)
-                    {
-                        MessageBox.Show(
-                            $"Received quantity cannot be greater than ordered quantity for item '{line.Description}'.",
-                            "PO Quantity Validation",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                        return false;
-                    }
-                }
+                return false;
             }
 
             return true;
         }
 
-        private static GrnLine CloneLineForPosting(GrnLine line)
+        private static GrnLine ToPostingLine(GrnLineEntryDto line)
         {
             return new GrnLine
             {
                 PoLineId = line.PoLineId,
+                ItemBatchId = line.ItemBatchId,
                 ItemVariantId = line.ItemVariantId,
                 BatchNo = line.BatchNo?.Trim() ?? string.Empty,
-                ExpiryDate = line.ExpiryDate,
+                ExpiryDate = line.ExpiryDate?.Date,
                 Uom = line.Uom?.Trim() ?? string.Empty,
                 OrderedQty = line.OrderedQty,
                 ReceivedQty = line.ReceivedQty,
@@ -952,34 +1070,49 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void Clear()
         {
-            SelectedPO = null;
-            IsSupplierSelectionEnabled = true;
+            _isClearing = true;
 
-            SelectedSupplier = null;
-            SupplierInvoiceNo = string.Empty;
+            try
+            {
+                SelectedPO = null;
+                IsSupplierSelectionEnabled = true;
 
-            InvoiceDate = DateTime.Now;
-            ReceivedDate = DateTime.Now;
-            DueDate = DateTime.Now.AddDays(30);
+                SelectedSupplier = null;
+                SupplierInvoiceNo = string.Empty;
 
-            Remarks = string.Empty;
-            ScanBarcode = string.Empty;
-            MatrixBatchNo = string.Empty;
-            MatrixExpiryDate = null;
-            MatrixFilterText = string.Empty;
+                InvoiceDate = DateTime.Now;
+                ReceivedDate = DateTime.Now;
+                DueDate = DateTime.Now.AddDays(30);
 
-            GlobalBillDiscount = 0m;
-            FreightAmount = 0m;
-            SelectedItem = null;
-            SelectedLine = null;
+                Remarks = string.Empty;
+                ScanBarcode = string.Empty;
+                MatrixBatchNo = string.Empty;
+                MatrixExpiryDate = null;
+                MatrixFilterText = string.Empty;
 
-            GrnLines.Clear();
-            ClearLoadedMatrixOnly();
+                GlobalBillDiscount = 0m;
+                FreightAmount = 0m;
+                SelectedItem = null;
+                SelectedLine = null;
 
-            RecalculateTotals();
+                UnsubscribeGrnLineEvents();
+                GrnLines.Clear();
 
-            DocumentStatus = "DRAFT";
-            StatusMessage = "Ready for new GRN.";
+                ClearLoadedMatrixOnly();
+
+                Subtotal = 0m;
+                TotalDiscountAmount = 0m;
+                NetPayable = 0m;
+
+                DocumentStatus = "DRAFT";
+                StatusMessage = "Ready for new GRN.";
+
+                OnPropertyChanged(nameof(IsPoLinked));
+            }
+            finally
+            {
+                _isClearing = false;
+            }
         }
 
         private void ClearLoadedMatrixOnly()
@@ -987,12 +1120,90 @@ namespace POS.BackOffice.UI.ViewModels
             _allMatrixVariants.Clear();
             ActiveMatrixVariants.Clear();
             MatrixFilterText = string.Empty;
-            SelectedItem = null;
+
+            if (!_isClearing)
+            {
+                _isClearing = true;
+                SelectedItem = null;
+                _isClearing = false;
+            }
+            else
+            {
+                SelectedItem = null;
+            }
         }
+
+        // =========================================================
+        // EVENTS
+        // =========================================================
+
+        private void SubscribeGrnLineEvents(GrnLineEntryDto line)
+        {
+            line.PropertyChanged -= GrnLine_PropertyChanged;
+            line.PropertyChanged += GrnLine_PropertyChanged;
+        }
+
+        private void UnsubscribeGrnLineEvents()
+        {
+            foreach (var line in GrnLines)
+                line.PropertyChanged -= GrnLine_PropertyChanged;
+        }
+
+        private void GrnLine_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_isRecalculating)
+                return;
+
+            if (e.PropertyName == nameof(GrnLineEntryDto.ReceivedQty) ||
+                e.PropertyName == nameof(GrnLineEntryDto.UnitCost) ||
+                e.PropertyName == nameof(GrnLineEntryDto.LineDiscount))
+            {
+                QueueRecalculate();
+            }
+        }
+
+        // =========================================================
+        // HELPERS
+        // =========================================================
 
         private static string NormalizeBatchKey(string? batchNo)
         {
             return (batchNo ?? string.Empty).Trim().ToUpperInvariant();
+        }
+
+        private static string SafeLower(string? value)
+        {
+            return (value ?? string.Empty).Trim().ToLowerInvariant();
+        }
+    }
+
+    internal static class GrnLineEntryDtoExtensions
+    {
+        public static GrnLineEntryDto CloneForGrnEntry(this GrnLineEntryDto source)
+        {
+            return new GrnLineEntryDto
+            {
+                GrnLineId = 0,
+                PoLineId = source.PoLineId,
+                ItemBatchId = source.ItemBatchId,
+                ItemVariantId = source.ItemVariantId,
+                ItemCode = source.ItemCode,
+                SkuCode = source.SkuCode,
+                Barcode = source.Barcode,
+                Description = source.Description,
+                VariantDescription = source.VariantDescription,
+                Uom = source.Uom,
+                OrderedQty = source.OrderedQty,
+                OutstandingPoQty = source.OutstandingPoQty,
+                RequiresExpiry = source.RequiresExpiry,
+                BatchNo = source.BatchNo,
+                ExpiryDate = source.ExpiryDate,
+                ReceivedQty = source.ReceivedQty,
+                UnitCost = source.UnitCost,
+                LineDiscount = source.LineDiscount,
+                LandedCost = source.LandedCost,
+                LineTotal = source.LineTotal
+            };
         }
     }
 }

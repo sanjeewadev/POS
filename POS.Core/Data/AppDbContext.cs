@@ -273,7 +273,7 @@ namespace POS.Core.Data
                     .HasMaxLength(50);
 
                 // Temporary legacy field.
-                // Keep only until all Item Master code is moved to UnitOfMeasureId.
+                // Keep while older pages/repositories still read BaseUom.
                 entity.Property(i => i.BaseUom)
                     .HasMaxLength(20);
 
@@ -282,6 +282,38 @@ namespace POS.Core.Data
 
                 entity.Property(i => i.UnitOfMeasureId)
                     .HasDefaultValue(1);
+
+                // New correct tracking flags.
+                // Batch Tracking and Expiry Tracking are separate.
+                entity.Property(i => i.HasBatchTracking)
+                    .HasDefaultValue(true);
+
+                entity.Property(i => i.HasExpiryTracking)
+                    .HasDefaultValue(false);
+
+                // Legacy compatibility field.
+                // Old code used this as combined Batch / Expiry.
+                // New Item Master will set this from HasExpiryTracking until all old code is updated.
+                entity.Property(i => i.HasBatchExpiry)
+                    .HasDefaultValue(false);
+
+                entity.Property(i => i.IsScaleItem)
+                    .HasDefaultValue(false);
+
+                entity.Property(i => i.IsSerialized)
+                    .HasDefaultValue(false);
+
+                entity.Property(i => i.AllowCashierDiscount)
+                    .HasDefaultValue(true);
+
+                entity.Property(i => i.IsPurchaseLocked)
+                    .HasDefaultValue(false);
+
+                entity.Property(i => i.IsSaleLocked)
+                    .HasDefaultValue(false);
+
+                entity.Property(i => i.IsDeactivated)
+                    .HasDefaultValue(false);
 
                 entity.HasOne(i => i.Category)
                     .WithMany()
@@ -308,6 +340,16 @@ namespace POS.Core.Data
                 entity.HasIndex(i => i.SubCategoryId);
 
                 entity.HasIndex(i => i.UnitOfMeasureId);
+
+                entity.HasIndex(i => i.HasBatchTracking);
+
+                entity.HasIndex(i => i.HasExpiryTracking);
+
+                entity.HasIndex(i => i.HasBatchExpiry);
+
+                entity.HasIndex(i => i.IsPurchaseLocked);
+
+                entity.HasIndex(i => i.IsSaleLocked);
 
                 entity.HasIndex(i => i.IsDeactivated);
             });
@@ -658,18 +700,27 @@ namespace POS.Core.Data
                     .HasForeignKey(l => l.PoLineId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // Enterprise batch audit:
+                // Every posted GRN line should point to the exact ItemBatch it created or updated.
+                entity.HasOne(l => l.ItemBatch)
+                    .WithMany()
+                    .HasForeignKey(l => l.ItemBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(l => l.GrnHeaderId);
 
                 entity.HasIndex(l => l.ItemVariantId);
 
                 entity.HasIndex(l => l.PoLineId);
 
+                entity.HasIndex(l => l.ItemBatchId);
+
                 entity.HasIndex(l => l.BatchNo);
 
                 entity.HasIndex(l => l.LineStatus);
 
                 // Prevent accidental duplicate same item/same batch line inside one GRN.
-                // If user scans same item and batch twice, ViewModel should merge quantities.
+                // The ViewModel and repository should merge same item + same batch before posting.
                 entity.HasIndex(l => new
                 {
                     l.GrnHeaderId,

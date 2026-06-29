@@ -8,36 +8,52 @@ using POS.Core.Models;
 
 namespace POS.Core.Repositories
 {
-    // Existing DTO for the Admin Item Master Grid
     public class ItemMasterSummaryDto
     {
         public int ParentId { get; set; }
+
         public string ItemCode { get; set; } = string.Empty;
+
         public string ItemName { get; set; } = string.Empty;
+
         public string CategoryName { get; set; } = string.Empty;
+
         public int VariantCount { get; set; }
+
         public decimal TotalStockOnHand { get; set; }
+
         public string StatusText { get; set; } = string.Empty;
+
+        public bool HasBatchTracking { get; set; }
+
+        public bool HasExpiryTracking { get; set; }
     }
 
-    // Represents Table 1: The generic parent item for cashier/PLU seek.
     public class ParentSeekDto
     {
         public int ParentId { get; set; }
+
         public string ItemCode { get; set; } = string.Empty;
+
         public string ItemName { get; set; } = string.Empty;
+
         public string CategoryName { get; set; } = string.Empty;
+
         public int ActiveVariantsCount { get; set; }
     }
 
-    // Represents Table 2: Specific sellable variants.
     public class VariantSeekDto
     {
         public int VariantId { get; set; }
+
         public string SkuCode { get; set; } = string.Empty;
+
         public string Barcode { get; set; } = string.Empty;
+
         public string VariantDescription { get; set; } = string.Empty;
+
         public decimal RetailPrice { get; set; }
+
         public decimal StockOnHand { get; set; }
     }
 
@@ -46,19 +62,30 @@ namespace POS.Core.Repositories
         public int VariantId { get; set; }
 
         public string ItemCode { get; set; } = string.Empty;
+
         public string SkuCode { get; set; } = string.Empty;
+
         public string Barcode { get; set; } = string.Empty;
 
         public string Description { get; set; } = string.Empty;
+
         public string VariantDescription { get; set; } = string.Empty;
+
         public string Uom { get; set; } = "PCS";
 
         public decimal RetailPrice { get; set; }
+
         public decimal WholesalePrice { get; set; }
+
         public decimal MinimumPrice { get; set; }
+
         public decimal MaximumPrice { get; set; }
 
         public decimal StockOnHand { get; set; }
+
+        public bool HasBatchTracking { get; set; }
+
+        public bool HasExpiryTracking { get; set; }
 
         public bool HasStock => StockOnHand > 0;
 
@@ -67,7 +94,7 @@ namespace POS.Core.Repositories
             get
             {
                 if (string.IsNullOrWhiteSpace(VariantDescription) ||
-                    VariantDescription == "Standard")
+                    VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
                 {
                     return Description;
                 }
@@ -119,7 +146,9 @@ namespace POS.Core.Repositories
                     CategoryName = p.Category.CategoryName,
                     VariantCount = p.Variants.Count(v => !v.IsDeactivated),
                     TotalStockOnHand = 0m,
-                    StatusText = p.IsDeactivated ? "Deactivated" : "Active"
+                    StatusText = p.IsDeactivated ? "Deactivated" : "Active",
+                    HasBatchTracking = p.HasBatchTracking,
+                    HasExpiryTracking = p.HasExpiryTracking || p.HasBatchExpiry
                 })
                 .Take(500)
                 .ToListAsync();
@@ -131,13 +160,15 @@ namespace POS.Core.Repositories
                 .Select(i => i.ParentId)
                 .ToList();
 
-            var rawStockData = await context.InventoryTransactions
+            var rawStockData = await context.ItemBatches
                 .AsNoTracking()
-                .Where(t => parentIds.Contains(t.ItemVariant.ItemParentId))
-                .Select(t => new
+                .Where(b =>
+                    parentIds.Contains(b.ItemVariant.ItemParentId) &&
+                    !b.IsDeactivated)
+                .Select(b => new
                 {
-                    t.ItemVariant.ItemParentId,
-                    t.Quantity
+                    b.ItemVariant.ItemParentId,
+                    b.CurrentStock
                 })
                 .ToListAsync();
 
@@ -145,7 +176,7 @@ namespace POS.Core.Repositories
             {
                 item.TotalStockOnHand = rawStockData
                     .Where(s => s.ItemParentId == item.ParentId)
-                    .Sum(s => s.Quantity);
+                    .Sum(s => s.CurrentStock);
             }
 
             return itemsList;
@@ -205,10 +236,12 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(normalizedBarcode))
                 return true;
 
+            string upperBarcode = normalizedBarcode.ToUpperInvariant();
+
             using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.ItemVariants.AnyAsync(v =>
-                v.Barcode.ToUpper() == normalizedBarcode.ToUpper() &&
+                ((v.Barcode ?? string.Empty).ToUpper()) == upperBarcode &&
                 v.Id != currentVariantId);
         }
 
@@ -280,8 +313,14 @@ namespace POS.Core.Repositories
                     existingParent.BaseUom = parent.BaseUom;
                     existingParent.TaxCode = parent.TaxCode;
 
+                    existingParent.HasBatchTracking = parent.HasBatchTracking;
+                    existingParent.HasExpiryTracking = parent.HasExpiryTracking;
+
+                    // Legacy compatibility:
+                    // Old GRN code still uses this as expiry-required.
+                    existingParent.HasBatchExpiry = parent.HasExpiryTracking;
+
                     existingParent.IsScaleItem = parent.IsScaleItem;
-                    existingParent.HasBatchExpiry = parent.HasBatchExpiry;
                     existingParent.IsSerialized = parent.IsSerialized;
                     existingParent.AllowCashierDiscount = parent.AllowCashierDiscount;
                     existingParent.IsPurchaseLocked = parent.IsPurchaseLocked;
@@ -639,8 +678,10 @@ namespace POS.Core.Repositories
             ItemVariant variant,
             int currentVariantId)
         {
+            string sku = NormalizeCode(variant.SkuCode);
+
             bool skuExists = await context.ItemVariants.AnyAsync(v =>
-                v.SkuCode.ToUpper() == variant.SkuCode.ToUpper() &&
+                v.SkuCode.ToUpper() == sku &&
                 v.Id != currentVariantId);
 
             if (skuExists)
@@ -649,10 +690,14 @@ namespace POS.Core.Repositories
                     $"SKU '{variant.SkuCode}' already exists.");
             }
 
-            if (!string.IsNullOrWhiteSpace(variant.Barcode))
+            string barcode = NormalizeText(variant.Barcode);
+
+            if (!string.IsNullOrWhiteSpace(barcode))
             {
+                string upperBarcode = barcode.ToUpperInvariant();
+
                 bool barcodeExists = await context.ItemVariants.AnyAsync(v =>
-                    v.Barcode.ToUpper() == variant.Barcode.ToUpper() &&
+                    ((v.Barcode ?? string.Empty).ToUpper()) == upperBarcode &&
                     v.Id != currentVariantId);
 
                 if (barcodeExists)
@@ -753,25 +798,28 @@ namespace POS.Core.Repositories
                     .ToListAsync();
 
                 foreach (int id in ids)
-                {
                     usedIds.Add(id);
-                }
             }
         }
 
         // =========================================================
-        // CASHIER / PO SEARCH ENGINE
+        // PO / GRN ITEM LOOKUP
         // =========================================================
 
-        public async Task<ItemVariant?> GetItemByBarcodeAsync(string barcode)
+        public async Task<ItemVariant?> GetItemByBarcodeAsync(string barcodeOrSku)
         {
-            string term = NormalizeText(barcode);
+            string term = NormalizeText(barcodeOrSku);
 
             if (string.IsNullOrWhiteSpace(term))
                 return null;
 
+            string upperTerm = term.ToUpperInvariant();
+
             using var context = await _contextFactory.CreateDbContextAsync();
 
+            // This method is used by BackOffice PO/GRN item entry.
+            // It should not block sale-locked items. Sale locking is handled
+            // by cashier-specific methods below.
             return await context.ItemVariants
                 .Include(v => v.ItemParent)
                 .Include(v => v.ItemSuppliers)
@@ -780,10 +828,10 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(v =>
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
-                    !v.ItemParent.IsSaleLocked &&
+                    !v.ItemParent.IsPurchaseLocked &&
                     (
-                        v.SkuCode.ToUpper() == term.ToUpper() ||
-                        v.Barcode.ToUpper() == term.ToUpper()
+                        v.SkuCode.ToUpper() == upperTerm ||
+                        ((v.Barcode ?? string.Empty).ToUpper()) == upperTerm
                     ));
         }
 
@@ -805,6 +853,10 @@ namespace POS.Core.Repositories
                 .ToListAsync();
         }
 
+        // =========================================================
+        // CASHIER SEEK / PRODUCT SEARCH
+        // =========================================================
+
         public async Task<List<ParentSeekDto>> SearchSeekParentsAsync(
             string searchTerm,
             string categoryFilter = "ALL CATEGORIES")
@@ -818,6 +870,7 @@ namespace POS.Core.Repositories
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 string term = searchTerm.Trim();
+                string upperTerm = term.ToUpperInvariant();
 
                 query = query.Where(p =>
                     EF.Functions.Like(p.ItemName, $"%{term}%") ||
@@ -825,8 +878,8 @@ namespace POS.Core.Repositories
                     p.Variants.Any(v =>
                         !v.IsDeactivated &&
                         (
-                            v.SkuCode.ToUpper() == term.ToUpper() ||
-                            v.Barcode.ToUpper() == term.ToUpper()
+                            v.SkuCode.ToUpper() == upperTerm ||
+                            ((v.Barcode ?? string.Empty).ToUpper()) == upperTerm
                         )));
             }
 
@@ -878,9 +931,6 @@ namespace POS.Core.Repositories
                 .Select(v => v.Id)
                 .ToList();
 
-            // IMPORTANT:
-            // SQLite cannot do decimal Sum() in the database.
-            // Load rows first, then calculate decimal totals in C# memory.
             var stockRows = await context.ItemBatches
                 .Where(b =>
                     variantIds.Contains(b.ItemVariantId) &&
@@ -972,7 +1022,7 @@ namespace POS.Core.Repositories
                     !v.ItemParent.IsSaleLocked &&
                     (
                         v.SkuCode.ToUpper() == upperTerm ||
-                        v.Barcode.ToUpper() == upperTerm
+                        ((v.Barcode ?? string.Empty).ToUpper()) == upperTerm
                     ));
 
             if (variant == null)
@@ -1009,7 +1059,12 @@ namespace POS.Core.Repositories
                 MinimumPrice = variant.MinimumPrice,
                 MaximumPrice = variant.MaximumPrice,
 
-                StockOnHand = stockOnHand
+                StockOnHand = stockOnHand,
+
+                HasBatchTracking = variant.ItemParent?.HasBatchTracking ?? true,
+                HasExpiryTracking =
+                    variant.ItemParent?.HasExpiryTracking == true ||
+                    variant.ItemParent?.HasBatchExpiry == true
             };
         }
 
@@ -1024,6 +1079,15 @@ namespace POS.Core.Repositories
             parent.PrintName = NormalizeText(parent.PrintName);
             parent.BaseUom = NormalizeText(parent.BaseUom);
             parent.TaxCode = NormalizeText(parent.TaxCode);
+
+            if (parent.HasExpiryTracking && !parent.HasBatchTracking)
+            {
+                throw new InvalidOperationException(
+                    "Expiry tracking requires batch tracking.");
+            }
+
+            // Temporary compatibility for old GRN logic.
+            parent.HasBatchExpiry = parent.HasExpiryTracking;
         }
 
         private static void ValidateParent(ItemParent parent)
@@ -1051,6 +1115,9 @@ namespace POS.Core.Repositories
 
             if (parent.TaxCode.Length > 20)
                 throw new InvalidOperationException("Tax code cannot be longer than 20 characters.");
+
+            if (parent.HasExpiryTracking && !parent.HasBatchTracking)
+                throw new InvalidOperationException("Expiry tracking requires batch tracking.");
         }
 
         private static void NormalizeVariant(ItemVariant variant)
