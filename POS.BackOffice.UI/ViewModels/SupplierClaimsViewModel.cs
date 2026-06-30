@@ -35,31 +35,31 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         public async Task LoadClaimsAsync()
         {
-            IsLoading = true;
-            try
-            {
-                ClaimedItems.Clear();
+            //IsLoading = true;
+            //try
+            //{
+            //    ClaimedItems.Clear();
 
-                // Fetch only the items flagged as IsRecoverable = true
-                var claims = await _claimRepository.GetRecoverableClaimsAsync(StartDate, EndDate);
+            //    // Fetch only the items flagged as IsRecoverable = true
+            //    var claims = await _claimRepository.GetRecoverableClaimsAsync(StartDate, EndDate);
 
-                foreach (var claim in claims)
-                {
-                    ClaimedItems.Add(claim);
-                }
+            //    foreach (var claim in claims)
+            //    {
+            //        ClaimedItems.Add(claim);
+            //    }
 
-                // Calculate the bottom line
-                TotalRecoverableAmount = claims.Sum(c => c.UnitCostAtTime * c.Quantity);
-                TotalItemsComped = claims.Sum(c => c.Quantity);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error loading claims: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsLoading = false;
-            }
+            //    // Calculate the bottom line
+            //    TotalRecoverableAmount = claims.Sum(c => c.UnitCostAtTime * c.Quantity);
+            //    TotalItemsComped = claims.Sum(c => c.Quantity);
+            //}
+            //catch (Exception ex)
+            //{
+            //    MessageBox.Show($"Error loading claims: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            //}
+            //finally
+            //{
+            //    IsLoading = false;
+            //}
         }
 
         [RelayCommand]

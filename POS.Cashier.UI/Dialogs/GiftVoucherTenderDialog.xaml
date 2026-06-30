@@ -1,0 +1,434 @@
+﻿<Window x:Class="POS.Cashier.UI.Dialogs.GiftVoucherTenderDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Gift Voucher Tender"
+        Width="820"
+        Height="560"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#D4D0C8"
+        FontFamily="Segoe UI"
+        FontSize="14"
+        Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </Window.InputBindings>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <Style TargetType="TextBlock" x:Key="LabelText">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="ClassicInput">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#FFFFE0"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ConfirmBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005500"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003300"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="FontSize" Value="16"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ManagerBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#F59E0B"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="#B45309"/>
+            <Setter Property="Height" Value="38"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="6">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0"
+                Background="#005500"
+                BorderBrush="#003300"
+                BorderThickness="1"
+                Padding="10"
+                Margin="0,0,0,6">
+
+            <Grid>
+                <TextBlock Text="GIFT VOUCHER PAYMENT"
+                           Foreground="White"
+                           FontSize="20"
+                           FontWeight="Heavy"
+                           HorizontalAlignment="Center"/>
+
+                <TextBlock Text="Esc = Close"
+                           Foreground="#D1FAE5"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- BODY -->
+        <Border Grid.Row="1"
+                Background="#F0F0F0"
+                BorderBrush="#808080"
+                BorderThickness="1"
+                Padding="16">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- BALANCE DUE -->
+                <Border Grid.Row="0"
+                        Background="#FFFFFF"
+                        BorderBrush="#10B981"
+                        BorderThickness="2"
+                        Padding="10"
+                        Margin="0,0,0,14">
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="BALANCE DUE:"
+                                   FontSize="18"
+                                   FontWeight="Heavy"
+                                   Foreground="#005500"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,15,0"/>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding BalanceDue, StringFormat=Rs. {0:N2}}"
+                                   FontSize="30"
+                                   FontWeight="Heavy"
+                                   Foreground="#8B0000"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- BARCODE INPUT -->
+                <Grid Grid.Row="1" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="155"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="130"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Text="Voucher Barcode:"
+                               Style="{StaticResource LabelText}"/>
+
+                    <TextBox x:Name="BarcodeTextBox"
+                             Grid.Column="1"
+                             Text="{Binding VoucherBarcode, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SearchVoucherCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+
+                    <Button Grid.Column="2"
+                            Content="VERIFY"
+                            Command="{Binding SearchVoucherCommand}"
+                            Style="{StaticResource ClassicBtn}"
+                            Height="38"
+                            Margin="8,0,0,0"/>
+                </Grid>
+
+                <!-- DETAILS -->
+                <Border Grid.Row="2"
+                        Background="#FFFFFF"
+                        BorderBrush="#A0A0A0"
+                        BorderThickness="1"
+                        Padding="14"
+                        Margin="0,0,0,14">
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT DETAILS -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Voucher Details"
+                                       FontSize="15"
+                                       FontWeight="Heavy"
+                                       Foreground="#003366"
+                                       Margin="0,0,0,12"/>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Voucher No:" Style="{StaticResource LabelText}"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding VoucherNo}"
+                                           FontSize="16"
+                                           FontWeight="Heavy"
+                                           Foreground="#003366"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Status:" Style="{StaticResource LabelText}"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding VoucherStatus}"
+                                           FontSize="16"
+                                           FontWeight="Heavy"
+                                           Foreground="#8B0000"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Expiry:" Style="{StaticResource LabelText}"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding ExpiryDate, StringFormat=yyyy-MM-dd}"
+                                           FontSize="16"
+                                           FontWeight="Bold"
+                                           Foreground="#333333"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Border Background="#FFF7ED"
+                                    BorderBrush="#D97706"
+                                    BorderThickness="1"
+                                    Padding="10"
+                                    Margin="0,12,0,0">
+
+                                <TextBlock Text="One-time voucher rule: after this payment is completed, this voucher will be marked as Redeemed and cannot be used again."
+                                           TextWrapping="Wrap"
+                                           Foreground="#7C2D12"
+                                           FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+
+                        <Rectangle Grid.Column="1"
+                                   Width="1"
+                                   Fill="#A0A0A0"
+                                   Margin="9,0"/>
+
+                        <!-- RIGHT AMOUNTS -->
+                        <StackPanel Grid.Column="2"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center">
+
+                            <TextBlock Text="VOUCHER VALUE"
+                                       FontSize="13"
+                                       FontWeight="Heavy"
+                                       Foreground="#555555"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,5"/>
+
+                            <Border Background="#F0FFF4"
+                                    BorderBrush="#10B981"
+                                    BorderThickness="2"
+                                    Padding="10"
+                                    Margin="0,0,0,12">
+
+                                <TextBlock Text="{Binding VoucherAmount, StringFormat=Rs. {0:N2}}"
+                                           FontSize="26"
+                                           FontWeight="Heavy"
+                                           Foreground="#005500"
+                                           HorizontalAlignment="Center"/>
+                            </Border>
+
+                            <TextBlock Text="AMOUNT TO APPLY"
+                                       FontSize="13"
+                                       FontWeight="Heavy"
+                                       Foreground="#555555"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,5"/>
+
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#003366"
+                                    BorderThickness="2"
+                                    Padding="10"
+                                    Margin="0,0,0,12">
+
+                                <TextBlock Text="{Binding AmountToApply, StringFormat=Rs. {0:N2}}"
+                                           FontSize="26"
+                                           FontWeight="Heavy"
+                                           Foreground="#003366"
+                                           HorizontalAlignment="Center"/>
+                            </Border>
+
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ForfeitedAmount}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding RequiresManagerApproval}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsManagerApproved}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <TextBlock Text="FORFEITED VALUE"
+                                           FontSize="13"
+                                           FontWeight="Heavy"
+                                           Foreground="#8B0000"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,5"/>
+
+                                <Border Background="#FFF5F5"
+                                        BorderBrush="#8B0000"
+                                        BorderThickness="2"
+                                        Padding="10">
+
+                                    <TextBlock Text="{Binding ForfeitedAmount, StringFormat=Rs. {0:N2}}"
+                                               FontSize="24"
+                                               FontWeight="Heavy"
+                                               Foreground="#8B0000"
+                                               HorizontalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- STATUS -->
+                <Border Grid.Row="3"
+                        Background="{Binding StatusColorHex}"
+                        BorderBrush="#808080"
+                        BorderThickness="1"
+                        Padding="10">
+
+                    <TextBlock Text="{Binding StatusText}"
+                               Foreground="White"
+                               FontWeight="Heavy"
+                               FontSize="14"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- FOOTER -->
+        <Border Grid.Row="2"
+                Background="#E0E0E0"
+                BorderBrush="#A0A0A0"
+                BorderThickness="1"
+                Padding="10"
+                Margin="0,6,0,0">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="Verify voucher, then confirm payment."
+                           Foreground="#333333"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+
+                <Button Grid.Column="2"
+                        Content="MANAGER APPROVE"
+                        Command="{Binding ApproveForfeitCommand}"
+                        Margin="0,0,8,0">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ManagerBtn}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding RequiresManagerApproval}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <Button Grid.Column="3"
+                        Content="CLEAR"
+                        Command="{Binding ClearCommand}"
+                        Style="{StaticResource ClassicBtn}"
+                        Margin="0,0,8,0"/>
+
+                <Button Grid.Column="4"
+                        Content="CANCEL"
+                        Command="{Binding CancelCommand}"
+                        Style="{StaticResource ClassicBtn}"
+                        Margin="0,0,8,0"/>
+
+                <Button Grid.Column="5"
+                        Content="CONFIRM PAYMENT"
+                        Command="{Binding ConfirmCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ConfirmBtn}">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanConfirm}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

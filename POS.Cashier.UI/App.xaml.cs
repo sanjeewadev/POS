@@ -55,12 +55,13 @@ namespace POS.Cashier.UI
             services.AddTransient<POS.Cashier.UI.ViewModels.CashMovementViewModel>();
             services.AddTransient<POS.Cashier.UI.ViewModels.B2BCustomerViewModel>();
 
+            services.AddTransient<QuickCustomerCreateViewModel>();
+
             // Dialog ViewModels (Flattened structure)
             services.AddTransient<POS.Cashier.UI.ViewModels.ManagerAuthViewModel>();
             services.AddTransient<POS.Cashier.UI.ViewModels.FloatCashViewModel>();
             services.AddTransient<POS.Cashier.UI.ViewModels.ExpressMenuViewModel>();
             services.AddTransient<POS.Cashier.UI.ViewModels.FreeItemReasonModalViewModel>();
-            services.AddTransient<POS.Cashier.UI.ViewModels.RedeemVoucherModalViewModel>();
 
             services.AddTransient<POS.Cashier.UI.ViewModels.PluSearchViewModel>();
 
@@ -68,6 +69,20 @@ namespace POS.Cashier.UI
             services.AddTransient<POS.Core.Repositories.ExpressItemRepository>();
             services.AddSingleton<IReceiptPrinterService, POS.Hardware.Services.ReceiptPrinterService>();
             services.AddTransient<POS.Core.Repositories.LoyaltyCustomerRepository>();
+
+            // =========================================================
+            // GIFT VOUCHER
+            // =========================================================
+            services.AddTransient<GiftVoucherRepository>();
+            services.AddTransient<SellGiftVoucherDialogViewModel>();
+            services.AddTransient<GiftVoucherTenderDialogViewModel>();
+
+            services.AddTransient<FreeIssueRuleRepository>();
+            services.AddTransient<FreeItemClaimRepository>();
+            services.AddTransient<FreeItemReasonModalViewModel>();
+
+            services.AddTransient<DiscountRuleDialogViewModel>();
+            services.AddTransient<DiscountRuleRepository>();
 
             return services.BuildServiceProvider();
         }

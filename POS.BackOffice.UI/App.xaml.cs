@@ -127,6 +127,15 @@ namespace POS.BackOffice.UI
 
             services.AddTransient<ReceiptLedgerViewModel>();
 
+            // =========================================================
+            // GIFT VOUCHER
+            // =========================================================
+            services.AddTransient<GiftVoucherAdminViewModel>();
+
+            services.AddTransient<FreeIssueRuleRepository>();
+            services.AddTransient<FreeItemClaimRepository>();
+            services.AddTransient<FreeIssueRuleSetupViewModel>();
+
             return services.BuildServiceProvider();
         }
 
