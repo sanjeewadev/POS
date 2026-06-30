@@ -1,74 +1,93 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Controls;
+﻿using Microsoft.Extensions.DependencyInjection;
+using POS.Cashier.UI.Models;
 using POS.Cashier.UI.ViewModels;
+using System;
+using System.Windows;
+using System.Windows.Input;
 
 namespace POS.Cashier.UI.Dialogs
 {
     public partial class FreeItemReasonModalWindow : Window
     {
-        public FreeItemReasonModalViewModel ViewModel { get; }
+        private readonly CartItem _selectedItem;
 
-        // Public properties to read the window outputs after closing
-        public string SelectedReasonType => (cmbReasons.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "";
-        public string CustomNotes => txtCustomReason.Text.Trim();
+        public FreeItemReasonModalViewModel? ViewModel { get; private set; }
 
-        public FreeItemReasonModalWindow(FreeItemReasonModalViewModel viewModel)
+        public FreeItemApplyResult? Result => ViewModel?.Result;
+
+        public FreeItemReasonModalWindow(CartItem selectedItem)
         {
             InitializeComponent();
-            ViewModel = viewModel;
-            DataContext = ViewModel;
 
-            // ViewModel callbacks mapping
-            ViewModel.OnReasonConfirmed = () =>
+            _selectedItem = selectedItem ?? throw new ArgumentNullException(nameof(selectedItem));
+
+            if (App.Services != null)
             {
-                this.DialogResult = true;
-                this.Close();
-            };
+                ViewModel = App.Services.GetRequiredService<FreeItemReasonModalViewModel>();
+                DataContext = ViewModel;
 
-            ViewModel.OnCancel = () =>
-            {
-                this.DialogResult = false;
-                this.Close();
-            };
-        }
-
-        private void CmbReasons_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (pnlCustomReason == null) return;
-
-            // Show input note field only if 'Other' category item is selected
-            if (cmbReasons.SelectedItem == cbiOther)
-            {
-                pnlCustomReason.Visibility = Visibility.Visible;
-                txtCustomReason.Focus();
+                ViewModel.ActionCompleted += OnActionCompleted;
             }
             else
             {
-                pnlCustomReason.Visibility = Visibility.Collapsed;
-                txtCustomReason.Clear();
+                MessageBox.Show(
+                    "Application services are not available.",
+                    "Free Item",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
-        private void ApplyBtn_Click(object sender, RoutedEventArgs e)
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Fallback validation block if "Other" is chosen without typing a custom reason
-            if (cmbReasons.SelectedItem == cbiOther && string.IsNullOrWhiteSpace(CustomNotes))
+            if (ViewModel == null)
+                return;
+
+            try
             {
-                MessageBox.Show("Please specify the manual authorization reason.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                txtCustomReason.Focus();
+                await ViewModel.InitializeAsync(_selectedItem);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to initialize Free Item dialog.\n\n{ex.Message}",
+                    "Free Item",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (e.Key == Key.Escape)
+            {
+                ViewModel.CancelCommand.Execute(null);
+                e.Handled = true;
                 return;
             }
 
-            // Trigger data persistence via your core ViewModel structure safely
-            this.DialogResult = true;
-            this.Close();
+            if (e.Key == Key.Enter)
+            {
+                ViewModel.ConfirmCommand.Execute(null);
+                e.Handled = true;
+            }
         }
 
-        private void CancelBtn_Click(object sender, RoutedEventArgs e)
+        private void OnActionCompleted(bool accepted)
         {
-            this.DialogResult = false;
-            this.Close();
+            DialogResult = accepted;
+            Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            if (ViewModel != null)
+                ViewModel.ActionCompleted -= OnActionCompleted;
+
+            base.OnClosed(e);
         }
     }
 }

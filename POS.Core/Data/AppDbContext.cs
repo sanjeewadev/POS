@@ -52,6 +52,11 @@ namespace POS.Core.Data
         public DbSet<LoyaltyDiscountProfile> LoyaltyDiscountProfiles { get; set; } = null!;
         public DbSet<ExpressItemLayout> ExpressItemLayouts { get; set; } = null!;
 
+        // --- DISCOUNT RULE ENGINE ---
+        public DbSet<DiscountRule> DiscountRules { get; set; } = null!;
+        public DbSet<DiscountReason> DiscountReasons { get; set; } = null!;
+        public DbSet<SalesLineDiscountAudit> SalesLineDiscountAudits { get; set; } = null!;
+
         // --- CASHIER & SALES ENGINE ---
         public DbSet<SalesHeader> SalesHeaders { get; set; } = null!;
         public DbSet<SalesLine> SalesLines { get; set; } = null!;
@@ -69,7 +74,17 @@ namespace POS.Core.Data
         // --- SETTINGS / VOUCHERS / CLAIMS ---
         public DbSet<SystemSetting> SystemSettings { get; set; } = null!;
         public DbSet<GiftVoucher> GiftVouchers { get; set; } = null!;
-        public DbSet<FreeItemClaimLog> FreeItemClaims { get; set; } = null!;
+
+        public DbSet<GiftVoucherTransaction> GiftVoucherTransactions { get; set; }
+        // =========================================================
+        // FREE ISSUE / SUPPLIER CLAIM
+        // =========================================================
+
+        public DbSet<FreeIssueRule> FreeIssueRules { get; set; }
+
+        public DbSet<FreeIssueReason> FreeIssueReasons { get; set; }
+
+        public DbSet<FreeItemClaimLog> FreeItemClaimLogs { get; set; }
 
         // Keep these because some existing repositories may already use these names.
         public DbSet<SupplierReturnHeader> SupplierReturnHeaders { get; set; } = null!;
@@ -1015,6 +1030,174 @@ namespace POS.Core.Data
                 .HasIndex(c => c.Timestamp);
 
             // =========================================================
+            // CUSTOMER MASTER / CRM
+            // =========================================================
+            modelBuilder.Entity<CustomerMaster>(entity =>
+            {
+                entity.Property(c => c.CustomerCode)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.FullName)
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.Phone)
+                    .HasMaxLength(30);
+
+                entity.Property(c => c.Email)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.Address)
+                    .HasMaxLength(300);
+
+                entity.Property(c => c.NicNumber)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CompanyName)
+                    .HasMaxLength(150)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.BusinessRegistrationNumber)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.VatRegistrationNumber)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CustomerType)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Retail")
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.IsDiscountEligible)
+                    .HasDefaultValue(false);
+
+                entity.Property(c => c.IsCreditEnabled)
+                    .HasDefaultValue(false);
+
+                entity.Property(c => c.CreditStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("None")
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CreditLimit)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(c => c.CurrentBalance)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(c => c.CreditDays)
+                    .HasDefaultValue(0);
+
+                entity.Property(c => c.IsCreditLocked)
+                    .HasDefaultValue(false);
+
+                entity.Property(c => c.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(c => c.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.UpdatedBy)
+                    .HasMaxLength(100);
+
+                // Temporary legacy fields.
+                // Keep until old loyalty/profile pages are replaced.
+                entity.Property(c => c.LoyaltyCardNumber)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.LoyaltyPointsBalance)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.HasOne(c => c.LoyaltyDiscountProfile)
+                    .WithMany()
+                    .HasForeignKey(c => c.LoyaltyDiscountProfileId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(c => c.LedgerEntries)
+                    .WithOne(l => l.CustomerMaster)
+                    .HasForeignKey(l => l.CustomerMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(c => c.CustomerCode)
+                    .IsUnique();
+
+                entity.HasIndex(c => c.Phone);
+
+                entity.HasIndex(c => c.FullName);
+
+                entity.HasIndex(c => c.CustomerType);
+
+                entity.HasIndex(c => c.IsDiscountEligible);
+
+                entity.HasIndex(c => c.IsCreditEnabled);
+
+                entity.HasIndex(c => c.CreditStatus);
+
+                entity.HasIndex(c => c.Birthday);
+
+                entity.HasIndex(c => c.NicNumber);
+
+                entity.HasIndex(c => c.BusinessRegistrationNumber);
+
+                entity.HasIndex(c => c.VatRegistrationNumber);
+
+                entity.HasIndex(c => c.IsCreditLocked);
+
+                entity.HasIndex(c => c.IsActive);
+            });
+
+            // =========================================================
+            // CUSTOMER LEDGER
+            // =========================================================
+            modelBuilder.Entity<CustomerLedger>(entity =>
+            {
+                entity.Property(l => l.DocumentRef)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TransactionType)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.DebitAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.CreditAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.ProcessedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.Remarks)
+                    .HasMaxLength(255);
+
+                entity.HasOne(l => l.CustomerMaster)
+                    .WithMany(c => c.LedgerEntries)
+                    .HasForeignKey(l => l.CustomerMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(l => l.CustomerMasterId);
+
+                entity.HasIndex(l => l.TransactionDate);
+
+                entity.HasIndex(l => l.DocumentRef);
+
+                entity.HasIndex(l => l.TransactionType);
+            });
+
+            // =========================================================
             // SUPPLIER MASTER
             // =========================================================
             modelBuilder.Entity<Supplier>(entity =>
@@ -1375,6 +1558,1353 @@ namespace POS.Core.Data
                     l.ItemBatchId
                 })
                 .IsUnique();
+            });
+
+            // =========================================================
+            // DISCOUNT REASON MASTER
+            // =========================================================
+            modelBuilder.Entity<DiscountReason>(entity =>
+            {
+                entity.Property(r => r.ReasonCode)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.ReasonName)
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.Description)
+                    .HasMaxLength(300);
+
+                entity.Property(r => r.RequiresManagerApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(r => r.RequiresAdminApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(r => r.ManagerApprovalThreshold)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(r => r.DisplayOrder)
+                    .HasDefaultValue(0);
+
+                entity.Property(r => r.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.UpdatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasIndex(r => r.ReasonCode)
+                    .IsUnique();
+
+                entity.HasIndex(r => r.ReasonName);
+
+                entity.HasIndex(r => r.IsActive);
+
+                entity.HasIndex(r => r.DisplayOrder);
+
+                entity.HasIndex(r => r.RequiresManagerApproval);
+
+                entity.HasIndex(r => r.RequiresAdminApproval);
+            });
+
+
+            // =========================================================
+            // DISCOUNT RULE MASTER
+            // =========================================================
+            modelBuilder.Entity<DiscountRule>(entity =>
+            {
+                entity.Property(r => r.RuleName)
+                    .IsRequired()
+                    .HasMaxLength(150)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.DiscountType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("Percent")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.DiscountValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.ReasonCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.ReasonName)
+                    .HasMaxLength(150);
+
+                entity.Property(r => r.AppliesToType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("All")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.CategoryName)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.SubCategoryName)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.ItemName)
+                    .HasMaxLength(150);
+
+                entity.Property(r => r.SkuCode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.Barcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.CustomerType)
+                    .HasMaxLength(30)
+                    .HasDefaultValue("All")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(r => r.MaxDiscountAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.MaxDiscountPercent)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.MaxValuePerInvoice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.MaxValuePerDay)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.MaxQtyPerInvoice)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(r => r.MaxQtyPerDay)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(r => r.RequiresManagerApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(r => r.RequiresAdminApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(r => r.ManagerApprovalThreshold)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.AllowBelowMinimumPrice)
+                    .HasDefaultValue(false);
+
+                entity.Property(r => r.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.UpdatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasOne(r => r.DiscountReason)
+                    .WithMany()
+                    .HasForeignKey(r => r.DiscountReasonId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(r => r.RuleName);
+
+                entity.HasIndex(r => r.DiscountType);
+
+                entity.HasIndex(r => r.DiscountReasonId);
+
+                entity.HasIndex(r => r.ReasonCode);
+
+                entity.HasIndex(r => r.AppliesToType);
+
+                entity.HasIndex(r => r.CategoryId);
+
+                entity.HasIndex(r => r.SubCategoryId);
+
+                entity.HasIndex(r => r.ItemParentId);
+
+                entity.HasIndex(r => r.ItemVariantId);
+
+                entity.HasIndex(r => r.CustomerType);
+
+                entity.HasIndex(r => r.ValidFrom);
+
+                entity.HasIndex(r => r.ValidTo);
+
+                entity.HasIndex(r => r.IsActive);
+
+                entity.HasIndex(r => r.RequiresManagerApproval);
+
+                entity.HasIndex(r => r.RequiresAdminApproval);
+
+                entity.HasIndex(r => r.AllowBelowMinimumPrice);
+            });
+
+
+            // =========================================================
+            // SALES LINE DISCOUNT AUDIT
+            // =========================================================
+            modelBuilder.Entity<SalesLineDiscountAudit>(entity =>
+            {
+                // =====================================================
+                // SALE REFERENCES
+                // =====================================================
+
+                entity.Property(a => a.InvoiceNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.CashierName)
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.TerminalNo)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                // =====================================================
+                // DISCOUNT SNAPSHOT
+                // =====================================================
+
+                entity.Property(a => a.DiscountRuleName)
+                    .HasMaxLength(150);
+
+                entity.Property(a => a.ReasonCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.ReasonName)
+                    .HasMaxLength(150);
+
+                entity.Property(a => a.DiscountType)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.DiscountValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(a => a.DiscountAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                // =====================================================
+                // LINE VALUE SNAPSHOT
+                // =====================================================
+
+                entity.Property(a => a.OriginalUnitPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(a => a.Quantity)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(a => a.GrossAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(a => a.LineTotalAfterDiscount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(a => a.CostPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(a => a.ProfitAfterDiscount)
+                    .HasColumnType("decimal(18,2)");
+
+                // =====================================================
+                // ITEM SNAPSHOT
+                // =====================================================
+
+                entity.Property(a => a.Barcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.SkuCode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.ItemDescription)
+                    .HasMaxLength(200);
+
+                entity.Property(a => a.BatchNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.Uom)
+                    .HasMaxLength(20);
+
+                // =====================================================
+                // APPROVAL / AUDIT
+                // =====================================================
+
+                entity.Property(a => a.RequiresManagerApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(a => a.RequiresAdminApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(a => a.ApprovedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.Remarks)
+                    .HasMaxLength(500);
+
+                // =====================================================
+                // RELATIONSHIPS
+                // =====================================================
+
+                entity.HasOne(a => a.SalesHeader)
+                    .WithMany()
+                    .HasForeignKey(a => a.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.SalesLine)
+                    .WithMany()
+                    .HasForeignKey(a => a.SalesLineId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.DiscountRule)
+                    .WithMany()
+                    .HasForeignKey(a => a.DiscountRuleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.DiscountReason)
+                    .WithMany()
+                    .HasForeignKey(a => a.DiscountReasonId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // =====================================================
+                // INDEXES
+                // =====================================================
+
+                entity.HasIndex(a => a.SalesHeaderId);
+
+                entity.HasIndex(a => a.SalesLineId);
+
+                entity.HasIndex(a => a.InvoiceNo);
+
+                entity.HasIndex(a => a.InvoiceDate);
+
+                entity.HasIndex(a => a.CashierName);
+
+                entity.HasIndex(a => a.TerminalNo);
+
+                entity.HasIndex(a => a.DiscountRuleId);
+
+                entity.HasIndex(a => a.DiscountReasonId);
+
+                entity.HasIndex(a => a.ReasonCode);
+
+                entity.HasIndex(a => a.DiscountType);
+
+                entity.HasIndex(a => a.ItemVariantId);
+
+                entity.HasIndex(a => a.ItemBatchId);
+
+                entity.HasIndex(a => a.Barcode);
+
+                entity.HasIndex(a => a.SkuCode);
+
+                entity.HasIndex(a => a.RequiresManagerApproval);
+
+                entity.HasIndex(a => a.RequiresAdminApproval);
+
+                entity.HasIndex(a => a.ApprovedBy);
+
+                entity.HasIndex(a => a.CreatedAt);
+            });
+
+            // =========================================================
+            // SALES HEADER
+            // =========================================================
+            modelBuilder.Entity<SalesHeader>(entity =>
+            {
+                entity.Property(s => s.InvoiceNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.TerminalNo)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CashierName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                // =====================================================
+                // CUSTOMER SNAPSHOT
+                // =====================================================
+
+                entity.Property(s => s.CustomerCode)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CustomerName)
+                    .HasMaxLength(150);
+
+                entity.Property(s => s.CustomerCompanyName)
+                    .HasMaxLength(150);
+
+                entity.Property(s => s.CustomerPhone)
+                    .HasMaxLength(30);
+
+                entity.Property(s => s.CustomerType)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CustomerNicOrBrNumber)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CustomerCreditStatus)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CustomerIsDiscountEligible)
+                    .HasDefaultValue(false);
+
+                entity.Property(s => s.CustomerIsCreditEnabled)
+                    .HasDefaultValue(false);
+
+                entity.Property(s => s.IsWholesaleSale)
+                    .HasDefaultValue(false);
+
+                entity.HasOne(s => s.CustomerMaster)
+                    .WithMany()
+                    .HasForeignKey(s => s.CustomerMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // =====================================================
+                // TOTALS / PAYMENT SUMMARY
+                // =====================================================
+
+                entity.Property(s => s.GrossTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.TotalDiscount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.NetTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.AmountTendered)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.BalanceReturned)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.PaymentMethod)
+                    .HasMaxLength(50);
+
+                entity.Property(s => s.Status)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.HasOne<ShiftSession>()
+                    .WithMany()
+                    .HasForeignKey(s => s.ShiftSessionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(s => s.SalesLines)
+                    .WithOne(l => l.SalesHeader)
+                    .HasForeignKey(l => l.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(s => s.SalesPayments)
+                    .WithOne(p => p.SalesHeader)
+                    .HasForeignKey(p => p.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(s => s.InvoiceNo)
+                    .IsUnique();
+
+                entity.HasIndex(s => s.ShiftSessionId);
+
+                entity.HasIndex(s => s.TerminalNo);
+
+                entity.HasIndex(s => s.CashierName);
+
+                entity.HasIndex(s => s.TransactionDate);
+
+                entity.HasIndex(s => s.Status);
+
+                entity.HasIndex(s => s.IsVoided);
+
+                entity.HasIndex(s => s.CustomerMasterId);
+
+                entity.HasIndex(s => s.CustomerCode);
+
+                entity.HasIndex(s => s.CustomerPhone);
+
+                entity.HasIndex(s => s.CustomerType);
+
+                entity.HasIndex(s => s.CustomerIsDiscountEligible);
+
+                entity.HasIndex(s => s.CustomerIsCreditEnabled);
+
+                entity.HasIndex(s => s.IsWholesaleSale);
+            });
+
+
+            // =========================================================
+            // SALES LINE
+            // =========================================================
+            modelBuilder.Entity<SalesLine>(entity =>
+            {
+                entity.Property(l => l.SkuCode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.Barcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.ItemDescription)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(l => l.BatchNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.Uom)
+                    .HasMaxLength(20);
+
+                entity.Property(l => l.Quantity)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(l => l.UnitPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.CostPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.GrossAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                // =========================================================
+                // DISCOUNT / PRICE OVERRIDE / TOTALS
+                // =========================================================
+
+                entity.Property(l => l.DiscountPercentage)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.DiscountAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.ManualDiscountAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.DiscountMode)
+                    .HasMaxLength(30)
+                    .HasDefaultValue("None")
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.IsManualDiscount)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.IsPriceOverridden)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.PriceOverrideAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.PriceOverrideApprovedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.LineTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.ProfitAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.HasIndex(l => l.DiscountMode);
+
+                entity.HasIndex(l => l.IsManualDiscount);
+
+                entity.HasIndex(l => l.IsPriceOverridden);
+
+                entity.HasOne(l => l.SalesHeader)
+                    .WithMany(h => h.SalesLines)
+                    .HasForeignKey(l => l.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(l => l.ItemVariant)
+                    .WithMany()
+                    .HasForeignKey(l => l.ItemVariantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.ItemBatch)
+                    .WithMany()
+                    .HasForeignKey(l => l.ItemBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(l => l.SalesHeaderId);
+
+                entity.HasIndex(l => l.ItemVariantId);
+
+                entity.HasIndex(l => l.ItemBatchId);
+
+                entity.HasIndex(l => l.BatchNo);
+
+                entity.HasIndex(l => l.ExpiryDate);
+
+                entity.HasIndex(l => l.IsReturned);
+
+                // Gift voucher sale line fields.
+                entity.Property(l => l.IsGiftVoucherSale)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.GiftVoucherNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.GiftVoucherBarcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.HasIndex(l => l.IsGiftVoucherSale);
+
+                entity.HasIndex(l => l.GiftVoucherId);
+
+                entity.HasIndex(l => l.GiftVoucherNo);
+
+                entity.HasIndex(l => l.GiftVoucherBarcode);
+
+                // =========================================================
+                // FREE ISSUE SNAPSHOT FIELDS
+                // =========================================================
+
+                entity.Property(l => l.IsFreeItem)
+    .HasDefaultValue(false);
+
+                entity.Property(l => l.FreeIssueRuleName)
+                    .HasMaxLength(150);
+
+                entity.Property(l => l.FreeIssueType)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.FreeReasonCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.FreeReasonText)
+                    .HasMaxLength(150);
+
+                entity.Property(l => l.FreeApprovedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.OriginalUnitPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.FreeIssueCostValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.FreeIssueSellingValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.IsSupplierRecoverable)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.SupplierName)
+                    .HasMaxLength(150);
+
+                entity.Property(l => l.SupplierPromotionReference)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.SupplierClaimStatus)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.SupplierClaimReferenceNo)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.SupplierClaimValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.HasIndex(l => l.IsFreeItem);
+                entity.HasIndex(l => l.FreeIssueRuleId);
+                entity.HasIndex(l => l.FreeIssueType);
+                entity.HasIndex(l => l.FreeReasonCode);
+                entity.HasIndex(l => l.IsSupplierRecoverable);
+                entity.HasIndex(l => l.SupplierId);
+                entity.HasIndex(l => l.SupplierClaimId);
+                entity.HasIndex(l => l.SupplierClaimStatus);
+                entity.HasIndex(l => l.SupplierClaimReferenceNo);
+
+                // =========================================================
+                // RULE-BASED DISCOUNT SNAPSHOT
+                // =========================================================
+
+                entity.Property(l => l.IsRuleDiscount)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.DiscountRuleName)
+                    .HasMaxLength(150);
+
+                entity.Property(l => l.DiscountReasonCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.DiscountReasonName)
+                    .HasMaxLength(150);
+
+                entity.Property(l => l.DiscountRequiresManagerApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.DiscountRequiresAdminApproval)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.DiscountApprovedBy)
+                    .HasMaxLength(100);
+
+                entity.HasOne<DiscountRule>()
+                    .WithMany()
+                    .HasForeignKey(l => l.DiscountRuleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<DiscountReason>()
+                    .WithMany()
+                    .HasForeignKey(l => l.DiscountReasonId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(l => l.IsRuleDiscount);
+
+                entity.HasIndex(l => l.DiscountRuleId);
+
+                entity.HasIndex(l => l.DiscountReasonId);
+
+                entity.HasIndex(l => l.DiscountReasonCode);
+
+                entity.HasIndex(l => l.DiscountRequiresManagerApproval);
+
+                entity.HasIndex(l => l.DiscountRequiresAdminApproval);
+
+                entity.HasIndex(l => l.DiscountApprovedBy);
+            });
+
+
+            // =========================================================
+            // SALES PAYMENT
+            // =========================================================
+            modelBuilder.Entity<SalesPayment>(entity =>
+            {
+                entity.Property(p => p.PaymentType)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.Amount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.ReferenceNo)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.BankOrCardType)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.HasOne(p => p.SalesHeader)
+                    .WithMany(h => h.SalesPayments)
+                    .HasForeignKey(p => p.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(p => p.SalesHeaderId);
+
+                entity.HasIndex(p => p.PaymentType);
+
+                entity.HasIndex(p => p.ReferenceNo);
+
+                entity.HasIndex(p => p.PaymentDate);
+
+                entity.HasIndex(p => p.CreatedAt);
+
+                // Gift voucher payment fields.
+                entity.Property(p => p.GiftVoucherNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.GiftVoucherBarcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.GiftVoucherAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.GiftVoucherForfeitedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.HasIndex(p => p.GiftVoucherId);
+
+                entity.HasIndex(p => p.GiftVoucherNo);
+
+                entity.HasIndex(p => p.GiftVoucherBarcode);
+            });
+
+            // =========================================================
+            // GIFT VOUCHERS
+            // =========================================================
+            modelBuilder.Entity<GiftVoucher>(entity =>
+            {
+                entity.Property(v => v.VoucherNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.Barcode)
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.VoucherAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(v => v.Status)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("Created")
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.BatchNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.Description)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.PrintedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.SoldInvoiceNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.SoldCashierName)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.SoldTerminalNo)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.RedeemedInvoiceNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.RedeemedCashierName)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.RedeemedTerminalNo)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(v => v.RedeemedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(v => v.ForfeitedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(v => v.BlockedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.BlockReason)
+                    .HasMaxLength(255);
+
+                entity.Property(v => v.CancelledBy)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.CancelReason)
+                    .HasMaxLength(255);
+
+                entity.Property(v => v.UpdatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasOne(v => v.SoldSalesHeader)
+                    .WithMany()
+                    .HasForeignKey(v => v.SoldSalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(v => v.RedeemedSalesHeader)
+                    .WithMany()
+                    .HasForeignKey(v => v.RedeemedSalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(v => v.Transactions)
+                    .WithOne(t => t.GiftVoucher)
+                    .HasForeignKey(t => t.GiftVoucherId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(v => v.VoucherNo)
+                    .IsUnique();
+
+                entity.HasIndex(v => v.Barcode)
+                    .IsUnique();
+
+                entity.HasIndex(v => v.Status);
+
+                entity.HasIndex(v => v.BatchNo);
+
+                entity.HasIndex(v => v.VoucherAmount);
+
+                entity.HasIndex(v => v.ExpiryDate);
+
+                entity.HasIndex(v => v.CreatedAt);
+
+                entity.HasIndex(v => v.ActivatedAt);
+
+                entity.HasIndex(v => v.RedeemedDate);
+
+                entity.HasIndex(v => v.SoldSalesHeaderId);
+
+                entity.HasIndex(v => v.RedeemedSalesHeaderId);
+            });
+
+
+            // =========================================================
+            // GIFT VOUCHER TRANSACTIONS
+            // =========================================================
+            modelBuilder.Entity<GiftVoucherTransaction>(entity =>
+            {
+                entity.Property(t => t.TransactionType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.VoucherNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.Barcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.VoucherAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(t => t.Amount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(t => t.AppliedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(t => t.ForfeitedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(t => t.StatusAfter)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.ReferenceInvoiceNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.CashierName)
+                    .HasMaxLength(100);
+
+                entity.Property(t => t.TerminalNo)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(t => t.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasOne(t => t.GiftVoucher)
+                    .WithMany(v => v.Transactions)
+                    .HasForeignKey(t => t.GiftVoucherId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(t => t.SalesHeader)
+                    .WithMany()
+                    .HasForeignKey(t => t.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(t => t.GiftVoucherId);
+
+                entity.HasIndex(t => t.TransactionDate);
+
+                entity.HasIndex(t => t.TransactionType);
+
+                entity.HasIndex(t => t.VoucherNo);
+
+                entity.HasIndex(t => t.Barcode);
+
+                entity.HasIndex(t => t.ReferenceInvoiceNo);
+
+                entity.HasIndex(t => t.SalesHeaderId);
+            });
+
+            // =========================================================
+            // FREE ISSUE RULES
+            // =========================================================
+            modelBuilder.Entity<FreeIssueRule>(entity =>
+            {
+                entity.Property(r => r.RuleName)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(r => r.FreeIssueType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("ShopCost")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.ReasonCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.ReasonName)
+                    .HasMaxLength(150);
+
+                entity.Property(r => r.SupplierName)
+                    .HasMaxLength(150);
+
+                entity.Property(r => r.SupplierPromotionReference)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.ClaimValueMode)
+                    .HasMaxLength(30)
+                    .HasDefaultValue("Cost")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.FixedClaimValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.AppliesToType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("ItemVariant")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.CategoryName)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.SubCategoryName)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.ItemName)
+                    .HasMaxLength(150);
+
+                entity.Property(r => r.SkuCode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.Barcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.MaxQtyPerInvoice)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(r => r.MaxQtyPerDay)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(r => r.MaxValuePerInvoice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.MaxValuePerDay)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.ManagerApprovalThreshold)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.UpdatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasIndex(r => r.RuleName);
+
+                entity.HasIndex(r => r.FreeIssueType);
+
+                entity.HasIndex(r => r.FreeIssueReasonId);
+
+                entity.HasIndex(r => r.SupplierId);
+
+                entity.HasIndex(r => r.AppliesToType);
+
+                entity.HasIndex(r => r.CategoryId);
+
+                entity.HasIndex(r => r.SubCategoryId);
+
+                entity.HasIndex(r => r.ItemParentId);
+
+                entity.HasIndex(r => r.ItemVariantId);
+
+                entity.HasIndex(r => r.SkuCode);
+
+                entity.HasIndex(r => r.Barcode);
+
+                entity.HasIndex(r => r.ValidFrom);
+
+                entity.HasIndex(r => r.ValidTo);
+
+                entity.HasIndex(r => r.IsActive);
+            });
+
+
+            // =========================================================
+            // FREE ISSUE REASONS
+            // =========================================================
+            modelBuilder.Entity<FreeIssueReason>(entity =>
+            {
+                entity.Property(r => r.ReasonCode)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.ReasonName)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(r => r.FreeIssueType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("ShopCost")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(r => r.ManagerApprovalThreshold)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.UpdatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasIndex(r => r.ReasonCode)
+                    .IsUnique();
+
+                entity.HasIndex(r => r.ReasonName);
+
+                entity.HasIndex(r => r.FreeIssueType);
+
+                entity.HasIndex(r => r.IsActive);
+
+                entity.HasIndex(r => r.DisplayOrder);
+            });
+
+
+            // =========================================================
+            // FREE ITEM SUPPLIER CLAIM LOGS
+            // =========================================================
+            modelBuilder.Entity<FreeItemClaimLog>(entity =>
+            {
+                entity.Property(c => c.InvoiceNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CashierName)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.TerminalNo)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.FreeIssueRuleName)
+                    .HasMaxLength(150);
+
+                entity.Property(c => c.FreeReasonCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.FreeReasonText)
+                    .HasMaxLength(150);
+
+                entity.Property(c => c.FreeIssueType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("SupplierClaim")
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.SupplierName)
+                    .HasMaxLength(150);
+
+                entity.Property(c => c.SupplierPromotionReference)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.Barcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.SkuCode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.ItemDescription)
+                    .IsRequired()
+                    .HasMaxLength(250);
+
+                entity.Property(c => c.BatchNo)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.Uom)
+                    .HasMaxLength(30)
+                    .HasDefaultValue("PCS")
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.Quantity)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(c => c.CostPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(c => c.OriginalUnitPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(c => c.FreeIssueCostValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(c => c.FreeIssueSellingValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(c => c.ClaimValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(c => c.ClaimStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("Pending")
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.ClaimReferenceNo)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.SubmittedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.SettledBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.SettlementType)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.SettlementReferenceNo)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.RejectedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.RejectReason)
+                    .HasMaxLength(300);
+
+                entity.Property(c => c.WrittenOffBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.WriteOffReason)
+                    .HasMaxLength(300);
+
+                entity.Property(c => c.CancelledBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.CancelReason)
+                    .HasMaxLength(300);
+
+                entity.Property(c => c.FreeApprovedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.UpdatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasOne(c => c.SalesHeader)
+                    .WithMany()
+                    .HasForeignKey(c => c.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.SalesLine)
+                    .WithMany()
+                    .HasForeignKey(c => c.SalesLineId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(c => c.SalesHeaderId);
+
+                entity.HasIndex(c => c.SalesLineId);
+
+                entity.HasIndex(c => c.InvoiceNo);
+
+                entity.HasIndex(c => c.InvoiceDate);
+
+                entity.HasIndex(c => c.FreeIssueRuleId);
+
+                entity.HasIndex(c => c.FreeReasonCode);
+
+                entity.HasIndex(c => c.FreeIssueType);
+
+                entity.HasIndex(c => c.SupplierId);
+
+                entity.HasIndex(c => c.SupplierName);
+
+                entity.HasIndex(c => c.ItemVariantId);
+
+                entity.HasIndex(c => c.ItemBatchId);
+
+                entity.HasIndex(c => c.Barcode);
+
+                entity.HasIndex(c => c.SkuCode);
+
+                entity.HasIndex(c => c.ClaimStatus);
+
+                entity.HasIndex(c => c.ClaimReferenceNo);
+
+                entity.HasIndex(c => c.CreatedAt);
+
+                entity.HasIndex(c => c.SubmittedAt);
+
+                entity.HasIndex(c => c.SettledAt);
+
+                entity.HasIndex(c => c.RejectedAt);
+
+                entity.HasIndex(c => c.WrittenOffAt);
+
+                entity.HasIndex(c => c.CancelledAt);
             });
         }
 

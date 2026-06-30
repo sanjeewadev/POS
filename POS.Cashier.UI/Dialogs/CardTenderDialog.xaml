@@ -1,0 +1,295 @@
+﻿<Window x:Class="POS.Cashier.UI.Dialogs.CardTenderDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:components="clr-namespace:POS.Cashier.UI.Components"
+        Title="Card Tender"
+        Width="860"
+        Height="515"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#D7DCE2"
+        FontFamily="Segoe UI"
+        FontSize="14"
+        Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <Window.Resources>
+        <Style TargetType="Button" x:Key="DialogButton">
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="FontWeight" Value="Heavy"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="#222"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="FieldLabel">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="TenderInputBox">
+            <Setter Property="Height" Value="45"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Heavy"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Background" Value="#FFFFCC"/>
+            <Setter Property="Foreground" Value="#8B0000"/>
+            <Setter Property="BorderBrush" Value="#555"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="58"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="54"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0"
+                Background="#1A1F71"
+                BorderBrush="#1F2937"
+                BorderThickness="1"
+                Padding="14,0">
+
+            <Grid>
+                <TextBlock Text="{Binding CardTitle}"
+                           Foreground="White"
+                           FontSize="25"
+                           FontWeight="Heavy"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Text="Enter = Next / Confirm   |   Esc = Cancel"
+                           Foreground="#DDE3FF"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- BODY -->
+        <Grid Grid.Row="1" Margin="0,10,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT DETAILS -->
+            <Border Grid.Column="0"
+                    Background="White"
+                    BorderBrush="#6B7280"
+                    BorderThickness="1"
+                    Padding="16"
+                    Margin="0,0,10,0">
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="48"/>
+                        <RowDefinition Height="58"/>
+                        <RowDefinition Height="58"/>
+                        <RowDefinition Height="58"/>
+                        <RowDefinition Height="58"/>
+                        <RowDefinition Height="58"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- STATUS -->
+                    <Border Grid.Row="0"
+                            Background="{Binding StatusColorHex}"
+                            BorderBrush="#222"
+                            BorderThickness="1"
+                            Padding="8,0">
+
+                        <TextBlock Text="{Binding StatusText}"
+                                   Foreground="White"
+                                   FontSize="14"
+                                   FontWeight="Heavy"
+                                   TextAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
+
+                    <!-- CARD TYPE -->
+                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="165"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="CARD TYPE"
+                                   Style="{StaticResource FieldLabel}"/>
+
+                        <Border Grid.Column="1"
+                                Background="#111827"
+                                BorderBrush="#030712"
+                                BorderThickness="2"
+                                Padding="10,0">
+
+                            <TextBlock Text="{Binding CardType}"
+                                       Foreground="#FBBF24"
+                                       FontSize="25"
+                                       FontWeight="Heavy"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- BALANCE DUE -->
+                    <Grid Grid.Row="2" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="165"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="BALANCE DUE"
+                                   Style="{StaticResource FieldLabel}"/>
+
+                        <Border Grid.Column="1"
+                                Background="#F3F4F6"
+                                BorderBrush="#9CA3AF"
+                                BorderThickness="2"
+                                Padding="10,0">
+
+                            <TextBlock Text="{Binding BalanceDue, StringFormat={}{0:N2}}"
+                                       Foreground="#8B0000"
+                                       FontSize="25"
+                                       FontWeight="Heavy"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+
+                    <!-- CARD AMOUNT -->
+                    <Grid Grid.Row="3" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="165"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="CARD AMOUNT"
+                                   Style="{StaticResource FieldLabel}"/>
+
+                        <TextBox x:Name="CardAmountTextBox"
+                                 Grid.Column="1"
+                                 Text="{Binding CardAmountText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource TenderInputBox}"
+                                 TextAlignment="Right"
+                                 GotKeyboardFocus="CardAmountTextBox_GotKeyboardFocus"
+                                 PreviewMouseLeftButtonDown="CardAmountTextBox_PreviewMouseLeftButtonDown"/>
+                    </Grid>
+
+                    <!-- LAST 6 DIGITS -->
+                    <Grid Grid.Row="4" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="165"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="LAST 6 DIGITS"
+                                   Style="{StaticResource FieldLabel}"/>
+
+                        <TextBox x:Name="LastSixDigitsTextBox"
+                                 Grid.Column="1"
+                                 Text="{Binding LastSixDigits, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource TenderInputBox}"
+                                 Background="White"
+                                 Foreground="#111827"
+                                 TextAlignment="Center"
+                                 MaxLength="6"
+                                 GotKeyboardFocus="LastSixDigitsTextBox_GotKeyboardFocus"
+                                 PreviewMouseLeftButtonDown="LastSixDigitsTextBox_PreviewMouseLeftButtonDown"/>
+                    </Grid>
+
+                    <!-- REFERENCE -->
+                    <Grid Grid.Row="5" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="165"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="REFERENCE"
+                                   Style="{StaticResource FieldLabel}"/>
+
+                        <TextBox x:Name="ReferenceTextBox"
+                                 Grid.Column="1"
+                                 Text="{Binding ReferenceNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource TenderInputBox}"
+                                 Background="White"
+                                 Foreground="#111827"
+                                 FontSize="18"
+                                 FontWeight="Bold"
+                                 GotKeyboardFocus="ReferenceTextBox_GotKeyboardFocus"
+                                 PreviewMouseLeftButtonDown="ReferenceTextBox_PreviewMouseLeftButtonDown"/>
+                    </Grid>
+
+                    <Border Grid.Row="6"
+                            Background="#F3F4F6"
+                            BorderBrush="#D1D5DB"
+                            BorderThickness="1"
+                            Padding="10"
+                            Margin="0,14,0,0">
+
+                        <TextBlock Text="Card rules: empty amount before opening uses full balance due. Typed amount before opening uses that amount. Enter from card amount moves to last 6 digits. Enter from last 6 digits confirms."
+                                   Foreground="#374151"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT NUMPAD -->
+            <components:TenderNumpadControl x:Name="TenderNumpad"
+                                            Grid.Column="1"
+                                            TargetText="{Binding ActiveInputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            HeaderText="{Binding ActiveNumpadHeader}"
+                                            TargetLabel="{Binding ActiveTargetLabel}"
+                                            ModeText="{Binding ActiveModeText}"
+                                            ShowDecimal="{Binding ActiveShowDecimal}"
+                                            ShowDoubleZero="{Binding ActiveShowDoubleZero}"
+                                            MaxLength="{Binding ActiveMaxLength}"
+                                            ClearValue=""
+                                            SelectAllOnFirstKey="True"
+                                            EnterPressed="TenderNumpad_EnterPressed"/>
+        </Grid>
+
+        <!-- FOOTER BUTTONS -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="135"/>
+                <ColumnDefinition Width="165"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="Keyboard and touch numpad both work. Enter from amount moves down. Enter from last 6 confirms."
+                       Foreground="#374151"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center"/>
+
+            <Button Grid.Column="1"
+                    Content="CANCEL"
+                    Style="{StaticResource DialogButton}"
+                    Background="#6B7280"
+                    Margin="0,0,8,0"
+                    Click="CancelBtn_Click"/>
+
+            <Button Grid.Column="2"
+                    Content="CONFIRM CARD"
+                    Style="{StaticResource DialogButton}"
+                    Background="#1A1F71"
+                    Click="ConfirmBtn_Click"/>
+        </Grid>
+    </Grid>
+</Window>

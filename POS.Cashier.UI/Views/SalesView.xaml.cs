@@ -1,6 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.ViewModels;
 using System;
+using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -91,6 +94,13 @@ namespace POS.Cashier.UI.Views
 
             if (e.Key == Key.Escape)
             {
+                if (ViewModel.IsPaymentModeActive)
+                {
+                    ViewModel.CancelPaymentMode();
+                    e.Handled = true;
+                    return;
+                }
+
                 if (!string.IsNullOrWhiteSpace(ViewModel.TerminalInput))
                 {
                     ViewModel.ClearTerminalInput();
@@ -126,9 +136,44 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
+            if (e.Key == Key.F7)
+            {
+                OpenCashTenderDialog();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.F8)
+            {
+                OpenCardTenderDialog("VISA");
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.F9)
+            {
+                OpenCardTenderDialog("MasterCard");
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.F10)
+            {
+                OpenCardTenderDialog("AMEX");
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.F11)
+            {
+                OpenChequeTenderDialog();
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.F12)
             {
-                PayBtn_Click(this, new RoutedEventArgs());
+                ViewModel.EnterPaymentMode();
                 e.Handled = true;
                 return;
             }
@@ -198,6 +243,7 @@ namespace POS.Cashier.UI.Views
         private void ClearBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.ClearTerminalInput();
+
             if (ViewModel != null)
                 _ = ViewModel.ShowNotificationAsync("Input cleared.", "#F59E0B");
         }
@@ -218,9 +264,38 @@ namespace POS.Cashier.UI.Views
             ViewModel?.ApplyTerminalInputAsQuantityToSelected();
         }
 
-        private void DiscountBtn_Click(object sender, RoutedEventArgs e)
+        private void FixedDiscountBtn_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel?.ApplyTerminalInputAsDiscountPercentToSelected();
+            if (ViewModel == null)
+                return;
+
+            if (!TryReadTerminalDecimal(
+                    out decimal amount,
+                    "Enter rupee discount amount first.",
+                    "Enter a valid rupee discount amount."))
+            {
+                return;
+            }
+
+            ViewModel.ClearTerminalInput();
+            ViewModel.ApplyFixedDiscountToSelected(amount);
+        }
+
+        private void PercentDiscountBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (!TryReadTerminalDecimal(
+                    out decimal percent,
+                    "Enter discount percentage first.",
+                    "Enter a valid discount percentage."))
+            {
+                return;
+            }
+
+            ViewModel.ClearTerminalInput();
+            ViewModel.ApplyPercentDiscountToSelected(percent);
         }
 
         private void PlusBtn_Click(object sender, RoutedEventArgs e)
@@ -250,6 +325,15 @@ namespace POS.Cashier.UI.Views
             if (ViewModel == null)
                 return;
 
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Cancel payment mode before removing cart items.",
+                    "#F59E0B");
+
+                return;
+            }
+
             if (ViewModel.SelectedCartItem == null)
             {
                 _ = ViewModel.ShowNotificationAsync("Please select an item to remove.", "#F59E0B");
@@ -263,6 +347,12 @@ namespace POS.Cashier.UI.Views
         {
             if (ViewModel == null)
                 return;
+
+            if (ViewModel.IsPaymentModeActive)
+            {
+                ViewModel.CancelPaymentMode();
+                return;
+            }
 
             if (ViewModel.Cart.Count == 0)
             {
@@ -283,11 +373,413 @@ namespace POS.Cashier.UI.Views
         }
 
         // =========================================================
+        // EMBEDDED PAYMENT FLOW
+        // =========================================================
+
+        private void SubTotalBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel?.EnterPaymentMode();
+        }
+
+        private void PayBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            string buttonText = GetButtonText(sender);
+
+            if (string.IsNullOrWhiteSpace(buttonText))
+                return;
+
+            if (buttonText.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenCashTenderDialog();
+                return;
+            }
+
+            if (buttonText.Equals("VISA", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenCardTenderDialog("VISA");
+                return;
+            }
+
+            if (buttonText.Equals("MasterCard", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenCardTenderDialog("MasterCard");
+                return;
+            }
+
+            if (buttonText.Equals("AMEX", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenCardTenderDialog("AMEX");
+                return;
+            }
+
+            if (buttonText.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenChequeTenderDialog();
+                return;
+            }
+
+            if (buttonText.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase) ||
+    buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenGiftVoucherTenderDialog();
+                return;
+            }
+
+            _ = ViewModel.ShowNotificationAsync($"{buttonText} payment is coming later.", "#F59E0B");
+        }
+
+        private void OpenCashTenderDialog()
+        {
+            if (ViewModel == null)
+                return;
+
+            EnsurePaymentModeStarted();
+
+            if (!ViewModel.IsPaymentModeActive)
+                return;
+
+            if (ViewModel.BalanceDue <= 0m)
+            {
+                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                return;
+            }
+
+            decimal typedAmount = GetTerminalInputAmountOrZero();
+            ViewModel.ClearTerminalInput();
+
+            var tenderViewModel = new CashTenderDialogViewModel();
+            tenderViewModel.Initialize(ViewModel.BalanceDue, typedAmount);
+
+            var dialog = new POS.Cashier.UI.Dialogs.CashTenderDialog(tenderViewModel)
+            {
+                Owner = this
+            };
+
+            bool? result = ShowTenderDialogWithDim(dialog);
+
+            if (result == true)
+            {
+                ViewModel.AddConfirmedCashPayment(
+                    tenderViewModel.AppliedAmount,
+                    tenderViewModel.TenderedAmount,
+                    tenderViewModel.ChangeAmount);
+            }
+        }
+
+        private void OpenCardTenderDialog(string cardType)
+        {
+            if (ViewModel == null)
+                return;
+
+            EnsurePaymentModeStarted();
+
+            if (!ViewModel.IsPaymentModeActive)
+                return;
+
+            if (ViewModel.BalanceDue <= 0m)
+            {
+                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                return;
+            }
+
+            decimal typedAmount = GetTerminalInputAmountOrZero();
+            ViewModel.ClearTerminalInput();
+
+            var tenderViewModel = new CardTenderDialogViewModel();
+            tenderViewModel.Initialize(cardType, ViewModel.BalanceDue, typedAmount);
+
+            var dialog = new POS.Cashier.UI.Dialogs.CardTenderDialog(tenderViewModel)
+            {
+                Owner = this
+            };
+
+            bool? result = ShowTenderDialogWithDim(dialog);
+
+            if (result == true)
+            {
+                ViewModel.AddConfirmedCardPayment(
+                    tenderViewModel.CardType,
+                    tenderViewModel.CardAmount,
+                    tenderViewModel.LastSixDigits,
+                    tenderViewModel.ReferenceNo);
+            }
+        }
+
+        private void OpenChequeTenderDialog()
+        {
+            if (ViewModel == null)
+                return;
+
+            EnsurePaymentModeStarted();
+
+            if (!ViewModel.IsPaymentModeActive)
+                return;
+
+            if (ViewModel.BalanceDue <= 0m)
+            {
+                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                return;
+            }
+
+            decimal typedAmount = GetTerminalInputAmountOrZero();
+            ViewModel.ClearTerminalInput();
+
+            var tenderViewModel = new ChequeTenderDialogViewModel();
+            tenderViewModel.Initialize(ViewModel.BalanceDue, typedAmount);
+
+            var dialog = new POS.Cashier.UI.Dialogs.ChequeTenderDialog(tenderViewModel)
+            {
+                Owner = this
+            };
+
+            bool? result = ShowTenderDialogWithDim(dialog);
+
+            if (result == true)
+            {
+                ViewModel.AddConfirmedChequePayment(
+                    tenderViewModel.ChequeAmount,
+                    tenderViewModel.ChequeNo,
+                    tenderViewModel.BankOrBranchText,
+                    tenderViewModel.ChequeDate);
+            }
+        }
+
+        private void OpenGiftVoucherTenderDialog()
+        {
+            if (ViewModel == null)
+                return;
+
+            EnsurePaymentModeStarted();
+
+            if (!ViewModel.IsPaymentModeActive)
+                return;
+
+            if (ViewModel.BalanceDue <= 0m)
+            {
+                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                return;
+            }
+
+            if (ViewModel.Cart.Any(c => c.IsGiftVoucherSale))
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Gift voucher cannot be used to buy another gift voucher.",
+                    "#EF4444");
+
+                return;
+            }
+
+            ViewModel.ClearTerminalInput();
+
+            var dialog = new GiftVoucherTenderDialog(ViewModel.BalanceDue)
+            {
+                Owner = this
+            };
+
+            bool? result = ShowTenderDialogWithDim(dialog);
+
+            if (result == true)
+            {
+                ViewModel.AddConfirmedGiftVoucherPayment(
+                    dialog.GiftVoucherId,
+                    dialog.VoucherNo,
+                    dialog.VoucherBarcode,
+                    dialog.VoucherAmount,
+                    dialog.AmountToApply,
+                    dialog.ForfeitedAmount);
+            }
+        }
+
+        private void EnsurePaymentModeStarted()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (!ViewModel.IsPaymentModeActive)
+                ViewModel.EnterPaymentMode();
+        }
+
+        private bool? ShowTenderDialogWithDim(Window dialog)
+        {
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                return dialog.ShowDialog();
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private bool TryReadTerminalDecimal(
+    out decimal value,
+    string emptyMessage,
+    string invalidMessage)
+        {
+            value = 0m;
+
+            if (ViewModel == null)
+                return false;
+
+            string input = (ViewModel.TerminalInput ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                _ = ViewModel.ShowNotificationAsync(emptyMessage, "#F59E0B");
+                return false;
+            }
+
+            input = input.Replace(",", string.Empty);
+
+            if (decimal.TryParse(
+                    input,
+                    NumberStyles.Number,
+                    CultureInfo.CurrentCulture,
+                    out decimal currentCultureValue))
+            {
+                value = Math.Round(currentCultureValue, 2);
+                return true;
+            }
+
+            if (decimal.TryParse(
+                    input,
+                    NumberStyles.Number,
+                    CultureInfo.InvariantCulture,
+                    out decimal invariantValue))
+            {
+                value = Math.Round(invariantValue, 2);
+                return true;
+            }
+
+            _ = ViewModel.ShowNotificationAsync(invalidMessage, "#EF4444");
+            ViewModel.ClearTerminalInput();
+
+            return false;
+        }
+
+        private decimal GetTerminalInputAmountOrZero()
+        {
+            if (ViewModel == null)
+                return 0m;
+
+            string input = (ViewModel.TerminalInput ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(input))
+                return 0m;
+
+            input = input.Replace(",", string.Empty);
+
+            if (decimal.TryParse(
+                    input,
+                    NumberStyles.Number,
+                    CultureInfo.CurrentCulture,
+                    out decimal currentCultureValue))
+            {
+                return currentCultureValue > 0m
+                    ? Math.Round(currentCultureValue, 2)
+                    : 0m;
+            }
+
+            if (decimal.TryParse(
+                    input,
+                    NumberStyles.Number,
+                    CultureInfo.InvariantCulture,
+                    out decimal invariantValue))
+            {
+                return invariantValue > 0m
+                    ? Math.Round(invariantValue, 2)
+                    : 0m;
+            }
+
+            return 0m;
+        }
+
+        private async void ConfirmSaleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            await ViewModel.ConfirmSaleFromPaymentModeAsync();
+        }
+
+        private void CancelPaymentBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel?.CancelPaymentMode();
+        }
+
+        private void RemovePaymentBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel?.RemoveSelectedPaymentLine();
+        }
+
+        private void UnsupportedPaymentBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            string buttonText = GetButtonText(sender);
+
+            if (buttonText.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenChequeTenderDialog();
+                return;
+            }
+
+            if (buttonText.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase) ||
+    buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenGiftVoucherTenderDialog();
+                return;
+            }
+
+            _ = ViewModel.ShowNotificationAsync(
+                $"{buttonText} will be added after Cash/Card/Cheque workflow is stable.",
+                "#F59E0B");
+        }
+
+        private static string GetButtonText(object sender)
+        {
+            if (sender is not Button button || button.Content == null)
+                return string.Empty;
+
+            return button.Content
+                .ToString()
+                ?.Replace("\r", " ")
+                .Replace("\n", " ")
+                .Trim() ?? string.Empty;
+        }
+
+        // =========================================================
         // SEEK / CUSTOMER / DIALOGS
         // =========================================================
 
+        private bool BlockDialogIfPaymentMode(string actionName)
+        {
+            if (ViewModel == null)
+                return true;
+
+            if (!ViewModel.IsPaymentModeActive)
+                return false;
+
+            _ = ViewModel.ShowNotificationAsync(
+                $"Cancel payment mode before {actionName}.",
+                "#F59E0B");
+
+            return true;
+        }
+
         private void SeekBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (BlockDialogIfPaymentMode("opening seek"))
+                return;
+
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
@@ -309,18 +801,104 @@ namespace POS.Cashier.UI.Views
 
         private void CustomerBtn_Click(object sender, RoutedEventArgs e)
         {
+            OpenCustomerLookupDialog("All");
+        }
+
+        private void NewPriceBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (!TryReadTerminalDecimal(
+                    out decimal newPrice,
+                    "Enter new price first.",
+                    "Enter a valid new price."))
+            {
+                return;
+            }
+
+            ViewModel.ClearTerminalInput();
+            ViewModel.ApplyNewPriceToSelected(newPrice);
+        }
+
+        private void DiscountRuleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (BlockDialogIfPaymentMode("applying discount rule"))
+                return;
+
+            if (ViewModel.SelectedCartItem == null)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Please select an item before applying discount rule.",
+                    "#F59E0B");
+
+                return;
+            }
+
+            if (ViewModel.SelectedCartItem.IsGiftVoucherSale)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Gift voucher sale line cannot use discount rule.",
+                    "#EF4444");
+
+                return;
+            }
+
+            if (ViewModel.SelectedCartItem.IsFreeItem)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Free item line cannot use discount rule.",
+                    "#EF4444");
+
+                return;
+            }
+
+            if (ViewModel.SelectedCartItem.IsPriceOverridden)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Discount rule cannot be applied after New Price.",
+                    "#EF4444");
+
+                return;
+            }
+
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
-                var b2bDialog = new POS.Cashier.UI.Dialogs.B2BCustomerDialogView();
-                bool? result = b2bDialog.ShowDialog();
+                string customerType = GetDiscountCustomerType();
 
-                if (result == true && b2bDialog.ViewModel?.SelectedCustomer != null)
+                string approvedBy = ViewModel.IsManagerModeActive
+                    ? ViewModel.CashierName
+                    : string.Empty;
+
+                var dialog = new POS.Cashier.UI.Dialogs.DiscountRuleDialog(
+                    ViewModel.SelectedCartItem,
+                    customerType,
+                    ViewModel.IsManagerModeActive,
+                    approvedBy)
                 {
-                    ViewModel?.AttachB2BCustomer(b2bDialog.ViewModel.SelectedCustomer);
+                    Owner = this
+                };
+
+                bool? result = dialog.ShowDialog();
+
+                if (result == true && dialog.Result != null)
+                {
+                    ViewModel.ApplyDiscountRuleToSelected(
+                        ViewModel.SelectedCartItem,
+                        dialog.Result);
                 }
+            }
+            catch (Exception ex)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Discount rule failed: {ex.Message}",
+                    "#EF4444");
             }
             finally
             {
@@ -329,13 +907,28 @@ namespace POS.Cashier.UI.Views
             }
         }
 
-        private void PriceOverrideBtn_Click(object sender, RoutedEventArgs e)
+        private string GetDiscountCustomerType()
         {
-            new POS.Cashier.UI.Dialogs.PriceOverrideDialog().ShowDialog();
+            if (ViewModel == null)
+                return "Walk-In";
+
+            if (ViewModel.ActiveB2BCustomer == null)
+                return "Walk-In";
+
+            if (ViewModel.ActiveB2BCustomer.IsWholesale)
+                return "Wholesale";
+
+            if (ViewModel.ActiveB2BCustomer.IsDiscountEligible)
+                return "Loyalty";
+
+            return "Retail";
         }
 
         private void SuspendRecallBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (BlockDialogIfPaymentMode("suspend/recall"))
+                return;
+
             new POS.Cashier.UI.Dialogs.HoldRecallDialog().ShowDialog();
         }
 
@@ -351,6 +944,9 @@ namespace POS.Cashier.UI.Views
 
         private void ReturnBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (BlockDialogIfPaymentMode("processing return"))
+                return;
+
             new POS.Cashier.UI.Dialogs.ReturnInvoiceDialog().ShowDialog();
         }
 
@@ -360,26 +956,91 @@ namespace POS.Cashier.UI.Views
         }
 
         // =========================================================
-        // PAYMENT
+        // CUSTOMER LOOKUP
         // =========================================================
 
-        private void PayBtn_Click(object sender, RoutedEventArgs e)
+        private void OpenCustomerLookupDialog(string lookupMode = "All")
         {
             if (ViewModel == null)
                 return;
 
-            if (ViewModel.Cart.Count == 0)
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Cancel payment mode before changing customer.",
+                    "#F59E0B");
+
+                return;
+            }
+
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var dialog = new B2BCustomerDialogView(lookupMode)
+                {
+                    Owner = this
+                };
+
+                bool? result = dialog.ShowDialog();
+
+                if (result == true && dialog.SelectedCustomer != null)
+                {
+                    ViewModel.AttachCustomer(dialog.SelectedCustomer);
+                }
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void OpenLoyaltyCustomerLookupDialog()
+        {
+            if (ViewModel == null)
                 return;
 
-            _ = ViewModel.ShowNotificationAsync(
-                "Checkout posting is blocked until FIFO batch sale flow is updated.",
-                "#F59E0B");
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Cancel payment mode before changing customer.",
+                    "#F59E0B");
 
-            MessageBox.Show(
-                "The cart table is ready, but final checkout should not be tested yet.\n\nNext step: update SalesRepository to allocate FIFO batches and post sales safely.",
-                "Checkout Not Ready",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                return;
+            }
+
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var dialog = new LoyaltyCustomerDialogView
+                {
+                    Owner = this
+                };
+
+                bool? result = dialog.ShowDialog();
+
+                if (result == true && dialog.SelectedCustomer != null)
+                {
+                    ViewModel.AttachCustomer(dialog.SelectedCustomer);
+                }
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void DetachCustomerFromSale()
+        {
+            if (ViewModel == null)
+                return;
+
+            ViewModel.DetachCustomer();
         }
 
         // =========================================================
@@ -390,6 +1051,12 @@ namespace POS.Cashier.UI.Views
         {
             if (ViewModel == null)
                 return;
+
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync("Cancel payment mode before Paid In.", "#F59E0B");
+                return;
+            }
 
             if (decimal.TryParse(ViewModel.TerminalInput, out decimal amount) && amount > 0)
             {
@@ -407,6 +1074,12 @@ namespace POS.Cashier.UI.Views
         {
             if (ViewModel == null)
                 return;
+
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync("Cancel payment mode before Paid Out.", "#F59E0B");
+                return;
+            }
 
             if (decimal.TryParse(ViewModel.TerminalInput, out decimal amount) && amount > 0)
             {
@@ -473,24 +1146,78 @@ namespace POS.Cashier.UI.Views
 
         private void LoyaltyBtn_Click(object sender, RoutedEventArgs e)
         {
+            OpenLoyaltyCustomerLookupDialog();
+        }
+
+        private void CustomerRegisterBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (BlockDialogIfPaymentMode("registering customer"))
+                return;
+
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
-                var loyaltyDialog = new POS.Cashier.UI.Dialogs.LoyaltyCustomerDialogView();
-                bool? result = loyaltyDialog.ShowDialog();
-
-                if (result == true && loyaltyDialog.SelectedCustomer != null)
+                var dialog = new QuickCustomerCreateDialog
                 {
-                    var customer = loyaltyDialog.SelectedCustomer;
+                    Owner = this
+                };
 
-                    MessageBox.Show(
-                        $"Loyalty Customer Applied:\n{customer.FullName}\nDiscount: {customer.ActiveDiscountName}",
-                        "Customer Linked",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                bool? result = dialog.ShowDialog();
+
+                if (result == true)
+                {
+                    _ = ViewModel.ShowNotificationAsync(
+                        "Customer saved. Use Customer button to search and attach.",
+                        "#10B981");
                 }
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void SellVoucherBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (BlockDialogIfPaymentMode("selling gift voucher"))
+                return;
+
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var dialog = new SellGiftVoucherDialog
+                {
+                    Owner = this
+                };
+
+                bool? result = dialog.ShowDialog();
+
+                if (result == true)
+                {
+                    ViewModel.AddGiftVoucherSaleLine(
+                        dialog.GiftVoucherId,
+                        dialog.VoucherNo,
+                        dialog.VoucherBarcode,
+                        dialog.VoucherAmount,
+                        dialog.DisplayDescription);
+                }
+            }
+            catch (Exception ex)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Gift voucher sale failed: {ex.Message}",
+                    "#EF4444");
             }
             finally
             {
@@ -501,6 +1228,9 @@ namespace POS.Cashier.UI.Views
 
         private void ExpressItemsBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (BlockDialogIfPaymentMode("opening express items"))
+                return;
+
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
@@ -519,15 +1249,44 @@ namespace POS.Cashier.UI.Views
                     DimmingCurtain.Visibility = Visibility.Collapsed;
             }
         }
-
         private void FreeBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel == null)
                 return;
 
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Cancel payment mode before free item action.",
+                    "#F59E0B");
+
+                return;
+            }
+
             if (ViewModel.SelectedCartItem == null)
             {
-                _ = ViewModel.ShowNotificationAsync("Please select an item to make it free.", "#F59E0B");
+                _ = ViewModel.ShowNotificationAsync(
+                    "Please select an item to make it free.",
+                    "#F59E0B");
+
+                return;
+            }
+
+            if (ViewModel.SelectedCartItem.IsGiftVoucherSale)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Gift voucher sale line cannot be made free.",
+                    "#EF4444");
+
+                return;
+            }
+
+            if (ViewModel.SelectedCartItem.IsFreeItem)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "This item is already marked as free.",
+                    "#F59E0B");
+
                 return;
             }
 
@@ -536,20 +1295,25 @@ namespace POS.Cashier.UI.Views
 
             try
             {
-                var reasonVM = App.Services!.GetRequiredService<POS.Cashier.UI.ViewModels.FreeItemReasonModalViewModel>();
-                reasonVM.Initialize(ViewModel.SelectedCartItem.Description, ViewModel.SelectedCartItem.UnitPrice);
-
-                var dialog = new POS.Cashier.UI.Dialogs.FreeItemReasonModalWindow(reasonVM)
+                var dialog = new FreeItemReasonModalWindow(ViewModel.SelectedCartItem)
                 {
                     Owner = this
                 };
 
                 bool? result = dialog.ShowDialog();
 
-                if (result == true)
+                if (result == true && dialog.Result != null)
                 {
-                    ViewModel.ApplyFreeItemLogic(ViewModel.SelectedCartItem, reasonVM.SelectedReason);
+                    ViewModel.ApplyFreeItemLogic(
+                        ViewModel.SelectedCartItem,
+                        dialog.Result);
                 }
+            }
+            catch (Exception ex)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Free item failed: {ex.Message}",
+                    "#EF4444");
             }
             finally
             {

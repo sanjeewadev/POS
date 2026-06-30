@@ -1,155 +1,478 @@
 ﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.GiftVoucherAdminView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="850" d:DesignWidth="1200"
-             Background="#F5F5F5" FontFamily="Segoe UI">
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="850"
+             d:DesignWidth="1250"
+             Background="#D4D0C8"
+             FontFamily="Segoe UI"
+             FontSize="13">
 
     <UserControl.Resources>
-        <Style TargetType="Button" x:Key="ActionBtn">
-            <Setter Property="Background" Value="#6F42C1"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,5"/>
+
+        <Style TargetType="TextBlock" x:Key="LabelText">
+            <Setter Property="Foreground" Value="#111827"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Height" Value="32"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#5936A2"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
         </Style>
 
-        <Style TargetType="Button" x:Key="DangerBtn">
-            <Setter Property="Background" Value="#DC3545"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="10,2"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#C82333"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="TextBox" x:Key="InputBox">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Padding" Value="5,0"/>
+        <Style TargetType="TextBox" x:Key="ClassicInput">
+            <Setter Property="Height" Value="31"/>
+            <Setter Property="Padding" Value="7,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#111827"/>
         </Style>
+
+        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+            <Setter Property="Height" Value="31"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style TargetType="DatePicker" x:Key="ClassicDatePicker">
+            <Setter Property="Height" Value="31"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="90"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#E5E7EB"/>
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="PrimaryBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#003366"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#002244"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="GenerateBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#005500"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#003300"/>
+            <Setter Property="MinWidth" Value="145"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="WarningBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#F59E0B"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="#B45309"/>
+            <Setter Property="MinWidth" Value="78"/>
+        </Style>
+
+        <Style TargetType="Button" x:Key="DangerBtn" BasedOn="{StaticResource ClassicBtn}">
+            <Setter Property="Background" Value="#B91C1C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#7F1D1D"/>
+            <Setter Property="MinWidth" Value="78"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#2B3C38"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="BorderBrush" Value="#1F2937"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        </Style>
+
     </UserControl.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="💳 Gift Voucher Management" FontSize="22" FontWeight="Bold" Foreground="#333333" Margin="0,0,0,20"/>
+        <!-- HEADER -->
+        <Border Grid.Row="0"
+                Background="#003366"
+                BorderBrush="#002244"
+                BorderThickness="1"
+                Padding="12"
+                Margin="0,0,0,8">
 
-        <Border Grid.Row="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" Padding="15" Margin="0,0,0,15">
+            <Grid>
+                <TextBlock Text="GIFT VOUCHER MANAGEMENT"
+                           Foreground="White"
+                           FontSize="22"
+                           FontWeight="Heavy"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Text="One-Time Paper Voucher Control"
+                           Foreground="#BFD7EF"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- GENERATE BATCH PANEL -->
+        <Border Grid.Row="1"
+                Background="#F0F0F0"
+                BorderBrush="#808080"
+                BorderThickness="1"
+                Padding="12"
+                Margin="0,0,0,8">
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Text="CREATE / PRINT VOUCHER BATCH"
+                           Foreground="#003366"
+                           FontSize="15"
+                           FontWeight="Heavy"
+                           Margin="0,0,0,10"/>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="18"/>
+
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="115"/>
+                        <ColumnDefinition Width="18"/>
+
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="135"/>
+                        <ColumnDefinition Width="18"/>
+
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="145"/>
+                        <ColumnDefinition Width="18"/>
+
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0"
+                               Text="Qty:"
+                               Style="{StaticResource LabelText}"/>
+
+                    <TextBox Grid.Column="1"
+                             Text="{Binding GenerateCount, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}"
+                             HorizontalContentAlignment="Center"/>
+
+                    <TextBlock Grid.Column="3"
+                               Text="Amount:"
+                               Style="{StaticResource LabelText}"/>
+
+                    <TextBox Grid.Column="4"
+                             Text="{Binding GenerateAmount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                             Style="{StaticResource ClassicInput}"
+                             HorizontalContentAlignment="Right"
+                             FontWeight="Bold"/>
+
+                    <TextBlock Grid.Column="6"
+                               Text="Expiry:"
+                               Style="{StaticResource LabelText}"/>
+
+                    <DatePicker Grid.Column="7"
+                                SelectedDate="{Binding GenerateExpiryDate, Mode=TwoWay}"
+                                Style="{StaticResource ClassicDatePicker}"/>
+
+                    <TextBlock Grid.Column="9"
+                               Text="Batch No:"
+                               Style="{StaticResource LabelText}"/>
+
+                    <TextBox Grid.Column="10"
+                             Text="{Binding GenerateBatchNo, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}"
+                             ToolTip="Optional. Leave empty to auto-generate."/>
+
+                    <TextBlock Grid.Column="12"
+                               Text="Description:"
+                               Style="{StaticResource LabelText}"/>
+
+                    <TextBox Grid.Column="13"
+                             Text="{Binding GenerateDescription, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}"
+                             ToolTip="Optional. Example: Gift Voucher Rs. 5000"/>
+
+                    <Button Grid.Column="15"
+                            Content="GENERATE"
+                            Command="{Binding GenerateBatchCommand}"
+                            Style="{StaticResource GenerateBtn}"
+                            Margin="0,0,8,0"/>
+
+                    <Button Grid.Column="16"
+                            Content="CLEAR"
+                            Command="{Binding ClearGenerateFormCommand}"
+                            Style="{StaticResource ClassicBtn}"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- SEARCH / FILTER PANEL -->
+        <Border Grid.Row="2"
+                Background="#F0F0F0"
+                BorderBrush="#808080"
+                BorderThickness="1"
+                Padding="12"
+                Margin="0,0,0,8">
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="16"/>
+
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="Status:"
+                           Style="{StaticResource LabelText}"/>
+
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding StatusFilters}"
+                          SelectedItem="{Binding SelectedFilter, Mode=TwoWay}"
+                          Style="{StaticResource ClassicCombo}"/>
+
+                <TextBlock Grid.Column="3"
+                           Text="Search:"
+                           Style="{StaticResource LabelText}"/>
+
+                <TextBox Grid.Column="4"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource ClassicInput}"
+                         ToolTip="Search voucher no, barcode, batch no, sold invoice, redeemed invoice">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+
+                <Button Grid.Column="6"
+                        Content="SEARCH"
+                        Command="{Binding SearchCommand}"
+                        Style="{StaticResource PrimaryBtn}"
+                        Margin="0,0,8,0"/>
+
+                <Button Grid.Column="7"
+                        Content="REFRESH"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource ClassicBtn}"
+                        Margin="0,0,8,0"/>
+
+                <Button Grid.Column="8"
+                        Content="EXPORT / PRINT"
+                        Command="{Binding ExportBarcodesCommand}"
+                        Style="{StaticResource ClassicBtn}"
+                        MinWidth="130"/>
+            </Grid>
+        </Border>
+
+        <!-- GRID -->
+        <DataGrid Grid.Row="3"
+                  ItemsSource="{Binding Vouchers}"
+                  SelectedItem="{Binding SelectedVoucher, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  HorizontalGridLinesBrush="#D1D5DB"
+                  VerticalGridLinesBrush="#D1D5DB"
+                  BorderBrush="#808080"
+                  BorderThickness="1"
+                  Background="White"
+                  AlternatingRowBackground="#F9FAFB"
+                  RowHeight="34"
+                  FontSize="13">
+
+            <DataGrid.Columns>
+
+                <DataGridTextColumn Header="Voucher No"
+                                    Binding="{Binding VoucherNo}"
+                                    Width="135"
+                                    FontWeight="Bold"/>
+
+                <DataGridTextColumn Header="Barcode"
+                                    Binding="{Binding Barcode}"
+                                    Width="150"
+                                    FontWeight="SemiBold"/>
+
+                <DataGridTextColumn Header="Amount"
+                                    Binding="{Binding VoucherAmount, StringFormat=Rs. {0:N2}}"
+                                    Width="110"
+                                    FontWeight="Bold"/>
+
+                <DataGridTextColumn Header="Status"
+                                    Binding="{Binding DisplayStatus}"
+                                    Width="105"
+                                    FontWeight="Bold"/>
+
+                <DataGridTextColumn Header="Batch No"
+                                    Binding="{Binding BatchNo}"
+                                    Width="120"/>
+
+                <DataGridTextColumn Header="Description"
+                                    Binding="{Binding Description}"
+                                    Width="190"/>
+
+                <DataGridTextColumn Header="Expiry"
+                                    Binding="{Binding ExpiryDate, StringFormat=yyyy-MM-dd}"
+                                    Width="105"/>
+
+                <DataGridTextColumn Header="Created"
+                                    Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm}"
+                                    Width="145"/>
+
+                <DataGridTextColumn Header="Activated"
+                                    Binding="{Binding ActivatedAt, StringFormat=yyyy-MM-dd HH:mm}"
+                                    Width="145"/>
+
+                <DataGridTextColumn Header="Sold Invoice"
+                                    Binding="{Binding SoldInvoiceNo}"
+                                    Width="130"/>
+
+                <DataGridTextColumn Header="Redeemed"
+                                    Binding="{Binding RedeemedDate, StringFormat=yyyy-MM-dd HH:mm}"
+                                    Width="145"/>
+
+                <DataGridTextColumn Header="Redeemed Invoice"
+                                    Binding="{Binding RedeemedInvoiceNo}"
+                                    Width="145"/>
+
+                <DataGridTextColumn Header="Remarks"
+                                    Binding="{Binding Remarks}"
+                                    Width="220"/>
+
+                <DataGridTemplateColumn Header="Actions" Width="190">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+
+                                <Button Content="BLOCK"
+                                        Command="{Binding DataContext.BlockVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding Id}"
+                                        Height="26"
+                                        MinWidth="75"
+                                        Padding="8,0"
+                                        Margin="0,0,6,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource DangerBtn}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Redeemed">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Blocked">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Cancelled">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <Button Content="CANCEL"
+                                        Command="{Binding DataContext.CancelVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding Id}"
+                                        Height="26"
+                                        MinWidth="82"
+                                        Padding="8,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource WarningBtn}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Redeemed">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Blocked">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Cancelled">
+                                                    <Setter Property="Visibility" Value="Hidden"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- STATUS BAR -->
+        <Border Grid.Row="4"
+                Background="{Binding StatusColorHex}"
+                BorderBrush="#808080"
+                BorderThickness="1"
+                Padding="9"
+                Margin="0,8,0,0">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#F9F5FF" BorderBrush="#E5D6FA" BorderThickness="1" Padding="10,5" CornerRadius="3">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🏭 CREATE NEW BATCH" FontWeight="Bold" Foreground="#6F42C1" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusText}"
+                           Foreground="White"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
 
-                            <TextBlock Text="Qty:" Foreground="#555" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBox Text="{Binding GenerateCount}" Width="60" Style="{StaticResource InputBox}" Margin="0,0,15,0" HorizontalContentAlignment="Center"/>
-
-                            <TextBlock Text="Face Value (Rs.):" Foreground="#555" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBox Text="{Binding GenerateAmount}" Width="100" Style="{StaticResource InputBox}" Margin="0,0,15,0" FontWeight="Bold"/>
-
-                            <Button Content="⚡ Generate Barcodes" Command="{Binding GenerateBatchCommand}" Style="{StaticResource ActionBtn}"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Status Filter:" Foreground="#555" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
-                    <ComboBox SelectedValue="{Binding SelectedFilter}" SelectedValuePath="Content" Width="150" Height="30" VerticalContentAlignment="Center" Margin="0,0,15,0">
-                        <ComboBoxItem Content="All"/>
-                        <ComboBoxItem Content="Inactive" ToolTip="Not yet sold"/>
-                        <ComboBoxItem Content="Active" ToolTip="Sold and holding a balance"/>
-                        <ComboBoxItem Content="Exhausted" ToolTip="Fully spent"/>
-                        <ComboBoxItem Content="Expired"/>
-                        <ComboBoxItem Content="Blocked"/>
-                    </ComboBox>
-
-                    <Button Content="📑 Export to Printer" Command="{Binding ExportBarcodesCommand}" Height="30" Background="#E2EDF8" Foreground="#2B5B84" BorderThickness="1" BorderBrush="#2B5B84" Padding="15,0"/>
-                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Vouchers.Count, StringFormat=Records: {0}}"
+                           Foreground="White"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Margin="16,0,0,0"/>
             </Grid>
         </Border>
-
-        <DataGrid Grid.Row="2" ItemsSource="{Binding Vouchers}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E0E0E0" BorderThickness="1" BorderBrush="#A0A0A0" 
-                  RowHeight="32" Background="White" AlternatingRowBackground="#F9F9F9">
-            <DataGrid.Resources>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#2B3C38"/>
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="Padding" Value="10,8"/>
-                </Style>
-                <Style TargetType="DataGridCell">
-                    <Setter Property="VerticalContentAlignment" Value="Center"/>
-                    <Setter Property="Padding" Value="10,0"/>
-                    <Setter Property="BorderThickness" Value="0"/>
-                </Style>
-            </DataGrid.Resources>
-
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Barcode (12-Digit)" Binding="{Binding Barcode}" Width="160" FontWeight="Bold"/>
-
-                <DataGridTextColumn Header="Face Value" Binding="{Binding InitialAmount, StringFormat=Rs. \{0:N2\}}" Width="120" Foreground="#555"/>
-                <DataGridTextColumn Header="Current Balance" Binding="{Binding CurrentBalance, StringFormat=Rs. \{0:N2\}}" Width="130" FontWeight="Bold" Foreground="#1E7E34"/>
-
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" FontWeight="SemiBold"/>
-
-                <DataGridTextColumn Header="Created On" Binding="{Binding CreatedDate, StringFormat=dd-MMM-yyyy HH:mm}" Width="150" Foreground="#666"/>
-                <DataGridTextColumn Header="Activated On" Binding="{Binding ActivationDate, StringFormat=dd-MMM-yyyy}" Width="110" Foreground="#666"/>
-                <DataGridTextColumn Header="Expires On" Binding="{Binding ExpiryDate, StringFormat=dd-MMM-yyyy}" Width="110" Foreground="#A94044"/>
-
-                <DataGridTemplateColumn Header="Emergency Action" Width="*">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button Content="BLOCK / KILL" 
-                    Command="{Binding DataContext.BlockVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                    CommandParameter="{Binding Id}" 
-                    HorizontalAlignment="Left">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource DangerBtn}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Status}" Value="Inactive">
-                                                <Setter Property="Visibility" Value="Hidden"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Status}" Value="Exhausted">
-                                                <Setter Property="Visibility" Value="Hidden"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Status}" Value="Blocked">
-                                                <Setter Property="Visibility" Value="Hidden"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
     </Grid>
 </UserControl>
