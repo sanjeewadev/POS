@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Input;
 using POS.Cashier.UI.ViewModels;
 
 namespace POS.Cashier.UI.Dialogs
@@ -9,32 +10,55 @@ namespace POS.Cashier.UI.Dialogs
         public CashMovementDialogView(CashMovementViewModel viewModel)
         {
             InitializeComponent();
-            this.DataContext = viewModel;
 
+            DataContext = viewModel;
             viewModel.ActionCompleted += OnActionCompleted;
         }
 
         private void OnActionCompleted(bool success)
         {
+            DialogResult = success;
+
             if (success)
-            {
-                this.DialogResult = true;
-                this.Close();
-            }
+                Close();
         }
 
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
         {
-            this.DialogResult = false;
-            this.Close();
+            DialogResult = false;
+            Close();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                DialogResult = false;
+                Close();
+                e.Handled = true;
+            }
+        }
+
+        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ButtonState != MouseButtonState.Pressed)
+                return;
+
+            try
+            {
+                DragMove();
+            }
+            catch
+            {
+                // Ignore drag errors when mouse capture is lost.
+            }
         }
 
         protected override void OnClosed(EventArgs e)
         {
-            if (this.DataContext is CashMovementViewModel viewModel)
-            {
+            if (DataContext is CashMovementViewModel viewModel)
                 viewModel.ActionCompleted -= OnActionCompleted;
-            }
+
             base.OnClosed(e);
         }
     }

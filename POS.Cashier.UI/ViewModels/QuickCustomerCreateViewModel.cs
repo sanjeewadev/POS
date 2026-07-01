@@ -277,8 +277,8 @@ namespace POS.Cashier.UI.ViewModels
                 CurrentBalance = customer.CurrentBalance,
                 IsCreditLocked = customer.IsCreditLocked,
                 IsActive = customer.IsActive,
-                LoyaltyDiscountProfileId = customer.LoyaltyDiscountProfileId,
-                DiscountExpiry = customer.LoyaltyDiscountExpiryDate
+                LoyaltyDiscountProfileId = null,
+                DiscountExpiry = null
             };
         }
 

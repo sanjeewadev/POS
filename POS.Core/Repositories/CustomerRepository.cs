@@ -128,7 +128,6 @@ namespace POS.Core.Repositories
             using var context = await _contextFactory.CreateDbContextAsync();
 
             var query = context.CustomerMasters
-                .Include(c => c.LoyaltyDiscountProfile)
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -232,8 +231,6 @@ namespace POS.Core.Repositories
             // Temporary legacy compatibility.
             existing.CustomerGroupId = customer.CustomerGroupId;
             existing.LoyaltyCardNumber = customer.LoyaltyCardNumber;
-            existing.LoyaltyDiscountProfileId = customer.LoyaltyDiscountProfileId;
-            existing.LoyaltyDiscountExpiryDate = customer.LoyaltyDiscountExpiryDate;
 
             await context.SaveChangesAsync();
 
@@ -379,8 +376,9 @@ namespace POS.Core.Repositories
                 IsActive = c.IsActive,
 
                 // Temporary legacy compatibility.
-                LoyaltyDiscountProfileId = c.LoyaltyDiscountProfileId,
-                DiscountExpiry = c.LoyaltyDiscountExpiryDate
+                // Old LoyaltyDiscountProfile system removed.
+                LoyaltyDiscountProfileId = null,
+                DiscountExpiry = null
             };
         }
 

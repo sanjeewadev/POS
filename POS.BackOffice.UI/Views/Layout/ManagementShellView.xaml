@@ -56,7 +56,6 @@
             <MenuItem Header="_Sales">
                 <MenuItem Header="Customer Return" Command="{Binding NavigateToCustomerReturnsAuditCommand}" />
                 <MenuItem Header="Item Sales Analytics" Command="{Binding NavigateToItemSalesAnalyticsCommand}" />
-                <MenuItem Header="Quotation" Command="{Binding NavigateToQuotationCommand}" />
                 <MenuItem Header="Receipt Ledger" Command="{Binding NavigateToReceiptLedgerCommand}" />
                 <MenuItem Header="Sales Explorer" Command="{Binding NavigateToSalesExplorerCommand}" />
                 <MenuItem Header="Security Audit" Command="{Binding NavigateToSecurityAuditCommand}" />
@@ -67,7 +66,6 @@
                 <MenuItem Header="Customer Ledger" Command="{Binding NavigateToCustomerLedgerCommand}" />
                 <MenuItem Header="Customer Master" Command="{Binding NavigateToCustomerMasterCommand}" />
                 <MenuItem Header="Gift Voucher" Command="{Binding NavigateToGiftVoucherCommand}" />
-                <MenuItem Header="Loyalty Rewards" Command="{Binding NavigateToLoyaltyRewardsCommand}" />
             </MenuItem>
 
             <MenuItem Header="_Finance">

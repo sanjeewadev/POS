@@ -45,11 +45,7 @@ namespace POS.Core.Data
         public DbSet<CustomerMaster> CustomerMasters { get; set; } = null!;
         public DbSet<CustomerLedger> CustomerLedgers { get; set; } = null!;
 
-        // --- LOYALTY & PROMOTIONS ENGINE ---
-        public DbSet<PromoRule> PromoRules { get; set; } = null!;
-        public DbSet<PromoCondition> PromoConditions { get; set; } = null!;
-        public DbSet<PromoReward> PromoRewards { get; set; } = null!;
-        public DbSet<LoyaltyDiscountProfile> LoyaltyDiscountProfiles { get; set; } = null!;
+        // --- EXPRESS ITEM LAYOUT ---
         public DbSet<ExpressItemLayout> ExpressItemLayouts { get; set; } = null!;
 
         // --- DISCOUNT RULE ENGINE ---
@@ -64,8 +60,6 @@ namespace POS.Core.Data
         public DbSet<CustomerReturnHeader> CustomerReturnHeaders { get; set; } = null!;
         public DbSet<CustomerReturnLine> CustomerReturnLines { get; set; } = null!;
         public DbSet<ItemSupplier> ItemSuppliers { get; set; } = null!;
-        public DbSet<QuotationHeader> QuotationHeaders { get; set; } = null!;
-        public DbSet<QuotationLine> QuotationLines { get; set; } = null!;
 
         // --- SHIFT & SECURITY ---
         public DbSet<ShiftSession> ShiftSessions { get; set; } = null!;
@@ -1117,11 +1111,6 @@ namespace POS.Core.Data
 
                 entity.Property(c => c.LoyaltyPointsBalance)
                     .HasColumnType("decimal(18,2)");
-
-                entity.HasOne(c => c.LoyaltyDiscountProfile)
-                    .WithMany()
-                    .HasForeignKey(c => c.LoyaltyDiscountProfileId)
-                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasMany(c => c.LedgerEntries)
                     .WithOne(l => l.CustomerMaster)

@@ -53,7 +53,6 @@ namespace POS.BackOffice.UI
             services.AddTransient<StockBalanceRepository>();
             services.AddTransient<SupplierReturnRepository>();
             services.AddTransient<ExpressItemRepository>();
-            services.AddTransient<LoyaltyDiscountRepository>();
             services.AddTransient<CustomerRepository>();
             services.AddTransient<SupplierLedgerRepository>();
             services.AddTransient<SupplierReportRepository>();
@@ -61,7 +60,6 @@ namespace POS.BackOffice.UI
             services.AddTransient<FloatCashRepository>();
             services.AddTransient<FinancialAnalyticsRepository>();
             services.AddTransient<SecurityAuditRepository>();
-            services.AddTransient<QuotationRepository>();
             services.AddTransient<MasterSalesAnalyticsRepository>();
             services.AddTransient<SalesAnalyticsRepository>();
             services.AddTransient<SystemSettingsRepository>();
@@ -109,7 +107,6 @@ namespace POS.BackOffice.UI
             services.AddTransient<FloatCashLogViewModel>();
             services.AddTransient<FinancialSummaryViewModel>();
             services.AddTransient<SecurityAuditViewModel>();
-            services.AddTransient<QuotationManagerViewModel>();
             services.AddTransient<ItemSalesAnalyticsViewModel>();
             services.AddTransient<CashMovementDashboardViewModel>();
             services.AddTransient<CustomerReturnsAuditViewModel>();
@@ -117,7 +114,6 @@ namespace POS.BackOffice.UI
             // CRM ViewModels
             services.AddTransient<CustomerMasterViewModel>();
             services.AddTransient<CustomerLedgerViewModel>();
-            services.AddTransient<LoyaltyDiscountAdminViewModel>();
             services.AddTransient<GiftVoucherAdminViewModel>();
 
             // Admin ViewModels

@@ -103,9 +103,6 @@
             <DataTemplate DataType="{x:Type viewmodels:SecurityAuditViewModel}">
                 <sales:SecurityAuditView />
             </DataTemplate>
-            <DataTemplate DataType="{x:Type viewmodels:QuotationManagerViewModel}">
-                <sales:QuotationManagerView />
-            </DataTemplate>
             <DataTemplate DataType="{x:Type viewmodels:ItemSalesAnalyticsViewModel}">
                 <sales:ItemSalesAnalyticsView />
             </DataTemplate>
@@ -114,10 +111,6 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type viewmodels:ReceiptLedgerViewModel}">
                 <sales:ReceiptLedgerView />
-            </DataTemplate>
-
-            <DataTemplate DataType="{x:Type viewmodels:LoyaltyDiscountAdminViewModel}">
-                <crm:LoyaltyDiscountAdminView />
             </DataTemplate>
             <DataTemplate DataType="{x:Type viewmodels:CustomerMasterViewModel}">
                 <crm:CustomerMasterView />
