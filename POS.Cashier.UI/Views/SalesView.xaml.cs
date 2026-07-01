@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -1362,5 +1363,70 @@ namespace POS.Cashier.UI.Views
 
             Close();
         }
+
+        private void MoreBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button)
+                return;
+
+            if (button.ContextMenu == null)
+                return;
+
+            button.ContextMenu.PlacementTarget = button;
+            button.ContextMenu.Placement = PlacementMode.Bottom;
+            button.ContextMenu.IsOpen = true;
+        }
+
+        private void PrintBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var dialog = new PrintOptionsDialog
+                {
+                    Owner = this
+                };
+
+                bool? result = dialog.ShowDialog();
+
+                if (result != true)
+                    return;
+
+                if (dialog.SelectedPrintOption == "LastBill")
+                {
+                    PrintLastBillBtn_Click(sender, e);
+                    return;
+                }
+
+                if (dialog.SelectedPrintOption == "Quotation")
+                {
+                    PrintQuotationBtn_Click(sender, e);
+                    return;
+                }
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void PrintLastBillBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _ = ViewModel?.ShowNotificationAsync(
+                "Print Last Bill will be connected after receipt print service is finalized.",
+                "#F59E0B");
+        }
+
+        private async void PrintQuotationBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            await ViewModel.PrintCurrentCartQuotationAsync();
+        }
     }
+
 }

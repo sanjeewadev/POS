@@ -703,26 +703,93 @@
                 </Grid.ColumnDefinitions>
 
                 <UniformGrid Grid.Column="0" Columns="5" Rows="3" Margin="0,0,2,0">
-                    <Button Background="{StaticResource SystemBtnBrush}" Content="Reports" FontSize="14" Click="ReportsBtn_Click"/>
-                    <Button Background="{StaticResource SystemBtnBrush}" Content="Paid In" FontSize="14" Click="PaidInBtn_Click"/>
-                    <Button Background="{StaticResource SystemBtnBrush}" Content="Paid Out" FontSize="14" Click="PaidOutBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Reload" FontSize="14"/>
-                    <Button Background="{StaticResource ExpressBtnBrush}" Foreground="White" Content="Express Items" FontSize="13" Click="ExpressItemsBtn_Click"/>
 
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Stock Inq." FontSize="14" Click="StockInquiryBtn_Click"/>
+                    <!-- PRINT DIALOG -->
+                    <Button Background="#007BFF"
+            Foreground="White"
+            Content="Print"
+            FontSize="14"
+            Click="PrintBtn_Click"/>
+
+
+                    <Button Background="{StaticResource SystemBtnBrush}"
+            Content="Paid In"
+            FontSize="14"
+            Click="PaidInBtn_Click"/>
+
+                    <Button Background="{StaticResource SystemBtnBrush}"
+            Content="Paid Out"
+            FontSize="14"
+            Click="PaidOutBtn_Click"/>
+
                     <Button Background="{StaticResource ActionBtnBrush}"
-                                                                            Content="Sell Voucher"
-                                                                            FontSize="14"
-                                                                            Click="SellVoucherBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Customer R." FontSize="14" Click="CustomerRegisterBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Customer" FontSize="14" Click="CustomerBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Retail" FontSize="14"/>
+            Content="Reload"
+            FontSize="14"/>
 
-                    <Button Background="#007BFF" Foreground="White" Content="SHIFT MENU" FontSize="14" Click="ShiftMenuBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="No Sale" FontSize="14"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="New Price" FontSize="14" Click="NewPriceBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Free" FontSize="14" Click="FreeBtn_Click"/>
-                    <Button Background="{StaticResource ActionBtnBrush}" Content="Disc Rule" FontSize="13" Click="DiscountRuleBtn_Click"/>
+                    <Button Background="{StaticResource ExpressBtnBrush}"
+            Foreground="White"
+            Content="Express Items"
+            FontSize="13"
+            Click="ExpressItemsBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="Stock Inq."
+            FontSize="14"
+            Click="StockInquiryBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="Sell Voucher"
+            FontSize="14"
+            Click="SellVoucherBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="Customer R."
+            FontSize="14"
+            Click="CustomerRegisterBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="Customer"
+            FontSize="14"
+            Click="CustomerBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="Retail"
+            FontSize="14"/>
+
+                    <!-- MORE MENU -->
+                    <Button x:Name="MoreBtn"
+            Background="{StaticResource SystemBtnBrush}"
+            Content="More.."
+            FontSize="14"
+            Click="MoreBtn_Click">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Reports" Click="ReportsBtn_Click"/>
+                                <MenuItem Header="Shift Menu" Click="ShiftMenuBtn_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+
+
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="No Sale"
+            FontSize="14"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="New Price"
+            FontSize="14"
+            Click="NewPriceBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="Free"
+            FontSize="14"
+            Click="FreeBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+            Content="Disc Rule"
+            FontSize="13"
+            Click="DiscountRuleBtn_Click"/>
 
                 </UniformGrid>
 

@@ -68,7 +68,6 @@ namespace POS.Cashier.UI
             // Services
             services.AddTransient<POS.Core.Repositories.ExpressItemRepository>();
             services.AddSingleton<IReceiptPrinterService, POS.Hardware.Services.ReceiptPrinterService>();
-            services.AddTransient<POS.Core.Repositories.LoyaltyCustomerRepository>();
 
             // =========================================================
             // GIFT VOUCHER

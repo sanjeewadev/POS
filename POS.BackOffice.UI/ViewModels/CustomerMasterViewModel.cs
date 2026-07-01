@@ -164,15 +164,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // =========================================================
-        // TEMPORARY LEGACY COMPATIBILITY
-        // =========================================================
-        // Keep until the old LoyaltyDiscountProfile page is replaced.
-        public ObservableCollection<LoyaltyDiscountProfile> AvailableLoyaltyGroups { get; } = new();
-
-        [ObservableProperty]
-        private LoyaltyDiscountProfile? _inputLoyaltyGroup;
-
         public CustomerMasterViewModel(
             CustomerRepository repository,
             IDbContextFactory<AppDbContext> contextFactory)
@@ -189,33 +180,8 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task InitializeAsync()
         {
-            await LoadLegacyDiscountProfilesAsync();
             await RefreshDataAsync();
             AddNewCustomer();
-        }
-
-        private async Task LoadLegacyDiscountProfilesAsync()
-        {
-            try
-            {
-                using var context = await _contextFactory.CreateDbContextAsync();
-
-                var profiles = await context.LoyaltyDiscountProfiles
-                    .AsNoTracking()
-                    .Where(p => p.IsActive)
-                    .OrderBy(p => p.ProfileName)
-                    .ToListAsync();
-
-                AvailableLoyaltyGroups.Clear();
-
-                foreach (var profile in profiles)
-                    AvailableLoyaltyGroups.Add(profile);
-            }
-            catch
-            {
-                // Ignore during transition.
-                // The new discount-rule engine will replace this later.
-            }
         }
 
         // =========================================================
@@ -316,7 +282,6 @@ namespace POS.BackOffice.UI.ViewModels
             InputCreditDays = 0;
             InputIsCreditLocked = false;
 
-            InputLoyaltyGroup = null;
 
             OnPropertyChanged(nameof(IsCustomerSelected));
             OnPropertyChanged(nameof(SelectedCurrentBalance));
@@ -452,16 +417,6 @@ namespace POS.BackOffice.UI.ViewModels
             InputCreditDays = c.CreditDays;
             InputIsCreditLocked = c.IsCreditLocked;
 
-            if (c.LoyaltyDiscountProfileId.HasValue)
-            {
-                InputLoyaltyGroup = AvailableLoyaltyGroups
-                    .FirstOrDefault(p => p.Id == c.LoyaltyDiscountProfileId.Value);
-            }
-            else
-            {
-                InputLoyaltyGroup = null;
-            }
-
             OnPropertyChanged(nameof(IsCustomerSelected));
             OnPropertyChanged(nameof(SelectedCurrentBalance));
             OnPropertyChanged(nameof(SelectedAvailableCredit));
@@ -514,8 +469,6 @@ namespace POS.BackOffice.UI.ViewModels
 
                 UpdatedAt = DateTime.Now,
 
-                // Temporary old profile bridge.
-                LoyaltyDiscountProfileId = InputLoyaltyGroup?.Id
             };
         }
 

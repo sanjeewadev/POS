@@ -105,11 +105,11 @@ namespace POS.Core.Models
         public string UpdatedBy { get; set; } = string.Empty;
 
         // =========================================================
-        // TEMPORARY LEGACY COMPATIBILITY
+        // LIGHTWEIGHT LOYALTY / LEGACY COMPATIBILITY
         // =========================================================
-        // Keep these for now because old repositories/dialogs still reference them.
-        // Later, after CustomerRepository and cashier dialogs are rebuilt,
-        // we can remove these safely.
+        // Keep these for now because cashier/customer pages may still
+        // display or search loyalty card and points.
+        // The old LoyaltyDiscountProfile model is removed.
 
         public int? CustomerGroupId { get; set; }
 
@@ -118,13 +118,6 @@ namespace POS.Core.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal LoyaltyPointsBalance { get; set; } = 0m;
-
-        public int? LoyaltyDiscountProfileId { get; set; }
-
-        public DateTime? LoyaltyDiscountExpiryDate { get; set; }
-
-        [ForeignKey(nameof(LoyaltyDiscountProfileId))]
-        public virtual LoyaltyDiscountProfile? LoyaltyDiscountProfile { get; set; }
 
         // =========================================================
         // NAVIGATION

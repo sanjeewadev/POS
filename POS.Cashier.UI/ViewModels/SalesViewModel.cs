@@ -2443,5 +2443,70 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return false;
             }
         }
+        public async Task<bool> PrintCurrentCartQuotationAsync()
+        {
+            if (IsPaymentModeActive)
+            {
+                _ = ShowNotificationAsync("Cancel payment mode before printing quotation.", "#F59E0B");
+                return false;
+            }
+
+            if (!Cart.Any())
+            {
+                _ = ShowNotificationAsync("Cannot print quotation. Cart is empty.", "#F59E0B");
+                return false;
+            }
+
+            try
+            {
+                RecalculateTotals();
+
+                var request = new QuotationPrintRequest
+                {
+                    QuotationNo = GenerateTemporaryQuotationNo(),
+                    QuotationDate = DateTime.Now,
+                    CashierName = CashierName,
+                    TerminalNo = TerminalNo,
+                    CustomerName = string.IsNullOrWhiteSpace(CustomerName) ? "Walk-In" : CustomerName,
+                    GrossTotal = GrossValue,
+                    TotalDiscount = TotalDiscount,
+                    NetTotal = NetValue,
+                    Lines = Cart.Select((item, index) => new QuotationPrintLine
+                    {
+                        LineNo = index + 1,
+                        ItemDescription = item.Description,
+                        SkuCode = item.SkuCode,
+                        Barcode = item.Barcode,
+                        Uom = item.Uom,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice,
+                        DiscountAmount = item.DiscountAmount,
+                        LineTotal = item.LineAmount
+                    }).ToList()
+                };
+
+                await _printService.PrintQuotationAsync(request, _printerName);
+
+                _ = ShowNotificationAsync(
+                    "Quotation printed. No sale saved and no stock deducted.",
+                    "#10B981");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _ = ShowNotificationAsync(
+                    $"Quotation print failed: {ex.Message}",
+                    "#EF4444");
+
+                return false;
+            }
+        }
+
+        private static string GenerateTemporaryQuotationNo()
+        {
+            return $"QT-{DateTime.Now:yyyyMMdd-HHmmss}";
+        }
+
     }
 }

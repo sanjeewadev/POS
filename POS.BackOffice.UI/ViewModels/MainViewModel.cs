@@ -120,9 +120,6 @@ namespace POS.BackOffice.UI.ViewModels
         private void NavigateToCustomerLedger() => CurrentPage = _serviceProvider.GetRequiredService<CustomerLedgerViewModel>();
 
         [RelayCommand]
-        private void NavigateToLoyaltyRewards() => CurrentPage = _serviceProvider.GetRequiredService<LoyaltyDiscountAdminViewModel>();
-
-        [RelayCommand]
         private void NavigateToGiftVoucher() => CurrentPage = _serviceProvider.GetRequiredService<GiftVoucherAdminViewModel>();
 
 
@@ -139,8 +136,6 @@ namespace POS.BackOffice.UI.ViewModels
         // ==========================================
         // 6. SALES COMMANDS (Active)
         // ==========================================
-        [RelayCommand]
-        private void NavigateToQuotation() => CurrentPage = _serviceProvider.GetRequiredService<QuotationManagerViewModel>();
 
         [RelayCommand]
         private void NavigateToSalesExplorer() => CurrentPage = _serviceProvider.GetRequiredService<SalesExplorerViewModel>();
