@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -17,8 +17,6 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly PriceManagementRepository _repository;
         private readonly DispatcherTimer _searchDebounceTimer;
 
-        private PriceManagementSummaryDto? _activeBatchItem;
-        private bool _isRollingBackSelection = false;
         private int _loadVersion = 0;
 
         // =========================================================
@@ -39,6 +37,18 @@ namespace POS.BackOffice.UI.ViewModels
         });
 
         [ObservableProperty]
+        private string _selectedTrackingFilter = "All";
+
+        public ObservableCollection<string> TrackingFilters { get; } = new(new[]
+        {
+            "All",
+            "Average Cost",
+            "Batch",
+            "Batch + Expiry"
+        });
+
+        // Kept only so old XAML bindings will not fail if an older view is still loaded.
+        [ObservableProperty]
         private string _selectedExpiryFilter = "All";
 
         public ObservableCollection<string> ExpiryFilters { get; } = new(new[]
@@ -53,6 +63,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         public ObservableCollection<PriceManagementSummaryDto> PricingItems { get; } = new();
 
+        // Kept for compatibility. The simplified page no longer edits batch rows separately.
         public ObservableCollection<PriceManagementBatchDto> ActiveBatches { get; } = new();
 
         // =========================================================
@@ -63,14 +74,24 @@ namespace POS.BackOffice.UI.ViewModels
         private PriceManagementSummaryDto? _selectedItem;
 
         // =========================================================
+        // SAVE OPTIONS
+        // =========================================================
+
+        [ObservableProperty]
+        private string _changeReason = string.Empty;
+
+        [ObservableProperty]
+        private bool _applySellingPriceToCurrentStock = true;
+
+        // =========================================================
         // UI STATE
         // =========================================================
 
         [ObservableProperty]
-        private bool _isBatchPanelVisible = false;
+        private bool _isBusy = false;
 
         [ObservableProperty]
-        private bool _isBusy = false;
+        private bool _isBatchPanelVisible = false;
 
         [ObservableProperty]
         private string _statusMessage = "Ready.";
@@ -84,12 +105,21 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private int _dirtyBatchCount = 0;
 
+        [ObservableProperty]
+        private int _averageCostItemCount = 0;
+
+        [ObservableProperty]
+        private int _batchTrackedItemCount = 0;
+
+        [ObservableProperty]
+        private int _batchExpiryItemCount = 0;
+
         public bool HasUnsavedChanges =>
-            PricingItems.Any(i => i.IsDirty) || ActiveBatches.Any(b => b.IsDirty);
+            PricingItems.Any(i => i.IsDirty);
 
         public PriceManagementViewModel(PriceManagementRepository repository)
         {
-            _repository = repository;
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
             _searchDebounceTimer = new DispatcherTimer
             {
@@ -119,13 +149,21 @@ namespace POS.BackOffice.UI.ViewModels
             QueueReload();
         }
 
-        partial void OnSelectedExpiryFilterChanged(string value)
+        partial void OnSelectedTrackingFilterChanged(string value)
         {
             QueueReload();
         }
 
+        partial void OnSelectedExpiryFilterChanged(string value)
+        {
+            // Old filter kept for compatibility. It does not control the simplified grid.
+        }
+
         private void QueueReload()
         {
+            if (IsBusy)
+                return;
+
             _searchDebounceTimer.Stop();
             _searchDebounceTimer.Start();
         }
@@ -161,7 +199,7 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 var rows = await _repository.GetPricingSummariesAsync(
                     SelectedMarginFilter,
-                    SelectedExpiryFilter,
+                    SelectedTrackingFilter,
                     SearchText);
 
                 if (version != _loadVersion)
@@ -179,10 +217,12 @@ namespace POS.BackOffice.UI.ViewModels
                 }
 
                 SelectedItem = null;
-                _activeBatchItem = null;
-                IsBatchPanelVisible = false;
 
                 TotalItems = PricingItems.Count;
+                AverageCostItemCount = PricingItems.Count(i => !i.HasBatchTracking);
+                BatchTrackedItemCount = PricingItems.Count(i => i.HasBatchTracking);
+                BatchExpiryItemCount = PricingItems.Count(i => i.HasBatchTracking && i.HasExpiryTracking);
+
                 RefreshDirtyCounters();
 
                 StatusMessage = $"Loaded {TotalItems} pricing item(s).";
@@ -208,227 +248,14 @@ namespace POS.BackOffice.UI.ViewModels
         {
             SearchText = string.Empty;
             SelectedMarginFilter = "All";
+            SelectedTrackingFilter = "All";
             SelectedExpiryFilter = "All";
 
             await LoadDataAsync();
         }
 
         // =========================================================
-        // SELECTION / BATCH INSPECTOR
-        // =========================================================
-
-        partial void OnSelectedItemChanged(PriceManagementSummaryDto? value)
-        {
-            if (_isRollingBackSelection)
-                return;
-
-            if (value == null)
-                return;
-
-            if (_activeBatchItem != null &&
-                _activeBatchItem.ItemVariantId != value.ItemVariantId &&
-                ActiveBatches.Any(b => b.IsDirty))
-            {
-                var confirm = MessageBox.Show(
-                    "The current batch panel has unsaved changes. Changing item will discard those batch changes.\n\nContinue?",
-                    "Unsaved Batch Changes",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (confirm != MessageBoxResult.Yes)
-                {
-                    _isRollingBackSelection = true;
-                    SelectedItem = _activeBatchItem;
-                    _isRollingBackSelection = false;
-                    return;
-                }
-            }
-
-            _ = OpenBatchInspectorAsync(value);
-        }
-
-        private async Task OpenBatchInspectorAsync(PriceManagementSummaryDto item)
-        {
-            if (item.ItemVariantId <= 0)
-                return;
-
-            IsBusy = true;
-            StatusMessage = $"Loading batches for {item.ItemCode}...";
-
-            try
-            {
-                UnsubscribeBatchEvents();
-                ActiveBatches.Clear();
-
-                var batches = await _repository.GetActiveBatchPriceRowsAsync(item.ItemVariantId);
-
-                if (SelectedItem == null || SelectedItem.ItemVariantId != item.ItemVariantId)
-                    return;
-
-                foreach (var batch in batches)
-                {
-                    batch.PropertyChanged += Batch_PropertyChanged;
-                    ActiveBatches.Add(batch);
-                }
-
-                _activeBatchItem = item;
-                IsBatchPanelVisible = true;
-
-                RefreshDirtyCounters();
-
-                StatusMessage = batches.Any()
-                    ? $"Loaded {batches.Count} active batch(es) for {item.ItemCode}."
-                    : $"No active batches found for {item.ItemCode}.";
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = "Failed to load batch pricing data.";
-
-                MessageBox.Show(
-                    $"Failed to load batch breakdown:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        [RelayCommand]
-        private void CloseBatchPanel()
-        {
-            if (ActiveBatches.Any(b => b.IsDirty))
-            {
-                var confirm = MessageBox.Show(
-                    "There are unsaved batch price changes. Close the batch panel and discard them?",
-                    "Unsaved Batch Changes",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (confirm != MessageBoxResult.Yes)
-                    return;
-            }
-
-            UnsubscribeBatchEvents();
-
-            ActiveBatches.Clear();
-            IsBatchPanelVisible = false;
-            _activeBatchItem = null;
-
-            _isRollingBackSelection = true;
-            SelectedItem = null;
-            _isRollingBackSelection = false;
-
-            RefreshDirtyCounters();
-
-            StatusMessage = "Batch panel closed.";
-        }
-
-        // =========================================================
-        // SAVE CURRENT SELECTED ITEM
-        // =========================================================
-
-        [RelayCommand]
-        private async Task SaveAdjustmentsAsync()
-        {
-            if (SelectedItem == null)
-            {
-                MessageBox.Show(
-                    "Please select an item before saving pricing adjustments.",
-                    "Selection Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            var validationErrors = SelectedItem.ValidateForSave();
-
-            foreach (var batch in ActiveBatches)
-                validationErrors.AddRange(batch.ValidateForSave());
-
-            if (validationErrors.Any())
-            {
-                MessageBox.Show(
-                    "Cannot save pricing because validation failed:\n\n" +
-                    string.Join("\n", validationErrors),
-                    "Price Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            if (SelectedItem.IsNegativeMargin)
-            {
-                var warning = MessageBox.Show(
-                    $"Retail price for '{SelectedItem.ItemCode}' is lower than cost.\n\n" +
-                    $"Margin: {SelectedItem.GrossMarginPercentage:N2}%\n\n" +
-                    "Save anyway?",
-                    "Negative Margin Warning",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (warning != MessageBoxResult.Yes)
-                    return;
-            }
-            else if (SelectedItem.IsLowMargin)
-            {
-                var warning = MessageBox.Show(
-                    $"Retail margin for '{SelectedItem.ItemCode}' is below 20%.\n\n" +
-                    $"Margin: {SelectedItem.GrossMarginPercentage:N2}%\n\n" +
-                    "Save anyway?",
-                    "Low Margin Warning",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (warning != MessageBoxResult.Yes)
-                    return;
-            }
-
-            IsBusy = true;
-            StatusMessage = $"Saving pricing for {SelectedItem.ItemCode}...";
-
-            try
-            {
-                await _repository.UpdatePricingAsync(
-                    SelectedItem,
-                    ActiveBatches.ToList(),
-                    "Admin");
-
-                foreach (var batch in ActiveBatches)
-                    batch.AcceptChanges();
-
-                SelectedItem.AcceptChanges();
-
-                RefreshDirtyCounters();
-
-                StatusMessage = $"Pricing updated for {SelectedItem.ItemCode}.";
-
-                MessageBox.Show(
-                    $"Pricing updated successfully for {SelectedItem.ItemCode}.",
-                    "Save Complete",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = "Failed to save pricing.";
-
-                MessageBox.Show(
-                    $"Failed to save pricing:\n\n{ex.Message}",
-                    "Save Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        // =========================================================
-        // SAVE ALL DIRTY MASTER ROWS
+        // SAVE
         // =========================================================
 
         [RelayCommand]
@@ -438,19 +265,73 @@ namespace POS.BackOffice.UI.ViewModels
                 .Where(i => i.IsDirty)
                 .ToList();
 
-            if (!dirtyRows.Any() && !ActiveBatches.Any(b => b.IsDirty))
+            if (!dirtyRows.Any())
             {
                 MessageBox.Show(
                     "There are no price changes to save.",
                     "No Changes",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+
                 return;
             }
 
+            string reason = (ChangeReason ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                MessageBox.Show(
+                    "Enter a price change reason before saving.",
+                    "Reason Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            var validationErrors = dirtyRows
+                .SelectMany(i => i.ValidateForSave())
+                .ToList();
+
+            if (validationErrors.Any())
+            {
+                MessageBox.Show(
+                    "Cannot save pricing because validation failed:\n\n" +
+                    string.Join("\n", validationErrors),
+                    "Price Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            int negativeMarginCount = dirtyRows.Count(i => i.IsNegativeMargin);
+            int lowMarginCount = dirtyRows.Count(i => i.IsLowMargin);
+
+            if (negativeMarginCount > 0 || lowMarginCount > 0)
+            {
+                var warning = MessageBox.Show(
+                    $"Some changed prices have margin warnings.\n\n" +
+                    $"Negative margin rows: {negativeMarginCount}\n" +
+                    $"Low margin rows: {lowMarginCount}\n\n" +
+                    "Save anyway?",
+                    "Margin Warning",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (warning != MessageBoxResult.Yes)
+                    return;
+            }
+
+            string stockSyncText = ApplySellingPriceToCurrentStock
+                ? "Current active stock selling prices will also be updated."
+                : "Only master prices will be updated.";
+
             var confirm = MessageBox.Show(
-                $"Save all changed master price rows?\n\nChanged items: {dirtyRows.Count}\nChanged active batches: {ActiveBatches.Count(b => b.IsDirty)}",
-                "Save All Price Changes",
+                $"Save changed price rows?\n\n" +
+                $"Changed items: {dirtyRows.Count}\n\n" +
+                $"{stockSyncText}",
+                "Save Price Changes",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -464,53 +345,31 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 foreach (var item in dirtyRows)
                 {
-                    var errors = item.ValidateForSave();
-
-                    if (errors.Any())
-                    {
-                        throw new InvalidOperationException(
-                            $"Validation failed for item '{item.ItemCode}':\n" +
-                            string.Join("\n", errors));
-                    }
-
-                    if (SelectedItem != null &&
-                        item.ItemVariantId == SelectedItem.ItemVariantId)
-                    {
-                        await _repository.UpdatePricingAsync(
-                            item,
-                            ActiveBatches.ToList(),
-                            "Admin");
-                    }
-                    else
-                    {
-                        await _repository.UpdatePricingAsync(
-                            item,
-                            new System.Collections.Generic.List<PriceManagementBatchDto>(),
-                            "Admin");
-                    }
+                    await _repository.UpdatePricingAsync(
+                        item,
+                        "Admin",
+                        reason,
+                        ApplySellingPriceToCurrentStock);
 
                     item.AcceptChanges();
                 }
 
-                foreach (var batch in ActiveBatches)
-                    batch.AcceptChanges();
-
                 RefreshDirtyCounters();
 
-                StatusMessage = "All changed price rows saved.";
+                StatusMessage = $"Saved {dirtyRows.Count} price change(s).";
 
                 MessageBox.Show(
-                    "All changed prices were saved successfully.",
+                    "Price changes saved successfully.",
                     "Save Complete",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                StatusMessage = "Save all price changes failed.";
+                StatusMessage = "Save price changes failed.";
 
                 MessageBox.Show(
-                    $"Failed to save all price changes:\n\n{ex.Message}",
+                    $"Failed to save price changes:\n\n{ex.Message}",
                     "Save Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -519,6 +378,43 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        // Compatibility command. Old XAML may still call this.
+        [RelayCommand]
+        private async Task SaveAdjustmentsAsync()
+        {
+            if (SelectedItem == null)
+            {
+                MessageBox.Show(
+                    "Select an item first.",
+                    "Selection Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            if (!SelectedItem.IsDirty)
+            {
+                MessageBox.Show(
+                    "The selected item has no price changes.",
+                    "No Changes",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                return;
+            }
+
+            await SaveAllDirtyAsync();
+        }
+
+        // Compatibility command. The simplified page does not use the batch panel.
+        [RelayCommand]
+        private void CloseBatchPanel()
+        {
+            ActiveBatches.Clear();
+            IsBatchPanelVisible = false;
         }
 
         // =========================================================
@@ -531,16 +427,10 @@ namespace POS.BackOffice.UI.ViewModels
                 RefreshDirtyCounters();
         }
 
-        private void Batch_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(PriceManagementBatchDto.IsDirty))
-                RefreshDirtyCounters();
-        }
-
         private void RefreshDirtyCounters()
         {
             DirtyItemCount = PricingItems.Count(i => i.IsDirty);
-            DirtyBatchCount = ActiveBatches.Count(b => b.IsDirty);
+            DirtyBatchCount = 0;
 
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -549,12 +439,6 @@ namespace POS.BackOffice.UI.ViewModels
         {
             foreach (var item in PricingItems)
                 item.PropertyChanged -= PricingItem_PropertyChanged;
-        }
-
-        private void UnsubscribeBatchEvents()
-        {
-            foreach (var batch in ActiveBatches)
-                batch.PropertyChanged -= Batch_PropertyChanged;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -21,7 +21,7 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly CategoryRepository _categoryRepository;
         private readonly SupplierRepository _supplierRepository;
 
-        private bool _suppressAutoRefresh = false;
+        private bool _suppressAutoRefresh;
 
         // =========================================================
         // FILTERS
@@ -37,7 +37,7 @@ namespace POS.BackOffice.UI.ViewModels
         private Supplier? _selectedSupplier;
 
         [ObservableProperty]
-        private bool _hideZeroStock = true;
+        private bool _hideZeroStock = false;
 
         [ObservableProperty]
         private bool _showNegativeOnly = false;
@@ -61,44 +61,56 @@ namespace POS.BackOffice.UI.ViewModels
         // =========================================================
 
         [ObservableProperty]
-        private int _totalLineItems = 0;
+        private int _totalLineItems;
 
         [ObservableProperty]
-        private int _totalBatchCount = 0;
+        private int _averageCostLineCount;
 
         [ObservableProperty]
-        private int _negativeLineCount = 0;
+        private int _batchTrackedLineCount;
 
         [ObservableProperty]
-        private int _zeroStockLineCount = 0;
+        private int _batchExpiryLineCount;
 
         [ObservableProperty]
-        private int _expiredBatchCount = 0;
+        private int _totalBatchCount;
 
         [ObservableProperty]
-        private int _expiringSoonBatchCount = 0;
+        private int _totalStockBucketCount;
 
         [ObservableProperty]
-        private decimal _totalPhysicalQty = 0m;
+        private int _negativeLineCount;
 
         [ObservableProperty]
-        private decimal _totalAssetValue = 0m;
+        private int _zeroStockLineCount;
 
         [ObservableProperty]
-        private decimal _projectedRevenue = 0m;
+        private int _expiredBatchCount;
 
         [ObservableProperty]
-        private decimal _projectedWholesaleValue = 0m;
+        private int _expiringSoonBatchCount;
 
         [ObservableProperty]
-        private decimal _projectedGrossProfit = 0m;
+        private decimal _totalPhysicalQty;
+
+        [ObservableProperty]
+        private decimal _totalAssetValue;
+
+        [ObservableProperty]
+        private decimal _projectedRevenue;
+
+        [ObservableProperty]
+        private decimal _projectedWholesaleValue;
+
+        [ObservableProperty]
+        private decimal _projectedGrossProfit;
 
         // =========================================================
         // UI STATE
         // =========================================================
 
         [ObservableProperty]
-        private bool _isBusy = false;
+        private bool _isBusy;
 
         [ObservableProperty]
         private string _statusMessage = "Ready.";
@@ -108,9 +120,9 @@ namespace POS.BackOffice.UI.ViewModels
             CategoryRepository categoryRepository,
             SupplierRepository supplierRepository)
         {
-            _stockRepository = stockRepository;
-            _categoryRepository = categoryRepository;
-            _supplierRepository = supplierRepository;
+            _stockRepository = stockRepository ?? throw new ArgumentNullException(nameof(stockRepository));
+            _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
+            _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
 
             _ = InitializeAsync();
         }
@@ -122,36 +134,12 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                Categories.Clear();
-                Suppliers.Clear();
-
-                var categories = await _categoryRepository.GetAllAsync();
-                var suppliers = await _supplierRepository.GetAllAsync();
-
-                Categories.Add(new Category
-                {
-                    Id = 0,
-                    CategoryName = "-- ALL CATEGORIES --"
-                });
-
-                foreach (var category in categories.OrderBy(c => c.CategoryName))
-                    Categories.Add(category);
-
-                Suppliers.Add(new Supplier
-                {
-                    Id = 0,
-                    SupplierName = "-- ALL SUPPLIERS --",
-                    CompanyName = "-- ALL SUPPLIERS --"
-                });
-
-                foreach (var supplier in suppliers.OrderBy(s => s.SupplierName))
-                    Suppliers.Add(supplier);
-
-                SelectedCategory = Categories.FirstOrDefault(c => c.Id == 0);
-                SelectedSupplier = Suppliers.FirstOrDefault(s => s.Id == 0);
+                await LoadLookupsAsync();
             }
             catch (Exception ex)
             {
+                StatusMessage = "Failed to initialize Stock Balance page.";
+
                 MessageBox.Show(
                     $"Failed to initialize Stock Balance page:\n\n{ex.Message}",
                     "Database Error",
@@ -165,6 +153,45 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             await LoadDataAsync();
+        }
+
+        private async Task LoadLookupsAsync()
+        {
+            Categories.Clear();
+            Suppliers.Clear();
+
+            var categories = await _categoryRepository.GetAllAsync();
+            var suppliers = await _supplierRepository.GetAllAsync();
+
+            Categories.Add(new Category
+            {
+                Id = 0,
+                CategoryName = "-- ALL CATEGORIES --"
+            });
+
+            foreach (var category in categories
+                         .Where(c => !c.IsDeactivated)
+                         .OrderBy(c => c.CategoryName))
+            {
+                Categories.Add(category);
+            }
+
+            Suppliers.Add(new Supplier
+            {
+                Id = 0,
+                SupplierName = "-- ALL SUPPLIERS --",
+                CompanyName = "-- ALL SUPPLIERS --"
+            });
+
+            foreach (var supplier in suppliers
+                         .Where(s => !s.IsDeactivated)
+                         .OrderBy(s => s.SupplierName))
+            {
+                Suppliers.Add(supplier);
+            }
+
+            SelectedCategory = Categories.FirstOrDefault(c => c.Id == 0);
+            SelectedSupplier = Suppliers.FirstOrDefault(s => s.Id == 0);
         }
 
         // =========================================================
@@ -213,11 +240,18 @@ namespace POS.BackOffice.UI.ViewModels
             _ = LoadDataAsync();
         }
 
+        partial void OnIsBusyChanged(bool value)
+        {
+            RefreshCommand.NotifyCanExecuteChanged();
+            ClearFiltersCommand.NotifyCanExecuteChanged();
+            ExportExcelCommand.NotifyCanExecuteChanged();
+        }
+
         // =========================================================
         // LOAD DATA
         // =========================================================
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task RefreshAsync()
         {
             await LoadDataAsync();
@@ -225,6 +259,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task LoadDataAsync()
         {
+            if (IsBusy)
+                return;
+
             IsBusy = true;
 
             try
@@ -248,7 +285,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 CalculateGlobalTotals();
 
-                StatusMessage = $"Loaded {TotalLineItems} item variant(s), {TotalBatchCount} active batch(es).";
+                StatusMessage =
+                    $"Loaded {TotalLineItems} item variant(s). " +
+                    $"Average-cost: {AverageCostLineCount}, Batch-tracked: {BatchTrackedLineCount}, " +
+                    $"Visible batch rows: {TotalBatchCount}, Stock buckets: {TotalStockBucketCount}.";
             }
             catch (Exception ex)
             {
@@ -271,7 +311,11 @@ namespace POS.BackOffice.UI.ViewModels
             if (!StockBalances.Any())
             {
                 TotalLineItems = 0;
+                AverageCostLineCount = 0;
+                BatchTrackedLineCount = 0;
+                BatchExpiryLineCount = 0;
                 TotalBatchCount = 0;
+                TotalStockBucketCount = 0;
                 NegativeLineCount = 0;
                 ZeroStockLineCount = 0;
                 ExpiredBatchCount = 0;
@@ -286,10 +330,15 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             TotalLineItems = StockBalances.Count;
-            TotalBatchCount = StockBalances.Sum(x => x.BatchCount);
+            AverageCostLineCount = StockBalances.Count(x => !x.HasBatchTracking);
+            BatchTrackedLineCount = StockBalances.Count(x => x.HasBatchTracking);
+            BatchExpiryLineCount = StockBalances.Count(x => x.HasBatchTracking && x.HasExpiryTracking);
 
-            NegativeLineCount = StockBalances.Count(x => x.TotalQtyOnHand < 0);
-            ZeroStockLineCount = StockBalances.Count(x => x.TotalQtyOnHand == 0);
+            TotalBatchCount = StockBalances.Sum(x => x.BatchCount);
+            TotalStockBucketCount = StockBalances.Sum(x => x.StockBucketCount);
+
+            NegativeLineCount = StockBalances.Count(x => x.TotalQtyOnHand < 0m);
+            ZeroStockLineCount = StockBalances.Count(x => x.TotalQtyOnHand == 0m);
             ExpiredBatchCount = StockBalances.Count(x => x.HasExpiredBatch);
             ExpiringSoonBatchCount = StockBalances.Count(x => x.HasExpiringSoonBatch);
 
@@ -304,7 +353,7 @@ namespace POS.BackOffice.UI.ViewModels
         // FILTER ACTIONS
         // =========================================================
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private void ClearFilters()
         {
             _suppressAutoRefresh = true;
@@ -312,7 +361,7 @@ namespace POS.BackOffice.UI.ViewModels
             SearchText = string.Empty;
             SelectedCategory = Categories.FirstOrDefault(c => c.Id == 0);
             SelectedSupplier = Suppliers.FirstOrDefault(s => s.Id == 0);
-            HideZeroStock = true;
+            HideZeroStock = false;
             ShowNegativeOnly = false;
 
             _suppressAutoRefresh = false;
@@ -326,7 +375,7 @@ namespace POS.BackOffice.UI.ViewModels
         // to ExportExcelCommand.
         // =========================================================
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private void ExportExcel()
         {
             try
@@ -359,7 +408,7 @@ namespace POS.BackOffice.UI.ViewModels
                     new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
                 MessageBox.Show(
-                    $"Stock balance exported successfully.\n\nRows: {TotalLineItems}\nBatches: {TotalBatchCount}",
+                    $"Stock balance exported successfully.\n\nRows: {TotalLineItems}\nBatch rows: {TotalBatchCount}\nStock buckets: {TotalStockBucketCount}",
                     "Export Complete",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -380,9 +429,11 @@ namespace POS.BackOffice.UI.ViewModels
 
             builder.AppendLine(CsvRow(
                 "Record Type",
+                "Tracking",
+                "Cost Method",
                 "Item Code",
                 "SKU",
-                "Barcode",
+                "Item Barcode",
                 "Description",
                 "Variant",
                 "UOM",
@@ -390,7 +441,7 @@ namespace POS.BackOffice.UI.ViewModels
                 "Supplier",
                 "Stock Status",
                 "Total Qty On Hand",
-                "Unit Avg Cost",
+                "Unit Cost",
                 "Unit Retail",
                 "Unit Wholesale",
                 "Total Cost Value",
@@ -398,10 +449,13 @@ namespace POS.BackOffice.UI.ViewModels
                 "Total Wholesale Value",
                 "Potential Gross Profit",
                 "Markup Percent",
-                "Batch Count",
+                "Visible Batch Count",
+                "Stock Bucket Count",
                 "Earliest Expiry Date",
                 "Last Received Date",
+                "Detail Row Type",
                 "Batch No",
+                "GRN Batch Barcode",
                 "Batch Stock",
                 "Batch Stock Status",
                 "Batch Cost",
@@ -413,16 +467,18 @@ namespace POS.BackOffice.UI.ViewModels
                 "Batch Received Date",
                 "Batch Expiry Date",
                 "Batch Expiry Status",
-                "Days To Expire"));
+                "Days To Expire",
+                "Barcode Printed Count",
+                "Last Barcode Printed At",
+                "Last Barcode Printed By",
+                "Printed Status"));
 
             foreach (var item in StockBalances)
             {
                 if (item.Batches.Any())
                 {
                     foreach (var batch in item.Batches)
-                    {
                         builder.AppendLine(BuildCsvLine(item, batch));
-                    }
                 }
                 else
                 {
@@ -433,7 +489,11 @@ namespace POS.BackOffice.UI.ViewModels
             builder.AppendLine();
             builder.AppendLine(CsvRow("SUMMARY"));
             builder.AppendLine(CsvRow("Total Line Items", TotalLineItems.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Total Batches", TotalBatchCount.ToString(CultureInfo.InvariantCulture)));
+            builder.AppendLine(CsvRow("Average-Cost Lines", AverageCostLineCount.ToString(CultureInfo.InvariantCulture)));
+            builder.AppendLine(CsvRow("Batch-Tracked Lines", BatchTrackedLineCount.ToString(CultureInfo.InvariantCulture)));
+            builder.AppendLine(CsvRow("Batch + Expiry Lines", BatchExpiryLineCount.ToString(CultureInfo.InvariantCulture)));
+            builder.AppendLine(CsvRow("Visible Batch Rows", TotalBatchCount.ToString(CultureInfo.InvariantCulture)));
+            builder.AppendLine(CsvRow("Stock Buckets", TotalStockBucketCount.ToString(CultureInfo.InvariantCulture)));
             builder.AppendLine(CsvRow("Negative Lines", NegativeLineCount.ToString(CultureInfo.InvariantCulture)));
             builder.AppendLine(CsvRow("Zero Stock Lines", ZeroStockLineCount.ToString(CultureInfo.InvariantCulture)));
             builder.AppendLine(CsvRow("Expired Batch Lines", ExpiredBatchCount.ToString(CultureInfo.InvariantCulture)));
@@ -452,7 +512,9 @@ namespace POS.BackOffice.UI.ViewModels
             ItemBatchDto? batch)
         {
             return CsvRow(
-                batch == null ? "ITEM" : "BATCH",
+                batch == null ? "ITEM" : "STOCK ROW",
+                item.TrackingText,
+                item.CostMethodText,
                 item.ItemCode,
                 item.SkuCode,
                 item.Barcode,
@@ -472,9 +534,12 @@ namespace POS.BackOffice.UI.ViewModels
                 FormatMoney(item.PotentialGrossProfit),
                 FormatPercent(item.MarkupPercent),
                 item.BatchCount.ToString(CultureInfo.InvariantCulture),
+                item.StockBucketCount.ToString(CultureInfo.InvariantCulture),
                 FormatDate(item.EarliestExpiryDate),
                 FormatDate(item.LastReceivedDate),
-                batch?.BatchNo ?? string.Empty,
+                batch?.RowTypeText ?? string.Empty,
+                batch?.BatchDisplayText ?? string.Empty,
+                batch?.BarcodeDisplayText ?? string.Empty,
                 batch == null ? string.Empty : FormatQty(batch.CurrentStock),
                 batch?.StockStatus ?? string.Empty,
                 batch == null ? string.Empty : FormatMoney(batch.CostPrice),
@@ -486,7 +551,11 @@ namespace POS.BackOffice.UI.ViewModels
                 batch == null ? string.Empty : FormatDate(batch.ReceivedDate),
                 batch == null ? string.Empty : FormatDate(batch.ExpiryDate),
                 batch?.ExpiryStatus ?? string.Empty,
-                batch?.DaysToExpire?.ToString(CultureInfo.InvariantCulture) ?? string.Empty);
+                batch?.DaysToExpire?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                batch?.BarcodePrintedCount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                batch == null ? string.Empty : FormatDateTime(batch.LastBarcodePrintedAt),
+                batch?.LastBarcodePrintedBy ?? string.Empty,
+                batch?.PrintedStatusText ?? string.Empty);
         }
 
         private static string CsvRow(params string[] values)
@@ -546,6 +615,18 @@ namespace POS.BackOffice.UI.ViewModels
             return value.HasValue
                 ? value.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
                 : string.Empty;
+        }
+
+        private static string FormatDateTime(DateTime? value)
+        {
+            return value.HasValue
+                ? value.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+                : string.Empty;
+        }
+
+        private bool CanRunCommand()
+        {
+            return !IsBusy;
         }
     }
 }

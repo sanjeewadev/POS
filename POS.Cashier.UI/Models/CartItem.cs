@@ -1,6 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using POS.Core.Models;
 using System;
+using System.Collections.Generic;
 
 namespace POS.Cashier.UI.Models
 {
@@ -13,8 +13,6 @@ namespace POS.Cashier.UI.Models
         [ObservableProperty]
         private int _itemVariantId;
 
-        // Important:
-        // Final checkout must sell from this exact selected batch.
         [ObservableProperty]
         private int _itemBatchId;
 
@@ -36,9 +34,156 @@ namespace POS.Cashier.UI.Models
         [ObservableProperty]
         private string _uom = "PCS";
 
-        // Backward compatibility for old XAML column.
-        // Later we can replace the cart grid column with a row number or BatchId column.
+        // Backward compatibility for old XAML/code.
         public int ItemId => ItemBatchId;
+
+        // =========================================================
+        // CASHIER DISPLAY HELPERS
+        // =========================================================
+
+        public string CashierCodeDisplay
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(Barcode))
+                    return Barcode.Trim();
+
+                if (!string.IsNullOrWhiteSpace(SkuCode))
+                    return SkuCode.Trim();
+
+                return ItemCode.Trim();
+            }
+        }
+
+        public string CashierItemDisplay
+        {
+            get
+            {
+                if (IsGiftVoucherSale)
+                    return string.IsNullOrWhiteSpace(Description)
+                        ? "Gift Voucher"
+                        : Description.Trim();
+
+                return string.IsNullOrWhiteSpace(Description)
+                    ? SkuCode.Trim()
+                    : Description.Trim();
+            }
+        }
+
+        public string SmartQuantityText => FormatQuantity(Quantity);
+
+        public string SmartAvailableStockText => FormatQuantity(AvailableBatchStock);
+
+        public string QuantityUomDisplay
+        {
+            get
+            {
+                string uom = string.IsNullOrWhiteSpace(Uom)
+                    ? string.Empty
+                    : Uom.Trim();
+
+                return string.IsNullOrWhiteSpace(uom)
+                    ? SmartQuantityText
+                    : $"{SmartQuantityText} {uom}";
+            }
+        }
+
+        public string CashierBatchInfoDisplay
+        {
+            get
+            {
+                if (IsGiftVoucherSale)
+                {
+                    string voucher = string.IsNullOrWhiteSpace(GiftVoucherNo)
+                        ? GiftVoucherBarcode
+                        : GiftVoucherNo;
+
+                    return string.IsNullOrWhiteSpace(voucher)
+                        ? "Gift voucher sale"
+                        : $"Voucher: {voucher}";
+                }
+
+                var parts = new List<string>();
+
+                if (!string.IsNullOrWhiteSpace(SkuCode))
+                    parts.Add($"SKU: {SkuCode.Trim()}");
+
+                if (!string.IsNullOrWhiteSpace(BatchNo))
+                    parts.Add($"Batch: {BatchNo.Trim()}");
+
+                if (ExpiryDate.HasValue)
+                    parts.Add($"Exp: {ExpiryDate.Value:yyyy-MM-dd}");
+
+                if (AvailableBatchStock > 0m)
+                    parts.Add($"Stock: {SmartAvailableStockText}");
+
+                return parts.Count == 0
+                    ? string.Empty
+                    : string.Join(" | ", parts);
+            }
+        }
+
+        public string DiscountDisplayText
+        {
+            get
+            {
+                if (IsGiftVoucherSale)
+                    return "-";
+
+                if (IsFreeItem)
+                    return "FREE";
+
+                if (DiscountAmount <= 0m)
+                    return "-";
+
+                if (IsRuleDiscount)
+                    return $"RULE {DiscountAmount:N2}";
+
+                if (ManualDiscountAmount > 0m ||
+                    DiscountMode.Equals("Amount", StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"Rs. {ManualDiscountAmount:N2}";
+                }
+
+                if (DiscountPercentage > 0m ||
+                    DiscountMode.Equals("Percent", StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"{DiscountPercentage:0.##}%";
+                }
+
+                return DiscountAmount.ToString("N2");
+            }
+        }
+
+        public string CashierLineStatusDisplay
+        {
+            get
+            {
+                var parts = new List<string>();
+
+                if (IsGiftVoucherSale)
+                    parts.Add("Gift Voucher");
+
+                if (IsFreeItem)
+                    parts.Add($"Free: {FreeIssueDisplayText}");
+
+                if (IsRuleDiscount)
+                    parts.Add($"Rule: {DiscountRuleDisplayText}");
+
+                if (IsPriceOverridden)
+                    parts.Add(PriceOverrideDisplayText);
+
+                if (IsBelowMinimumPrice)
+                    parts.Add("Below Min Price");
+
+                return parts.Count == 0
+                    ? string.Empty
+                    : string.Join(" | ", parts);
+            }
+        }
+
+        public bool HasCashierLineStatus =>
+            !string.IsNullOrWhiteSpace(CashierLineStatusDisplay);
 
         // =========================================================
         // BATCH SNAPSHOT
@@ -57,7 +202,6 @@ namespace POS.Cashier.UI.Models
         private decimal _availableBatchStock = 0m;
 
         // Backward compatibility with old SalesViewModel code.
-        // New code should use AvailableBatchStock.
         public decimal AvailableStock
         {
             get => AvailableBatchStock;
@@ -112,32 +256,23 @@ namespace POS.Cashier.UI.Models
         [ObservableProperty]
         private decimal _quantity = 1m;
 
-        // Percentage discount entered from "% Disc" button.
-        // Example: 10 = 10%
         [ObservableProperty]
         private decimal _discountPercentage = 0m;
 
-        // Fixed rupee discount entered from "Rs Disc" button.
-        // Example: 100 = Rs. 100 discount.
         [ObservableProperty]
         private decimal _manualDiscountAmount = 0m;
 
-        // None / Amount / Percent
-        // This is mainly for audit/reporting.
+        // None / Amount / Percent / Rule
         [ObservableProperty]
         private string _discountMode = "None";
 
-        // True when cashier manually applied Rs Disc or % Disc.
         [ObservableProperty]
         private bool _isManualDiscount = false;
 
-        // True when cashier changed the selling price using New Price.
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(PriceOverrideDisplayText))]
         private bool _isPriceOverridden = false;
 
-        // Difference between original price and new price.
-        // Example: Original Rs. 1000, New Price Rs. 850 => PriceOverrideAmount = 150.
         [ObservableProperty]
         private decimal _priceOverrideAmount = 0m;
 
@@ -163,7 +298,6 @@ namespace POS.Cashier.UI.Models
         // =========================================================
         // FREE ISSUE / FREE ITEM
         // =========================================================
-        // Cashier can only apply free issue using an active BackOffice rule.
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsShopCostFreeItem))]
@@ -329,103 +463,6 @@ namespace POS.Cashier.UI.Models
         public string LineKey =>
             $"{ItemVariantId}:{ItemBatchId}";
 
-        partial void OnItemBatchIdChanged(int value)
-        {
-            OnPropertyChanged(nameof(ItemId));
-            OnPropertyChanged(nameof(LineKey));
-        }
-
-        partial void OnItemVariantIdChanged(int value)
-        {
-            OnPropertyChanged(nameof(LineKey));
-        }
-
-        partial void OnBatchNoChanged(string value)
-        {
-            OnPropertyChanged(nameof(BatchDisplayText));
-        }
-
-        partial void OnExpiryDateChanged(DateTime? value)
-        {
-            OnPropertyChanged(nameof(HasExpiry));
-            OnPropertyChanged(nameof(ExpiryDisplayText));
-        }
-
-        partial void OnAvailableBatchStockChanged(decimal value)
-        {
-            OnPropertyChanged(nameof(AvailableStock));
-        }
-
-        partial void OnQuantityChanged(decimal value)
-        {
-            NotifyAmountChanges();
-        }
-
-        partial void OnUnitPriceChanged(decimal value)
-        {
-            NotifyAmountChanges();
-        }
-
-        partial void OnCostPriceChanged(decimal value)
-        {
-            NotifyAmountChanges();
-        }
-
-        partial void OnDiscountPercentageChanged(decimal value)
-        {
-            NotifyAmountChanges();
-        }
-
-        partial void OnManualDiscountAmountChanged(decimal value)
-        {
-            NotifyAmountChanges();
-        }
-
-        partial void OnIsManualDiscountChanged(bool value)
-        {
-            OnPropertyChanged(nameof(DiscountAmount));
-            OnPropertyChanged(nameof(LineAmount));
-        }
-
-        partial void OnDiscountModeChanged(string value)
-        {
-            OnPropertyChanged(nameof(DiscountAmount));
-            OnPropertyChanged(nameof(LineAmount));
-        }
-
-        partial void OnPriceOverrideAmountChanged(decimal value)
-        {
-            OnPropertyChanged(nameof(PriceOverrideDisplayText));
-        }
-
-        partial void OnOriginalUnitPriceChanged(decimal value)
-        {
-            OnPropertyChanged(nameof(PriceOverrideDisplayText));
-        }
-
-        partial void OnIsFreeItemChanged(bool value)
-        {
-            NotifyAmountChanges();
-        }
-
-        partial void OnMinimumPriceChanged(decimal value)
-        {
-            OnPropertyChanged(nameof(IsBelowMinimumPrice));
-        }
-
-        private void NotifyAmountChanges()
-        {
-            OnPropertyChanged(nameof(GrossAmount));
-            OnPropertyChanged(nameof(PercentageDiscountAmount));
-            OnPropertyChanged(nameof(DiscountAmount));
-            OnPropertyChanged(nameof(LineAmount));
-            OnPropertyChanged(nameof(CostAmount));
-            OnPropertyChanged(nameof(ProfitAmount));
-            OnPropertyChanged(nameof(IsBelowMinimumPrice));
-            OnPropertyChanged(nameof(DiscountRuleDisplayText));
-            OnPropertyChanged(nameof(PriceOverrideDisplayText));
-        }
-
         // =========================================================
         // GIFT VOUCHER SALE LINE
         // =========================================================
@@ -445,8 +482,6 @@ namespace POS.Cashier.UI.Models
         // =========================================================
         // RULE-BASED DISCOUNT
         // =========================================================
-        // Used by "Disc Rule" button.
-        // This is different from manual Rs Disc / % Disc.
 
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(DiscountRuleDisplayText))]
@@ -502,6 +537,257 @@ namespace POS.Cashier.UI.Models
 
                 return "Rule Discount";
             }
+        }
+
+        // =========================================================
+        // PROPERTY CHANGE HELPERS
+        // =========================================================
+
+        partial void OnItemBatchIdChanged(int value)
+        {
+            OnPropertyChanged(nameof(ItemId));
+            OnPropertyChanged(nameof(LineKey));
+        }
+
+        partial void OnItemVariantIdChanged(int value)
+        {
+            OnPropertyChanged(nameof(LineKey));
+        }
+
+        partial void OnItemCodeChanged(string value)
+        {
+            NotifyCashierIdentityDisplayChanges();
+        }
+
+        partial void OnSkuCodeChanged(string value)
+        {
+            NotifyCashierIdentityDisplayChanges();
+        }
+
+        partial void OnBarcodeChanged(string value)
+        {
+            NotifyCashierIdentityDisplayChanges();
+        }
+
+        partial void OnDescriptionChanged(string value)
+        {
+            NotifyCashierIdentityDisplayChanges();
+        }
+
+        partial void OnVariantDescriptionChanged(string value)
+        {
+            NotifyCashierIdentityDisplayChanges();
+        }
+
+        partial void OnUomChanged(string value)
+        {
+            OnPropertyChanged(nameof(QuantityUomDisplay));
+        }
+
+        partial void OnBatchNoChanged(string value)
+        {
+            OnPropertyChanged(nameof(BatchDisplayText));
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+        }
+
+        partial void OnExpiryDateChanged(DateTime? value)
+        {
+            OnPropertyChanged(nameof(HasExpiry));
+            OnPropertyChanged(nameof(ExpiryDisplayText));
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+        }
+
+        partial void OnReceivedDateChanged(DateTime? value)
+        {
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+        }
+
+        partial void OnAvailableBatchStockChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(AvailableStock));
+            OnPropertyChanged(nameof(SmartAvailableStockText));
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+        }
+
+        partial void OnQuantityChanged(decimal value)
+        {
+            NotifyAmountChanges();
+            OnPropertyChanged(nameof(SmartQuantityText));
+            OnPropertyChanged(nameof(QuantityUomDisplay));
+        }
+
+        partial void OnUnitPriceChanged(decimal value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnCostPriceChanged(decimal value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnRetailPriceChanged(decimal value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnWholesalePriceChanged(decimal value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnMinimumPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(IsBelowMinimumPrice));
+            OnPropertyChanged(nameof(CashierLineStatusDisplay));
+            OnPropertyChanged(nameof(HasCashierLineStatus));
+        }
+
+        partial void OnMaximumPriceChanged(decimal value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnDiscountPercentageChanged(decimal value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnManualDiscountAmountChanged(decimal value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnIsManualDiscountChanged(bool value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnDiscountModeChanged(string value)
+        {
+            NotifyAmountChanges();
+        }
+
+        partial void OnIsPriceOverriddenChanged(bool value)
+        {
+            NotifyAmountChanges();
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnPriceOverrideAmountChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(PriceOverrideDisplayText));
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnOriginalUnitPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(PriceOverrideDisplayText));
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnIsFreeItemChanged(bool value)
+        {
+            NotifyAmountChanges();
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnFreeIssueRuleNameChanged(string value)
+        {
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnFreeIssueTypeChanged(string value)
+        {
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnFreeReasonTextChanged(string value)
+        {
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnIsSupplierRecoverableChanged(bool value)
+        {
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnSupplierNameChanged(string value)
+        {
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnIsGiftVoucherSaleChanged(bool value)
+        {
+            NotifyCashierIdentityDisplayChanges();
+            NotifyCashierStatusDisplayChanges();
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+            OnPropertyChanged(nameof(DiscountDisplayText));
+        }
+
+        partial void OnGiftVoucherNoChanged(string value)
+        {
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+        }
+
+        partial void OnGiftVoucherBarcodeChanged(string value)
+        {
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+        }
+
+        partial void OnIsRuleDiscountChanged(bool value)
+        {
+            NotifyAmountChanges();
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnDiscountRuleNameChanged(string value)
+        {
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        partial void OnDiscountReasonNameChanged(string value)
+        {
+            NotifyCashierStatusDisplayChanges();
+        }
+
+        private void NotifyAmountChanges()
+        {
+            OnPropertyChanged(nameof(GrossAmount));
+            OnPropertyChanged(nameof(PercentageDiscountAmount));
+            OnPropertyChanged(nameof(DiscountAmount));
+            OnPropertyChanged(nameof(LineAmount));
+            OnPropertyChanged(nameof(CostAmount));
+            OnPropertyChanged(nameof(ProfitAmount));
+            OnPropertyChanged(nameof(IsBelowMinimumPrice));
+            OnPropertyChanged(nameof(DiscountDisplayText));
+            OnPropertyChanged(nameof(DiscountRuleDisplayText));
+            OnPropertyChanged(nameof(PriceOverrideDisplayText));
+            OnPropertyChanged(nameof(CashierLineStatusDisplay));
+            OnPropertyChanged(nameof(HasCashierLineStatus));
+        }
+
+        private void NotifyCashierIdentityDisplayChanges()
+        {
+            OnPropertyChanged(nameof(CashierCodeDisplay));
+            OnPropertyChanged(nameof(CashierItemDisplay));
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+        }
+
+        private void NotifyCashierStatusDisplayChanges()
+        {
+            OnPropertyChanged(nameof(FreeIssueDisplayText));
+            OnPropertyChanged(nameof(FreeIssueTypeDisplay));
+            OnPropertyChanged(nameof(DiscountRuleDisplayText));
+            OnPropertyChanged(nameof(PriceOverrideDisplayText));
+            OnPropertyChanged(nameof(DiscountDisplayText));
+            OnPropertyChanged(nameof(CashierLineStatusDisplay));
+            OnPropertyChanged(nameof(HasCashierLineStatus));
+        }
+
+        private static string FormatQuantity(decimal value)
+        {
+            return value.ToString("0.###");
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
+using POS.Cashier.UI.Models;
 using POS.Cashier.UI.ViewModels;
 using System;
 using System.Globalization;
@@ -17,10 +18,23 @@ namespace POS.Cashier.UI.Views
         private readonly DispatcherTimer _inactivityTimer;
         private const int INACTIVITY_TIMEOUT_MINUTES = 3;
 
+        private TerminalActionMode _terminalActionMode = TerminalActionMode.Normal;
+        private bool _isDialogOpen;
+
+        private enum TerminalActionMode
+        {
+            Normal,
+            Quantity,
+            FixedDiscount,
+            PercentDiscount,
+            NewPrice
+        }
+
         public SalesView()
         {
             InitializeComponent();
 
+            Focusable = true;
             DataContext = App.Services!.GetRequiredService<SalesViewModel>();
 
             _inactivityTimer = new DispatcherTimer
@@ -31,6 +45,8 @@ namespace POS.Cashier.UI.Views
             _inactivityTimer.Tick += InactivityTimer_Tick;
             _inactivityTimer.Start();
 
+            Loaded += SalesView_Loaded;
+
             MouseMove += ResetInactivityTimer;
             PreviewKeyDown += ResetInactivityTimer;
             PreviewMouseDown += ResetInactivityTimer;
@@ -38,6 +54,28 @@ namespace POS.Cashier.UI.Views
         }
 
         private SalesViewModel? ViewModel => DataContext as SalesViewModel;
+
+        private void SalesView_Loaded(object sender, RoutedEventArgs e)
+        {
+            ReturnFocusToTerminalInput();
+        }
+
+        private void ReturnFocusToTerminalInput()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!IsVisible)
+                    return;
+
+                Focus();
+                Keyboard.Focus(this);
+            }), DispatcherPriority.ApplicationIdle);
+        }
+
+        private static bool IsEditableTextInputSource(object source)
+        {
+            return source is TextBox textBox && !textBox.IsReadOnly;
+        }
 
         private void ResetInactivityTimer(object? sender, EventArgs e)
         {
@@ -59,12 +97,100 @@ namespace POS.Cashier.UI.Views
         }
 
         // =========================================================
+        // TERMINAL MODE
+        // =========================================================
+
+        private void SetTerminalActionMode(
+            TerminalActionMode mode,
+            string displayMode,
+            string message)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Cancel payment mode before editing cart lines.",
+                    "#F59E0B");
+
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            _terminalActionMode = mode;
+            ViewModel.TerminalInputMode = displayMode;
+
+            if (!string.IsNullOrWhiteSpace(message))
+                _ = ViewModel.ShowNotificationAsync(message, "#2563EB");
+
+            ReturnFocusToTerminalInput();
+        }
+
+        private void ResetTerminalActionMode()
+        {
+            _terminalActionMode = TerminalActionMode.Normal;
+
+            if (ViewModel != null && !ViewModel.IsPaymentModeActive)
+                ViewModel.TerminalInputMode = "SCAN / QTY";
+        }
+
+        private bool HasTerminalInput()
+        {
+            return ViewModel != null &&
+                   !string.IsNullOrWhiteSpace(ViewModel.TerminalInput);
+        }
+
+        private bool ExecutePendingTerminalAction()
+        {
+            if (ViewModel == null)
+                return false;
+
+            if (_terminalActionMode == TerminalActionMode.Normal)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(ViewModel.TerminalInput))
+            {
+                _ = ViewModel.ShowNotificationAsync("Enter a value first.", "#F59E0B");
+                ReturnFocusToTerminalInput();
+                return true;
+            }
+
+            switch (_terminalActionMode)
+            {
+                case TerminalActionMode.Quantity:
+                    ViewModel.ApplyTerminalInputAsQuantityToSelected();
+                    break;
+
+                case TerminalActionMode.FixedDiscount:
+                    ApplyFixedDiscountFromTerminalInput();
+                    break;
+
+                case TerminalActionMode.PercentDiscount:
+                    ApplyPercentDiscountFromTerminalInput();
+                    break;
+
+                case TerminalActionMode.NewPrice:
+                    ApplyNewPriceFromTerminalInput();
+                    break;
+            }
+
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
+
+            return true;
+        }
+
+        // =========================================================
         // KEYBOARD / SCANNER INPUT
         // =========================================================
 
         private void Window_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            if (e.OriginalSource is TextBox textBox && !textBox.IsReadOnly)
+            if (_isDialogOpen)
+                return;
+
+            if (IsEditableTextInputSource(e.OriginalSource))
                 return;
 
             ViewModel?.AppendTerminalInput(e.Text);
@@ -73,16 +199,66 @@ namespace POS.Cashier.UI.Views
 
         private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.OriginalSource is TextBox textBox && !textBox.IsReadOnly)
+            if (_isDialogOpen)
+                return;
+
+            if (IsEditableTextInputSource(e.OriginalSource))
                 return;
 
             if (ViewModel == null)
+            {
+                e.Handled = true;
                 return;
+            }
+
+            // Ctrl shortcuts
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                if (e.Key == Key.P)
+                {
+                    PrintBtn_Click(this, new RoutedEventArgs());
+                    e.Handled = true;
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                if (e.Key == Key.Q)
+                {
+                    PrintQuotationBtn_Click(this, new RoutedEventArgs());
+                    e.Handled = true;
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                if (e.Key == Key.L)
+                {
+                    PrintLastBillBtn_Click(this, new RoutedEventArgs());
+                    e.Handled = true;
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+            }
 
             if (e.Key == Key.Enter)
             {
-                await ViewModel.HandleTerminalEnterAsync();
                 e.Handled = true;
+
+                if (ExecutePendingTerminalAction())
+                    return;
+
+                // Stop empty Enter from reaching DataGrid/WPF and ringing.
+                if (!ViewModel.IsPaymentModeActive &&
+                    string.IsNullOrWhiteSpace(ViewModel.TerminalInput))
+                {
+                    ResetTerminalActionMode();
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                await ViewModel.HandleTerminalEnterAsync();
+
+                ResetTerminalActionMode();
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -90,91 +266,127 @@ namespace POS.Cashier.UI.Views
             {
                 ViewModel.BackspaceTerminalInput();
                 e.Handled = true;
+                ReturnFocusToTerminalInput();
                 return;
             }
 
             if (e.Key == Key.Escape)
             {
+                e.Handled = true;
+
                 if (ViewModel.IsPaymentModeActive)
                 {
                     ViewModel.CancelPaymentMode();
-                    e.Handled = true;
+                    ResetTerminalActionMode();
+                    ReturnFocusToTerminalInput();
                     return;
                 }
 
                 if (!string.IsNullOrWhiteSpace(ViewModel.TerminalInput))
                 {
                     ViewModel.ClearTerminalInput();
+                    ResetTerminalActionMode();
                     _ = ViewModel.ShowNotificationAsync("Input cleared.", "#F59E0B");
-                }
-                else
-                {
-                    CancelSaleBtn_Click(this, new RoutedEventArgs());
+                    ReturnFocusToTerminalInput();
+                    return;
                 }
 
-                e.Handled = true;
+                ResetTerminalActionMode();
+                _ = ViewModel.ShowNotificationAsync("Ready.", "#64748B");
+                ReturnFocusToTerminalInput();
                 return;
             }
 
-            if (e.Key == Key.F2)
+            if (e.Key == Key.Delete)
+            {
+                ConfirmAndRemoveSelectedCartLine();
+                e.Handled = true;
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            if (e.Key == Key.F1)
             {
                 SeekBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
+            if (e.Key == Key.F2)
+            {
+                QuantityShortcut();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.F3)
+            {
+                FixedDiscountShortcut();
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.F4)
             {
-                ViewModel.ApplyTerminalInputAsQuantityToSelected();
+                PercentDiscountShortcut();
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F5)
             {
-                ViewModel.ApplyTerminalInputAsDiscountPercentToSelected();
+                NewPriceShortcut();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.F6)
+            {
+                DiscountRuleBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F7)
             {
-                OpenCashTenderDialog();
+                CustomerBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F8)
             {
-                OpenCardTenderDialog("VISA");
+                SuspendRecallBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F9)
             {
-                OpenCardTenderDialog("MasterCard");
+                ViewModel.EnterPaymentMode();
+                ResetTerminalActionMode();
                 e.Handled = true;
+                ReturnFocusToTerminalInput();
                 return;
             }
 
             if (e.Key == Key.F10)
             {
-                OpenCardTenderDialog("AMEX");
+                PrintBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F11)
             {
-                OpenChequeTenderDialog();
+                ShiftMenuBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F12)
             {
-                ViewModel.EnterPaymentMode();
+                OpenMoreMenu();
                 e.Handled = true;
                 return;
             }
@@ -183,6 +395,7 @@ namespace POS.Cashier.UI.Views
             {
                 ViewModel.IncreaseSelectedQuantity();
                 e.Handled = true;
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -190,6 +403,7 @@ namespace POS.Cashier.UI.Views
             {
                 ViewModel.DecreaseSelectedQuantity();
                 e.Handled = true;
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -197,6 +411,7 @@ namespace POS.Cashier.UI.Views
             {
                 MoveCartSelection(-1);
                 e.Handled = true;
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -204,7 +419,151 @@ namespace POS.Cashier.UI.Views
             {
                 MoveCartSelection(1);
                 e.Handled = true;
+                ReturnFocusToTerminalInput();
+                return;
             }
+
+            if (e.Key == Key.Home)
+            {
+                MoveCartSelectionToStart();
+                e.Handled = true;
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            if (e.Key == Key.End)
+            {
+                MoveCartSelectionToEnd();
+                e.Handled = true;
+                ReturnFocusToTerminalInput();
+            }
+        }
+
+        private void QuantityShortcut()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (HasTerminalInput())
+            {
+                ViewModel.ApplyTerminalInputAsQuantityToSelected();
+                ResetTerminalActionMode();
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            SetTerminalActionMode(
+                TerminalActionMode.Quantity,
+                "QTY",
+                "Quantity mode. Type quantity and press Enter.");
+        }
+
+        private void FixedDiscountShortcut()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (HasTerminalInput())
+            {
+                ApplyFixedDiscountFromTerminalInput();
+                ResetTerminalActionMode();
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            SetTerminalActionMode(
+                TerminalActionMode.FixedDiscount,
+                "RS DISC",
+                "Rs Discount mode. Type amount and press Enter.");
+        }
+
+        private void PercentDiscountShortcut()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (HasTerminalInput())
+            {
+                ApplyPercentDiscountFromTerminalInput();
+                ResetTerminalActionMode();
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            SetTerminalActionMode(
+                TerminalActionMode.PercentDiscount,
+                "% DISC",
+                "% Discount mode. Type percentage and press Enter.");
+        }
+
+        private void NewPriceShortcut()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (HasTerminalInput())
+            {
+                ApplyNewPriceFromTerminalInput();
+                ResetTerminalActionMode();
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            SetTerminalActionMode(
+                TerminalActionMode.NewPrice,
+                "NEW PRICE",
+                "New Price mode. Type final price and press Enter.");
+        }
+
+        private void ApplyFixedDiscountFromTerminalInput()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (!TryReadTerminalDecimal(
+                    out decimal amount,
+                    "Enter rupee discount amount first.",
+                    "Enter a valid rupee discount amount."))
+            {
+                return;
+            }
+
+            ViewModel.ClearTerminalInput();
+            ViewModel.ApplyFixedDiscountToSelected(amount);
+        }
+
+        private void ApplyPercentDiscountFromTerminalInput()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (!TryReadTerminalDecimal(
+                    out decimal percent,
+                    "Enter discount percentage first.",
+                    "Enter a valid discount percentage."))
+            {
+                return;
+            }
+
+            ViewModel.ClearTerminalInput();
+            ViewModel.ApplyPercentDiscountToSelected(percent);
+        }
+
+        private void ApplyNewPriceFromTerminalInput()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (!TryReadTerminalDecimal(
+                    out decimal newPrice,
+                    "Enter new price first.",
+                    "Enter a valid new price."))
+            {
+                return;
+            }
+
+            ViewModel.ClearTerminalInput();
+            ViewModel.ApplyNewPriceToSelected(newPrice);
         }
 
         private void MoveCartSelection(int direction)
@@ -227,6 +586,33 @@ namespace POS.Cashier.UI.Views
 
             CartDataGrid.SelectedIndex = currentIndex;
             CartDataGrid.ScrollIntoView(CartDataGrid.SelectedItem);
+
+            if (ViewModel != null && CartDataGrid.SelectedItem is CartItem item)
+                ViewModel.SelectedCartItem = item;
+        }
+
+        private void MoveCartSelectionToStart()
+        {
+            if (CartDataGrid.Items.Count == 0)
+                return;
+
+            CartDataGrid.SelectedIndex = 0;
+            CartDataGrid.ScrollIntoView(CartDataGrid.SelectedItem);
+
+            if (ViewModel != null && CartDataGrid.SelectedItem is CartItem item)
+                ViewModel.SelectedCartItem = item;
+        }
+
+        private void MoveCartSelectionToEnd()
+        {
+            if (CartDataGrid.Items.Count == 0)
+                return;
+
+            CartDataGrid.SelectedIndex = CartDataGrid.Items.Count - 1;
+            CartDataGrid.ScrollIntoView(CartDataGrid.SelectedItem);
+
+            if (ViewModel != null && CartDataGrid.SelectedItem is CartItem item)
+                ViewModel.SelectedCartItem = item;
         }
 
         // =========================================================
@@ -239,74 +625,77 @@ namespace POS.Cashier.UI.Views
             {
                 ViewModel?.AppendTerminalInput(btn.Content.ToString() ?? string.Empty);
             }
+
+            ReturnFocusToTerminalInput();
         }
 
         private void ClearBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.ClearTerminalInput();
+            ResetTerminalActionMode();
 
             if (ViewModel != null)
                 _ = ViewModel.ShowNotificationAsync("Input cleared.", "#F59E0B");
+
+            ReturnFocusToTerminalInput();
         }
 
         private void BackspaceBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.BackspaceTerminalInput();
+            ReturnFocusToTerminalInput();
         }
 
         private async void EnterBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel != null)
+            {
+                if (ExecutePendingTerminalAction())
+                {
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                if (!ViewModel.IsPaymentModeActive &&
+                    string.IsNullOrWhiteSpace(ViewModel.TerminalInput))
+                {
+                    ResetTerminalActionMode();
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
                 await ViewModel.HandleTerminalEnterAsync();
+                ResetTerminalActionMode();
+            }
+
+            ReturnFocusToTerminalInput();
         }
 
         private void QtyBtn_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel?.ApplyTerminalInputAsQuantityToSelected();
+            QuantityShortcut();
         }
 
         private void FixedDiscountBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel == null)
-                return;
-
-            if (!TryReadTerminalDecimal(
-                    out decimal amount,
-                    "Enter rupee discount amount first.",
-                    "Enter a valid rupee discount amount."))
-            {
-                return;
-            }
-
-            ViewModel.ClearTerminalInput();
-            ViewModel.ApplyFixedDiscountToSelected(amount);
+            FixedDiscountShortcut();
         }
 
         private void PercentDiscountBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel == null)
-                return;
-
-            if (!TryReadTerminalDecimal(
-                    out decimal percent,
-                    "Enter discount percentage first.",
-                    "Enter a valid discount percentage."))
-            {
-                return;
-            }
-
-            ViewModel.ClearTerminalInput();
-            ViewModel.ApplyPercentDiscountToSelected(percent);
+            PercentDiscountShortcut();
         }
 
         private void PlusBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.IncreaseSelectedQuantity();
+            ReturnFocusToTerminalInput();
         }
 
         private void MinusBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.DecreaseSelectedQuantity();
+            ReturnFocusToTerminalInput();
         }
 
         // =========================================================
@@ -315,13 +704,19 @@ namespace POS.Cashier.UI.Views
 
         private void CartDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ViewModel != null && CartDataGrid.SelectedItem is POS.Cashier.UI.Models.CartItem item)
-            {
+            if (ViewModel != null && CartDataGrid.SelectedItem is CartItem item)
                 ViewModel.SelectedCartItem = item;
-            }
+
+            ReturnFocusToTerminalInput();
         }
 
         private void RemoveBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ConfirmAndRemoveSelectedCartLine();
+            ReturnFocusToTerminalInput();
+        }
+
+        private void ConfirmAndRemoveSelectedCartLine()
         {
             if (ViewModel == null)
                 return;
@@ -341,7 +736,21 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
+            string itemName = string.IsNullOrWhiteSpace(ViewModel.SelectedCartItem.Description)
+                ? "selected item"
+                : ViewModel.SelectedCartItem.Description;
+
+            MessageBoxResult result = MessageBox.Show(
+                $"Remove '{itemName}' from this sale?",
+                "Remove Item",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
             ViewModel.RemoveSelectedItem();
+            ResetTerminalActionMode();
         }
 
         private void CancelSaleBtn_Click(object sender, RoutedEventArgs e)
@@ -352,12 +761,16 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.IsPaymentModeActive)
             {
                 ViewModel.CancelPaymentMode();
+                ResetTerminalActionMode();
+                ReturnFocusToTerminalInput();
                 return;
             }
 
             if (ViewModel.Cart.Count == 0)
             {
                 ViewModel.ClearTerminalInput();
+                ResetTerminalActionMode();
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -370,16 +783,21 @@ namespace POS.Cashier.UI.Views
             if (result == MessageBoxResult.Yes)
             {
                 ViewModel.ClearCartCommand.Execute(null);
+                ResetTerminalActionMode();
             }
+
+            ReturnFocusToTerminalInput();
         }
 
         // =========================================================
-        // EMBEDDED PAYMENT FLOW
+        // PAYMENT FLOW
         // =========================================================
 
         private void SubTotalBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.EnterPaymentMode();
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void PayBtn_Click(object sender, RoutedEventArgs e)
@@ -423,19 +841,22 @@ namespace POS.Cashier.UI.Views
             }
 
             if (buttonText.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase) ||
-    buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
+                buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
             {
                 OpenGiftVoucherTenderDialog();
                 return;
             }
 
             _ = ViewModel.ShowNotificationAsync($"{buttonText} payment is coming later.", "#F59E0B");
+            ReturnFocusToTerminalInput();
         }
 
         private void OpenCashTenderDialog()
         {
             if (ViewModel == null)
                 return;
+
+            decimal typedAmount = GetTerminalInputAmountOrZero();
 
             EnsurePaymentModeStarted();
 
@@ -445,16 +866,16 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.BalanceDue <= 0m)
             {
                 _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                ReturnFocusToTerminalInput();
                 return;
             }
 
-            decimal typedAmount = GetTerminalInputAmountOrZero();
             ViewModel.ClearTerminalInput();
 
             var tenderViewModel = new CashTenderDialogViewModel();
             tenderViewModel.Initialize(ViewModel.BalanceDue, typedAmount);
 
-            var dialog = new POS.Cashier.UI.Dialogs.CashTenderDialog(tenderViewModel)
+            var dialog = new CashTenderDialog(tenderViewModel)
             {
                 Owner = this
             };
@@ -468,12 +889,17 @@ namespace POS.Cashier.UI.Views
                     tenderViewModel.TenderedAmount,
                     tenderViewModel.ChangeAmount);
             }
+
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void OpenCardTenderDialog(string cardType)
         {
             if (ViewModel == null)
                 return;
+
+            decimal typedAmount = GetTerminalInputAmountOrZero();
 
             EnsurePaymentModeStarted();
 
@@ -483,16 +909,16 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.BalanceDue <= 0m)
             {
                 _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                ReturnFocusToTerminalInput();
                 return;
             }
 
-            decimal typedAmount = GetTerminalInputAmountOrZero();
             ViewModel.ClearTerminalInput();
 
             var tenderViewModel = new CardTenderDialogViewModel();
             tenderViewModel.Initialize(cardType, ViewModel.BalanceDue, typedAmount);
 
-            var dialog = new POS.Cashier.UI.Dialogs.CardTenderDialog(tenderViewModel)
+            var dialog = new CardTenderDialog(tenderViewModel)
             {
                 Owner = this
             };
@@ -507,12 +933,17 @@ namespace POS.Cashier.UI.Views
                     tenderViewModel.LastSixDigits,
                     tenderViewModel.ReferenceNo);
             }
+
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void OpenChequeTenderDialog()
         {
             if (ViewModel == null)
                 return;
+
+            decimal typedAmount = GetTerminalInputAmountOrZero();
 
             EnsurePaymentModeStarted();
 
@@ -522,16 +953,16 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.BalanceDue <= 0m)
             {
                 _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                ReturnFocusToTerminalInput();
                 return;
             }
 
-            decimal typedAmount = GetTerminalInputAmountOrZero();
             ViewModel.ClearTerminalInput();
 
             var tenderViewModel = new ChequeTenderDialogViewModel();
             tenderViewModel.Initialize(ViewModel.BalanceDue, typedAmount);
 
-            var dialog = new POS.Cashier.UI.Dialogs.ChequeTenderDialog(tenderViewModel)
+            var dialog = new ChequeTenderDialog(tenderViewModel)
             {
                 Owner = this
             };
@@ -546,6 +977,9 @@ namespace POS.Cashier.UI.Views
                     tenderViewModel.BankOrBranchText,
                     tenderViewModel.ChequeDate);
             }
+
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void OpenGiftVoucherTenderDialog()
@@ -561,6 +995,7 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.BalanceDue <= 0m)
             {
                 _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -570,6 +1005,7 @@ namespace POS.Cashier.UI.Views
                     "Gift voucher cannot be used to buy another gift voucher.",
                     "#EF4444");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -592,6 +1028,9 @@ namespace POS.Cashier.UI.Views
                     dialog.AmountToApply,
                     dialog.ForfeitedAmount);
             }
+
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void EnsurePaymentModeStarted()
@@ -605,6 +1044,8 @@ namespace POS.Cashier.UI.Views
 
         private bool? ShowTenderDialogWithDim(Window dialog)
         {
+            _isDialogOpen = true;
+
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
@@ -616,13 +1057,16 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
         private bool TryReadTerminalDecimal(
-    out decimal value,
-    string emptyMessage,
-    string invalidMessage)
+            out decimal value,
+            string emptyMessage,
+            string invalidMessage)
         {
             value = 0m;
 
@@ -708,16 +1152,20 @@ namespace POS.Cashier.UI.Views
                 return;
 
             await ViewModel.ConfirmSaleFromPaymentModeAsync();
+            ReturnFocusToTerminalInput();
         }
 
         private void CancelPaymentBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.CancelPaymentMode();
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void RemovePaymentBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.RemoveSelectedPaymentLine();
+            ReturnFocusToTerminalInput();
         }
 
         private void UnsupportedPaymentBtn_Click(object sender, RoutedEventArgs e)
@@ -734,7 +1182,7 @@ namespace POS.Cashier.UI.Views
             }
 
             if (buttonText.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase) ||
-    buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
+                buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
             {
                 OpenGiftVoucherTenderDialog();
                 return;
@@ -743,6 +1191,8 @@ namespace POS.Cashier.UI.Views
             _ = ViewModel.ShowNotificationAsync(
                 $"{buttonText} will be added after Cash/Card/Cheque workflow is stable.",
                 "#F59E0B");
+
+            ReturnFocusToTerminalInput();
         }
 
         private static string GetButtonText(object sender)
@@ -773,20 +1223,26 @@ namespace POS.Cashier.UI.Views
                 $"Cancel payment mode before {actionName}.",
                 "#F59E0B");
 
+            ReturnFocusToTerminalInput();
             return true;
         }
 
         private void SeekBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (BlockDialogIfPaymentMode("opening seek"))
+            if (BlockDialogIfPaymentMode("opening product search"))
                 return;
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
-                var seekDialog = new POS.Cashier.UI.Dialogs.ProductSeekDialog
+                var seekDialog = new ProductSeekDialog
                 {
                     Owner = this
                 };
@@ -797,6 +1253,9 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -807,19 +1266,7 @@ namespace POS.Cashier.UI.Views
 
         private void NewPriceBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel == null)
-                return;
-
-            if (!TryReadTerminalDecimal(
-                    out decimal newPrice,
-                    "Enter new price first.",
-                    "Enter a valid new price."))
-            {
-                return;
-            }
-
-            ViewModel.ClearTerminalInput();
-            ViewModel.ApplyNewPriceToSelected(newPrice);
+            NewPriceShortcut();
         }
 
         private void DiscountRuleBtn_Click(object sender, RoutedEventArgs e)
@@ -836,6 +1283,7 @@ namespace POS.Cashier.UI.Views
                     "Please select an item before applying discount rule.",
                     "#F59E0B");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -845,6 +1293,7 @@ namespace POS.Cashier.UI.Views
                     "Gift voucher sale line cannot use discount rule.",
                     "#EF4444");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -854,6 +1303,7 @@ namespace POS.Cashier.UI.Views
                     "Free item line cannot use discount rule.",
                     "#EF4444");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -863,8 +1313,14 @@ namespace POS.Cashier.UI.Views
                     "Discount rule cannot be applied after New Price.",
                     "#EF4444");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
@@ -877,7 +1333,7 @@ namespace POS.Cashier.UI.Views
                     ? ViewModel.CashierName
                     : string.Empty;
 
-                var dialog = new POS.Cashier.UI.Dialogs.DiscountRuleDialog(
+                var dialog = new DiscountRuleDialog(
                     ViewModel.SelectedCartItem,
                     customerType,
                     ViewModel.IsManagerModeActive,
@@ -894,6 +1350,8 @@ namespace POS.Cashier.UI.Views
                         ViewModel.SelectedCartItem,
                         dialog.Result);
                 }
+
+                ResetTerminalActionMode();
             }
             catch (Exception ex)
             {
@@ -905,6 +1363,9 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -930,17 +1391,50 @@ namespace POS.Cashier.UI.Views
             if (BlockDialogIfPaymentMode("suspend/recall"))
                 return;
 
-            new POS.Cashier.UI.Dialogs.HoldRecallDialog().ShowDialog();
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
+
+            try
+            {
+                new HoldRecallDialog
+                {
+                    Owner = this
+                }.ShowDialog();
+            }
+            finally
+            {
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
+            }
         }
 
         private void FloatCashBtn_Click(object sender, RoutedEventArgs e)
         {
             ViewModel?.AddFloatCommand.Execute(null);
+            ReturnFocusToTerminalInput();
         }
 
         private void StockInquiryBtn_Click(object sender, RoutedEventArgs e)
         {
-            new POS.Cashier.UI.Dialogs.StockInquiryDialog().ShowDialog();
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
+
+            try
+            {
+                new StockInquiryDialog
+                {
+                    Owner = this
+                }.ShowDialog();
+            }
+            finally
+            {
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
+            }
         }
 
         private void ReturnBtn_Click(object sender, RoutedEventArgs e)
@@ -948,16 +1442,33 @@ namespace POS.Cashier.UI.Views
             if (BlockDialogIfPaymentMode("processing return"))
                 return;
 
-            new POS.Cashier.UI.Dialogs.ReturnInvoiceDialog().ShowDialog();
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
+
+            try
+            {
+                new ReturnInvoiceDialog
+                {
+                    Owner = this
+                }.ShowDialog();
+            }
+            finally
+            {
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
+            }
         }
 
         private void ReportsBtn_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Reports dialog coming soon.");
+            ReturnFocusToTerminalInput();
         }
 
         // =========================================================
-        // CUSTOMER LOOKUP
+        // CUSTOMER
         // =========================================================
 
         private void OpenCustomerLookupDialog(string lookupMode = "All")
@@ -971,8 +1482,14 @@ namespace POS.Cashier.UI.Views
                     "Cancel payment mode before changing customer.",
                     "#F59E0B");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
@@ -987,14 +1504,17 @@ namespace POS.Cashier.UI.Views
                 bool? result = dialog.ShowDialog();
 
                 if (result == true && dialog.SelectedCustomer != null)
-                {
                     ViewModel.AttachCustomer(dialog.SelectedCustomer);
-                }
+
+                ResetTerminalActionMode();
             }
             finally
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -1009,8 +1529,14 @@ namespace POS.Cashier.UI.Views
                     "Cancel payment mode before changing customer.",
                     "#F59E0B");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
@@ -1025,23 +1551,24 @@ namespace POS.Cashier.UI.Views
                 bool? result = dialog.ShowDialog();
 
                 if (result == true && dialog.SelectedCustomer != null)
-                {
                     ViewModel.AttachCustomer(dialog.SelectedCustomer);
-                }
+
+                ResetTerminalActionMode();
             }
             finally
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
         private void DetachCustomerFromSale()
         {
-            if (ViewModel == null)
-                return;
-
-            ViewModel.DetachCustomer();
+            ViewModel?.DetachCustomer();
+            ReturnFocusToTerminalInput();
         }
 
         // =========================================================
@@ -1056,19 +1583,22 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.IsPaymentModeActive)
             {
                 _ = ViewModel.ShowNotificationAsync("Cancel payment mode before Paid In.", "#F59E0B");
+                ReturnFocusToTerminalInput();
                 return;
             }
 
-            if (decimal.TryParse(ViewModel.TerminalInput, out decimal amount) && amount > 0)
+            if (TryReadTerminalDecimal(
+                    out decimal amount,
+                    "Amount required before Paid In.",
+                    "Enter a valid Paid In amount.") &&
+                amount > 0m)
             {
                 ViewModel.ClearTerminalInput();
                 OpenCashMovementDialog("Paid In", amount, ViewModel);
             }
-            else
-            {
-                _ = ViewModel.ShowNotificationAsync("Amount required before Paid In.", "#F59E0B");
-                ViewModel.ClearTerminalInput();
-            }
+
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void PaidOutBtn_Click(object sender, RoutedEventArgs e)
@@ -1079,19 +1609,22 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.IsPaymentModeActive)
             {
                 _ = ViewModel.ShowNotificationAsync("Cancel payment mode before Paid Out.", "#F59E0B");
+                ReturnFocusToTerminalInput();
                 return;
             }
 
-            if (decimal.TryParse(ViewModel.TerminalInput, out decimal amount) && amount > 0)
+            if (TryReadTerminalDecimal(
+                    out decimal amount,
+                    "Amount required before Paid Out.",
+                    "Enter a valid Paid Out amount.") &&
+                amount > 0m)
             {
                 ViewModel.ClearTerminalInput();
                 OpenCashMovementDialog("Paid Out", amount, ViewModel);
             }
-            else
-            {
-                _ = ViewModel.ShowNotificationAsync("Amount required before Paid Out.", "#F59E0B");
-                ViewModel.ClearTerminalInput();
-            }
+
+            ResetTerminalActionMode();
+            ReturnFocusToTerminalInput();
         }
 
         private void OpenCashMovementDialog(string type, decimal amount, SalesViewModel viewModel)
@@ -1099,18 +1632,24 @@ namespace POS.Cashier.UI.Views
             if (viewModel.CurrentShiftId == 0)
             {
                 _ = viewModel.ShowNotificationAsync("Action blocked: No active shift found.", "#EF4444");
+                ReturnFocusToTerminalInput();
                 return;
             }
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
-                var cashVM = App.Services!.GetRequiredService<POS.Cashier.UI.ViewModels.CashMovementViewModel>();
+                var cashVM = App.Services!.GetRequiredService<CashMovementViewModel>();
                 cashVM.Initialize(type, amount, viewModel.CurrentShiftId, viewModel.CashierName);
 
-                var cashDialog = new POS.Cashier.UI.Dialogs.CashMovementDialogView(cashVM)
+                var cashDialog = new CashMovementDialogView(cashVM)
                 {
                     Owner = this
                 };
@@ -1121,6 +1660,9 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -1130,18 +1672,35 @@ namespace POS.Cashier.UI.Views
 
         private void ShiftMenuBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel != null)
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
+
+            try
             {
-                var shiftMenu = new POS.Cashier.UI.Dialogs.ShiftMenuView(ViewModel);
-                shiftMenu.ShowDialog();
+                if (ViewModel != null)
+                {
+                    var shiftMenu = new ShiftMenuView(ViewModel)
+                    {
+                        Owner = this
+                    };
+
+                    shiftMenu.ShowDialog();
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "System Error: Could not locate the Sales configuration.",
+                        "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
             }
-            else
+            finally
             {
-                MessageBox.Show(
-                    "System Error: Could not locate the Sales configuration.",
-                    "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -1157,6 +1716,11 @@ namespace POS.Cashier.UI.Views
 
             if (BlockDialogIfPaymentMode("registering customer"))
                 return;
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
@@ -1181,6 +1745,9 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -1191,6 +1758,11 @@ namespace POS.Cashier.UI.Views
 
             if (BlockDialogIfPaymentMode("selling gift voucher"))
                 return;
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
@@ -1213,6 +1785,8 @@ namespace POS.Cashier.UI.Views
                         dialog.VoucherAmount,
                         dialog.DisplayDescription);
                 }
+
+                ResetTerminalActionMode();
             }
             catch (Exception ex)
             {
@@ -1224,6 +1798,9 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -1232,12 +1809,17 @@ namespace POS.Cashier.UI.Views
             if (BlockDialogIfPaymentMode("opening express items"))
                 return;
 
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
+
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
-                var expressDialog = new POS.Cashier.UI.Dialogs.ExpressItemDialogView
+                var expressDialog = new ExpressItemDialogView
                 {
                     Owner = this
                 };
@@ -1248,8 +1830,12 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
+
         private void FreeBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel == null)
@@ -1261,6 +1847,7 @@ namespace POS.Cashier.UI.Views
                     "Cancel payment mode before free item action.",
                     "#F59E0B");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -1270,6 +1857,7 @@ namespace POS.Cashier.UI.Views
                     "Please select an item to make it free.",
                     "#F59E0B");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -1279,6 +1867,7 @@ namespace POS.Cashier.UI.Views
                     "Gift voucher sale line cannot be made free.",
                     "#EF4444");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -1288,8 +1877,14 @@ namespace POS.Cashier.UI.Views
                     "This item is already marked as free.",
                     "#F59E0B");
 
+                ReturnFocusToTerminalInput();
                 return;
             }
+
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
 
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
@@ -1309,6 +1904,8 @@ namespace POS.Cashier.UI.Views
                         ViewModel.SelectedCartItem,
                         dialog.Result);
                 }
+
+                ResetTerminalActionMode();
             }
             catch (Exception ex)
             {
@@ -1320,6 +1917,9 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -1335,13 +1935,17 @@ namespace POS.Cashier.UI.Views
             {
                 PerformLogOff();
             }
+            else
+            {
+                ReturnFocusToTerminalInput();
+            }
         }
 
         private void PerformLogOff()
         {
             _inactivityTimer.Stop();
 
-            var loginViewModel = App.Services?.GetService<POS.Cashier.UI.ViewModels.LoginViewModel>();
+            var loginViewModel = App.Services?.GetService<LoginViewModel>();
 
             if (loginViewModel != null)
             {
@@ -1353,7 +1957,7 @@ namespace POS.Cashier.UI.Views
                 };
             }
 
-            POS.Cashier.UI.Views.LoginView loginWindow = new POS.Cashier.UI.Views.LoginView
+            LoginView loginWindow = new LoginView
             {
                 DataContext = loginViewModel
             };
@@ -1366,19 +1970,32 @@ namespace POS.Cashier.UI.Views
 
         private void MoreBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not Button button)
-                return;
-
-            if (button.ContextMenu == null)
-                return;
-
-            button.ContextMenu.PlacementTarget = button;
-            button.ContextMenu.Placement = PlacementMode.Bottom;
-            button.ContextMenu.IsOpen = true;
+            OpenMoreMenu();
         }
+
+        private void OpenMoreMenu()
+        {
+            if (MoreBtn.ContextMenu == null)
+                return;
+
+            MoreBtn.ContextMenu.PlacementTarget = MoreBtn;
+            MoreBtn.ContextMenu.Placement = PlacementMode.Bottom;
+            MoreBtn.ContextMenu.IsOpen = true;
+
+            ReturnFocusToTerminalInput();
+        }
+
+        // =========================================================
+        // PRINT
+        // =========================================================
 
         private void PrintBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
+
             if (DimmingCurtain != null)
                 DimmingCurtain.Visibility = Visibility.Visible;
 
@@ -1410,6 +2027,9 @@ namespace POS.Cashier.UI.Views
             {
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
             }
         }
 
@@ -1418,6 +2038,8 @@ namespace POS.Cashier.UI.Views
             _ = ViewModel?.ShowNotificationAsync(
                 "Print Last Bill will be connected after receipt print service is finalized.",
                 "#F59E0B");
+
+            ReturnFocusToTerminalInput();
         }
 
         private async void PrintQuotationBtn_Click(object sender, RoutedEventArgs e)
@@ -1426,7 +2048,7 @@ namespace POS.Cashier.UI.Views
                 return;
 
             await ViewModel.PrintCurrentCartQuotationAsync();
+            ReturnFocusToTerminalInput();
         }
     }
-
 }

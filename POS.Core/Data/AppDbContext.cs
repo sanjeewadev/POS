@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Models.Terminals;
@@ -573,6 +573,20 @@ namespace POS.Core.Data
                     .HasMaxLength(50)
                     .UseCollation("NOCASE");
 
+                // Internal GRN/batch barcode used by the cashier for exact-batch sales.
+                // Average-cost GENERAL buckets should keep this blank.
+                entity.Property(b => b.InternalBatchBarcode)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty)
+                    .UseCollation("NOCASE");
+
+                entity.Property(b => b.BarcodePrintedCount)
+                    .HasDefaultValue(0);
+
+                entity.Property(b => b.LastBarcodePrintedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
                 entity.Property(b => b.CostPrice)
                     .HasColumnType("decimal(18,2)");
 
@@ -601,6 +615,12 @@ namespace POS.Core.Data
                 entity.HasIndex(b => b.ItemVariantId);
 
                 entity.HasIndex(b => b.BatchNo);
+
+                // Unique only when barcode is not blank.
+                // This allows non-batch GENERAL stock buckets without a GRN barcode.
+                entity.HasIndex(b => b.InternalBatchBarcode)
+                    .IsUnique()
+                    .HasFilter("InternalBatchBarcode IS NOT NULL AND InternalBatchBarcode <> ''");
 
                 entity.HasIndex(b => b.ExpiryDate);
 

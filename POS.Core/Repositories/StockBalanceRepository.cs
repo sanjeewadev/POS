@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,11 +10,13 @@ namespace POS.Core.Repositories
 {
     public class StockBalanceRepository
     {
+        private const string GeneralBatchNo = "GENERAL";
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         public StockBalanceRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
         public async Task<List<StockBalanceDto>> GetStockBalancesAsync(
@@ -24,9 +26,9 @@ namespace POS.Core.Repositories
             bool hideZeroStock = false,
             bool showNegativeOnly = false)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            string search = (searchText ?? string.Empty).Trim();
+            string search = NormalizeText(searchText);
 
             var query = context.ItemVariants
                 .Include(v => v.ItemParent)
@@ -42,20 +44,19 @@ namespace POS.Core.Repositories
                     !v.ItemParent.IsDeactivated)
                 .AsQueryable();
 
-            // =========================================================
-            // FILTERS
-            // =========================================================
-
             if (!string.IsNullOrWhiteSpace(search))
             {
                 string like = $"%{search}%";
 
                 query = query.Where(v =>
                     EF.Functions.Like(v.SkuCode, like) ||
-                    EF.Functions.Like(v.Barcode, like) ||
+                    EF.Functions.Like(v.Barcode ?? string.Empty, like) ||
                     EF.Functions.Like(v.ItemParent.ItemCode, like) ||
                     EF.Functions.Like(v.ItemParent.ItemName, like) ||
-                    EF.Functions.Like(v.ItemParent.PrintName, like));
+                    EF.Functions.Like(v.ItemParent.PrintName, like) ||
+                    v.ItemBatches.Any(b =>
+                        EF.Functions.Like(b.BatchNo, like) ||
+                        EF.Functions.Like(b.InternalBatchBarcode ?? string.Empty, like)));
             }
 
             if (categoryId.HasValue && categoryId.Value > 0)
@@ -68,63 +69,93 @@ namespace POS.Core.Repositories
                 query = query.Where(v => v.ItemSuppliers.Any(s => s.SupplierId == supplierId.Value));
             }
 
-            var rawData = await query
+            var variants = await query
                 .OrderBy(v => v.ItemParent.ItemCode)
                 .ThenBy(v => v.VariantDescription)
+                .ThenBy(v => v.SkuCode)
                 .ToListAsync();
 
             var result = new List<StockBalanceDto>();
 
-            foreach (var variant in rawData)
+            foreach (var variant in variants)
             {
-                var activeBatches = variant.ItemBatches
-                    .Where(b => !b.IsDeactivated)
-                    .OrderBy(b => b.ExpiryDate ?? DateTime.MaxValue)
-                    .ThenBy(b => b.BatchNo)
-                    .ToList();
+                bool hasBatchTracking = variant.ItemParent?.HasBatchTracking ?? true;
+                bool hasExpiryTracking =
+                    (variant.ItemParent?.HasExpiryTracking ?? false) ||
+                    (variant.ItemParent?.HasBatchExpiry ?? false);
 
-                decimal totalQty = activeBatches.Sum(b => b.CurrentStock);
+                var stockRows = GetStockRowsForVariant(variant.ItemBatches, hasBatchTracking);
 
-                if (showNegativeOnly && totalQty >= 0)
+                decimal totalQty = stockRows.Sum(b => b.CurrentStock);
+
+                if (showNegativeOnly && totalQty >= 0m)
                     continue;
 
-                if (hideZeroStock && totalQty == 0)
+                if (hideZeroStock && totalQty == 0m)
                     continue;
 
-                decimal totalCostValue = activeBatches.Sum(b => b.CurrentStock * b.CostPrice);
-                decimal totalRetailValue = activeBatches.Sum(b => b.CurrentStock * b.RetailPrice);
-                decimal totalWholesaleValue = activeBatches.Sum(b => b.CurrentStock * b.WholesalePrice);
+                decimal totalCostValue = CalculateTotalCostValue(
+                    stockRows,
+                    hasBatchTracking,
+                    totalQty,
+                    variant.AverageCost,
+                    variant.CostPrice);
 
-                var primarySupplier = variant.ItemSuppliers
+                decimal totalRetailValue = CalculateTotalRetailValue(
+                    stockRows,
+                    totalQty,
+                    variant.RetailPrice);
+
+                decimal totalWholesaleValue = CalculateTotalWholesaleValue(
+                    stockRows,
+                    totalQty,
+                    variant.WholesalePrice);
+
+                decimal unitCost = CalculateUnitValue(
+                    totalCostValue,
+                    totalQty,
+                    variant.AverageCost > 0m ? variant.AverageCost : variant.CostPrice);
+
+                decimal unitRetail = CalculateUnitValue(
+                    totalRetailValue,
+                    totalQty,
+                    variant.RetailPrice);
+
+                decimal unitWholesale = CalculateUnitValue(
+                    totalWholesaleValue,
+                    totalQty,
+                    variant.WholesalePrice);
+
+                var primarySupplier = variant.ItemSuppliers?
                     .Where(s => s.Supplier != null)
                     .OrderByDescending(s => s.IsPrimary)
-                    .ThenBy(s => s.Supplier.SupplierName)
+                    .ThenBy(s => s.Supplier!.SupplierName)
                     .FirstOrDefault();
 
-                bool hasExpiredBatch = activeBatches.Any(b =>
-                    b.CurrentStock > 0 &&
+                bool hasExpiredBatch = hasBatchTracking && stockRows.Any(b =>
+                    b.CurrentStock > 0m &&
                     b.ExpiryDate.HasValue &&
-                    b.ExpiryDate.Value.Date < DateTime.Now.Date);
+                    b.ExpiryDate.Value.Date < DateTime.Today);
 
-                bool hasExpiringSoonBatch = activeBatches.Any(b =>
-                    b.CurrentStock > 0 &&
+                bool hasExpiringSoonBatch = hasBatchTracking && stockRows.Any(b =>
+                    b.CurrentStock > 0m &&
                     b.ExpiryDate.HasValue &&
-                    b.ExpiryDate.Value.Date >= DateTime.Now.Date &&
-                    b.ExpiryDate.Value.Date <= DateTime.Now.Date.AddDays(30));
+                    b.ExpiryDate.Value.Date >= DateTime.Today &&
+                    b.ExpiryDate.Value.Date <= DateTime.Today.AddDays(30));
 
                 var dto = new StockBalanceDto
                 {
+                    ParentId = variant.ItemParentId,
                     VariantId = variant.Id,
 
                     ItemCode = variant.ItemParent?.ItemCode ?? string.Empty,
                     SkuCode = variant.SkuCode,
-                    Barcode = variant.Barcode,
+                    Barcode = variant.Barcode ?? string.Empty,
 
+                    Description = variant.ItemParent?.ItemName ?? string.Empty,
                     VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
                         ? "Standard"
                         : variant.VariantDescription,
-
-                    Description = variant.ItemParent?.ItemName ?? string.Empty,
 
                     Uom = variant.ItemParent?.UnitOfMeasure?.UomCode
                         ?? variant.ItemParent?.BaseUom
@@ -136,51 +167,84 @@ namespace POS.Core.Repositories
                         ?? primarySupplier?.Supplier?.CompanyName
                         ?? string.Empty,
 
+                    HasBatchTracking = hasBatchTracking,
+                    HasExpiryTracking = hasBatchTracking && hasExpiryTracking,
+
                     TotalQtyOnHand = totalQty,
 
-                    UnitCost = variant.AverageCost > 0
-                        ? variant.AverageCost
-                        : variant.CostPrice,
-
-                    UnitRetail = variant.RetailPrice,
-                    UnitWholesale = variant.WholesalePrice,
+                    UnitCost = Math.Round(unitCost, 2),
+                    UnitRetail = Math.Round(unitRetail, 2),
+                    UnitWholesale = Math.Round(unitWholesale, 2),
 
                     TotalCostValue = Math.Round(totalCostValue, 2),
                     TotalRetailValue = Math.Round(totalRetailValue, 2),
                     TotalWholesaleValue = Math.Round(totalWholesaleValue, 2),
 
-                    BatchCount = activeBatches.Count,
+                    BatchCount = hasBatchTracking
+                        ? stockRows.Count
+                        : 0,
+
+                    StockBucketCount = hasBatchTracking
+                        ? stockRows.Count
+                        : stockRows.Count,
 
                     HasExpiredBatch = hasExpiredBatch,
                     HasExpiringSoonBatch = hasExpiringSoonBatch,
 
-                    StockStatus = BuildStockStatus(totalQty, hasExpiredBatch, hasExpiringSoonBatch),
+                    StockStatus = BuildStockStatus(
+                        totalQty,
+                        hasBatchTracking,
+                        hasExpiredBatch,
+                        hasExpiringSoonBatch),
 
-                    EarliestExpiryDate = activeBatches
-                        .Where(b => b.CurrentStock > 0 && b.ExpiryDate.HasValue)
-                        .Select(b => b.ExpiryDate)
-                        .OrderBy(d => d)
-                        .FirstOrDefault(),
+                    EarliestExpiryDate = hasBatchTracking
+                        ? stockRows
+                            .Where(b => b.CurrentStock > 0m && b.ExpiryDate.HasValue)
+                            .Select(b => b.ExpiryDate)
+                            .OrderBy(d => d)
+                            .FirstOrDefault()
+                        : null,
 
-                    LastReceivedDate = activeBatches
-                        .Where(b => b.CurrentStock != 0)
+                    LastReceivedDate = stockRows
+                        .Where(b => b.CurrentStock != 0m)
                         .Select(b => (DateTime?)b.ReceivedDate)
                         .OrderByDescending(d => d)
                         .FirstOrDefault(),
 
-                    Batches = activeBatches.Select(b => new ItemBatchDto
-                    {
-                        BatchId = b.Id,
-                        ItemVariantId = b.ItemVariantId,
-                        BatchNo = b.BatchNo,
-                        ExpiryDate = b.ExpiryDate,
-                        ReceivedDate = b.ReceivedDate,
-                        CurrentStock = b.CurrentStock,
-                        CostPrice = b.CostPrice,
-                        RetailPrice = b.RetailPrice,
-                        WholesalePrice = b.WholesalePrice,
-                        IsDeactivated = b.IsDeactivated
-                    }).ToList()
+                    Batches = stockRows
+                        .Select(b => new ItemBatchDto
+                        {
+                            BatchId = b.Id,
+                            ItemVariantId = b.ItemVariantId,
+                            BatchNo = string.IsNullOrWhiteSpace(b.BatchNo)
+                                ? (hasBatchTracking ? string.Empty : GeneralBatchNo)
+                                : b.BatchNo,
+                            InternalBatchBarcode = hasBatchTracking
+                                ? b.InternalBatchBarcode ?? string.Empty
+                                : string.Empty,
+                            IsGeneralStockBucket = !hasBatchTracking || IsGeneralBatch(b.BatchNo),
+                            ExpiryDate = hasBatchTracking ? b.ExpiryDate : null,
+                            ReceivedDate = b.ReceivedDate,
+                            CurrentStock = b.CurrentStock,
+                            CostPrice = hasBatchTracking
+                                ? b.CostPrice
+                                : unitCost,
+                            RetailPrice = b.RetailPrice > 0m
+                                ? b.RetailPrice
+                                : variant.RetailPrice,
+                            WholesalePrice = b.WholesalePrice > 0m
+                                ? b.WholesalePrice
+                                : variant.WholesalePrice,
+                            IsDeactivated = b.IsDeactivated,
+                            BarcodePrintedCount = hasBatchTracking ? b.BarcodePrintedCount : 0,
+                            LastBarcodePrintedAt = hasBatchTracking ? b.LastBarcodePrintedAt : null,
+                            LastBarcodePrintedBy = hasBatchTracking ? b.LastBarcodePrintedBy ?? string.Empty : string.Empty
+                        })
+                        .OrderBy(b => b.IsGeneralStockBucket ? 0 : 1)
+                        .ThenBy(b => b.ExpiryDate ?? DateTime.MaxValue)
+                        .ThenBy(b => b.ReceivedDate)
+                        .ThenBy(b => b.BatchNo)
+                        .ToList()
                 };
 
                 result.Add(dto);
@@ -189,24 +253,143 @@ namespace POS.Core.Repositories
             return result;
         }
 
+        private static List<POS.Core.Models.ItemBatch> GetStockRowsForVariant(
+            IEnumerable<POS.Core.Models.ItemBatch>? sourceBatches,
+            bool hasBatchTracking)
+        {
+            var batches = sourceBatches?
+                .Where(b => !b.IsDeactivated)
+                .ToList() ?? new List<POS.Core.Models.ItemBatch>();
+
+            if (!batches.Any())
+                return batches;
+
+            if (hasBatchTracking)
+            {
+                return batches
+                    .Where(b => !IsGeneralBatch(b.BatchNo))
+                    .OrderBy(b => b.ExpiryDate ?? DateTime.MaxValue)
+                    .ThenBy(b => b.ReceivedDate)
+                    .ThenBy(b => b.BatchNo)
+                    .ToList();
+            }
+
+            return batches
+                .OrderByDescending(b => IsGeneralBatch(b.BatchNo))
+                .ThenBy(b => b.ReceivedDate)
+                .ThenBy(b => b.Id)
+                .ToList();
+        }
+
+        private static decimal CalculateTotalCostValue(
+            List<POS.Core.Models.ItemBatch> stockRows,
+            bool hasBatchTracking,
+            decimal totalQty,
+            decimal averageCost,
+            decimal fallbackCost)
+        {
+            if (!stockRows.Any())
+                return totalQty * GetBestCost(averageCost, fallbackCost);
+
+            if (!hasBatchTracking)
+            {
+                decimal cost = GetBestAverageCost(stockRows, averageCost, fallbackCost);
+                return totalQty * cost;
+            }
+
+            return stockRows.Sum(b => b.CurrentStock * b.CostPrice);
+        }
+
+        private static decimal CalculateTotalRetailValue(
+            List<POS.Core.Models.ItemBatch> stockRows,
+            decimal totalQty,
+            decimal fallbackRetail)
+        {
+            if (!stockRows.Any())
+                return totalQty * fallbackRetail;
+
+            return stockRows.Sum(b => b.CurrentStock * (b.RetailPrice > 0m ? b.RetailPrice : fallbackRetail));
+        }
+
+        private static decimal CalculateTotalWholesaleValue(
+            List<POS.Core.Models.ItemBatch> stockRows,
+            decimal totalQty,
+            decimal fallbackWholesale)
+        {
+            if (!stockRows.Any())
+                return totalQty * fallbackWholesale;
+
+            return stockRows.Sum(b => b.CurrentStock * (b.WholesalePrice > 0m ? b.WholesalePrice : fallbackWholesale));
+        }
+
+        private static decimal CalculateUnitValue(
+            decimal totalValue,
+            decimal totalQty,
+            decimal fallbackUnitValue)
+        {
+            if (totalQty == 0m)
+                return fallbackUnitValue;
+
+            return totalValue / totalQty;
+        }
+
+        private static decimal GetBestAverageCost(
+            List<POS.Core.Models.ItemBatch> stockRows,
+            decimal averageCost,
+            decimal fallbackCost)
+        {
+            if (averageCost > 0m)
+                return averageCost;
+
+            decimal totalQty = stockRows.Sum(b => b.CurrentStock);
+            decimal totalValue = stockRows.Sum(b => b.CurrentStock * b.CostPrice);
+
+            if (totalQty != 0m && totalValue != 0m)
+                return totalValue / totalQty;
+
+            return GetBestCost(averageCost, fallbackCost);
+        }
+
+        private static decimal GetBestCost(decimal averageCost, decimal fallbackCost)
+        {
+            if (averageCost > 0m)
+                return averageCost;
+
+            return fallbackCost;
+        }
+
         private static string BuildStockStatus(
             decimal totalQty,
+            bool hasBatchTracking,
             bool hasExpiredBatch,
             bool hasExpiringSoonBatch)
         {
-            if (totalQty < 0)
+            if (totalQty < 0m)
                 return "Negative Stock";
 
-            if (totalQty == 0)
+            if (totalQty == 0m)
                 return "Zero Stock";
 
-            if (hasExpiredBatch)
+            if (hasBatchTracking && hasExpiredBatch)
                 return "Expired Batch";
 
-            if (hasExpiringSoonBatch)
+            if (hasBatchTracking && hasExpiringSoonBatch)
                 return "Expiring Soon";
 
             return "In Stock";
+        }
+
+        private static bool IsGeneralBatch(string? batchNo)
+        {
+            return string.Equals(
+                NormalizeText(batchNo),
+                GeneralBatchNo,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            return (value ?? string.Empty).Trim();
         }
     }
 }

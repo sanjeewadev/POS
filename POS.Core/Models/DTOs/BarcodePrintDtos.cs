@@ -1,7 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 
 namespace POS.Core.Models.DTOs
 {
@@ -13,20 +12,50 @@ namespace POS.Core.Models.DTOs
 
         public string SupplierInvoiceNo { get; set; } = string.Empty;
 
+        public string SupplierName { get; set; } = string.Empty;
+
         public DateTime ReceivedDate { get; set; }
 
-        public string DisplayText => $"{GrnNumber} | {SupplierInvoiceNo} | {ReceivedDate:d}";
+        public int BatchLabelLineCount { get; set; }
+
+        public int TotalLabelsSuggested { get; set; }
+
+        public string DisplayText
+        {
+            get
+            {
+                string supplier = string.IsNullOrWhiteSpace(SupplierName)
+                    ? "Supplier"
+                    : SupplierName.Trim();
+
+                return $"{GrnNumber} | {supplier} | Inv: {SupplierInvoiceNo} | {ReceivedDate:yyyy-MM-dd}";
+            }
+        }
     }
 
     public partial class BarcodePrintQueueItemDto : ObservableObject
     {
+        // =========================================================
+        // SOURCE / IDENTITY
+        // =========================================================
+
         public int ItemVariantId { get; set; }
+
+        public int? ItemBatchId { get; set; }
 
         public int? GrnHeaderId { get; set; }
 
         public int? GrnLineId { get; set; }
 
         public string SourceDocument { get; set; } = string.Empty;
+
+        public string SourceType { get; set; } = "MANUAL";
+
+        public bool IsBatchLabel { get; set; }
+
+        // =========================================================
+        // ITEM SNAPSHOT
+        // =========================================================
 
         public string ItemCode { get; set; } = string.Empty;
 
@@ -36,9 +65,50 @@ namespace POS.Core.Models.DTOs
 
         public string VariantDescription { get; set; } = string.Empty;
 
+        public string Uom { get; set; } = "PCS";
+
+        // =========================================================
+        // BATCH SNAPSHOT
+        // =========================================================
+
+        public string BatchNo { get; set; } = string.Empty;
+
+        public DateTime? ExpiryDate { get; set; }
+
+        public DateTime? ReceivedDate { get; set; }
+
+        public decimal ReceivedQty { get; set; }
+
+        public decimal AvailableQty { get; set; }
+
+        // =========================================================
+        // BARCODE / PRICE SNAPSHOT
+        // =========================================================
+
         public string Barcode { get; set; } = string.Empty;
 
+        public string InternalBatchBarcode { get; set; } = string.Empty;
+
         public decimal Price { get; set; }
+
+        public decimal CostPrice { get; set; }
+
+        // =========================================================
+        // PRINT AUDIT SNAPSHOT
+        // =========================================================
+
+        public int BarcodePrintedCount { get; set; }
+
+        public DateTime? LastBarcodePrintedAt { get; set; }
+
+        public string LastBarcodePrintedBy { get; set; } = string.Empty;
+
+        // =========================================================
+        // UI STATE
+        // =========================================================
+
+        [ObservableProperty]
+        private bool _isSelected = true;
 
         [ObservableProperty]
         private int _printQuantity = 1;
@@ -57,12 +127,65 @@ namespace POS.Core.Models.DTOs
             }
         }
 
-        public bool HasValidBarcode => !string.IsNullOrWhiteSpace(Barcode);
+        public string BatchDisplayText =>
+            string.IsNullOrWhiteSpace(BatchNo)
+                ? "-"
+                : BatchNo.Trim();
+
+        public string ExpiryDisplayText =>
+            ExpiryDate.HasValue
+                ? ExpiryDate.Value.ToString("yyyy-MM-dd")
+                : "-";
+
+        public string ReceivedQtyDisplayText =>
+            ReceivedQty.ToString("0.###");
+
+        public string AvailableQtyDisplayText =>
+            AvailableQty.ToString("0.###");
+
+        public string PrintedStatusText
+        {
+            get
+            {
+                if (BarcodePrintedCount <= 0)
+                    return "Not Printed";
+
+                if (LastBarcodePrintedAt.HasValue)
+                    return $"Printed {BarcodePrintedCount} / {LastBarcodePrintedAt:yyyy-MM-dd HH:mm}";
+
+                return $"Printed {BarcodePrintedCount}";
+            }
+        }
+
+        public string LabelTypeText =>
+            IsBatchLabel ? "GRN Batch" : "Item";
+
+        public string EffectiveBarcode
+        {
+            get
+            {
+                if (IsBatchLabel && !string.IsNullOrWhiteSpace(InternalBatchBarcode))
+                    return InternalBatchBarcode.Trim();
+
+                return (Barcode ?? string.Empty).Trim();
+            }
+        }
+
+        public bool HasValidBarcode =>
+            !string.IsNullOrWhiteSpace(EffectiveBarcode);
 
         partial void OnPrintQuantityChanged(int value)
         {
             if (value < 0)
+            {
                 PrintQuantity = 0;
+                return;
+            }
+
+            if (value > 5000)
+            {
+                PrintQuantity = 5000;
+            }
         }
     }
 
@@ -94,6 +217,12 @@ namespace POS.Core.Models.DTOs
 
         [ObservableProperty]
         private bool _printBarcodeText = true;
+
+        [ObservableProperty]
+        private bool _printBatchNo = true;
+
+        [ObservableProperty]
+        private bool _printExpiryDate = true;
 
         public List<string> ValidateForPrint()
         {

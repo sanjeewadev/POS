@@ -1,4 +1,4 @@
-﻿using POS.Core.Models;
+using POS.Core.Models;
 using POS.Core.Services;
 using System;
 using System.Collections.Generic;
@@ -91,7 +91,7 @@ namespace POS.BackOffice.UI.Services
                             Background = WpfBrushes.White
                         };
 
-                        var labelVisual = CreateLabelVisual(item, settings, pageSize);
+                        UIElement labelVisual = CreateLabelVisual(item, settings, pageSize);
 
                         fixedPage.Children.Add(labelVisual);
 
@@ -141,8 +141,6 @@ namespace POS.BackOffice.UI.Services
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            int row = 0;
-
             if (settings.PrintStoreName)
             {
                 var storeText = new TextBlock
@@ -153,28 +151,19 @@ namespace POS.BackOffice.UI.Services
                     FontFamily = new WpfFontFamily("Arial"),
                     TextAlignment = TextAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    Margin = new Thickness(0, 0, 0, 1)
                 };
 
-                Grid.SetRow(storeText, row++);
+                Grid.SetRow(storeText, 0);
                 grid.Children.Add(storeText);
             }
 
             if (settings.PrintItemName)
             {
-                var itemText = new TextBlock
-                {
-                    Text = SafeTrim(item.ItemName, 42),
-                    FontSize = GetItemFontSize(pageSize.Height),
-                    FontFamily = new WpfFontFamily("Arial"),
-                    TextAlignment = TextAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    Margin = new Thickness(0, 1, 0, 1)
-                };
-
-                Grid.SetRow(itemText, row++);
-                grid.Children.Add(itemText);
+                var itemTextPanel = CreateItemTextPanel(item, pageSize);
+                Grid.SetRow(itemTextPanel, 1);
+                grid.Children.Add(itemTextPanel);
             }
 
             var barcodePanel = CreateBarcodePanel(item, pageSize);
@@ -186,6 +175,58 @@ namespace POS.BackOffice.UI.Services
             grid.Children.Add(footer);
 
             return outer;
+        }
+
+        private static UIElement CreateItemTextPanel(
+            BarcodePrintJobItem item,
+            WpfSize pageSize)
+        {
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 1)
+            };
+
+            var parts = SplitPrintName(item.ItemName);
+
+            if (parts.Count == 0)
+                parts.Add(string.Empty);
+
+            string itemName = SafeTrim(parts[0], 42);
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = itemName,
+                FontSize = GetItemFontSize(pageSize.Height),
+                FontWeight = FontWeights.Bold,
+                FontFamily = new WpfFontFamily("Arial"),
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+
+            if (parts.Count > 1)
+            {
+                string detailLine = SafeTrim(string.Join("  ", parts.Skip(1)), 48);
+
+                if (!string.IsNullOrWhiteSpace(detailLine))
+                {
+                    panel.Children.Add(new TextBlock
+                    {
+                        Text = detailLine,
+                        FontSize = GetDetailFontSize(pageSize.Height),
+                        FontFamily = new WpfFontFamily("Arial"),
+                        TextAlignment = TextAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        Margin = new Thickness(0, 0, 0, 1)
+                    });
+                }
+            }
+
+            return panel;
         }
 
         private static UIElement CreateBarcodePanel(
@@ -204,7 +245,7 @@ namespace POS.BackOffice.UI.Services
                 BarcodeFormat format = DetectBarcodeFormat(item.Barcode);
 
                 int barcodeWidth = Math.Max(80, (int)(pageSize.Width * 0.90));
-                int barcodeHeight = Math.Max(24, (int)(pageSize.Height * 0.38));
+                int barcodeHeight = Math.Max(24, (int)(pageSize.Height * 0.36));
 
                 var writer = new BarcodeWriter
                 {
@@ -238,7 +279,7 @@ namespace POS.BackOffice.UI.Services
                         Stretch = Stretch.Uniform,
                         HorizontalAlignment = HorizontalAlignment.Center,
                         MaxWidth = pageSize.Width * 0.92,
-                        MaxHeight = pageSize.Height * 0.45
+                        MaxHeight = pageSize.Height * 0.43
                     };
 
                     panel.Children.Add(image);
@@ -292,7 +333,7 @@ namespace POS.BackOffice.UI.Services
             {
                 var codeText = new TextBlock
                 {
-                    Text = SafeTrim(item.ItemCode, 18),
+                    Text = SafeTrim(item.ItemCode, 20),
                     FontSize = GetFooterFontSize(pageSize.Height),
                     FontFamily = new WpfFontFamily("Arial"),
                     HorizontalAlignment = HorizontalAlignment.Left,
@@ -498,12 +539,31 @@ namespace POS.BackOffice.UI.Services
 
         private static string SafeTrim(string? value, int maxLength)
         {
+            string text = (value ?? string.Empty)
+                .Replace("\r", " ")
+                .Replace("\n", " ")
+                .Trim();
+
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            return text.Length <= maxLength
+                ? text
+                : text.Substring(0, maxLength);
+        }
+
+        private static List<string> SplitPrintName(string? value)
+        {
             string text = (value ?? string.Empty).Trim();
 
-            if (text.Length <= maxLength)
-                return text;
+            if (string.IsNullOrWhiteSpace(text))
+                return new List<string>();
 
-            return text.Substring(0, maxLength);
+            return text
+                .Split(new[] { " | " }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
         }
 
         private static double GetStoreFontSize(double labelHeight)
@@ -513,7 +573,12 @@ namespace POS.BackOffice.UI.Services
 
         private static double GetItemFontSize(double labelHeight)
         {
-            return labelHeight < 80 ? 6.5 : 8;
+            return labelHeight < 80 ? 6.2 : 8;
+        }
+
+        private static double GetDetailFontSize(double labelHeight)
+        {
+            return labelHeight < 80 ? 5.8 : 7.2;
         }
 
         private static double GetBarcodeTextFontSize(double labelHeight)

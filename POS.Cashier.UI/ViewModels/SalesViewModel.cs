@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -28,55 +28,21 @@ namespace POS.Cashier.UI.ViewModels
         public ObservableCollection<CartItem> Cart { get; } = new();
         public ObservableCollection<PaymentLine> PaymentLines { get; } = new();
 
-        // =========================================================
-        // CART / TOTALS
-        // =========================================================
+        [ObservableProperty] private CartItem? _selectedCartItem;
+        [ObservableProperty] private decimal _grossValue = 0.00m;
+        [ObservableProperty] private decimal _netValue = 0.00m;
+        [ObservableProperty] private decimal _totalDiscount = 0.00m;
+        [ObservableProperty] private int _totalItems = 0;
+        [ObservableProperty] private decimal _totalPieces = 0m;
 
-        [ObservableProperty]
-        private CartItem? _selectedCartItem;
-
-        [ObservableProperty]
-        private decimal _grossValue = 0.00m;
-
-        [ObservableProperty]
-        private decimal _netValue = 0.00m;
-
-        [ObservableProperty]
-        private decimal _totalDiscount = 0.00m;
-
-        [ObservableProperty]
-        private int _totalItems = 0;
-
-        [ObservableProperty]
-        private decimal _totalPieces = 0m;
-
-        // =========================================================
-        // PAYMENT MODE
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _isPaymentModeActive = false;
-
-        [ObservableProperty]
-        private PaymentLine? _selectedPaymentLine;
-
-        [ObservableProperty]
-        private decimal _paidTotal = 0m;
-
-        [ObservableProperty]
-        private decimal _balanceDue = 0m;
-
-        [ObservableProperty]
-        private decimal _cashTenderedTotal = 0m;
-
-        [ObservableProperty]
-        private decimal _balanceReturned = 0m;
-
-        [ObservableProperty]
-        private string _paymentStatusText = "Sale mode active.";
-
-        [ObservableProperty]
-        private string _paymentStatusColor = "#003366";
+        [ObservableProperty] private bool _isPaymentModeActive = false;
+        [ObservableProperty] private PaymentLine? _selectedPaymentLine;
+        [ObservableProperty] private decimal _paidTotal = 0m;
+        [ObservableProperty] private decimal _balanceDue = 0m;
+        [ObservableProperty] private decimal _cashTenderedTotal = 0m;
+        [ObservableProperty] private decimal _balanceReturned = 0m;
+        [ObservableProperty] private string _paymentStatusText = "Sale mode active.";
+        [ObservableProperty] private string _paymentStatusColor = "#003366";
 
         public bool CanConfirmPaymentSale =>
             IsPaymentModeActive &&
@@ -84,73 +50,26 @@ namespace POS.Cashier.UI.ViewModels
             BalanceDue <= 0m &&
             PaymentLines.Any();
 
-        // =========================================================
-        // HEADER / SESSION
-        // =========================================================
+        [ObservableProperty] private string _terminalNo = "01";
+        [ObservableProperty] private string _cashierName = "Pending...";
+        [ObservableProperty] private string _invoiceNo = "PENDING...";
+        [ObservableProperty] private DateTime _currentDate = DateTime.Now;
 
-        [ObservableProperty]
-        private string _terminalNo = "01";
+        [ObservableProperty] private string _terminalInput = string.Empty;
+        [ObservableProperty] private string _terminalInputMode = "SCAN / QTY";
 
-        [ObservableProperty]
-        private string _cashierName = "Pending...";
+        [ObservableProperty] private string _customerName = "Walk-In";
+        [ObservableProperty] private int _loyaltyPoints = 0;
+        [ObservableProperty] private bool _isWholesaleMode = false;
+        [ObservableProperty] private CustomerSearchDto? _activeB2BCustomer;
 
-        [ObservableProperty]
-        private string _invoiceNo = "PENDING...";
+        [ObservableProperty] private bool _isManagerModeActive = false;
+        [ObservableProperty] private string _securityStatusMode = "CASHIER MODE";
+        [ObservableProperty] private bool _isTerminalLocked = false;
 
-        [ObservableProperty]
-        private DateTime _currentDate = DateTime.Now;
-
-        // =========================================================
-        // FAST TERMINAL INPUT BUFFER
-        // =========================================================
-
-        [ObservableProperty]
-        private string _terminalInput = string.Empty;
-
-        [ObservableProperty]
-        private string _terminalInputMode = "SCAN / QTY";
-
-        // =========================================================
-        // CUSTOMER / WHOLESALE / LOYALTY
-        // =========================================================
-
-        [ObservableProperty]
-        private string _customerName = "Walk-In";
-
-        [ObservableProperty]
-        private int _loyaltyPoints = 0;
-
-        [ObservableProperty]
-        private bool _isWholesaleMode = false;
-
-        [ObservableProperty]
-        private CustomerSearchDto? _activeB2BCustomer;
-
-        // =========================================================
-        // SECURITY
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _isManagerModeActive = false;
-
-        [ObservableProperty]
-        private string _securityStatusMode = "CASHIER MODE";
-
-        [ObservableProperty]
-        private bool _isTerminalLocked = false;
-
-        // =========================================================
-        // NOTIFICATION BAR
-        // =========================================================
-
-        [ObservableProperty]
-        private string _notificationMessage = string.Empty;
-
-        [ObservableProperty]
-        private string _notificationColor = "#10B981";
-
-        [ObservableProperty]
-        private bool _isNotificationVisible = false;
+        [ObservableProperty] private string _notificationMessage = string.Empty;
+        [ObservableProperty] private string _notificationColor = "#10B981";
+        [ObservableProperty] private bool _isNotificationVisible = false;
 
         private int _currentShiftId = 0;
         public int CurrentShiftId => _currentShiftId;
@@ -207,7 +126,6 @@ namespace POS.Cashier.UI.ViewModels
 
             WeakReferenceMessenger.Default.Register<AddToCartMessage>(this, (r, m) =>
             {
-                System.Media.SystemSounds.Beep.Play();
                 _ = AddToCartFromMessageAsync(m.Value);
             });
 
@@ -225,12 +143,12 @@ namespace POS.Cashier.UI.ViewModels
                 e.PropertyName == nameof(CartItem.ManualDiscountAmount) ||
                 e.PropertyName == nameof(CartItem.DiscountMode) ||
                 e.PropertyName == nameof(CartItem.IsManualDiscount) ||
-e.PropertyName == nameof(CartItem.IsPriceOverridden) ||
-e.PropertyName == nameof(CartItem.PriceOverrideAmount) ||
-e.PropertyName == nameof(CartItem.IsRuleDiscount) ||
-e.PropertyName == nameof(CartItem.DiscountRuleId) ||
-e.PropertyName == nameof(CartItem.DiscountReasonId) ||
-e.PropertyName == nameof(CartItem.LineAmount) ||
+                e.PropertyName == nameof(CartItem.IsPriceOverridden) ||
+                e.PropertyName == nameof(CartItem.PriceOverrideAmount) ||
+                e.PropertyName == nameof(CartItem.IsRuleDiscount) ||
+                e.PropertyName == nameof(CartItem.DiscountRuleId) ||
+                e.PropertyName == nameof(CartItem.DiscountReasonId) ||
+                e.PropertyName == nameof(CartItem.LineAmount) ||
                 e.PropertyName == nameof(CartItem.AvailableBatchStock) ||
                 e.PropertyName == nameof(CartItem.IsFreeItem))
             {
@@ -250,10 +168,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 RecalculatePaymentTotals();
             }
         }
-
-        // =========================================================
-        // NOTIFICATION
-        // =========================================================
 
         public async Task ShowNotificationAsync(string message, string colorHex = "#10B981")
         {
@@ -289,10 +203,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 CashierName = "ERROR LOADING SHIFT";
             }
         }
-
-        // =========================================================
-        // TERMINAL INPUT ENGINE
-        // =========================================================
 
         public void AppendTerminalInput(string value)
         {
@@ -427,27 +337,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             ApplyPercentDiscountToSelected(percent);
         }
 
-        private static void ClearRuleDiscountSnapshot(CartItem item)
-        {
-            if (item == null)
-                return;
-
-            item.IsRuleDiscount = false;
-
-            item.DiscountRuleId = 0;
-            item.DiscountRuleName = string.Empty;
-
-            item.DiscountReasonId = 0;
-            item.DiscountReasonCode = string.Empty;
-            item.DiscountReasonName = string.Empty;
-
-            item.DiscountRequiresManagerApproval = false;
-            item.DiscountRequiresAdminApproval = false;
-
-            item.DiscountApprovedBy = string.Empty;
-            item.DiscountApprovedAt = null;
-        }
-
         public void ApplyTerminalInputAsPriceOverrideToSelected()
         {
             if (!decimal.TryParse(TerminalInput, out decimal newPrice))
@@ -461,9 +350,22 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             ApplyNewPriceToSelected(newPrice);
         }
 
-        // =========================================================
-        // QUANTITY
-        // =========================================================
+        private static void ClearRuleDiscountSnapshot(CartItem item)
+        {
+            if (item == null)
+                return;
+
+            item.IsRuleDiscount = false;
+            item.DiscountRuleId = 0;
+            item.DiscountRuleName = string.Empty;
+            item.DiscountReasonId = 0;
+            item.DiscountReasonCode = string.Empty;
+            item.DiscountReasonName = string.Empty;
+            item.DiscountRequiresManagerApproval = false;
+            item.DiscountRequiresAdminApproval = false;
+            item.DiscountApprovedBy = string.Empty;
+            item.DiscountApprovedAt = null;
+        }
 
         public void IncreaseSelectedQuantity(decimal amount = 1m)
         {
@@ -533,7 +435,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             if (!SelectedCartItem.IsGiftVoucherSale && qty > SelectedCartItem.AvailableBatchStock)
             {
                 _ = ShowNotificationAsync(
-                    $"Only {SelectedCartItem.AvailableBatchStock:N3} available in selected batch.",
+                    $"Only {SelectedCartItem.AvailableBatchStock:N3} available in selected stock.",
                     "#F59E0B");
                 return;
             }
@@ -545,10 +447,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 $"Quantity updated: {SelectedCartItem.Description} x {qty:N3}",
                 "#10B981");
         }
-
-        // =========================================================
-        // DISCOUNT / NEW PRICE
-        // =========================================================
 
         private bool CanModifySelectedLineForPriceOrDiscount(string actionName)
         {
@@ -596,7 +494,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
 
             var item = SelectedCartItem!;
-
             amount = Math.Round(amount, 2);
 
             if (amount < 0m)
@@ -615,10 +512,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             if (amount > grossAmount)
             {
-                _ = ShowNotificationAsync(
-                    $"Discount cannot exceed line gross amount Rs. {grossAmount:N2}.",
-                    "#EF4444");
-
+                _ = ShowNotificationAsync($"Discount cannot exceed line gross amount Rs. {grossAmount:N2}.", "#EF4444");
                 return;
             }
 
@@ -630,12 +524,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             item.IsManualDiscount = amount > 0m;
 
             RecalculateTotals();
-
-            _ = ShowNotificationAsync(
-                amount == 0m
-                    ? "Line discount cleared."
-                    : $"Rs. discount applied: Rs. {amount:N2}",
-                "#10B981");
+            _ = ShowNotificationAsync(amount == 0m ? "Line discount cleared." : $"Rs. discount applied: Rs. {amount:N2}", "#10B981");
         }
 
         public void ApplyPercentDiscountToSelected(decimal percent)
@@ -644,7 +533,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
 
             var item = SelectedCartItem!;
-
             percent = Math.Round(percent, 2);
 
             if (percent < 0m || percent > 100m)
@@ -667,12 +555,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             item.IsManualDiscount = percent > 0m;
 
             RecalculateTotals();
-
-            _ = ShowNotificationAsync(
-                percent == 0m
-                    ? "Line discount cleared."
-                    : $"Percentage discount applied: {percent:N2}%",
-                "#10B981");
+            _ = ShowNotificationAsync(percent == 0m ? "Line discount cleared." : $"Percentage discount applied: {percent:N2}%", "#10B981");
         }
 
         public void ApplyNewPriceToSelected(decimal newPrice, string approvedBy = "")
@@ -681,7 +564,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
 
             var item = SelectedCartItem!;
-
             newPrice = Math.Round(newPrice, 2);
 
             if (newPrice < 0m)
@@ -692,42 +574,24 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             if (item.IsManualDiscount || item.DiscountAmount > 0m)
             {
-                _ = ShowNotificationAsync(
-                    "New Price cannot be applied after discount. Clear discount first by entering 0 and pressing Rs Disc or % Disc.",
-                    "#F59E0B");
-
+                _ = ShowNotificationAsync("New Price cannot be applied after discount. Clear discount first by entering 0 and pressing Rs Disc or % Disc.", "#F59E0B");
                 return;
             }
 
             if (item.MinimumPrice > 0m && newPrice < item.MinimumPrice && !IsManagerModeActive)
             {
-                _ = ShowNotificationAsync(
-                    $"Manager approval required. Minimum price is Rs. {item.MinimumPrice:N2}.",
-                    "#EF4444");
-
+                _ = ShowNotificationAsync($"Manager approval required. Minimum price is Rs. {item.MinimumPrice:N2}.", "#EF4444");
                 return;
             }
 
-            decimal originalPrice;
-
-            if (item.IsPriceOverridden && item.OriginalUnitPrice > 0m)
-            {
-                originalPrice = Math.Round(item.OriginalUnitPrice, 2);
-            }
-            else
-            {
-                originalPrice = Math.Round(item.UnitPrice, 2);
-                item.OriginalUnitPrice = originalPrice;
-            }
+            decimal originalPrice = item.IsPriceOverridden && item.OriginalUnitPrice > 0m
+                ? Math.Round(item.OriginalUnitPrice, 2)
+                : Math.Round(item.UnitPrice > 0m ? item.UnitPrice : item.RetailPrice, 2);
 
             if (originalPrice <= 0m)
-            {
-                originalPrice = item.RetailPrice > 0m
-                    ? Math.Round(item.RetailPrice, 2)
-                    : Math.Round(newPrice, 2);
+                originalPrice = Math.Round(newPrice, 2);
 
-                item.OriginalUnitPrice = originalPrice;
-            }
+            item.OriginalUnitPrice = originalPrice;
 
             if (newPrice == originalPrice)
             {
@@ -736,9 +600,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 item.PriceOverrideAmount = 0m;
                 item.PriceOverrideApprovedBy = string.Empty;
                 item.PriceOverrideApprovedAt = null;
-
                 RecalculateTotals();
-
                 _ = ShowNotificationAsync("New Price cleared. Original price restored.", "#10B981");
                 return;
             }
@@ -749,10 +611,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             if (item.MinimumPrice > 0m && newPrice < item.MinimumPrice)
             {
-                item.PriceOverrideApprovedBy = string.IsNullOrWhiteSpace(approvedBy)
-                    ? "Manager Mode"
-                    : approvedBy.Trim();
-
+                item.PriceOverrideApprovedBy = string.IsNullOrWhiteSpace(approvedBy) ? "Manager Mode" : approvedBy.Trim();
                 item.PriceOverrideApprovedAt = DateTime.Now;
             }
             else
@@ -762,7 +621,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
 
             RecalculateTotals();
-
             _ = ShowNotificationAsync($"New price applied: Rs. {newPrice:N2}", "#10B981");
         }
 
@@ -785,21 +643,9 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
             }
 
-            if (cartItem.IsGiftVoucherSale)
+            if (cartItem.IsGiftVoucherSale || cartItem.IsFreeItem || cartItem.IsPriceOverridden)
             {
-                _ = ShowNotificationAsync("Gift voucher sale line cannot use discount rule.", "#EF4444");
-                return;
-            }
-
-            if (cartItem.IsFreeItem)
-            {
-                _ = ShowNotificationAsync("Free item line cannot use discount rule.", "#EF4444");
-                return;
-            }
-
-            if (cartItem.IsPriceOverridden)
-            {
-                _ = ShowNotificationAsync("Discount rule cannot be applied after New Price.", "#EF4444");
+                _ = ShowNotificationAsync("Discount rule cannot be applied to this line.", "#EF4444");
                 return;
             }
 
@@ -812,21 +658,13 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             decimal discountAmount = Math.Round(result.DiscountAmount, 2);
             decimal grossAmount = Math.Round(cartItem.GrossAmount, 2);
 
-            if (discountAmount <= 0m)
+            if (discountAmount <= 0m || discountAmount > grossAmount)
             {
-                _ = ShowNotificationAsync("Discount amount must be greater than zero.", "#EF4444");
+                _ = ShowNotificationAsync("Discount amount is invalid.", "#EF4444");
                 return;
             }
 
-            if (discountAmount > grossAmount)
-            {
-                _ = ShowNotificationAsync("Discount cannot exceed line gross amount.", "#EF4444");
-                return;
-            }
-
-            bool approvalRequired =
-                result.RequiresManagerApproval ||
-                result.RequiresAdminApproval;
+            bool approvalRequired = result.RequiresManagerApproval || result.RequiresAdminApproval;
 
             if (approvalRequired && string.IsNullOrWhiteSpace(result.ApprovedBy))
             {
@@ -834,16 +672,11 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
             }
 
-            string discountType = string.IsNullOrWhiteSpace(result.DiscountType)
-                ? "Percent"
-                : result.DiscountType.Trim();
+            string discountType = string.IsNullOrWhiteSpace(result.DiscountType) ? "Percent" : result.DiscountType.Trim();
 
             if (cartItem.OriginalUnitPrice <= 0m)
                 cartItem.OriginalUnitPrice = cartItem.UnitPrice;
 
-            // Rule discount is still calculated using existing cart fields:
-            // Percent rule -> DiscountPercentage
-            // Amount rule  -> ManualDiscountAmount
             if (discountType.Equals("Amount", StringComparison.OrdinalIgnoreCase))
             {
                 cartItem.DiscountPercentage = 0m;
@@ -866,35 +699,19 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             cartItem.DiscountMode = "Rule";
             cartItem.IsManualDiscount = true;
             cartItem.IsRuleDiscount = true;
-
             cartItem.DiscountRuleId = result.DiscountRuleId;
             cartItem.DiscountRuleName = result.DiscountRuleName ?? string.Empty;
-
             cartItem.DiscountReasonId = result.DiscountReasonId ?? 0;
             cartItem.DiscountReasonCode = result.DiscountReasonCode ?? string.Empty;
             cartItem.DiscountReasonName = result.DiscountReasonName ?? string.Empty;
-
             cartItem.DiscountRequiresManagerApproval = result.RequiresManagerApproval;
             cartItem.DiscountRequiresAdminApproval = result.RequiresAdminApproval;
-
-            cartItem.DiscountApprovedBy = approvalRequired
-                ? result.ApprovedBy.Trim()
-                : string.Empty;
-
-            cartItem.DiscountApprovedAt = approvalRequired
-                ? result.ApprovedAt ?? DateTime.Now
-                : null;
+            cartItem.DiscountApprovedBy = approvalRequired ? result.ApprovedBy.Trim() : string.Empty;
+            cartItem.DiscountApprovedAt = approvalRequired ? result.ApprovedAt ?? DateTime.Now : null;
 
             RecalculateTotals();
-
-            _ = ShowNotificationAsync(
-                $"Discount rule applied: Rs. {discountAmount:N2}",
-                "#10B981");
+            _ = ShowNotificationAsync($"Discount rule applied: Rs. {discountAmount:N2}", "#10B981");
         }
-
-        // =========================================================
-        // PAYMENT MODE
-        // =========================================================
 
         public void EnterPaymentMode()
         {
@@ -912,23 +729,18 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             if (Cart.Any(c => !c.IsGiftVoucherSale && c.ItemBatchId <= 0))
             {
-                _ = ShowNotificationAsync("Cannot pay: one or more cart lines has no selected batch.", "#EF4444");
+                _ = ShowNotificationAsync("Cannot pay: one or more cart lines has no selected stock reference.", "#EF4444");
                 return;
             }
 
             var invalidFreeLine = Cart.FirstOrDefault(c => c.IsFreeItem && c.FreeIssueRuleId <= 0);
-
             if (invalidFreeLine != null)
             {
                 _ = ShowNotificationAsync($"Free issue rule missing: {invalidFreeLine.Description}", "#EF4444");
                 return;
             }
 
-            var invalidSupplierClaimLine = Cart.FirstOrDefault(c =>
-                c.IsFreeItem &&
-                c.IsSupplierRecoverable &&
-                c.SupplierId <= 0);
-
+            var invalidSupplierClaimLine = Cart.FirstOrDefault(c => c.IsFreeItem && c.IsSupplierRecoverable && c.SupplierId <= 0);
             if (invalidSupplierClaimLine != null)
             {
                 _ = ShowNotificationAsync($"Supplier missing for free issue: {invalidSupplierClaimLine.Description}", "#EF4444");
@@ -936,7 +748,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
 
             var belowMinimumLine = Cart.FirstOrDefault(c => c.IsBelowMinimumPrice);
-
             if (belowMinimumLine != null && !IsManagerModeActive)
             {
                 _ = ShowNotificationAsync($"Price below minimum: {belowMinimumLine.Description}", "#EF4444");
@@ -946,12 +757,9 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             IsPaymentModeActive = true;
             TerminalInputMode = "PAYMENT";
             TerminalInput = string.Empty;
-
             RecalculatePaymentTotals();
-
             PaymentStatusText = "Payment mode active. Enter amount and select payment type.";
             PaymentStatusColor = "#003366";
-
             _ = ShowNotificationAsync("Payment mode active.", "#3B82F6");
         }
 
@@ -962,16 +770,12 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             PaymentLines.Clear();
             SelectedPaymentLine = null;
-
             IsPaymentModeActive = false;
             TerminalInputMode = "SCAN / QTY";
             TerminalInput = string.Empty;
-
             RecalculatePaymentTotals();
-
             PaymentStatusText = "Payment cancelled. Sale mode active.";
             PaymentStatusColor = "#F59E0B";
-
             _ = ShowNotificationAsync("Payment mode cancelled.", "#F59E0B");
         }
 
@@ -984,25 +788,13 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             tenderedAmount = Math.Round(tenderedAmount, 2);
             changeAmount = Math.Round(changeAmount, 2);
 
-            if (appliedAmount <= 0m)
+            if (appliedAmount <= 0m || appliedAmount > BalanceDue || tenderedAmount < appliedAmount)
             {
                 _ = ShowNotificationAsync("Invalid cash payment amount.", "#EF4444");
                 return;
             }
 
-            if (appliedAmount > BalanceDue)
-            {
-                _ = ShowNotificationAsync("Cash applied amount cannot be greater than balance due.", "#EF4444");
-                return;
-            }
-
-            if (tenderedAmount < appliedAmount)
-            {
-                _ = ShowNotificationAsync("Cash tendered cannot be lower than applied cash amount.", "#EF4444");
-                return;
-            }
-
-            var paymentLine = new PaymentLine
+            PaymentLines.Add(new PaymentLine
             {
                 PaymentType = "Cash",
                 Amount = appliedAmount,
@@ -1010,64 +802,37 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 ChangeAmount = changeAmount,
                 PaymentDate = DateTime.Now,
                 CreatedAt = DateTime.Now
-            };
+            });
 
-            PaymentLines.Add(paymentLine);
-            SelectedPaymentLine = paymentLine;
+            SelectedPaymentLine = PaymentLines.LastOrDefault();
             TerminalInput = string.Empty;
-
             RecalculatePaymentTotals();
 
-            if (BalanceDue <= 0m)
-            {
-                _ = ShowNotificationAsync(
-                    $"Cash payment added. Change Rs. {BalanceReturned:N2}. Press Enter to complete sale.",
-                    "#10B981");
-            }
-            else
-            {
-                _ = ShowNotificationAsync(
-                    $"Cash payment added. Balance due Rs. {BalanceDue:N2}.",
-                    "#D97706");
-            }
+            _ = ShowNotificationAsync(
+                BalanceDue <= 0m
+                    ? $"Cash payment added. Change Rs. {BalanceReturned:N2}. Press Enter to complete sale."
+                    : $"Cash payment added. Balance due Rs. {BalanceDue:N2}.",
+                BalanceDue <= 0m ? "#10B981" : "#D97706");
         }
 
-        public void AddConfirmedCardPayment(
-            string cardType,
-            decimal amount,
-            string lastSixDigits,
-            string referenceNo)
+        public void AddConfirmedCardPayment(string cardType, decimal amount, string lastSixDigits, string referenceNo)
         {
             if (!EnsurePaymentModeReady())
                 return;
 
             amount = Math.Round(amount, 2);
 
-            if (amount <= 0m)
+            if (amount <= 0m || amount > BalanceDue)
             {
                 _ = ShowNotificationAsync("Invalid card payment amount.", "#EF4444");
                 return;
             }
 
-            if (amount > BalanceDue)
-            {
-                _ = ShowNotificationAsync("Card amount cannot be greater than balance due.", "#EF4444");
-                return;
-            }
+            string safeCardType = string.IsNullOrWhiteSpace(cardType) ? "Card" : cardType.Trim();
+            string safeLastSix = string.IsNullOrWhiteSpace(lastSixDigits) ? string.Empty : lastSixDigits.Trim();
+            string safeReference = string.IsNullOrWhiteSpace(referenceNo) ? safeLastSix : referenceNo.Trim();
 
-            string safeCardType = string.IsNullOrWhiteSpace(cardType)
-                ? "Card"
-                : cardType.Trim();
-
-            string safeLastSix = string.IsNullOrWhiteSpace(lastSixDigits)
-                ? string.Empty
-                : lastSixDigits.Trim();
-
-            string safeReference = string.IsNullOrWhiteSpace(referenceNo)
-                ? safeLastSix
-                : referenceNo.Trim();
-
-            var paymentLine = new PaymentLine
+            PaymentLines.Add(new PaymentLine
             {
                 PaymentType = "Card",
                 CardType = safeCardType,
@@ -1078,72 +843,35 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 ChangeAmount = 0m,
                 PaymentDate = DateTime.Now,
                 CreatedAt = DateTime.Now
-            };
+            });
 
-            PaymentLines.Add(paymentLine);
-            SelectedPaymentLine = paymentLine;
+            SelectedPaymentLine = PaymentLines.LastOrDefault();
             TerminalInput = string.Empty;
-
             RecalculatePaymentTotals();
 
-            if (BalanceDue <= 0m)
-            {
-                _ = ShowNotificationAsync(
-                    $"{safeCardType} payment added. Press Enter to complete sale.",
-                    "#10B981");
-            }
-            else
-            {
-                _ = ShowNotificationAsync(
-                    $"{safeCardType} payment added. Balance due Rs. {BalanceDue:N2}.",
-                    "#D97706");
-            }
+            _ = ShowNotificationAsync(
+                BalanceDue <= 0m
+                    ? $"{safeCardType} payment added. Press Enter to complete sale."
+                    : $"{safeCardType} payment added. Balance due Rs. {BalanceDue:N2}.",
+                BalanceDue <= 0m ? "#10B981" : "#D97706");
         }
 
-        public void AddConfirmedChequePayment(
-            decimal amount,
-            string chequeNo,
-            string bankOrBranch,
-            DateTime chequeDate)
+        public void AddConfirmedChequePayment(decimal amount, string chequeNo, string bankOrBranch, DateTime chequeDate)
         {
             if (!EnsurePaymentModeReady())
                 return;
 
             amount = Math.Round(amount, 2);
+            string safeChequeNo = (chequeNo ?? string.Empty).Trim();
+            string safeBankOrBranch = (bankOrBranch ?? string.Empty).Trim();
 
-            if (amount <= 0m)
+            if (amount <= 0m || amount > BalanceDue || string.IsNullOrWhiteSpace(safeChequeNo) || string.IsNullOrWhiteSpace(safeBankOrBranch))
             {
-                _ = ShowNotificationAsync("Invalid cheque payment amount.", "#EF4444");
+                _ = ShowNotificationAsync("Valid cheque details are required.", "#EF4444");
                 return;
             }
 
-            if (amount > BalanceDue)
-            {
-                _ = ShowNotificationAsync("Cheque amount cannot be greater than balance due.", "#EF4444");
-                return;
-            }
-
-            string safeChequeNo = string.IsNullOrWhiteSpace(chequeNo)
-                ? string.Empty
-                : chequeNo.Trim();
-
-            string safeBankOrBranch = string.IsNullOrWhiteSpace(bankOrBranch)
-                ? string.Empty
-                : bankOrBranch.Trim();
-
-            if (string.IsNullOrWhiteSpace(safeChequeNo))
-            {
-                _ = ShowNotificationAsync("Cheque number is required.", "#EF4444");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(safeBankOrBranch))
-            {
-                _ = ShowNotificationAsync("Bank or branch is required.", "#EF4444");
-                return;
-            }
-
-            var paymentLine = new PaymentLine
+            PaymentLines.Add(new PaymentLine
             {
                 PaymentType = "Cheque",
                 BankOrCardType = safeBankOrBranch,
@@ -1153,43 +881,22 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 ChangeAmount = 0m,
                 PaymentDate = chequeDate,
                 CreatedAt = DateTime.Now
-            };
+            });
 
-            PaymentLines.Add(paymentLine);
-            SelectedPaymentLine = paymentLine;
+            SelectedPaymentLine = PaymentLines.LastOrDefault();
             TerminalInput = string.Empty;
-
             RecalculatePaymentTotals();
-
-            if (BalanceDue <= 0m)
-            {
-                _ = ShowNotificationAsync("Cheque payment added. Press Enter to complete sale.", "#10B981");
-            }
-            else
-            {
-                _ = ShowNotificationAsync(
-                    $"Cheque payment added. Balance due Rs. {BalanceDue:N2}.",
-                    "#D97706");
-            }
+            _ = ShowNotificationAsync(BalanceDue <= 0m ? "Cheque payment added. Press Enter to complete sale." : $"Cheque payment added. Balance due Rs. {BalanceDue:N2}.", BalanceDue <= 0m ? "#10B981" : "#D97706");
         }
 
-        public void AddConfirmedGiftVoucherPayment(
-            int giftVoucherId,
-            string voucherNo,
-            string voucherBarcode,
-            decimal voucherAmount,
-            decimal amountToApply,
-            decimal forfeitedAmount)
+        public void AddConfirmedGiftVoucherPayment(int giftVoucherId, string voucherNo, string voucherBarcode, decimal voucherAmount, decimal amountToApply, decimal forfeitedAmount)
         {
             if (!EnsurePaymentModeReady())
                 return;
 
             if (Cart.Any(c => c.IsGiftVoucherSale))
             {
-                _ = ShowNotificationAsync(
-                    "Gift voucher cannot be used to buy another gift voucher.",
-                    "#EF4444");
-
+                _ = ShowNotificationAsync("Gift voucher cannot be used to buy another gift voucher.", "#EF4444");
                 return;
             }
 
@@ -1203,100 +910,49 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             voucherAmount = Math.Round(voucherAmount, 2);
             forfeitedAmount = Math.Round(forfeitedAmount, 2);
 
-            if (amountToApply <= 0m)
+            if (amountToApply <= 0m || amountToApply > BalanceDue || voucherAmount <= 0m || forfeitedAmount < 0m || Math.Round(amountToApply + forfeitedAmount, 2) > voucherAmount)
             {
                 _ = ShowNotificationAsync("Gift voucher payment amount is invalid.", "#EF4444");
                 return;
             }
 
-            if (amountToApply > BalanceDue)
-            {
-                _ = ShowNotificationAsync("Gift voucher amount cannot be greater than balance due.", "#EF4444");
-                return;
-            }
+            string safeVoucherNo = string.IsNullOrWhiteSpace(voucherNo) ? $"GV-{giftVoucherId}" : voucherNo.Trim();
+            string safeBarcode = string.IsNullOrWhiteSpace(voucherBarcode) ? safeVoucherNo : voucherBarcode.Trim();
 
-            if (voucherAmount <= 0m)
-            {
-                _ = ShowNotificationAsync("Gift voucher value is invalid.", "#EF4444");
-                return;
-            }
-
-            if (forfeitedAmount < 0m)
-                forfeitedAmount = 0m;
-
-            if (Math.Round(amountToApply + forfeitedAmount, 2) > voucherAmount)
-            {
-                _ = ShowNotificationAsync(
-                    "Gift voucher applied plus forfeited amount cannot exceed voucher value.",
-                    "#EF4444");
-
-                return;
-            }
-
-            string safeVoucherNo = string.IsNullOrWhiteSpace(voucherNo)
-                ? $"GV-{giftVoucherId}"
-                : voucherNo.Trim();
-
-            string safeBarcode = string.IsNullOrWhiteSpace(voucherBarcode)
-                ? safeVoucherNo
-                : voucherBarcode.Trim();
-
-            bool alreadyUsed = PaymentLines.Any(p =>
-                p.IsGiftVoucher &&
-                p.GiftVoucherId == giftVoucherId);
-
-            if (alreadyUsed)
+            if (PaymentLines.Any(p => p.IsGiftVoucher && p.GiftVoucherId == giftVoucherId))
             {
                 _ = ShowNotificationAsync("This gift voucher is already added to the payment.", "#F59E0B");
                 return;
             }
 
-            var paymentLine = new PaymentLine
+            PaymentLines.Add(new PaymentLine
             {
                 PaymentType = "GiftVoucher",
                 BankOrCardType = "Gift Voucher",
                 ReferenceNo = safeVoucherNo,
-
                 Amount = amountToApply,
                 TenderedAmount = amountToApply,
                 ChangeAmount = 0m,
-
                 GiftVoucherId = giftVoucherId,
                 GiftVoucherNo = safeVoucherNo,
                 GiftVoucherBarcode = safeBarcode,
                 GiftVoucherAmount = voucherAmount,
                 GiftVoucherForfeitedAmount = forfeitedAmount,
-
                 PaymentDate = DateTime.Now,
                 CreatedAt = DateTime.Now
-            };
+            });
 
-            PaymentLines.Add(paymentLine);
-            SelectedPaymentLine = paymentLine;
+            SelectedPaymentLine = PaymentLines.LastOrDefault();
             TerminalInput = string.Empty;
-
             RecalculatePaymentTotals();
 
-            if (forfeitedAmount > 0m)
-            {
-                _ = ShowNotificationAsync(
-                    $"Gift voucher added. Applied Rs. {amountToApply:N2}. Forfeited Rs. {forfeitedAmount:N2}.",
-                    "#10B981");
-                return;
-            }
-
-            if (BalanceDue <= 0m)
-            {
-                _ = ShowNotificationAsync(
-                    "Gift voucher payment added. Press Enter to complete sale.",
-                    "#10B981");
-            }
-            else
-            {
-                _ = ShowNotificationAsync(
-                    $"Gift voucher payment added. Balance due Rs. {BalanceDue:N2}.",
-                    "#D97706");
-            }
+            _ = ShowNotificationAsync(
+                forfeitedAmount > 0m
+                    ? $"Gift voucher added. Applied Rs. {amountToApply:N2}. Forfeited Rs. {forfeitedAmount:N2}."
+                    : BalanceDue <= 0m
+                        ? "Gift voucher payment added. Press Enter to complete sale."
+                        : $"Gift voucher payment added. Balance due Rs. {BalanceDue:N2}.",
+                BalanceDue <= 0m || forfeitedAmount > 0m ? "#10B981" : "#D97706");
         }
 
         public void RemoveSelectedPaymentLine()
@@ -1309,9 +965,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             PaymentLines.Remove(SelectedPaymentLine);
             SelectedPaymentLine = PaymentLines.LastOrDefault();
-
             RecalculatePaymentTotals();
-
             _ = ShowNotificationAsync("Payment row removed.", "#F59E0B");
         }
 
@@ -1343,9 +997,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             if (!IsPaymentModeActive)
                 EnterPaymentMode();
 
-            return IsPaymentModeActive &&
-                   Cart.Any() &&
-                   BalanceDue > 0m;
+            return IsPaymentModeActive && Cart.Any() && BalanceDue > 0m;
         }
 
         private void RecalculatePaymentTotals()
@@ -1359,10 +1011,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             BalanceReturned = change;
 
             decimal due = Math.Round(NetValue - paid, 2);
-
-            if (due < 0m)
-                due = 0m;
-
+            if (due < 0m) due = 0m;
             BalanceDue = due;
 
             if (!IsPaymentModeActive)
@@ -1387,17 +1036,9 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
         private void RenumberPaymentLines()
         {
             int lineNo = 1;
-
             foreach (var line in PaymentLines)
-            {
-                line.LineNo = lineNo;
-                lineNo++;
-            }
+                line.LineNo = lineNo++;
         }
-
-        // =========================================================
-        // CUSTOMER
-        // =========================================================
 
         public void AttachCustomer(CustomerSearchDto customer)
         {
@@ -1417,43 +1058,21 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
 
             ActiveB2BCustomer = customer;
-
-            CustomerName = string.IsNullOrWhiteSpace(customer.DisplayName)
-                ? "Walk-In"
-                : customer.DisplayName;
-
+            CustomerName = string.IsNullOrWhiteSpace(customer.DisplayName) ? "Walk-In" : customer.DisplayName;
             IsWholesaleMode = customer.IsWholesale;
-
             ApplyCustomerPricingToCart(customer);
             RecalculateTotals();
 
-            string message;
-
-            if (customer.IsWholesale)
-            {
-                message = customer.IsDiscountEligible
-                    ? $"WHOLESALE CUSTOMER LINKED: {CustomerName} | Discount Enabled"
-                    : $"WHOLESALE CUSTOMER LINKED: {CustomerName}";
-            }
-            else
-            {
-                message = customer.IsDiscountEligible
-                    ? $"LOYALTY CUSTOMER LINKED: {CustomerName}"
-                    : $"CUSTOMER LINKED: {CustomerName}";
-            }
+            string message = customer.IsWholesale
+                ? customer.IsDiscountEligible ? $"WHOLESALE CUSTOMER LINKED: {CustomerName} | Discount Enabled" : $"WHOLESALE CUSTOMER LINKED: {CustomerName}"
+                : customer.IsDiscountEligible ? $"LOYALTY CUSTOMER LINKED: {CustomerName}" : $"CUSTOMER LINKED: {CustomerName}";
 
             _ = ShowNotificationAsync(message, customer.IsWholesale ? "#3B82F6" : "#10B981");
         }
 
-        public void AttachB2BCustomer(CustomerSearchDto customer)
-        {
-            AttachCustomer(customer);
-        }
+        public void AttachB2BCustomer(CustomerSearchDto customer) => AttachCustomer(customer);
 
-        public void AttachLoyaltyCustomer(CustomerSearchDto customer)
-        {
-            AttachCustomer(customer);
-        }
+        public void AttachLoyaltyCustomer(CustomerSearchDto customer) => AttachCustomer(customer);
 
         public void DetachCustomer()
         {
@@ -1469,11 +1088,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             foreach (var item in Cart)
             {
-                if (!item.IsGiftVoucherSale &&
-                    !item.IsFreeItem &&
-                    !item.IsManualDiscount &&
-                    !item.IsPriceOverridden &&
-                    item.RetailPrice > 0m)
+                if (!item.IsGiftVoucherSale && !item.IsFreeItem && !item.IsManualDiscount && !item.IsPriceOverridden && item.RetailPrice > 0m)
                 {
                     item.UnitPrice = item.RetailPrice;
                     item.OriginalUnitPrice = item.RetailPrice;
@@ -1481,7 +1096,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
 
             RecalculateTotals();
-
             _ = ShowNotificationAsync("Customer removed. Walk-in sale active.", "#64748B");
         }
 
@@ -1489,13 +1103,8 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
         {
             foreach (var item in Cart)
             {
-                if (item.IsGiftVoucherSale ||
-                    item.IsFreeItem ||
-                    item.IsManualDiscount ||
-                    item.IsPriceOverridden)
-                {
+                if (item.IsGiftVoucherSale || item.IsFreeItem || item.IsManualDiscount || item.IsPriceOverridden)
                     continue;
-                }
 
                 if (customer.IsWholesale && item.WholesalePrice > 0m)
                 {
@@ -1510,24 +1119,13 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
         }
 
-        // =========================================================
-        // SECURITY
-        // =========================================================
-
         public void SetManagerMode(bool activate)
         {
             IsManagerModeActive = activate;
             SecurityStatusMode = activate ? "MANAGER MODE ACTIVE" : "CASHIER MODE";
         }
 
-        public bool VerifyActionPermission()
-        {
-            return IsManagerModeActive;
-        }
-
-        // =========================================================
-        // SHIFT COMMANDS
-        // =========================================================
+        public bool VerifyActionPermission() => IsManagerModeActive;
 
         [RelayCommand]
         public async Task AddFloatAsync()
@@ -1572,14 +1170,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
         }
 
         [RelayCommand]
-        public Task ProcessZReportAsync()
-        {
-            return Task.CompletedTask;
-        }
-
-        // =========================================================
-        // SCANNER / SEEK ADD-TO-CART ENGINE
-        // =========================================================
+        public Task ProcessZReportAsync() => Task.CompletedTask;
 
         private async Task AddToCartFromMessageAsync(AddToCartRequest request)
         {
@@ -1626,11 +1217,26 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             try
             {
+                // New GRN barcode rule: exact batch barcode wins first and never opens batch popup.
+                var batchByBarcode = await _itemRepository.GetSellableBatchByInternalBarcodeAsync(term);
+
+                if (batchByBarcode != null)
+                {
+                    await AddBatchToCartAsync(batchByBarcode.ItemBatchId, 1m);
+                    return;
+                }
+
                 var item = await _itemRepository.GetSellableItemByBarcodeOrSkuAsync(term);
 
                 if (item == null)
                 {
-                    _ = ShowNotificationAsync($"Unrecognized item: {term}", "#F59E0B");
+                    _ = ShowNotificationAsync($"Unrecognized item/barcode: {term}", "#F59E0B");
+                    return;
+                }
+
+                if (item.HasBatchTracking)
+                {
+                    _ = ShowNotificationAsync("Batch item. Scan GRN batch barcode.", "#F59E0B");
                     return;
                 }
 
@@ -1639,6 +1245,52 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             catch (Exception ex)
             {
                 _ = ShowNotificationAsync($"Database Error: {ex.Message}", "#EF4444");
+            }
+        }
+
+        public async Task AddBatchToCartAsync(int itemBatchId, decimal quantity = 1m)
+        {
+            if (IsPaymentModeActive)
+            {
+                _ = ShowNotificationAsync("Cancel payment mode before adding more items.", "#F59E0B");
+                return;
+            }
+
+            if (itemBatchId <= 0)
+                return;
+
+            if (quantity <= 0m)
+                quantity = 1m;
+
+            if (_currentShiftId == 0)
+            {
+                _ = ShowNotificationAsync("Action blocked: No active shift found.", "#EF4444");
+                return;
+            }
+
+            try
+            {
+                var selectedBatch = await _itemRepository.GetSellableBatchByIdAsync(itemBatchId);
+
+                if (selectedBatch == null)
+                {
+                    _ = ShowNotificationAsync("Selected batch is not sellable.", "#EF4444");
+                    return;
+                }
+
+                var item = await _itemRepository.GetSellableItemByVariantIdAsync(selectedBatch.ItemVariantId);
+
+                if (item == null)
+                {
+                    _ = ShowNotificationAsync("Selected item is locked or not sellable.", "#EF4444");
+                    return;
+                }
+
+                AddSelectedBatchToCart(item, selectedBatch, quantity);
+            }
+            catch (Exception ex)
+            {
+                _ = ShowNotificationAsync($"Add batch failed: {ex.Message}", "#EF4444");
             }
         }
 
@@ -1672,37 +1324,18 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                     return;
                 }
 
-                var batches = await _itemRepository.GetSellableBatchesByVariantIdAsync(item.VariantId);
-
-                if (!batches.Any())
+                if (item.HasBatchTracking)
                 {
-                    _ = ShowNotificationAsync($"No sellable batch stock: {item.DisplayDescription}", "#F59E0B");
+                    _ = ShowNotificationAsync("Batch item. Scan GRN batch barcode.", "#F59E0B");
                     return;
                 }
 
-                CashierBatchDto? selectedBatch;
+                var selectedBatch = await _itemRepository.GetGeneralSellableBatchForVariantAsync(item.VariantId);
 
-                if (batches.Count == 1)
+                if (selectedBatch == null)
                 {
-                    selectedBatch = batches[0];
-
-                    if (selectedBatch.AvailableQty < quantity)
-                    {
-                        _ = ShowNotificationAsync(
-                            $"Only {selectedBatch.AvailableQty:N3} available in selected batch.",
-                            "#F59E0B");
-                        return;
-                    }
-                }
-                else
-                {
-                    selectedBatch = ShowBatchSelectionDialog(item.DisplayDescription, batches, quantity);
-
-                    if (selectedBatch == null)
-                    {
-                        _ = ShowNotificationAsync("Batch selection cancelled.", "#F59E0B");
-                        return;
-                    }
+                    _ = ShowNotificationAsync($"No sellable stock: {item.DisplayDescription}", "#F59E0B");
+                    return;
                 }
 
                 AddSelectedBatchToCart(item, selectedBatch, quantity);
@@ -1713,44 +1346,17 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
         }
 
-        private CashierBatchDto? ShowBatchSelectionDialog(
-            string itemDescription,
-            List<CashierBatchDto> batches,
-            decimal requestedQty)
-        {
-            var viewModel = new BatchSelectionViewModel(itemDescription, batches, requestedQty);
-            var dialog = new POS.Cashier.UI.Dialogs.BatchSelectionDialog(viewModel);
-
-            Window? owner = Application.Current.Windows
-                .OfType<Window>()
-                .FirstOrDefault(w => w.IsActive);
-
-            if (owner != null)
-                dialog.Owner = owner;
-
-            bool? result = dialog.ShowDialog();
-
-            return result == true
-                ? dialog.SelectedBatch
-                : null;
-        }
-
-        private void AddSelectedBatchToCart(
-            CashierSellableItemDto item,
-            CashierBatchDto selectedBatch,
-            decimal quantity)
+        private void AddSelectedBatchToCart(CashierSellableItemDto item, CashierBatchDto selectedBatch, decimal quantity)
         {
             if (selectedBatch.AvailableQty <= 0m)
             {
-                _ = ShowNotificationAsync("Selected batch has no available stock.", "#F59E0B");
+                _ = ShowNotificationAsync("Selected stock has no available quantity.", "#F59E0B");
                 return;
             }
 
             if (quantity > selectedBatch.AvailableQty)
             {
-                _ = ShowNotificationAsync(
-                    $"Only {selectedBatch.AvailableQty:N3} available in selected batch.",
-                    "#F59E0B");
+                _ = ShowNotificationAsync($"Only {selectedBatch.AvailableQty:N3} available in selected stock.", "#F59E0B");
                 return;
             }
 
@@ -1767,9 +1373,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             {
                 if (existingItem.Quantity + quantity > selectedBatch.AvailableQty)
                 {
-                    _ = ShowNotificationAsync(
-                        $"Only {selectedBatch.AvailableQty:N3} available in selected batch.",
-                        "#F59E0B");
+                    _ = ShowNotificationAsync($"Only {selectedBatch.AvailableQty:N3} available in selected stock.", "#F59E0B");
                     return;
                 }
 
@@ -1777,15 +1381,11 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 existingItem.AvailableBatchStock = selectedBatch.AvailableQty;
                 SelectedCartItem = existingItem;
                 RecalculateTotals();
-
                 _ = ShowNotificationAsync($"{item.DisplayDescription} quantity updated.", "#10B981");
                 return;
             }
 
-            decimal sellingPrice = IsWholesaleMode && item.WholesalePrice > 0m
-                ? item.WholesalePrice
-                : item.RetailPrice;
-
+            decimal sellingPrice = IsWholesaleMode && item.WholesalePrice > 0m ? item.WholesalePrice : item.RetailPrice;
             if (sellingPrice <= 0m && selectedBatch.RetailPrice > 0m)
                 sellingPrice = selectedBatch.RetailPrice;
 
@@ -1793,49 +1393,40 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             {
                 ItemVariantId = item.VariantId,
                 ItemBatchId = selectedBatch.ItemBatchId,
-
                 ItemCode = item.ItemCode,
                 SkuCode = item.SkuCode,
                 Barcode = string.IsNullOrWhiteSpace(item.Barcode) ? item.SkuCode : item.Barcode,
-
                 Description = item.DisplayDescription,
                 VariantDescription = item.VariantDescription,
                 Uom = item.Uom,
-
                 BatchNo = selectedBatch.BatchNo,
                 ExpiryDate = selectedBatch.ExpiryDate,
                 ReceivedDate = selectedBatch.ReceivedDate,
-
                 CostPrice = selectedBatch.CostPrice,
                 RetailPrice = item.RetailPrice,
                 WholesalePrice = item.WholesalePrice,
                 MinimumPrice = item.MinimumPrice,
                 MaximumPrice = item.MaximumPrice,
-
                 UnitPrice = sellingPrice,
                 OriginalUnitPrice = sellingPrice,
-
                 Quantity = quantity,
                 DiscountPercentage = 0m,
                 ManualDiscountAmount = 0m,
                 DiscountMode = "None",
                 IsManualDiscount = false,
-
                 IsPriceOverridden = false,
                 PriceOverrideAmount = 0m,
                 PriceOverrideApprovedBy = string.Empty,
                 PriceOverrideApprovedAt = null,
-
                 AvailableBatchStock = selectedBatch.AvailableQty
             };
 
             Cart.Add(cartItem);
             SelectedCartItem = cartItem;
-
             RecalculateTotals();
 
-            string batchText = string.IsNullOrWhiteSpace(selectedBatch.BatchNo)
-                ? "Batch selected"
+            string batchText = string.IsNullOrWhiteSpace(selectedBatch.BatchNo) || selectedBatch.BatchNo.Equals("GENERAL", StringComparison.OrdinalIgnoreCase)
+                ? "Stock selected"
                 : $"Batch {selectedBatch.BatchNo}";
 
             _ = ShowNotificationAsync($"Added: {item.DisplayDescription} / {batchText}", "#10B981");
@@ -1846,25 +1437,20 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             if (string.IsNullOrWhiteSpace(barcode) || quantity <= 0)
                 return false;
 
-            if (_currentShiftId == 0)
-                return false;
-
-            if (IsPaymentModeActive)
+            if (_currentShiftId == 0 || IsPaymentModeActive)
                 return false;
 
             try
             {
-                var item = await _itemRepository.GetSellableItemByBarcodeOrSkuAsync(barcode.Trim());
-
-                if (item == null)
-                    return false;
-
                 decimal beforeQty = Cart.Sum(c => c.Quantity);
 
-                await AddVariantToCartAsync(item.VariantId, quantity);
+                var batch = await _itemRepository.GetSellableBatchByInternalBarcodeAsync(barcode.Trim());
+                if (batch != null)
+                    await AddBatchToCartAsync(batch.ItemBatchId, quantity);
+                else
+                    await ProcessBarcodeAsync(barcode.Trim());
 
                 decimal afterQty = Cart.Sum(c => c.Quantity);
-
                 return afterQty > beforeQty;
             }
             catch
@@ -1873,16 +1459,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
         }
 
-        // =========================================================
-        // GIFT VOUCHER SALE LINE
-        // =========================================================
-
-        public void AddGiftVoucherSaleLine(
-            int giftVoucherId,
-            string voucherNo,
-            string voucherBarcode,
-            decimal voucherAmount,
-            string displayDescription)
+        public void AddGiftVoucherSaleLine(int giftVoucherId, string voucherNo, string voucherBarcode, decimal voucherAmount, string displayDescription)
         {
             if (IsPaymentModeActive)
             {
@@ -1896,41 +1473,23 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
             }
 
-            if (giftVoucherId <= 0)
+            if (giftVoucherId <= 0 || voucherAmount <= 0m)
             {
                 _ = ShowNotificationAsync("Invalid gift voucher.", "#EF4444");
                 return;
             }
 
             voucherAmount = Math.Round(voucherAmount, 2);
+            string safeVoucherNo = string.IsNullOrWhiteSpace(voucherNo) ? $"GV-{giftVoucherId}" : voucherNo.Trim();
+            string safeBarcode = string.IsNullOrWhiteSpace(voucherBarcode) ? safeVoucherNo : voucherBarcode.Trim();
 
-            if (voucherAmount <= 0m)
-            {
-                _ = ShowNotificationAsync("Gift voucher amount is invalid.", "#EF4444");
-                return;
-            }
-
-            string safeVoucherNo = string.IsNullOrWhiteSpace(voucherNo)
-                ? $"GV-{giftVoucherId}"
-                : voucherNo.Trim();
-
-            string safeBarcode = string.IsNullOrWhiteSpace(voucherBarcode)
-                ? safeVoucherNo
-                : voucherBarcode.Trim();
-
-            bool alreadyInCart = Cart.Any(c =>
-                c.IsGiftVoucherSale &&
-                c.GiftVoucherId == giftVoucherId);
-
-            if (alreadyInCart)
+            if (Cart.Any(c => c.IsGiftVoucherSale && c.GiftVoucherId == giftVoucherId))
             {
                 _ = ShowNotificationAsync("This gift voucher is already added to the sale.", "#F59E0B");
                 return;
             }
 
-            string description = string.IsNullOrWhiteSpace(displayDescription)
-                ? $"Gift Voucher Rs. {voucherAmount:N2}"
-                : displayDescription.Trim();
+            string description = string.IsNullOrWhiteSpace(displayDescription) ? $"Gift Voucher Rs. {voucherAmount:N2}" : displayDescription.Trim();
 
             var cartItem = new CartItem
             {
@@ -1938,68 +1497,45 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 GiftVoucherId = giftVoucherId,
                 GiftVoucherNo = safeVoucherNo,
                 GiftVoucherBarcode = safeBarcode,
-
                 ItemVariantId = 0,
                 ItemBatchId = 0,
-
                 ItemCode = "GIFT-VOUCHER",
                 SkuCode = "GV-SALE",
                 Barcode = safeBarcode,
-
                 Description = $"{description} / {safeVoucherNo}",
                 VariantDescription = "Gift Voucher",
                 Uom = "VOU",
-
                 BatchNo = string.Empty,
                 ExpiryDate = null,
                 ReceivedDate = null,
-
                 CostPrice = 0m,
                 RetailPrice = voucherAmount,
                 WholesalePrice = voucherAmount,
                 MinimumPrice = voucherAmount,
                 MaximumPrice = voucherAmount,
-
                 UnitPrice = voucherAmount,
                 OriginalUnitPrice = voucherAmount,
-
                 Quantity = 1m,
                 DiscountPercentage = 0m,
                 ManualDiscountAmount = 0m,
                 DiscountMode = "None",
                 IsManualDiscount = false,
-
                 IsPriceOverridden = false,
                 PriceOverrideAmount = 0m,
                 PriceOverrideApprovedBy = string.Empty,
                 PriceOverrideApprovedAt = null,
-
                 AvailableBatchStock = 1m
             };
 
             Cart.Add(cartItem);
             SelectedCartItem = cartItem;
-
             RecalculateTotals();
-
-            _ = ShowNotificationAsync(
-                $"Gift voucher added to sale: {safeVoucherNo} / Rs. {voucherAmount:N2}",
-                "#10B981");
+            _ = ShowNotificationAsync($"Gift voucher added to sale: {safeVoucherNo} / Rs. {voucherAmount:N2}", "#10B981");
         }
-
-        // =========================================================
-        // FREE ISSUE / CART ACTIONS
-        // =========================================================
 
         public void ApplyFreeItemLogic(CartItem cartItem, FreeItemApplyResult result)
         {
-            if (cartItem == null)
-            {
-                _ = ShowNotificationAsync("Please select an item before applying free issue.", "#F59E0B");
-                return;
-            }
-
-            if (result == null)
+            if (cartItem == null || result == null)
             {
                 _ = ShowNotificationAsync("Free issue result is missing.", "#EF4444");
                 return;
@@ -2011,31 +1547,14 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
             }
 
-            if (cartItem.IsGiftVoucherSale)
+            if (cartItem.IsGiftVoucherSale || cartItem.Quantity <= 0m || result.FreeIssueRuleId <= 0)
             {
-                _ = ShowNotificationAsync("Gift voucher sale line cannot be made free.", "#EF4444");
+                _ = ShowNotificationAsync("Free issue cannot be applied to this line.", "#EF4444");
                 return;
             }
 
-            if (cartItem.Quantity <= 0m)
-            {
-                _ = ShowNotificationAsync("Free issue quantity must be greater than zero.", "#EF4444");
-                return;
-            }
-
-            if (result.FreeIssueRuleId <= 0)
-            {
-                _ = ShowNotificationAsync("A valid BackOffice free issue rule is required.", "#EF4444");
-                return;
-            }
-
-            string freeIssueType = (result.FreeIssueType ?? string.Empty).Trim();
-
-            if (string.IsNullOrWhiteSpace(freeIssueType))
-                freeIssueType = "ShopCost";
-
-            bool isSupplierRecoverable =
-                freeIssueType.Equals("SupplierClaim", StringComparison.OrdinalIgnoreCase);
+            string freeIssueType = string.IsNullOrWhiteSpace(result.FreeIssueType) ? "ShopCost" : result.FreeIssueType.Trim();
+            bool isSupplierRecoverable = freeIssueType.Equals("SupplierClaim", StringComparison.OrdinalIgnoreCase);
 
             if (isSupplierRecoverable && (!result.SupplierId.HasValue || result.SupplierId.Value <= 0))
             {
@@ -2043,35 +1562,21 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return;
             }
 
-            decimal originalUnitPrice = result.OriginalUnitPrice > 0m
-                ? Math.Round(result.OriginalUnitPrice, 2)
-                : Math.Round(cartItem.UnitPrice > 0m ? cartItem.UnitPrice : cartItem.RetailPrice, 2);
-
-            decimal costValue = result.FreeIssueCostValue > 0m
-                ? Math.Round(result.FreeIssueCostValue, 2)
-                : Math.Round(cartItem.CostPrice * cartItem.Quantity, 2);
-
-            decimal sellingValue = result.FreeIssueSellingValue > 0m
-                ? Math.Round(result.FreeIssueSellingValue, 2)
-                : Math.Round(originalUnitPrice * cartItem.Quantity, 2);
-
-            decimal claimValue = isSupplierRecoverable
-                ? Math.Round(result.ClaimValue, 2)
-                : 0m;
+            decimal originalUnitPrice = result.OriginalUnitPrice > 0m ? Math.Round(result.OriginalUnitPrice, 2) : Math.Round(cartItem.UnitPrice > 0m ? cartItem.UnitPrice : cartItem.RetailPrice, 2);
+            decimal costValue = result.FreeIssueCostValue > 0m ? Math.Round(result.FreeIssueCostValue, 2) : Math.Round(cartItem.CostPrice * cartItem.Quantity, 2);
+            decimal sellingValue = result.FreeIssueSellingValue > 0m ? Math.Round(result.FreeIssueSellingValue, 2) : Math.Round(originalUnitPrice * cartItem.Quantity, 2);
+            decimal claimValue = isSupplierRecoverable ? Math.Round(result.ClaimValue, 2) : 0m;
 
             cartItem.OriginalUnitPrice = originalUnitPrice;
-
             cartItem.UnitPrice = 0m;
             cartItem.DiscountPercentage = 0m;
             cartItem.ManualDiscountAmount = 0m;
             cartItem.DiscountMode = "None";
             cartItem.IsManualDiscount = false;
-
             cartItem.IsPriceOverridden = false;
             cartItem.PriceOverrideAmount = 0m;
             cartItem.PriceOverrideApprovedBy = string.Empty;
             cartItem.PriceOverrideApprovedAt = null;
-
             cartItem.IsFreeItem = true;
             cartItem.FreeIssueRuleId = result.FreeIssueRuleId;
             cartItem.FreeIssueRuleName = result.FreeIssueRuleName ?? string.Empty;
@@ -2080,10 +1585,8 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             cartItem.FreeReasonText = result.FreeReasonText ?? string.Empty;
             cartItem.FreeApprovedBy = result.ApprovedBy ?? string.Empty;
             cartItem.FreeApprovedAt = result.ApprovedAt;
-
             cartItem.FreeIssueCostValue = costValue;
             cartItem.FreeIssueSellingValue = sellingValue;
-
             cartItem.IsSupplierRecoverable = isSupplierRecoverable;
             cartItem.SupplierId = result.SupplierId ?? 0;
             cartItem.SupplierName = result.SupplierName ?? string.Empty;
@@ -2093,12 +1596,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             cartItem.SupplierClaimValue = claimValue;
 
             RecalculateTotals();
-
-            string message = isSupplierRecoverable
-                ? $"Free item applied as supplier recoverable claim: Rs. {claimValue:N2}"
-                : $"Free item applied as shop cost: Rs. {costValue:N2}";
-
-            _ = ShowNotificationAsync(message, "#10B981");
+            _ = ShowNotificationAsync(isSupplierRecoverable ? $"Free item applied as supplier recoverable claim: Rs. {claimValue:N2}" : $"Free item applied as shop cost: Rs. {costValue:N2}", "#10B981");
         }
 
         public void RemoveSelectedItem()
@@ -2123,9 +1621,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             Cart.Remove(item);
             SelectedCartItem = Cart.LastOrDefault();
-
             RecalculateTotals();
-
             _ = ShowNotificationAsync("Item removed.", "#F59E0B");
         }
 
@@ -2134,30 +1630,20 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
         {
             Cart.Clear();
             PaymentLines.Clear();
-
             SelectedCartItem = null;
             SelectedPaymentLine = null;
-
             IsPaymentModeActive = false;
             TerminalInputMode = "SCAN / QTY";
             TerminalInput = string.Empty;
-
             ActiveB2BCustomer = null;
             CustomerName = "Walk-In";
             IsWholesaleMode = false;
-
             InvoiceNo = "PENDING...";
-
             RecalculateTotals();
             RecalculatePaymentTotals();
-
             PaymentStatusText = "Sale mode active.";
             PaymentStatusColor = "#003366";
         }
-
-        // =========================================================
-        // TOTALS
-        // =========================================================
 
         public void RecalculateTotals()
         {
@@ -2178,17 +1664,12 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             GrossValue = Math.Round(Cart.Sum(c => c.GrossAmount), 2);
             NetValue = Math.Round(Cart.Sum(c => c.LineAmount), 2);
             TotalDiscount = Math.Round(Cart.Sum(c => c.DiscountAmount), 2);
-
             TotalItems = Cart.Count;
             TotalPieces = Math.Round(Cart.Sum(c => c.Quantity), 3);
 
             if (IsPaymentModeActive)
                 RecalculatePaymentTotals();
         }
-
-        // =========================================================
-        // FINAL CHECKOUT
-        // =========================================================
 
         public async Task<bool> FinalizeCheckoutAsync()
         {
@@ -2215,7 +1696,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
 
             if (Cart.Any(c => !c.IsGiftVoucherSale && c.ItemBatchId <= 0))
             {
-                _ = ShowNotificationAsync("One or more cart lines has no selected batch.", "#EF4444");
+                _ = ShowNotificationAsync("One or more cart lines has no selected stock reference.", "#EF4444");
                 return false;
             }
 
@@ -2231,28 +1712,20 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return false;
             }
 
-            bool sellingGiftVoucher = Cart.Any(c => c.IsGiftVoucherSale);
-            bool payingByGiftVoucher = PaymentLines.Any(p => p.IsGiftVoucher);
-
-            if (sellingGiftVoucher && payingByGiftVoucher)
+            if (Cart.Any(c => c.IsGiftVoucherSale) && PaymentLines.Any(p => p.IsGiftVoucher))
             {
                 _ = ShowNotificationAsync("Gift voucher cannot be used to buy another gift voucher.", "#EF4444");
                 return false;
             }
 
             var invalidFreeLine = Cart.FirstOrDefault(c => c.IsFreeItem && c.FreeIssueRuleId <= 0);
-
             if (invalidFreeLine != null)
             {
                 _ = ShowNotificationAsync($"Free issue rule missing: {invalidFreeLine.Description}", "#EF4444");
                 return false;
             }
 
-            var invalidSupplierClaimLine = Cart.FirstOrDefault(c =>
-                c.IsFreeItem &&
-                c.IsSupplierRecoverable &&
-                c.SupplierId <= 0);
-
+            var invalidSupplierClaimLine = Cart.FirstOrDefault(c => c.IsFreeItem && c.IsSupplierRecoverable && c.SupplierId <= 0);
             if (invalidSupplierClaimLine != null)
             {
                 _ = ShowNotificationAsync($"Supplier missing for free issue: {invalidSupplierClaimLine.Description}", "#EF4444");
@@ -2260,37 +1733,23 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
             }
 
             var belowMinimumLine = Cart.FirstOrDefault(c => !c.IsGiftVoucherSale && c.IsBelowMinimumPrice);
-
             if (belowMinimumLine != null && !IsManagerModeActive)
             {
-                _ = ShowNotificationAsync(
-                    $"Price below minimum: {belowMinimumLine.Description}",
-                    "#EF4444");
-
+                _ = ShowNotificationAsync($"Price below minimum: {belowMinimumLine.Description}", "#EF4444");
                 return false;
             }
 
             try
             {
-                string paymentMethod = PaymentLines.Count == 1
-                    ? PaymentLines.First().DisplayPaymentType
-                    : "Split";
-
+                string paymentMethod = PaymentLines.Count == 1 ? PaymentLines.First().DisplayPaymentType : "Split";
                 CustomerSearchDto? activeCustomer = ActiveB2BCustomer;
-
-                string customerName = activeCustomer == null
-                    ? "Walk-In"
-                    : activeCustomer.DisplayName;
-
+                string customerName = activeCustomer == null ? "Walk-In" : activeCustomer.DisplayName;
                 string customerCompanyName = activeCustomer?.CompanyName ?? string.Empty;
-
                 string nicOrBr = string.Empty;
 
                 if (activeCustomer != null)
                 {
-                    nicOrBr = activeCustomer.IsWholesale
-                        ? activeCustomer.BusinessRegistrationNumber
-                        : activeCustomer.NicNumber;
+                    nicOrBr = activeCustomer.IsWholesale ? activeCustomer.BusinessRegistrationNumber : activeCustomer.NicNumber;
 
                     if (activeCustomer.IsWholesale && string.IsNullOrWhiteSpace(nicOrBr))
                         nicOrBr = activeCustomer.VatRegistrationNumber;
@@ -2301,7 +1760,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                     ShiftSessionId = _currentShiftId,
                     CashierName = CashierName,
                     TerminalNo = TerminalNo,
-
                     CustomerMasterId = activeCustomer?.Id,
                     CustomerCode = activeCustomer?.CustomerCode ?? string.Empty,
                     CustomerName = customerName,
@@ -2313,7 +1771,6 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                     CustomerIsCreditEnabled = activeCustomer?.IsCreditEnabled ?? false,
                     CustomerCreditStatus = activeCustomer?.CreditStatus ?? "None",
                     IsWholesaleSale = activeCustomer?.IsWholesale ?? false,
-
                     GrossTotal = GrossValue,
                     TotalDiscount = TotalDiscount,
                     NetTotal = NetValue,
@@ -2326,67 +1783,42 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 {
                     ItemVariantId = c.IsGiftVoucherSale ? null : c.ItemVariantId,
                     ItemBatchId = c.IsGiftVoucherSale ? null : c.ItemBatchId,
-
                     SkuCode = c.IsGiftVoucherSale ? "GV-SALE" : c.SkuCode,
                     Barcode = c.Barcode,
                     ItemDescription = c.Description,
                     BatchNo = c.BatchNo,
                     ExpiryDate = c.ExpiryDate,
                     Uom = c.Uom,
-
                     Quantity = c.Quantity,
                     UnitPrice = c.UnitPrice,
                     CostPrice = c.CostPrice,
                     GrossAmount = c.GrossAmount,
-
                     DiscountPercentage = c.IsGiftVoucherSale || c.IsFreeItem ? 0m : c.DiscountPercentage,
                     DiscountAmount = c.IsGiftVoucherSale || c.IsFreeItem ? 0m : c.DiscountAmount,
                     ManualDiscountAmount = c.IsGiftVoucherSale || c.IsFreeItem ? 0m : c.ManualDiscountAmount,
                     DiscountMode = c.IsGiftVoucherSale || c.IsFreeItem ? "None" : c.DiscountMode,
                     IsManualDiscount = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsManualDiscount,
-
                     IsRuleDiscount = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount,
-                    DiscountRuleId = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount && c.DiscountRuleId > 0
-    ? c.DiscountRuleId
-    : null,
-                    DiscountRuleName = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount
-    ? c.DiscountRuleName
-    : string.Empty,
-                    DiscountReasonId = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount && c.DiscountReasonId > 0
-    ? c.DiscountReasonId
-    : null,
-                    DiscountReasonCode = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount
-    ? c.DiscountReasonCode
-    : string.Empty,
-                    DiscountReasonName = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount
-    ? c.DiscountReasonName
-    : string.Empty,
+                    DiscountRuleId = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount && c.DiscountRuleId > 0 ? c.DiscountRuleId : null,
+                    DiscountRuleName = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount ? c.DiscountRuleName : string.Empty,
+                    DiscountReasonId = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount && c.DiscountReasonId > 0 ? c.DiscountReasonId : null,
+                    DiscountReasonCode = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount ? c.DiscountReasonCode : string.Empty,
+                    DiscountReasonName = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount ? c.DiscountReasonName : string.Empty,
                     DiscountRequiresManagerApproval = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount && c.DiscountRequiresManagerApproval,
                     DiscountRequiresAdminApproval = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount && c.DiscountRequiresAdminApproval,
-                    DiscountApprovedBy = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount
-    ? c.DiscountApprovedBy
-    : string.Empty,
-                    DiscountApprovedAt = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount
-    ? c.DiscountApprovedAt
-    : null,
-
-                    OriginalUnitPrice = c.OriginalUnitPrice > 0m
-    ? c.OriginalUnitPrice
-    : c.UnitPrice,
-
+                    DiscountApprovedBy = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount ? c.DiscountApprovedBy : string.Empty,
+                    DiscountApprovedAt = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount ? c.DiscountApprovedAt : null,
+                    OriginalUnitPrice = c.OriginalUnitPrice > 0m ? c.OriginalUnitPrice : c.UnitPrice,
                     IsPriceOverridden = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsPriceOverridden,
                     PriceOverrideAmount = !c.IsGiftVoucherSale && !c.IsFreeItem ? c.PriceOverrideAmount : 0m,
                     PriceOverrideApprovedBy = !c.IsGiftVoucherSale && !c.IsFreeItem ? c.PriceOverrideApprovedBy : string.Empty,
                     PriceOverrideApprovedAt = !c.IsGiftVoucherSale && !c.IsFreeItem ? c.PriceOverrideApprovedAt : null,
-
                     LineTotal = c.LineAmount,
                     ProfitAmount = c.ProfitAmount,
-
                     IsGiftVoucherSale = c.IsGiftVoucherSale,
                     GiftVoucherId = c.IsGiftVoucherSale ? c.GiftVoucherId : null,
                     GiftVoucherNo = c.IsGiftVoucherSale ? c.GiftVoucherNo : string.Empty,
                     GiftVoucherBarcode = c.IsGiftVoucherSale ? c.GiftVoucherBarcode : string.Empty,
-
                     IsFreeItem = c.IsFreeItem,
                     FreeIssueRuleId = c.IsFreeItem && c.FreeIssueRuleId > 0 ? c.FreeIssueRuleId : null,
                     FreeIssueRuleName = c.IsFreeItem ? c.FreeIssueRuleName : string.Empty,
@@ -2412,11 +1844,8 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                     PaymentType = p.PaymentType,
                     Amount = p.Amount,
                     ReferenceNo = p.ReferenceNo,
-                    BankOrCardType = string.IsNullOrWhiteSpace(p.BankOrCardType)
-                        ? p.CardType
-                        : p.BankOrCardType,
+                    BankOrCardType = string.IsNullOrWhiteSpace(p.BankOrCardType) ? p.CardType : p.BankOrCardType,
                     PaymentDate = p.PaymentDate ?? p.CreatedAt,
-
                     GiftVoucherId = p.IsGiftVoucher ? p.GiftVoucherId : null,
                     GiftVoucherNo = p.IsGiftVoucher ? p.GiftVoucherNo : string.Empty,
                     GiftVoucherBarcode = p.IsGiftVoucher ? p.GiftVoucherBarcode : string.Empty,
@@ -2427,14 +1856,10 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 var savedReceipt = await _salesRepository.ProcessCheckoutAsync(header, lines, payments);
 
                 InvoiceNo = savedReceipt.InvoiceNo;
-
                 await _printService.PrintReceiptAsync(savedReceipt, _printerName);
-
                 _ = ShowNotificationAsync("Payment successful. Ready for next customer.", "#10B981");
-
                 ClearCart();
                 SetManagerMode(false);
-
                 return true;
             }
             catch (Exception ex)
@@ -2443,6 +1868,7 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 return false;
             }
         }
+
         public async Task<bool> PrintCurrentCartQuotationAsync()
         {
             if (IsPaymentModeActive)
@@ -2486,19 +1912,12 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
                 };
 
                 await _printService.PrintQuotationAsync(request, _printerName);
-
-                _ = ShowNotificationAsync(
-                    "Quotation printed. No sale saved and no stock deducted.",
-                    "#10B981");
-
+                _ = ShowNotificationAsync("Quotation printed. No sale saved and no stock deducted.", "#10B981");
                 return true;
             }
             catch (Exception ex)
             {
-                _ = ShowNotificationAsync(
-                    $"Quotation print failed: {ex.Message}",
-                    "#EF4444");
-
+                _ = ShowNotificationAsync($"Quotation print failed: {ex.Message}", "#EF4444");
                 return false;
             }
         }
@@ -2507,6 +1926,5 @@ e.PropertyName == nameof(CartItem.LineAmount) ||
         {
             return $"QT-{DateTime.Now:yyyyMMdd-HHmmss}";
         }
-
     }
 }

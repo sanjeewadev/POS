@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -196,6 +196,26 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
+        public bool IsExistingItem => CurrentItem.Id > 0;
+
+        public bool IsSetupEditable => !IsBusy && !IsExistingItem;
+
+        public bool IsCurrentItemDeactivated => IsExistingItem && _loadedItemWasDeactivated;
+
+        public string ItemStatusText
+        {
+            get
+            {
+                if (!IsExistingItem)
+                    return "New Item";
+
+                return IsCurrentItemDeactivated ? "Deactivated" : "Active";
+            }
+        }
+
+        public string DeactivateReactivateButtonText =>
+            IsCurrentItemDeactivated ? "REACTIVATE ITEM" : "DEACTIVATE ITEM";
+
         public ItemMasterViewModel(
             ItemMasterRepository itemMasterRepository,
             CategoryRepository categoryRepository,
@@ -212,6 +232,27 @@ namespace POS.BackOffice.UI.ViewModels
             _uomRepository = uomRepository ?? throw new ArgumentNullException(nameof(uomRepository));
             _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
             _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
+        }
+
+        partial void OnCurrentItemChanged(ItemParent value)
+        {
+            RaiseItemStateProperties();
+        }
+
+        private void RaiseItemStateProperties()
+        {
+            OnPropertyChanged(nameof(IsExistingItem));
+            OnPropertyChanged(nameof(IsSetupEditable));
+            OnPropertyChanged(nameof(IsCurrentItemDeactivated));
+            OnPropertyChanged(nameof(ItemStatusText));
+            OnPropertyChanged(nameof(DeactivateReactivateButtonText));
+
+            DeleteUnusedItemCommand.NotifyCanExecuteChanged();
+            DeactivateItemCommand.NotifyCanExecuteChanged();
+            ReactivateItemCommand.NotifyCanExecuteChanged();
+            DeleteCommand.NotifyCanExecuteChanged();
+            GenerateVariantsCommand.NotifyCanExecuteChanged();
+            AddPropertyCommand.NotifyCanExecuteChanged();
         }
 
         [RelayCommand(CanExecute = nameof(CanInitialize))]
@@ -282,6 +323,12 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            if (!_isLoadingItem && !IsSetupEditable)
+            {
+                StatusMessage = "Category is locked after the item is saved. Delete the unused item and create it again if the category is wrong.";
+                return;
+            }
+
             CurrentItem.CategoryId = value.Id;
 
             if (!_isLoadingItem)
@@ -328,6 +375,12 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (value != null && SelectedCategory != null && !IsCodeReadOnly)
             {
+                if (!IsSetupEditable)
+                {
+                    StatusMessage = "Sub-category is locked after the item is saved. Delete the unused item and create it again if the sub-category is wrong.";
+                    return;
+                }
+
                 CurrentItem.SubCategoryId = value.Id;
                 ItemPrefix = BuildItemCodePrefix(SelectedCategory, value);
             }
@@ -424,7 +477,10 @@ namespace POS.BackOffice.UI.ViewModels
             if (value != null)
                 _ = LoadFullItemDetailsAsync(value.ParentId);
             else
+            {
                 IsCodeReadOnly = false;
+                RaiseItemStateProperties();
+            }
         }
 
         private async Task LoadFullItemDetailsAsync(int parentId)
@@ -496,16 +552,18 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (fullItem.IsDeactivated)
                 {
-                    StatusMessage = $"Loaded deactivated item: {fullItem.ItemCode}. Untick Item Deactivated and click SAVE FULL ITEM to reactivate item and variants.";
+                    StatusMessage = $"Loaded deactivated item: {fullItem.ItemCode}. Use REACTIVATE ITEM to make it active again.";
                 }
                 else if (GeneratedVariants.Any() && activeVariantCount == 0)
                 {
-                    StatusMessage = $"Loaded item: {fullItem.ItemCode}. Warning: all variants are inactive. Click SAVE FULL ITEM to repair/reactivate variants.";
+                    StatusMessage = $"Loaded item: {fullItem.ItemCode}. Warning: all variants are inactive.";
                 }
                 else
                 {
-                    StatusMessage = $"Loaded item: {fullItem.ItemCode}";
+                    StatusMessage = $"Loaded item: {fullItem.ItemCode}. Setup fields are locked after save.";
                 }
+
+                RaiseItemStateProperties();
             }
             catch (Exception ex)
             {
@@ -605,6 +663,12 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (selection == null)
                 return;
+
+            if (!IsSetupEditable)
+            {
+                StatusMessage = "Matrix/property structure is locked after the item is saved.";
+                return;
+            }
 
             DynamicProperties.Remove(selection);
 
@@ -892,6 +956,13 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnBulkHasBatchTrackingChanged(bool value)
         {
+            if (!_isLoadingItem && IsExistingItem && value != CurrentItem.HasBatchTracking)
+            {
+                BulkHasBatchTracking = CurrentItem.HasBatchTracking;
+                StatusMessage = "Batch tracking is locked after the item is saved. Delete the unused item and create it again if the tracking type is wrong.";
+                return;
+            }
+
             if (!value)
             {
                 BulkHasExpiryTracking = false;
@@ -903,6 +974,16 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnBulkHasExpiryTrackingChanged(bool value)
         {
+            bool currentExpiryTracking = CurrentItem.HasExpiryTracking || CurrentItem.HasBatchExpiry;
+
+            if (!_isLoadingItem && IsExistingItem && value != currentExpiryTracking)
+            {
+                BulkHasExpiryTracking = currentExpiryTracking;
+                BulkHasBatchExpiry = currentExpiryTracking;
+                StatusMessage = "Expiry tracking is locked after the item is saved. Delete the unused item and create it again if the expiry rule is wrong.";
+                return;
+            }
+
             if (value && !BulkHasBatchTracking)
             {
                 BulkHasExpiryTracking = false;
@@ -921,6 +1002,13 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnBulkIsScaleItemChanged(bool value)
         {
+            if (!_isLoadingItem && IsExistingItem && value != CurrentItem.IsScaleItem)
+            {
+                BulkIsScaleItem = CurrentItem.IsScaleItem;
+                StatusMessage = "Scale item setting is locked after the item is saved. Delete the unused item and create it again if the scale rule is wrong.";
+                return;
+            }
+
             SaveCommand.NotifyCanExecuteChanged();
         }
 
@@ -1661,28 +1749,30 @@ namespace POS.BackOffice.UI.ViewModels
 
             DateTime now = DateTime.Now;
 
+            // Status changes must happen only through Deactivate/Reactivate buttons.
+            // The old checkbox-based workflow is intentionally ignored during save.
+            if (CurrentItem.Id == 0)
+            {
+                CurrentItem.IsDeactivated = false;
+                CurrentItem.DeactivatedAt = null;
+                return;
+            }
+
+            CurrentItem.IsDeactivated = _loadedItemWasDeactivated;
+
             if (CurrentItem.IsDeactivated)
             {
+                CurrentItem.DeactivatedAt ??= now;
+
                 foreach (var variant in GeneratedVariants)
                 {
                     variant.IsDeactivated = true;
                     variant.DeactivatedAt ??= now;
                 }
-
-                return;
             }
-
-            bool allVariantsInactive = GeneratedVariants.All(v => v.IsDeactivated);
-
-            if (_loadedItemWasDeactivated || allVariantsInactive)
+            else
             {
-                foreach (var variant in GeneratedVariants)
-                {
-                    variant.IsDeactivated = false;
-                    variant.DeactivatedAt = null;
-                }
-
-                StatusMessage = "Item is active. Variants were reactivated before saving.";
+                CurrentItem.DeactivatedAt = null;
             }
         }
 
@@ -1800,19 +1890,100 @@ namespace POS.BackOffice.UI.ViewModels
 
             StatusMessage = "Ready for new item.";
 
+            RaiseItemStateProperties();
             NotifyCommandStates();
         }
 
-        [RelayCommand(CanExecute = nameof(CanDelete))]
-        private async Task DeleteAsync()
+        [RelayCommand(CanExecute = nameof(CanDeleteUnusedItem))]
+        private async Task DeleteUnusedItemAsync()
         {
-            if (SelectedDatabaseItem == null)
+            int parentId = GetCurrentParentId();
+
+            if (parentId <= 0)
+                return;
+
+            IsBusy = true;
+
+            try
+            {
+                var deleteCheck = await _itemMasterRepository.CanHardDeleteMatrixAsync(parentId);
+
+                if (!deleteCheck.CanDelete)
+                {
+                    _messageBoxService.ShowWarning(
+                        "This item cannot be deleted. Use Deactivate instead, or remove the blocking setup first.\n\n" +
+                        deleteCheck.Message,
+                        "Delete Blocked");
+
+                    StatusMessage = "Delete blocked. Item has links or history.";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Delete check failed.";
+
+                _messageBoxService.ShowError(
+                    $"Failed to check item delete safety:\n\n{ex.Message}",
+                    "Delete Check Error");
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Permanently delete unused item '{GetCurrentItemName()}'?\n\n" +
+                "This is allowed only because the item has no stock, no transactions, and no supplier links.\n\n" +
+                "This action cannot be undone.",
+                "Confirm Permanent Delete",
+                MessageBoxImage.Warning);
+
+            if (!confirmed)
+                return;
+
+            IsBusy = true;
+
+            try
+            {
+                await _itemMasterRepository.HardDeleteMatrixAsync(parentId);
+
+                await LoadMasterGridInternalAsync();
+                Clear();
+
+                StatusMessage = "Unused item deleted successfully.";
+
+                _messageBoxService.ShowInformation(
+                    "Unused item deleted successfully.",
+                    "Deleted");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Delete failed.";
+
+                _messageBoxService.ShowError(
+                    $"Failed to delete item:\n\n{ex.Message}",
+                    "Delete Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanDeactivateItem))]
+        private async Task DeactivateItemAsync()
+        {
+            int parentId = GetCurrentParentId();
+
+            if (parentId <= 0)
                 return;
 
             bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Deactivate item '{SelectedDatabaseItem.ItemName}' and all its variants?\n\n" +
-                "This keeps sales, GRN, stock, and transaction history safe.\n\n" +
-                "To find it again later, tick 'Include Deactivated' in the Item Database.",
+                $"Deactivate item '{GetCurrentItemName()}' and all its variants?\n\n" +
+                "This keeps sales, GRN, stock, barcode, and transaction history safe.\n\n" +
+                "The item will be hidden from normal purchasing and selling lists.",
                 "Confirm Deactivation",
                 MessageBoxImage.Warning);
 
@@ -1823,7 +1994,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                await _itemMasterRepository.DeleteMatrixAsync(SelectedDatabaseItem.ParentId);
+                await _itemMasterRepository.DeactivateMatrixAsync(parentId);
 
                 await LoadMasterGridInternalAsync();
                 Clear();
@@ -1832,16 +2003,80 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = "Delete/deactivate failed.";
+                StatusMessage = "Deactivate failed.";
 
                 _messageBoxService.ShowError(
                     $"Failed to deactivate item:\n\n{ex.Message}",
-                    "Delete Error");
+                    "Deactivate Error");
             }
             finally
             {
                 IsBusy = false;
             }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanReactivateItem))]
+        private async Task ReactivateItemAsync()
+        {
+            int parentId = GetCurrentParentId();
+
+            if (parentId <= 0)
+                return;
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Reactivate item '{GetCurrentItemName()}' and all its variants?",
+                "Confirm Reactivation",
+                MessageBoxImage.Question);
+
+            if (!confirmed)
+                return;
+
+            IsBusy = true;
+
+            try
+            {
+                await _itemMasterRepository.ReactivateMatrixAsync(parentId);
+
+                await LoadMasterGridInternalAsync();
+                Clear();
+
+                StatusMessage = "Item reactivated successfully.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Reactivate failed.";
+
+                _messageBoxService.ShowError(
+                    $"Failed to reactivate item:\n\n{ex.Message}",
+                    "Reactivate Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        // Backward compatibility for the old XAML button that used DeleteCommand for deactivation.
+        [RelayCommand(CanExecute = nameof(CanDeactivateItem))]
+        private async Task DeleteAsync()
+        {
+            await DeactivateItemAsync();
+        }
+
+        private int GetCurrentParentId()
+        {
+            if (CurrentItem.Id > 0)
+                return CurrentItem.Id;
+
+            return SelectedDatabaseItem?.ParentId ?? 0;
+        }
+
+        private string GetCurrentItemName()
+        {
+            if (!string.IsNullOrWhiteSpace(CurrentItem.ItemName))
+                return CurrentItem.ItemName.Trim();
+
+            return SelectedDatabaseItem?.ItemName ?? "selected item";
         }
 
         partial void OnMasterSearchTextChanged(string value)
@@ -1874,6 +2109,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnIsBusyChanged(bool value)
         {
+            RaiseItemStateProperties();
             NotifyCommandStates();
         }
 
@@ -1895,6 +2131,9 @@ namespace POS.BackOffice.UI.ViewModels
             ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
 
             SaveCommand.NotifyCanExecuteChanged();
+            DeleteUnusedItemCommand.NotifyCanExecuteChanged();
+            DeactivateItemCommand.NotifyCanExecuteChanged();
+            ReactivateItemCommand.NotifyCanExecuteChanged();
             DeleteCommand.NotifyCanExecuteChanged();
         }
 
@@ -1911,13 +2150,14 @@ namespace POS.BackOffice.UI.ViewModels
         private bool CanAddProperty()
         {
             return !IsBusy &&
+                   IsSetupEditable &&
                    SelectedPropertyKey != null &&
                    PropertyValueInput != null;
         }
 
         private bool CanGenerateVariants()
         {
-            return !IsBusy;
+            return !IsBusy && IsSetupEditable;
         }
 
         private bool CanAssignSupplierToSelectedVariants()
@@ -1949,9 +2189,24 @@ namespace POS.BackOffice.UI.ViewModels
             return !IsBusy;
         }
 
+        private bool CanDeleteUnusedItem()
+        {
+            return !IsBusy && IsExistingItem;
+        }
+
+        private bool CanDeactivateItem()
+        {
+            return !IsBusy && IsExistingItem && !_loadedItemWasDeactivated;
+        }
+
+        private bool CanReactivateItem()
+        {
+            return !IsBusy && IsExistingItem && _loadedItemWasDeactivated;
+        }
+
         private bool CanDelete()
         {
-            return !IsBusy && SelectedDatabaseItem != null;
+            return CanDeactivateItem();
         }
 
         private string BuildItemCode()

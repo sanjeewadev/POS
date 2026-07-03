@@ -17,6 +17,12 @@ namespace POS.Core.Models
         [MaxLength(50)]
         public string BatchNo { get; set; } = string.Empty;
 
+        // Internal GRN/batch barcode used by cashier scan.
+        // Example: B0000000025
+        // For average-cost GENERAL buckets, keep this blank.
+        [MaxLength(100)]
+        public string InternalBatchBarcode { get; set; } = string.Empty;
+
         public DateTime? ExpiryDate { get; set; }
 
         public DateTime ReceivedDate { get; set; } = DateTime.Now;
@@ -41,6 +47,17 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,3)")]
         public decimal CurrentStock { get; set; } = 0m;
 
+        // =========================================================
+        // BARCODE PRINT AUDIT
+        // =========================================================
+
+        public int BarcodePrintedCount { get; set; } = 0;
+
+        public DateTime? LastBarcodePrintedAt { get; set; }
+
+        [MaxLength(100)]
+        public string LastBarcodePrintedBy { get; set; } = string.Empty;
+
         public bool IsDeactivated { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -51,6 +68,10 @@ namespace POS.Core.Models
 
         [NotMapped]
         public bool HasExpiry => ExpiryDate.HasValue;
+
+        [NotMapped]
+        public bool HasInternalBatchBarcode =>
+            !string.IsNullOrWhiteSpace(InternalBatchBarcode);
 
         [NotMapped]
         public decimal StockValue => CurrentStock * CostPrice;

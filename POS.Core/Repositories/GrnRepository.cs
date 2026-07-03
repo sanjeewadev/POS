@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -1181,6 +1181,8 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(batchNo))
                 throw new InvalidOperationException("Internal error: batch number was not prepared.");
 
+            bool hasBatchTracking = variant.ItemParent?.HasBatchTracking == true;
+
             var batch = await context.ItemBatches
                 .FirstOrDefaultAsync(b =>
                     b.ItemVariantId == variant.Id &&
@@ -1198,12 +1200,31 @@ namespace POS.Core.Repositories
                     RetailPrice = variant.RetailPrice,
                     WholesalePrice = variant.WholesalePrice,
                     CurrentStock = line.ReceivedQty,
+                    InternalBatchBarcode = string.Empty,
+                    BarcodePrintedCount = 0,
+                    LastBarcodePrintedAt = null,
+                    LastBarcodePrintedBy = string.Empty,
                     IsDeactivated = false,
                     CreatedAt = now,
                     UpdatedAt = now
                 };
 
                 await context.ItemBatches.AddAsync(batch);
+
+                // Need the database-generated ItemBatch.Id before creating B0000000001 style barcode.
+                await context.SaveChangesAsync();
+
+                if (hasBatchTracking)
+                {
+                    batch.InternalBatchBarcode = BuildInternalBatchBarcode(batch.Id);
+                    batch.UpdatedAt = now;
+                }
+                else
+                {
+                    // Average-cost GENERAL stock bucket must not get a cashier GRN barcode.
+                    batch.InternalBatchBarcode = string.Empty;
+                }
+
                 return batch;
             }
 
@@ -1223,6 +1244,12 @@ namespace POS.Core.Repositories
 
             if (!batch.ExpiryDate.HasValue && line.ExpiryDate.HasValue)
                 batch.ExpiryDate = line.ExpiryDate.Value.Date;
+
+            if (hasBatchTracking && string.IsNullOrWhiteSpace(batch.InternalBatchBarcode))
+                batch.InternalBatchBarcode = BuildInternalBatchBarcode(batch.Id);
+
+            if (!hasBatchTracking)
+                batch.InternalBatchBarcode = string.Empty;
 
             batch.CurrentStock += line.ReceivedQty;
             batch.CostPrice = line.LandedCost;
@@ -1272,6 +1299,14 @@ namespace POS.Core.Repositories
         // =========================================================
         // GENERAL HELPERS
         // =========================================================
+
+        private static string BuildInternalBatchBarcode(int itemBatchId)
+        {
+            if (itemBatchId <= 0)
+                throw new InvalidOperationException("Cannot create batch barcode before item batch is saved.");
+
+            return $"B{itemBatchId.ToString().PadLeft(10, '0')}";
+        }
 
         private static async Task<string> GenerateDocumentNumberAsync(
             AppDbContext context,

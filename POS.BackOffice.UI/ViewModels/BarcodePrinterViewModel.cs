@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -18,6 +18,9 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly IBarcodePrintService _printService;
         private readonly BarcodePrinterRepository _printerRepository;
+
+        private bool _isBulkSelectionChanging;
+        private bool _isUpdatingSelectAllFromQueue;
 
         // =========================================================
         // PRINTER SETTINGS
@@ -57,10 +60,22 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<BarcodePrintQueueItemDto> PrintQueue { get; } = new();
 
         [ObservableProperty]
+        private BarcodePrintQueueItemDto? _selectedQueueItem;
+
+        [ObservableProperty]
+        private bool _isSelectAllChecked = false;
+
+        [ObservableProperty]
         private int _totalLabelsToGenerate = 0;
 
         [ObservableProperty]
         private int _queueItemCount = 0;
+
+        [ObservableProperty]
+        private int _selectedQueueItemCount = 0;
+
+        [ObservableProperty]
+        private int _selectedLabelsToGenerate = 0;
 
         // =========================================================
         // UI STATE
@@ -76,8 +91,8 @@ namespace POS.BackOffice.UI.ViewModels
             IBarcodePrintService printService,
             BarcodePrinterRepository printerRepository)
         {
-            _printService = printService;
-            _printerRepository = printerRepository;
+            _printService = printService ?? throw new ArgumentNullException(nameof(printService));
+            _printerRepository = printerRepository ?? throw new ArgumentNullException(nameof(printerRepository));
 
             PrintQueue.CollectionChanged += PrintQueue_CollectionChanged;
 
@@ -156,6 +171,9 @@ namespace POS.BackOffice.UI.ViewModels
                 foreach (var grn in grns)
                     RecentGrns.Add(grn);
 
+                if (RecentGrns.Count > 0 && SelectedGrn == null)
+                    SelectedGrn = RecentGrns.FirstOrDefault();
+
                 StatusMessage = $"Loaded {RecentGrns.Count} recent posted GRN(s).";
             }
             catch (Exception ex)
@@ -182,7 +200,10 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnManualQtyChanged(int value)
         {
             if (value < 1)
+            {
                 ManualQty = 1;
+                return;
+            }
 
             if (value > 5000)
                 ManualQty = 5000;
@@ -206,44 +227,56 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             IsBusy = true;
-            StatusMessage = $"Loading label queue from {SelectedGrn.GrnNumber}...";
+            StatusMessage = $"Loading batch labels from {SelectedGrn.GrnNumber}...";
 
             try
             {
                 var rows = await _printerRepository.GetPrintQueueItemsForGrnAsync(
                     SelectedGrn.GrnHeaderId);
 
+                if (!rows.Any())
+                {
+                    MessageBox.Show(
+                        "This GRN has no printable batch barcode labels. Average-cost GENERAL stock lines are not printed here.",
+                        "No Batch Labels",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    StatusMessage = "No printable GRN batch labels found.";
+                    return;
+                }
+
                 int addedCount = 0;
-                int missingBarcodeCount = 0;
+                int alreadyPrintedCount = 0;
 
                 foreach (var row in rows)
                 {
-                    if (string.IsNullOrWhiteSpace(row.Barcode))
-                        missingBarcodeCount++;
+                    if (row.BarcodePrintedCount > 0)
+                        alreadyPrintedCount++;
 
                     AddOrMergeQueueItem(row);
                     addedCount++;
                 }
 
-                UpdateTotalLabels();
+                RefreshQueueCounters();
 
-                StatusMessage = $"Loaded {addedCount} GRN item(s) into print queue.";
+                StatusMessage = $"Loaded {addedCount} GRN batch label row(s) into print queue.";
 
-                if (missingBarcodeCount > 0)
+                if (alreadyPrintedCount > 0)
                 {
                     MessageBox.Show(
-                        $"{missingBarcodeCount} item(s) were added but do not have barcodes. Generate barcodes before printing.",
-                        "Missing Barcodes",
+                        $"{alreadyPrintedCount} batch label row(s) were already printed before. They were loaded for reprint, but may have print quantity 0. Change Print Qty if you need to reprint.",
+                        "Reprint Notice",
                         MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                StatusMessage = "Failed to load GRN label items.";
+                StatusMessage = "Failed to load GRN batch labels.";
 
                 MessageBox.Show(
-                    $"Failed to load GRN lines:\n\n{ex.Message}",
+                    $"Failed to load GRN batch labels:\n\n{ex.Message}",
                     "Database Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -277,7 +310,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             IsBusy = true;
-            StatusMessage = $"Searching item '{search}'...";
+            StatusMessage = $"Searching barcode '{search}'...";
 
             try
             {
@@ -286,38 +319,43 @@ namespace POS.BackOffice.UI.ViewModels
                 if (item == null)
                 {
                     MessageBox.Show(
-                        $"Item, SKU, or barcode '{search}' was not found.",
+                        $"Item, SKU, item barcode, or GRN batch barcode '{search}' was not found.",
                         "Not Found",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
 
-                    StatusMessage = "Manual item not found.";
+                    StatusMessage = "Manual barcode search found no result.";
                     return;
                 }
 
-                if (string.IsNullOrWhiteSpace(item.Barcode))
+                if (string.IsNullOrWhiteSpace(item.EffectiveBarcode))
                 {
                     MessageBox.Show(
-                        $"Item '{item.DisplayName}' does not have a barcode. Use Barcode Management to assign or generate one first.",
+                        $"Item '{item.DisplayName}' does not have a printable barcode.",
                         "Missing Barcode",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
 
-                    StatusMessage = "Item has no barcode.";
+                    StatusMessage = "Selected item has no barcode.";
                     return;
                 }
 
                 item.PrintQuantity = ManualQty;
-                item.SourceDocument = "MANUAL";
+                item.IsSelected = true;
+
+                if (string.IsNullOrWhiteSpace(item.SourceDocument))
+                    item.SourceDocument = "MANUAL";
 
                 AddOrMergeQueueItem(item);
 
                 SearchText = string.Empty;
                 ManualQty = 1;
 
-                UpdateTotalLabels();
+                RefreshQueueCounters();
 
-                StatusMessage = $"Added {item.ItemCode} to print queue.";
+                StatusMessage = item.IsBatchLabel
+                    ? $"Added GRN batch barcode {item.EffectiveBarcode} to print queue."
+                    : $"Added item barcode {item.EffectiveBarcode} to print queue.";
             }
             catch (Exception ex)
             {
@@ -339,15 +377,20 @@ namespace POS.BackOffice.UI.ViewModels
         {
             var existing = PrintQueue.FirstOrDefault(q =>
                 q.ItemVariantId == item.ItemVariantId &&
-                q.Barcode == item.Barcode);
+                (q.ItemBatchId ?? 0) == (item.ItemBatchId ?? 0) &&
+                q.EffectiveBarcode.Equals(item.EffectiveBarcode, StringComparison.OrdinalIgnoreCase));
 
             if (existing != null)
             {
-                existing.PrintQuantity += item.PrintQuantity;
+                if (item.PrintQuantity > 0)
+                    existing.PrintQuantity += item.PrintQuantity;
+
+                if (item.IsSelected)
+                    existing.IsSelected = true;
+
                 return;
             }
 
-            item.PropertyChanged += QueueItem_PropertyChanged;
             PrintQueue.Add(item);
         }
 
@@ -355,18 +398,67 @@ namespace POS.BackOffice.UI.ViewModels
         // QUEUE MANAGEMENT
         // =========================================================
 
+        partial void OnIsSelectAllCheckedChanged(bool value)
+        {
+            if (_isUpdatingSelectAllFromQueue)
+                return;
+
+            _isBulkSelectionChanging = true;
+
+            foreach (var item in PrintQueue)
+                item.IsSelected = value;
+
+            _isBulkSelectionChanging = false;
+
+            RefreshQueueCounters();
+        }
+
+        [RelayCommand]
+        private void SelectAllQueue()
+        {
+            IsSelectAllChecked = true;
+        }
+
+        [RelayCommand]
+        private void UnselectAllQueue()
+        {
+            IsSelectAllChecked = false;
+        }
+
+        [RelayCommand]
+        private void SetPrintQtyToReceived()
+        {
+            var selectedRows = PrintQueue
+                .Where(q => q.IsSelected && q.IsBatchLabel)
+                .ToList();
+
+            if (!selectedRows.Any())
+            {
+                MessageBox.Show(
+                    "Select one or more GRN batch rows first.",
+                    "No Batch Rows Selected",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            foreach (var item in selectedRows)
+                item.PrintQuantity = ConvertQtyToLabels(item.ReceivedQty);
+
+            RefreshQueueCounters();
+            StatusMessage = "Print quantity reset to received quantity for selected batch rows.";
+        }
+
         [RelayCommand]
         private void RemoveQueueItem(BarcodePrintQueueItemDto? item)
         {
             if (item == null)
                 return;
 
-            item.PropertyChanged -= QueueItem_PropertyChanged;
             PrintQueue.Remove(item);
+            RefreshQueueCounters();
 
-            UpdateTotalLabels();
-
-            StatusMessage = $"Removed {item.ItemCode} from print queue.";
+            StatusMessage = $"Removed {item.DisplayName} from print queue.";
         }
 
         [RelayCommand]
@@ -384,12 +476,8 @@ namespace POS.BackOffice.UI.ViewModels
             if (confirm != MessageBoxResult.Yes)
                 return;
 
-            foreach (var item in PrintQueue)
-                item.PropertyChanged -= QueueItem_PropertyChanged;
-
             PrintQueue.Clear();
-
-            UpdateTotalLabels();
+            RefreshQueueCounters();
 
             StatusMessage = "Print queue cleared.";
         }
@@ -401,9 +489,11 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task PrintSelectedLabelsAsync()
         {
-            var queue = PrintQueue.ToList();
+            var selectedQueue = PrintQueue
+                .Where(q => q.IsSelected && q.PrintQuantity > 0)
+                .ToList();
 
-            var errors = BarcodePrinterRepository.ValidatePrintQueue(queue);
+            var errors = BarcodePrinterRepository.ValidatePrintQueue(selectedQueue);
             errors.AddRange(PrintConfig.ValidateForPrint());
 
             if (errors.Any())
@@ -418,8 +508,10 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            int labelCount = selectedQueue.Sum(q => q.PrintQuantity);
+
             var confirm = MessageBox.Show(
-                $"Send {TotalLabelsToGenerate} label(s) to printer?\n\nPrinter: {PrintConfig.PrinterName}",
+                $"Send {labelCount} selected label(s) to printer?\n\nPrinter: {PrintConfig.PrinterName}",
                 "Confirm Label Printing",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
@@ -428,16 +520,18 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             IsBusy = true;
-            StatusMessage = "Dispatching labels to printer...";
+            StatusMessage = "Dispatching selected labels to printer...";
 
             try
             {
-                var modelItems = queue
+                var modelItems = selectedQueue
                     .Select(q => new BarcodePrintJobItem
                     {
-                        ItemCode = q.ItemCode,
-                        ItemName = q.DisplayName,
-                        Barcode = q.Barcode,
+                        ItemCode = q.IsBatchLabel
+                            ? q.BatchDisplayText
+                            : q.ItemCode,
+                        ItemName = BuildPrintItemName(q),
+                        Barcode = q.EffectiveBarcode,
                         Price = q.Price,
                         PrintQuantity = q.PrintQuantity
                     })
@@ -457,7 +551,24 @@ namespace POS.BackOffice.UI.ViewModels
 
                 await _printService.PrintLabelsAsync(modelItems, modelSettings);
 
-                StatusMessage = $"Dispatched {TotalLabelsToGenerate} label(s) to printer.";
+                await _printerRepository.MarkBatchLabelsPrintedAsync(
+                    selectedQueue,
+                    printedBy: "Admin");
+
+                DateTime now = DateTime.Now;
+
+                foreach (var item in selectedQueue.Where(q => q.IsBatchLabel))
+                {
+                    item.BarcodePrintedCount += item.PrintQuantity;
+                    item.LastBarcodePrintedAt = now;
+                    item.LastBarcodePrintedBy = "Admin";
+                    item.PrintQuantity = 0;
+                    item.IsSelected = false;
+                }
+
+                RefreshQueueCounters();
+
+                StatusMessage = $"Dispatched {labelCount} label(s) to printer.";
 
                 MessageBox.Show(
                     "Labels were dispatched to the printer successfully.",
@@ -481,6 +592,24 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
+        private static string BuildPrintItemName(BarcodePrintQueueItemDto item)
+        {
+            string name = item.DisplayName;
+
+            if (!item.IsBatchLabel)
+                return name;
+
+            string batch = string.IsNullOrWhiteSpace(item.BatchNo)
+                ? string.Empty
+                : $" | B:{item.BatchNo.Trim()}";
+
+            string expiry = item.ExpiryDate.HasValue
+                ? $" | E:{item.ExpiryDate.Value:yyyy-MM-dd}"
+                : string.Empty;
+
+            return $"{name}{batch}{expiry}";
+        }
+
         // =========================================================
         // EVENTS / TOTALS
         // =========================================================
@@ -499,19 +628,42 @@ namespace POS.BackOffice.UI.ViewModels
                     item.PropertyChanged -= QueueItem_PropertyChanged;
             }
 
-            UpdateTotalLabels();
+            RefreshQueueCounters();
         }
 
         private void QueueItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(BarcodePrintQueueItemDto.PrintQuantity))
-                UpdateTotalLabels();
+            if (_isBulkSelectionChanging)
+                return;
+
+            if (e.PropertyName == nameof(BarcodePrintQueueItemDto.PrintQuantity) ||
+                e.PropertyName == nameof(BarcodePrintQueueItemDto.IsSelected))
+            {
+                RefreshQueueCounters();
+            }
         }
 
-        private void UpdateTotalLabels()
+        private void RefreshQueueCounters()
         {
-            TotalLabelsToGenerate = PrintQueue.Sum(x => x.PrintQuantity);
             QueueItemCount = PrintQueue.Count;
+            TotalLabelsToGenerate = PrintQueue.Sum(q => q.PrintQuantity);
+
+            SelectedQueueItemCount = PrintQueue.Count(q => q.IsSelected);
+            SelectedLabelsToGenerate = PrintQueue
+                .Where(q => q.IsSelected)
+                .Sum(q => q.PrintQuantity);
+
+            _isUpdatingSelectAllFromQueue = true;
+            IsSelectAllChecked = PrintQueue.Any() && SelectedQueueItemCount == PrintQueue.Count;
+            _isUpdatingSelectAllFromQueue = false;
+        }
+
+        private static int ConvertQtyToLabels(decimal qty)
+        {
+            if (qty <= 0m)
+                return 0;
+
+            return (int)Math.Ceiling(qty);
         }
     }
 }

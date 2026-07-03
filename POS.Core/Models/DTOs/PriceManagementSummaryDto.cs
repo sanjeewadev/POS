@@ -18,6 +18,7 @@ namespace POS.Core.Models.DTOs
         private bool _isDirty;
 
         public int ItemVariantId { get; set; }
+        public int ItemParentId { get; set; }
 
         public string ItemCode { get; set; } = string.Empty;
         public string SkuCode { get; set; } = string.Empty;
@@ -25,17 +26,32 @@ namespace POS.Core.Models.DTOs
 
         public string Description { get; set; } = string.Empty;
         public string VariantAttributes { get; set; } = string.Empty;
+        public string Uom { get; set; } = "PCS";
+        public string CategoryName { get; set; } = string.Empty;
 
+        public bool HasBatchTracking { get; set; }
+        public bool HasExpiryTracking { get; set; }
+
+        public int ActiveStockRowCount { get; set; }
         public decimal TotalSoh { get; set; }
+
+        public decimal CurrentStockValue { get; set; }
+        public decimal CurrentRetailValue { get; set; }
+        public decimal CurrentWholesaleValue { get; set; }
+
+        public DateTime? LastReceivedDate { get; set; }
+        public DateTime? EarliestExpiryDate { get; set; }
 
         public decimal MovingAverageCost
         {
             get => _movingAverageCost;
             set
             {
-                if (_movingAverageCost != value)
+                decimal newValue = RoundMoney(value);
+
+                if (_movingAverageCost != newValue)
                 {
-                    _movingAverageCost = RoundMoney(value);
+                    _movingAverageCost = newValue;
                     OnPropertyChanged();
                     NotifyMarginProperties();
                 }
@@ -47,9 +63,11 @@ namespace POS.Core.Models.DTOs
             get => _lastLandedCost;
             set
             {
-                if (_lastLandedCost != value)
+                decimal newValue = RoundMoney(value);
+
+                if (_lastLandedCost != newValue)
                 {
-                    _lastLandedCost = RoundMoney(value);
+                    _lastLandedCost = newValue;
                     OnPropertyChanged();
                     NotifyMarginProperties();
                 }
@@ -84,6 +102,7 @@ namespace POS.Core.Models.DTOs
                     OnPropertyChanged();
                     NotifyMarginProperties();
                     NotifyRuleProperties();
+                    NotifyValueProperties();
                 }
             }
         }
@@ -102,6 +121,7 @@ namespace POS.Core.Models.DTOs
                     OnPropertyChanged();
                     NotifyMarginProperties();
                     NotifyRuleProperties();
+                    NotifyValueProperties();
                 }
             }
         }
@@ -173,6 +193,46 @@ namespace POS.Core.Models.DTOs
                 return $"{Description} - {VariantAttributes}";
             }
         }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
+
+        public string CostMethodText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return "Batch Weighted Cost";
+            }
+        }
+
+        public string ActiveStockRowsText
+        {
+            get
+            {
+                if (ActiveStockRowCount <= 0)
+                    return "-";
+
+                if (!HasBatchTracking)
+                    return "GENERAL";
+
+                return ActiveStockRowCount.ToString();
+            }
+        }
+
+        public decimal NewRetailValue => Math.Round(TotalSoh * RetailPrice, 2);
+
+        public decimal NewWholesaleValue => Math.Round(TotalSoh * WholesalePrice, 2);
 
         public decimal GrossMarginPercentage
         {
@@ -271,6 +331,8 @@ namespace POS.Core.Models.DTOs
             IsDirty = false;
 
             _suppressDirtyTracking = false;
+
+            OnPropertyChanged(nameof(HasMasterPriceChanged));
         }
 
         public List<string> ValidateForSave()
@@ -281,51 +343,51 @@ namespace POS.Core.Models.DTOs
                 errors.Add("Invalid item variant.");
 
             if (RetailPrice < 0)
-                errors.Add("Retail price cannot be negative.");
+                errors.Add($"Retail price cannot be negative for '{ItemCode}'.");
 
             if (WholesalePrice < 0)
-                errors.Add("Wholesale price cannot be negative.");
+                errors.Add($"Wholesale price cannot be negative for '{ItemCode}'.");
 
             if (MinimumPrice < 0)
-                errors.Add("Minimum price cannot be negative.");
+                errors.Add($"Minimum price cannot be negative for '{ItemCode}'.");
 
             if (MaximumPrice < 0)
-                errors.Add("Maximum price cannot be negative.");
+                errors.Add($"Maximum price cannot be negative for '{ItemCode}'.");
 
             if (RetailPrice <= 0)
-                errors.Add("Retail price must be greater than zero.");
+                errors.Add($"Retail price must be greater than zero for '{ItemCode}'.");
 
             if (MaximumPrice > 0 &&
                 MinimumPrice > 0 &&
                 MaximumPrice < MinimumPrice)
             {
-                errors.Add("Maximum price cannot be lower than minimum price.");
+                errors.Add($"Maximum price cannot be lower than minimum price for '{ItemCode}'.");
             }
 
             if (MinimumPrice > 0 &&
                 RetailPrice > 0 &&
                 RetailPrice < MinimumPrice)
             {
-                errors.Add("Retail price cannot be lower than minimum price.");
+                errors.Add($"Retail price cannot be lower than minimum price for '{ItemCode}'.");
             }
 
             if (MinimumPrice > 0 &&
                 WholesalePrice > 0 &&
                 WholesalePrice < MinimumPrice)
             {
-                errors.Add("Wholesale price cannot be lower than minimum price.");
+                errors.Add($"Wholesale price cannot be lower than minimum price for '{ItemCode}'.");
             }
 
             if (MaximumPrice > 0 &&
                 RetailPrice > MaximumPrice)
             {
-                errors.Add("Retail price cannot be higher than maximum price.");
+                errors.Add($"Retail price cannot be higher than maximum price for '{ItemCode}'.");
             }
 
             if (MaximumPrice > 0 &&
                 WholesalePrice > MaximumPrice)
             {
-                errors.Add("Wholesale price cannot be higher than maximum price.");
+                errors.Add($"Wholesale price cannot be higher than maximum price for '{ItemCode}'.");
             }
 
             return errors;
@@ -358,6 +420,12 @@ namespace POS.Core.Models.DTOs
             OnPropertyChanged(nameof(MarginHealth));
         }
 
+        private void NotifyValueProperties()
+        {
+            OnPropertyChanged(nameof(NewRetailValue));
+            OnPropertyChanged(nameof(NewWholesaleValue));
+        }
+
         private static decimal RoundMoney(decimal value)
         {
             return Math.Round(value, 2);
@@ -371,6 +439,7 @@ namespace POS.Core.Models.DTOs
         }
     }
 
+    // Kept for compatibility with old code. The simplified Price Management page does not edit batches separately.
     public class PriceManagementBatchDto : INotifyPropertyChanged
     {
         private bool _suppressDirtyTracking = false;
@@ -383,6 +452,9 @@ namespace POS.Core.Models.DTOs
         public int ItemVariantId { get; set; }
 
         public string BatchNo { get; set; } = string.Empty;
+        public string InternalBatchBarcode { get; set; } = string.Empty;
+
+        public bool IsGeneralStockBucket { get; set; }
 
         public DateTime? ExpiryDate { get; set; }
         public DateTime ReceivedDate { get; set; }

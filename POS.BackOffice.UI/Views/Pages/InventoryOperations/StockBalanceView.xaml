@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.StockBalanceView"
+<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.StockBalanceView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -6,7 +6,7 @@
              xmlns:conv="clr-namespace:POS.BackOffice.UI.Converters"
              mc:Ignorable="d"
              d:DesignHeight="850"
-             d:DesignWidth="1400"
+             d:DesignWidth="1450"
              Background="#D4D0C8"
              FontFamily="Segoe UI"
              FontSize="12">
@@ -122,6 +122,12 @@
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
+        <Style TargetType="{x:Type DataGridCell}" x:Key="TrackingCell" BasedOn="{StaticResource BaseCell}">
+            <Setter Property="Background" Value="#EEF6FF"/>
+            <Setter Property="Foreground" Value="#003366"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
         <Style TargetType="{x:Type DataGridCell}" x:Key="WarningCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#FFF7ED"/>
             <Setter Property="Foreground" Value="#B45309"/>
@@ -201,7 +207,8 @@
                                VerticalAlignment="Center"
                                Foreground="#666"
                                FontSize="11"
-                               Margin="15,0"/>
+                               Margin="15,0"
+                               TextWrapping="Wrap"/>
 
                     <Border Grid.Column="2"
                             Background="#E0FFFF"
@@ -234,7 +241,7 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Search Item Code / SKU / Barcode / Name:"
+                        <TextBlock Text="Search Item Code / SKU / Item Barcode / Batch Barcode / Batch No / Name:"
                                    Style="{StaticResource InlineLabel}"/>
 
                         <TextBox Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -289,7 +296,7 @@
                               FontWeight="Bold"
                               Margin="0,0,25,0"/>
 
-                    <TextBlock Text="Tip: Select a row to view batch-level details. Item Code, SKU, Barcode, and Batch No can be selected and copied."
+                    <TextBlock Text="Average-cost items show the hidden GENERAL stock bucket. Batch-tracked items show real GRN batches and GRN batch barcodes."
                                Foreground="#666"
                                VerticalAlignment="Center"
                                FontStyle="Italic"/>
@@ -329,13 +336,12 @@
                 </DataGrid.Resources>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="..."
-                                        Binding="{Binding BatchCount}"
-                                        Width="42"
+
+                    <DataGridTextColumn Header="Tracking"
+                                        Binding="{Binding TrackingText}"
+                                        Width="115"
                                         FontWeight="Bold"
-                                        Foreground="#005555"
-                                        ElementStyle="{StaticResource CenterText}"
-                                        CellStyle="{StaticResource FrozenCell}"/>
+                                        CellStyle="{StaticResource TrackingCell}"/>
 
                     <DataGridTextColumn Header="Status"
                                         Binding="{Binding StockStatus}"
@@ -344,7 +350,7 @@
                                         CellStyle="{StaticResource WarningCell}"/>
 
                     <DataGridTemplateColumn Header="Item Code"
-                                            Width="90"
+                                            Width="95"
                                             CellStyle="{StaticResource FrozenCell}">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -356,7 +362,7 @@
                     </DataGridTemplateColumn>
 
                     <DataGridTemplateColumn Header="SKU"
-                                            Width="120">
+                                            Width="135">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBox Text="{Binding SkuCode}"
@@ -366,7 +372,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Barcode"
+                    <DataGridTemplateColumn Header="Item Barcode"
                                             Width="130">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -406,12 +412,18 @@
                                         Width="105"
                                         ElementStyle="{StaticResource CenterBoldGreenText}"/>
 
-                    <DataGridTextColumn Header="Batches"
-                                        Binding="{Binding BatchCount}"
-                                        Width="65"
+                    <DataGridTextColumn Header="Stock Rows"
+                                        Binding="{Binding BatchCountText}"
+                                        Width="95"
                                         ElementStyle="{StaticResource CenterText}"/>
 
-                    <DataGridTextColumn Header="Avg Cost"
+                    <DataGridTextColumn Header="Cost Method"
+                                        Binding="{Binding CostMethodText}"
+                                        Width="135"
+                                        Foreground="#003366"
+                                        FontWeight="Bold"/>
+
+                    <DataGridTextColumn Header="Unit Cost"
                                         Binding="{Binding UnitCost, StringFormat=N2}"
                                         Width="85"
                                         CellStyle="{StaticResource FinancialCell}"
@@ -487,17 +499,24 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Column="0"
-                                               Text="ACTIVE BATCH BREAKDOWN"
-                                               FontWeight="Bold"
-                                               Foreground="#003366"
-                                               FontSize="11"/>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding DetailsHeaderText}"
+                                                   FontWeight="Bold"
+                                                   Foreground="#003366"
+                                                   FontSize="11"/>
+
+                                        <TextBlock Text="{Binding DetailSummaryText}"
+                                                   Foreground="#666"
+                                                   FontSize="11"
+                                                   Margin="0,2,0,0"/>
+                                    </StackPanel>
 
                                     <TextBlock Grid.Column="1"
                                                Text="{Binding Description}"
                                                Foreground="#666"
                                                FontStyle="Italic"
-                                               Margin="15,0,0,0"/>
+                                               Margin="15,0,0,0"
+                                               VerticalAlignment="Top"/>
                                 </Grid>
 
                                 <DataGrid ItemsSource="{Binding Batches}"
@@ -511,7 +530,9 @@
                                           BorderThickness="1"
                                           HorizontalGridLinesBrush="#E2E8F0"
                                           VerticalGridLinesBrush="#E2E8F0"
-                                          RowHeight="24">
+                                          RowHeight="24"
+                                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                                     <DataGrid.Resources>
                                         <Style TargetType="{x:Type DataGridColumnHeader}">
@@ -525,14 +546,33 @@
                                     </DataGrid.Resources>
 
                                     <DataGrid.Columns>
-                                        <DataGridTemplateColumn Header="Batch No"
-                                                                Width="130">
+
+                                        <DataGridTextColumn Header="Row Type"
+                                                            Binding="{Binding RowTypeText}"
+                                                            Width="105"
+                                                            FontWeight="Bold"
+                                                            Foreground="#003366"/>
+
+                                        <DataGridTemplateColumn Header="Batch / Bucket"
+                                                                Width="135">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <TextBox Text="{Binding BatchNo}"
+                                                    <TextBox Text="{Binding BatchDisplayText}"
                                                              Style="{StaticResource CopyableGridTextBox}"
                                                              Foreground="#003366"
                                                              FontWeight="Bold"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+
+                                        <DataGridTemplateColumn Header="GRN Batch Barcode"
+                                                                Width="145">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding BarcodeDisplayText}"
+                                                             Style="{StaticResource CopyableGridTextBox}"
+                                                             Foreground="#111827"
+                                                             FontWeight="SemiBold"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
@@ -600,6 +640,18 @@
                                                             Binding="{Binding TotalBatchWholesale, StringFormat=N2}"
                                                             Width="115"
                                                             ElementStyle="{StaticResource RightText}"/>
+
+                                        <DataGridTextColumn Header="Printed"
+                                                            Binding="{Binding PrintedStatusText}"
+                                                            Width="120"/>
+
+                                        <DataGridTextColumn Header="Printed By"
+                                                            Binding="{Binding LastBarcodePrintedBy}"
+                                                            Width="95"/>
+
+                                        <DataGridTextColumn Header="Printed At"
+                                                            Binding="{Binding LastBarcodePrintedAt, StringFormat=g}"
+                                                            Width="120"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </StackPanel>
@@ -624,7 +676,7 @@
 
                 <StackPanel VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="Total Line Items: "
+                        <TextBlock Text="Total Variants: "
                                    Foreground="#555"
                                    FontSize="12"
                                    FontWeight="SemiBold"/>
@@ -636,12 +688,36 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="Total Batches: "
+                        <TextBlock Text="Average Cost: "
                                    Foreground="#555"
                                    FontSize="12"
                                    FontWeight="SemiBold"/>
 
-                        <TextBlock Text="{Binding TotalBatchCount}"
+                        <TextBlock Text="{Binding AverageCostLineCount}"
+                                   FontWeight="Bold"
+                                   Foreground="#003366"
+                                   FontSize="13"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="Batch Tracked: "
+                                   Foreground="#555"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"/>
+
+                        <TextBlock Text="{Binding BatchTrackedLineCount}"
+                                   FontWeight="Bold"
+                                   Foreground="#003366"
+                                   FontSize="13"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="Stock Rows: "
+                                   Foreground="#555"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"/>
+
+                        <TextBlock Text="{Binding TotalStockBucketCount}"
                                    FontWeight="Bold"
                                    Foreground="#000"
                                    FontSize="13"/>
@@ -756,6 +832,11 @@
 
                         <TextBlock Text="{Binding ExpiringSoonBatchCount, StringFormat=Expiring Soon: \{0\}}"
                                    Foreground="#B45309"
+                                   FontWeight="Bold"
+                                   FontSize="11"/>
+
+                        <TextBlock Text="{Binding BatchExpiryLineCount, StringFormat=Batch + Expiry: \{0\}}"
+                                   Foreground="#003366"
                                    FontWeight="Bold"
                                    FontSize="11"/>
                     </StackPanel>

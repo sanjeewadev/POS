@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -1415,8 +1415,14 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 RecalculateTotals();
 
-                var validLines = GrnLines
+                var sourceLinesForPosting = GrnLines
                     .Where(l => l.ReceivedQty > 0)
+                    .ToList();
+
+                bool hasPrintableBatchLabels = sourceLinesForPosting.Any(l => l.HasBatchTracking);
+                int printableBatchLineCount = sourceLinesForPosting.Count(l => l.HasBatchTracking);
+
+                var validLines = sourceLinesForPosting
                     .Select(ToPostingLine)
                     .ToList();
 
@@ -1442,14 +1448,45 @@ namespace POS.BackOffice.UI.ViewModels
 
                 await _grnRepository.PostGrnAsync(header, validLines);
 
-                _messageBoxService.ShowInformation(
-                    "GRN posted successfully.",
-                    "Success");
+                string postedGrnNumber = string.IsNullOrWhiteSpace(header.GrnNumber)
+                    ? "posted GRN"
+                    : header.GrnNumber.Trim();
+
+                if (hasPrintableBatchLabels)
+                {
+                    bool printNow = _messageBoxService.ShowConfirmation(
+                        $"GRN {postedGrnNumber} posted successfully.\n\n" +
+                        $"This GRN has {printableBatchLineCount} batch-tracked line(s) that need GRN batch barcode labels.\n\n" +
+                        "Open Barcode Printer page now and print the batch labels?",
+                        "Print GRN Batch Barcodes",
+                        MessageBoxImage.Question);
+
+                    if (printNow)
+                    {
+                        _messageBoxService.ShowInformation(
+                            $"Open Inventory Operations > Barcode Printer.\n\n" +
+                            $"1. Select GRN: {postedGrnNumber}\n" +
+                            "2. Click Load GRN Batches\n" +
+                            "3. Check Print Qty\n" +
+                            "4. Click Print Selected\n\n" +
+                            "Average-cost GENERAL stock lines will not appear in the GRN barcode queue.",
+                            "Barcode Printing");
+                    }
+                }
+                else
+                {
+                    _messageBoxService.ShowInformation(
+                        $"GRN {postedGrnNumber} posted successfully.\n\n" +
+                        "No GRN batch barcode labels are required because this GRN has no batch-tracked lines.",
+                        "Success");
+                }
 
                 Clear();
                 await LoadOpenPurchaseOrdersAsync();
 
-                StatusMessage = "GRN posted successfully.";
+                StatusMessage = hasPrintableBatchLabels
+                    ? $"GRN {postedGrnNumber} posted successfully. Print batch labels from Barcode Printer."
+                    : $"GRN {postedGrnNumber} posted successfully.";
             }
             catch (InvalidOperationException ex)
             {
