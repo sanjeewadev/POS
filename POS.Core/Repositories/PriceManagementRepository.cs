@@ -43,7 +43,7 @@ namespace POS.Core.Repositories
                     v.ItemParent.ItemCode.ToUpper().Contains(search) ||
                     v.ItemParent.ItemName.ToUpper().Contains(search) ||
                     v.SkuCode.ToUpper().Contains(search) ||
-                    v.Barcode.ToUpper().Contains(search));
+                    (v.Barcode ?? string.Empty).ToUpper().Contains(search));
             }
 
             var variants = await query
@@ -84,8 +84,6 @@ namespace POS.Core.Repositories
                 })
                 .ToListAsync();
 
-            // SQLite decimal-safe aggregation.
-            // Do NOT use EF-side Sum() for decimal with SQLite.
             var stockByVariant = batchRows
                 .Where(b => b.CurrentStock > 0)
                 .GroupBy(b => b.ItemVariantId)
@@ -124,13 +122,14 @@ namespace POS.Core.Repositories
                         : variant.VariantDescription,
 
                     TotalSoh = totalSoh,
-                    MovingAverageCost = variant.AverageCost,
-                    LastLandedCost = variant.CostPrice,
 
-                    RetailPrice = variant.RetailPrice,
-                    WholesalePrice = variant.WholesalePrice,
-                    MinimumPrice = variant.MinimumPrice,
-                    MaximumPrice = variant.MaximumPrice
+                    MovingAverageCost = RoundMoney(variant.AverageCost),
+                    LastLandedCost = RoundMoney(variant.CostPrice),
+
+                    RetailPrice = RoundMoney(variant.RetailPrice),
+                    WholesalePrice = RoundMoney(variant.WholesalePrice),
+                    MinimumPrice = RoundMoney(variant.MinimumPrice),
+                    MaximumPrice = RoundMoney(variant.MaximumPrice)
                 };
 
                 dto.AcceptChanges();
@@ -148,13 +147,18 @@ namespace POS.Core.Repositories
             if (marginFilter == "Low Margin Alerts (< 20%)")
             {
                 results = results
-                    .Where(r => r.GrossMarginPercentage < 20m)
+                    .Where(r =>
+                        r.MarginHealth == "Negative Margin" ||
+                        r.MarginHealth == "Low Margin" ||
+                        r.MarginHealth == "Below Minimum" ||
+                        r.MarginHealth == "No Retail Price" ||
+                        r.MarginHealth == "Cost Missing")
                     .ToList();
             }
             else if (marginFilter == "Healthy Margins")
             {
                 results = results
-                    .Where(r => r.GrossMarginPercentage >= 20m)
+                    .Where(r => r.MarginHealth == "Healthy")
                     .ToList();
             }
 
@@ -166,7 +170,7 @@ namespace POS.Core.Repositories
         }
 
         // =========================================================
-        // BATCH INSPECTOR - NEW SAFE DTO VERSION
+        // BATCH INSPECTOR
         // =========================================================
 
         public async Task<List<PriceManagementBatchDto>> GetActiveBatchPriceRowsAsync(int itemVariantId)
@@ -193,9 +197,9 @@ namespace POS.Core.Repositories
                     ExpiryDate = b.ExpiryDate,
                     ReceivedDate = b.ReceivedDate,
                     CurrentStock = b.CurrentStock,
-                    CostPrice = b.CostPrice,
-                    RetailPrice = b.RetailPrice,
-                    WholesalePrice = b.WholesalePrice
+                    CostPrice = RoundMoney(b.CostPrice),
+                    RetailPrice = RoundMoney(b.RetailPrice),
+                    WholesalePrice = RoundMoney(b.WholesalePrice)
                 })
                 .ToListAsync();
 
@@ -205,11 +209,7 @@ namespace POS.Core.Repositories
             return rows;
         }
 
-        // =========================================================
-        // BATCH INSPECTOR - COMPATIBILITY VERSION
-        // Keeps your current ViewModel compiling until we replace it.
-        // =========================================================
-
+        // Compatibility method. Keep it for older code until all pages are cleaned.
         public async Task<List<ItemBatch>> GetActiveBatchesAsync(int itemVariantId)
         {
             if (itemVariantId <= 0)
@@ -230,18 +230,36 @@ namespace POS.Core.Repositories
         }
 
         // =========================================================
-        // SAVE PRICING - NEW SAFE DTO VERSION
+        // SAVE PRICING WITH HISTORY
         // =========================================================
 
         public async Task UpdatePricingAsync(
             PriceManagementSummaryDto masterPricing,
             List<PriceManagementBatchDto> batchOverrides,
-            string updatedBy = "Admin")
+            string updatedBy = "Admin",
+            string changeReason = "Price updated from Price Management page",
+            string reasonCode = "")
         {
             if (masterPricing == null)
                 throw new ArgumentNullException(nameof(masterPricing));
 
             batchOverrides ??= new List<PriceManagementBatchDto>();
+
+            updatedBy = NormalizeText(updatedBy);
+            changeReason = NormalizeText(changeReason);
+            reasonCode = NormalizeText(reasonCode);
+
+            if (string.IsNullOrWhiteSpace(updatedBy))
+                updatedBy = "Admin";
+
+            if (string.IsNullOrWhiteSpace(changeReason))
+                throw new InvalidOperationException("Price change reason is required.");
+
+            if (changeReason.Length > 250)
+                throw new InvalidOperationException("Price change reason cannot be longer than 250 characters.");
+
+            if (reasonCode.Length > 100)
+                throw new InvalidOperationException("Price change reason code cannot be longer than 100 characters.");
 
             ValidateMasterPricing(masterPricing);
 
@@ -265,11 +283,23 @@ namespace POS.Core.Repositories
                 if (variant == null)
                     throw new InvalidOperationException("Selected item variant was not found or is inactive.");
 
-                variant.RetailPrice = RoundMoney(masterPricing.RetailPrice);
-                variant.WholesalePrice = RoundMoney(masterPricing.WholesalePrice);
-                variant.MinimumPrice = RoundMoney(masterPricing.MinimumPrice);
-                variant.MaximumPrice = RoundMoney(masterPricing.MaximumPrice);
-                variant.UpdatedAt = now;
+                var historyRows = new List<PriceChangeHistory>();
+
+                decimal oldMinimumPrice = RoundMoney(variant.MinimumPrice);
+                decimal oldRetailPrice = RoundMoney(variant.RetailPrice);
+                decimal oldWholesalePrice = RoundMoney(variant.WholesalePrice);
+                decimal oldMaximumPrice = RoundMoney(variant.MaximumPrice);
+
+                decimal newMinimumPrice = RoundMoney(masterPricing.MinimumPrice);
+                decimal newRetailPrice = RoundMoney(masterPricing.RetailPrice);
+                decimal newWholesalePrice = RoundMoney(masterPricing.WholesalePrice);
+                decimal newMaximumPrice = RoundMoney(masterPricing.MaximumPrice);
+
+                bool masterChanged =
+                    oldMinimumPrice != newMinimumPrice ||
+                    oldRetailPrice != newRetailPrice ||
+                    oldWholesalePrice != newWholesalePrice ||
+                    oldMaximumPrice != newMaximumPrice;
 
                 var batchIds = batchOverrides
                     .Where(b => b.ItemBatchId > 0)
@@ -277,9 +307,11 @@ namespace POS.Core.Repositories
                     .Distinct()
                     .ToList();
 
+                Dictionary<int, ItemBatch> dbBatches = new();
+
                 if (batchIds.Any())
                 {
-                    var dbBatches = await context.ItemBatches
+                    dbBatches = await context.ItemBatches
                         .Where(b =>
                             batchIds.Contains(b.Id) &&
                             b.ItemVariantId == variant.Id &&
@@ -290,12 +322,141 @@ namespace POS.Core.Repositories
                     {
                         if (!dbBatches.TryGetValue(batchDto.ItemBatchId, out var dbBatch))
                             throw new InvalidOperationException($"Batch '{batchDto.BatchNo}' was not found or does not belong to the selected item.");
-
-                        dbBatch.RetailPrice = RoundMoney(batchDto.RetailPrice);
-                        dbBatch.WholesalePrice = RoundMoney(batchDto.WholesalePrice);
-                        dbBatch.UpdatedAt = now;
                     }
                 }
+
+                string priceChangeNo = string.Empty;
+
+                bool anyBatchChanged = batchOverrides.Any(batchDto =>
+                {
+                    if (!dbBatches.TryGetValue(batchDto.ItemBatchId, out var dbBatch))
+                        return false;
+
+                    return RoundMoney(dbBatch.RetailPrice) != RoundMoney(batchDto.RetailPrice) ||
+                           RoundMoney(dbBatch.WholesalePrice) != RoundMoney(batchDto.WholesalePrice);
+                });
+
+                if (masterChanged || anyBatchChanged)
+                {
+                    priceChangeNo = await GenerateDocumentNumberAsync(context, "PCH");
+                }
+
+                if (masterChanged)
+                {
+                    historyRows.Add(new PriceChangeHistory
+                    {
+                        PriceChangeNo = priceChangeNo,
+                        PriceLevel = "Master",
+                        ChangeSource = "PriceManagement",
+
+                        ItemVariantId = variant.Id,
+                        ItemBatchId = null,
+
+                        ItemCode = variant.ItemParent.ItemCode,
+                        SkuCode = variant.SkuCode,
+                        Barcode = variant.Barcode ?? string.Empty,
+                        ItemDescription = variant.ItemParent.ItemName,
+                        VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
+                            ? "Standard"
+                            : variant.VariantDescription,
+
+                        BatchNo = string.Empty,
+                        BatchExpiryDate = null,
+
+                        EffectiveCost = ResolveEffectiveCost(variant.AverageCost, variant.CostPrice),
+
+                        OldMinimumPrice = oldMinimumPrice,
+                        NewMinimumPrice = newMinimumPrice,
+
+                        OldRetailPrice = oldRetailPrice,
+                        NewRetailPrice = newRetailPrice,
+
+                        OldWholesalePrice = oldWholesalePrice,
+                        NewWholesalePrice = newWholesalePrice,
+
+                        OldMaximumPrice = oldMaximumPrice,
+                        NewMaximumPrice = newMaximumPrice,
+
+                        ChangedBy = updatedBy,
+                        ChangedAt = now,
+                        ReasonCode = reasonCode,
+                        ChangeReason = changeReason,
+                        Remarks = "Master price updated from Price Management page."
+                    });
+                }
+
+                variant.MinimumPrice = newMinimumPrice;
+                variant.RetailPrice = newRetailPrice;
+                variant.WholesalePrice = newWholesalePrice;
+                variant.MaximumPrice = newMaximumPrice;
+                variant.UpdatedAt = now;
+
+                foreach (var batchDto in batchOverrides)
+                {
+                    if (!dbBatches.TryGetValue(batchDto.ItemBatchId, out var dbBatch))
+                        continue;
+
+                    decimal oldBatchRetail = RoundMoney(dbBatch.RetailPrice);
+                    decimal oldBatchWholesale = RoundMoney(dbBatch.WholesalePrice);
+
+                    decimal newBatchRetail = RoundMoney(batchDto.RetailPrice);
+                    decimal newBatchWholesale = RoundMoney(batchDto.WholesalePrice);
+
+                    bool batchChanged =
+                        oldBatchRetail != newBatchRetail ||
+                        oldBatchWholesale != newBatchWholesale;
+
+                    if (batchChanged)
+                    {
+                        historyRows.Add(new PriceChangeHistory
+                        {
+                            PriceChangeNo = priceChangeNo,
+                            PriceLevel = "Batch",
+                            ChangeSource = "PriceManagement",
+
+                            ItemVariantId = variant.Id,
+                            ItemBatchId = dbBatch.Id,
+
+                            ItemCode = variant.ItemParent.ItemCode,
+                            SkuCode = variant.SkuCode,
+                            Barcode = variant.Barcode ?? string.Empty,
+                            ItemDescription = variant.ItemParent.ItemName,
+                            VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
+                                ? "Standard"
+                                : variant.VariantDescription,
+
+                            BatchNo = dbBatch.BatchNo,
+                            BatchExpiryDate = dbBatch.ExpiryDate,
+
+                            EffectiveCost = RoundMoney(dbBatch.CostPrice),
+
+                            OldMinimumPrice = 0m,
+                            NewMinimumPrice = 0m,
+
+                            OldRetailPrice = oldBatchRetail,
+                            NewRetailPrice = newBatchRetail,
+
+                            OldWholesalePrice = oldBatchWholesale,
+                            NewWholesalePrice = newBatchWholesale,
+
+                            OldMaximumPrice = 0m,
+                            NewMaximumPrice = 0m,
+
+                            ChangedBy = updatedBy,
+                            ChangedAt = now,
+                            ReasonCode = reasonCode,
+                            ChangeReason = changeReason,
+                            Remarks = "Batch markdown price updated from Price Management page."
+                        });
+                    }
+
+                    dbBatch.RetailPrice = newBatchRetail;
+                    dbBatch.WholesalePrice = newBatchWholesale;
+                    dbBatch.UpdatedAt = now;
+                }
+
+                if (historyRows.Any())
+                    await context.PriceChangeHistories.AddRangeAsync(historyRows);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -312,11 +473,7 @@ namespace POS.Core.Repositories
             }
         }
 
-        // =========================================================
-        // SAVE PRICING - COMPATIBILITY VERSION
-        // Keeps your current ViewModel compiling until we replace it.
-        // =========================================================
-
+        // Compatibility method. Keep it for old callers.
         public async Task UpdatePricingAsync(
             PriceManagementSummaryDto masterPricing,
             List<ItemBatch> batchOverrides)
@@ -338,7 +495,12 @@ namespace POS.Core.Repositories
                 })
                 .ToList();
 
-            await UpdatePricingAsync(masterPricing, batchDtos, "Admin");
+            await UpdatePricingAsync(
+                masterPricing,
+                batchDtos,
+                "Admin",
+                "Price updated from Price Management page",
+                string.Empty);
         }
 
         // =========================================================
@@ -352,7 +514,7 @@ namespace POS.Core.Repositories
             if (errors.Any())
             {
                 throw new InvalidOperationException(
-                    "Price validation failed:\n" + string.Join("\n", errors));
+                    "Master price validation failed:\n" + string.Join("\n", errors));
             }
         }
 
@@ -368,6 +530,43 @@ namespace POS.Core.Repositories
         }
 
         // =========================================================
+        // DOCUMENT NUMBER
+        // =========================================================
+
+        private static async Task<string> GenerateDocumentNumberAsync(
+            AppDbContext context,
+            string documentType)
+        {
+            var sequence = await context.DocumentSequences
+                .FirstOrDefaultAsync(s => s.DocumentType == documentType);
+
+            if (sequence == null)
+            {
+                sequence = new DocumentSequence
+                {
+                    DocumentType = documentType,
+                    Prefix = $"{documentType}-",
+                    NextSequenceNumber = 1,
+                    PaddingLength = 5,
+                    UpdatedAt = DateTime.Now
+                };
+
+                await context.DocumentSequences.AddAsync(sequence);
+                await context.SaveChangesAsync();
+            }
+
+            string number =
+                $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+
+            sequence.NextSequenceNumber++;
+            sequence.UpdatedAt = DateTime.Now;
+
+            await context.SaveChangesAsync();
+
+            return number;
+        }
+
+        // =========================================================
         // HELPERS
         // =========================================================
 
@@ -379,6 +578,20 @@ namespace POS.Core.Repositories
         private static decimal RoundMoney(decimal value)
         {
             return Math.Round(value, 2);
+        }
+
+        private static decimal ResolveEffectiveCost(decimal averageCost, decimal lastCost)
+        {
+            averageCost = RoundMoney(averageCost);
+            lastCost = RoundMoney(lastCost);
+
+            if (averageCost > 0)
+                return averageCost;
+
+            if (lastCost > 0)
+                return lastCost;
+
+            return 0m;
         }
     }
 }

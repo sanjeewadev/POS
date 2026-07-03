@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -45,6 +46,87 @@ namespace POS.BackOffice.UI.ViewModels
         private string _lineRemarks = string.Empty;
 
         public decimal CreditValue => Math.Round(ReturnQty * HistoricalCost, 2);
+
+        public string DisplayDescription
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(VariantDescription) ||
+                    VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Description;
+                }
+
+                return $"{Description} - {VariantDescription}";
+            }
+        }
+
+        partial void OnReturnQtyChanged(decimal value)
+        {
+            if (value < 0)
+            {
+                ReturnQty = 0m;
+                return;
+            }
+
+            OnPropertyChanged(nameof(CreditValue));
+        }
+    }
+
+    public partial class SupplierReturnLineEntryDto : ObservableObject
+    {
+        public int GrnLineId { get; set; }
+
+        public int ItemVariantId { get; set; }
+        public int ItemBatchId { get; set; }
+
+        public string ItemCode { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string VariantDescription { get; set; } = string.Empty;
+
+        public string BatchNo { get; set; } = string.Empty;
+        public DateTime? ExpiryDate { get; set; }
+
+        public decimal HistoricalCost { get; set; }
+
+        public decimal CurrentBatchStock { get; set; }
+        public decimal MaxReturnQty { get; set; }
+
+        [ObservableProperty]
+        private decimal _returnQty = 0m;
+
+        [ObservableProperty]
+        private string _reasonCode = string.Empty;
+
+        [ObservableProperty]
+        private string _lineRemarks = string.Empty;
+
+        public decimal CreditValue => Math.Round(ReturnQty * HistoricalCost, 2);
+
+        public string DisplayDescription
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(VariantDescription) ||
+                    VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Description;
+                }
+
+                return $"{Description} - {VariantDescription}";
+            }
+        }
+
+        partial void OnReturnQtyChanged(decimal value)
+        {
+            if (value < 0)
+            {
+                ReturnQty = 0m;
+                return;
+            }
+
+            OnPropertyChanged(nameof(CreditValue));
+        }
     }
 
     public partial class SupplierReturnViewModel : ViewModelBase
@@ -56,10 +138,10 @@ namespace POS.BackOffice.UI.ViewModels
         // =========================================================
 
         [ObservableProperty]
-        private Supplier? _selectedSupplier;
+        private SupplierLookupDto? _selectedSupplier;
 
         [ObservableProperty]
-        private GrnHeader? _selectedInvoice;
+        private SupplierInvoiceLookupDto? _selectedInvoice;
 
         [ObservableProperty]
         private DateTime _returnDate = DateTime.Now;
@@ -74,18 +156,18 @@ namespace POS.BackOffice.UI.ViewModels
         // DATA COLLECTIONS
         // =========================================================
 
-        public ObservableCollection<Supplier> Suppliers { get; } = new();
+        public ObservableCollection<SupplierLookupDto> Suppliers { get; } = new();
 
-        public ObservableCollection<GrnHeader> SupplierInvoices { get; } = new();
+        public ObservableCollection<SupplierInvoiceLookupDto> SupplierInvoices { get; } = new();
 
         public ObservableCollection<ReturnMatrixDto> ActiveMatrixVariants { get; } = new();
 
-        public ObservableCollection<SupplierReturnLine> ReturnLines { get; } = new();
+        public ObservableCollection<SupplierReturnLineEntryDto> ReturnLines { get; } = new();
 
         public ObservableCollection<string> ReasonCodes { get; } = new();
 
         [ObservableProperty]
-        private SupplierReturnLine? _selectedLine;
+        private SupplierReturnLineEntryDto? _selectedLine;
 
         // =========================================================
         // FINANCIAL TOTALS
@@ -141,7 +223,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                 MessageBox.Show(
                     $"Failed to load suppliers:\n\n{ex.Message}",
-                    "Database Error",
+                    "Supplier Return",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
@@ -155,30 +237,42 @@ namespace POS.BackOffice.UI.ViewModels
         // AUTO EVENTS
         // =========================================================
 
-        partial void OnSelectedSupplierChanged(Supplier? value)
+        partial void OnSelectedSupplierChanged(SupplierLookupDto? value)
         {
             SupplierInvoices.Clear();
             ActiveMatrixVariants.Clear();
-            ReturnLines.Clear();
+            ClearReturnLines();
 
             SelectedInvoice = null;
             RecalculateTotals();
 
             if (value != null)
-            {
                 _ = LoadSupplierInvoicesAsync(value.Id);
-            }
         }
 
-        partial void OnSelectedInvoiceChanged(GrnHeader? value)
+        partial void OnSelectedInvoiceChanged(SupplierInvoiceLookupDto? value)
         {
             ActiveMatrixVariants.Clear();
+            ClearReturnLines();
+            RecalculateTotals();
+
+            if (value == null)
+                StatusMessage = "Select a supplier invoice / GRN.";
         }
 
         partial void OnRestockingFeeChanged(decimal value)
         {
             if (value < 0)
+            {
                 RestockingFee = 0m;
+                return;
+            }
+
+            if (GrossCredit > 0 && value > GrossCredit)
+            {
+                RestockingFee = GrossCredit;
+                return;
+            }
 
             RecalculateTotals();
         }
@@ -196,7 +290,9 @@ namespace POS.BackOffice.UI.ViewModels
                 foreach (var invoice in invoices)
                     SupplierInvoices.Add(invoice);
 
-                StatusMessage = $"Loaded {SupplierInvoices.Count} posted invoice(s) for selected supplier.";
+                StatusMessage = SupplierInvoices.Count == 0
+                    ? "No returnable posted GRNs found for selected supplier."
+                    : $"Loaded {SupplierInvoices.Count} returnable posted GRN(s).";
             }
             catch (Exception ex)
             {
@@ -204,7 +300,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                 MessageBox.Show(
                     $"Failed to load supplier invoices:\n\n{ex.Message}",
-                    "Database Error",
+                    "Supplier Return",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
@@ -215,7 +311,7 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         // =========================================================
-        // LOAD GRN BATCH LINES
+        // LOAD GRN RETURNABLE BATCH LINES
         // =========================================================
 
         [RelayCommand]
@@ -246,6 +342,8 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 ActiveMatrixVariants.Clear();
+                ClearReturnLines();
+                RecalculateTotals();
 
                 var rows = await _returnRepository.GetReturnableBatchesForGrnAsync(SelectedInvoice.Id);
 
@@ -280,15 +378,17 @@ namespace POS.BackOffice.UI.ViewModels
                     });
                 }
 
-                StatusMessage = $"Loaded {ActiveMatrixVariants.Count} returnable batch line(s).";
+                StatusMessage = ActiveMatrixVariants.Count == 0
+                    ? "Selected GRN has no returnable batch lines."
+                    : $"Loaded {ActiveMatrixVariants.Count} returnable batch line(s).";
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load GRN returnable batches.";
 
                 MessageBox.Show(
-                    $"Failed to load invoice history:\n\n{ex.Message}",
-                    "Database Error",
+                    $"Failed to load invoice return lines:\n\n{ex.Message}",
+                    "Supplier Return",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
@@ -321,47 +421,15 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var item in itemsToAdd)
             {
-                if (item.ItemBatchId <= 0)
-                {
-                    MessageBox.Show(
-                        $"Batch is missing for item '{item.Description}'.",
-                        "Validation",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                if (!ValidateMatrixLine(item))
                     return;
-                }
+            }
 
-                if (item.ReturnQty <= 0)
-                {
-                    MessageBox.Show(
-                        $"Return quantity must be greater than zero for '{item.Description}'.",
-                        "Validation",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (item.ReturnQty > item.MaxReturnQty)
-                {
-                    MessageBox.Show(
-                        $"Cannot return {item.ReturnQty:N3} of '{item.Description}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
-                        "Return Quantity Exceeded",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return;
-                }
-
-                if (string.IsNullOrWhiteSpace(item.ReasonCode))
-                {
-                    MessageBox.Show(
-                        $"Please select a reason for '{item.Description}'.",
-                        "Validation",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return;
-                }
-
-                var existingLine = ReturnLines.FirstOrDefault(l => l.ItemBatchId == item.ItemBatchId);
+            foreach (var item in itemsToAdd)
+            {
+                var existingLine = ReturnLines.FirstOrDefault(l =>
+                    l.GrnLineId == item.GrnLineId &&
+                    l.ItemBatchId == item.ItemBatchId);
 
                 if (existingLine != null)
                 {
@@ -370,7 +438,7 @@ namespace POS.BackOffice.UI.ViewModels
                     if (newQty > item.MaxReturnQty)
                     {
                         MessageBox.Show(
-                            $"Cannot add more quantity for '{item.Description}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
+                            $"Cannot add more quantity for '{item.DisplayDescription}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
                             "Return Quantity Exceeded",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
@@ -378,39 +446,37 @@ namespace POS.BackOffice.UI.ViewModels
                     }
 
                     existingLine.ReturnQty = newQty;
-                    existingLine.CreditValue = Math.Round(existingLine.ReturnQty * existingLine.HistoricalCost, 2);
                     existingLine.ReasonCode = item.ReasonCode;
                     existingLine.LineRemarks = item.LineRemarks;
 
-                    RefreshReturnLine(existingLine);
                     continue;
                 }
 
-                var newLine = new SupplierReturnLine
+                var newLine = new SupplierReturnLineEntryDto
                 {
                     GrnLineId = item.GrnLineId,
+
                     ItemVariantId = item.ItemVariantId,
                     ItemBatchId = item.ItemBatchId,
+
+                    ItemCode = item.ItemCode,
+                    Description = item.Description,
+                    VariantDescription = item.VariantDescription,
 
                     BatchNo = item.BatchNo,
                     ExpiryDate = item.ExpiryDate,
 
                     ReturnQty = item.ReturnQty,
                     HistoricalCost = item.HistoricalCost,
-                    CreditValue = Math.Round(item.ReturnQty * item.HistoricalCost, 2),
 
                     ReasonCode = item.ReasonCode,
                     LineRemarks = item.LineRemarks,
-                    LineStatus = "Open",
 
-                    ItemCode = item.ItemCode,
-                    Description = item.Description,
-                    VariantDescription = item.VariantDescription,
                     CurrentBatchStock = item.CurrentBatchStock,
                     MaxReturnQty = item.MaxReturnQty
                 };
 
-                ReturnLines.Add(newLine);
+                AddReturnLine(newLine);
             }
 
             foreach (var item in itemsToAdd)
@@ -421,69 +487,119 @@ namespace POS.BackOffice.UI.ViewModels
             StatusMessage = $"Return cart contains {ReturnLines.Count} line(s).";
         }
 
+        private bool ValidateMatrixLine(ReturnMatrixDto item)
+        {
+            if (item.GrnLineId <= 0)
+            {
+                MessageBox.Show(
+                    $"GRN line is missing for item '{item.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (item.ItemBatchId <= 0)
+            {
+                MessageBox.Show(
+                    $"Batch is missing for item '{item.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (item.ReturnQty <= 0)
+            {
+                MessageBox.Show(
+                    $"Return quantity must be greater than zero for '{item.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (item.ReturnQty > item.MaxReturnQty)
+            {
+                MessageBox.Show(
+                    $"Cannot return {item.ReturnQty:N3} of '{item.DisplayDescription}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
+                    "Return Quantity Exceeded",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (item.HistoricalCost <= 0)
+            {
+                MessageBox.Show(
+                    $"Historical cost is missing for '{item.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(item.ReasonCode))
+            {
+                MessageBox.Show(
+                    $"Please select a reason for '{item.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
+        }
+
+        private void AddReturnLine(SupplierReturnLineEntryDto line)
+        {
+            line.PropertyChanged += ReturnLine_PropertyChanged;
+            ReturnLines.Add(line);
+        }
+
+        private void RemoveReturnLine(SupplierReturnLineEntryDto line)
+        {
+            line.PropertyChanged -= ReturnLine_PropertyChanged;
+            ReturnLines.Remove(line);
+        }
+
+        private void ReturnLine_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SupplierReturnLineEntryDto.ReturnQty) ||
+                e.PropertyName == nameof(SupplierReturnLineEntryDto.CreditValue))
+            {
+                RecalculateTotals();
+            }
+        }
+
         [RelayCommand]
-        private void RemoveLine(SupplierReturnLine? line)
+        private void RemoveLine(SupplierReturnLineEntryDto? line)
         {
             if (line == null)
                 return;
 
-            ReturnLines.Remove(line);
+            RemoveReturnLine(line);
             RecalculateTotals();
 
             StatusMessage = $"Removed line. Return cart contains {ReturnLines.Count} line(s).";
         }
 
+        // Temporary compatibility with the old XAML OK button.
+        // The final XAML will remove the OK button because totals now auto recalculate.
         [RelayCommand]
         private void UpdateLine()
         {
             if (SelectedLine == null)
                 return;
 
-            if (SelectedLine.ReturnQty <= 0)
-            {
-                MessageBox.Show(
-                    "Return quantity must be greater than zero.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+            if (!ValidateCartLine(SelectedLine))
                 return;
-            }
 
-            if (SelectedLine.ReturnQty > SelectedLine.MaxReturnQty)
-            {
-                MessageBox.Show(
-                    $"Maximum returnable quantity is {SelectedLine.MaxReturnQty:N3}.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(SelectedLine.ReasonCode))
-            {
-                MessageBox.Show(
-                    "Reason code is required.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            SelectedLine.CreditValue = Math.Round(SelectedLine.ReturnQty * SelectedLine.HistoricalCost, 2);
-
-            RefreshReturnLine(SelectedLine);
+            OnPropertyChanged(nameof(ReturnLines));
             RecalculateTotals();
-        }
 
-        private void RefreshReturnLine(SupplierReturnLine line)
-        {
-            int index = ReturnLines.IndexOf(line);
-
-            if (index >= 0)
-            {
-                ReturnLines[index] = line;
-                SelectedLine = line;
-            }
+            StatusMessage = "Return line updated.";
         }
 
         // =========================================================
@@ -507,22 +623,28 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         // =========================================================
-        // SAVE / POST
+        // POST
         // =========================================================
 
+        // Temporary compatibility with old XAML.
+        // Supplier Return draft is intentionally disabled.
         [RelayCommand]
-        private async Task SaveDraftAsync()
+        private void SaveDraft()
         {
-            await SaveReturnExecutionAsync(isDraft: true);
+            MessageBox.Show(
+                "Draft supplier returns are not supported in this version. Please post the supplier return directly.",
+                "Draft Disabled",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         [RelayCommand]
         private async Task PostReturnAsync()
         {
-            await SaveReturnExecutionAsync(isDraft: false);
+            await PostReturnExecutionAsync();
         }
 
-        private async Task SaveReturnExecutionAsync(bool isDraft)
+        private async Task PostReturnExecutionAsync()
         {
             if (SelectedSupplier == null)
             {
@@ -534,10 +656,20 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            if (SelectedInvoice == null)
+            {
+                MessageBox.Show(
+                    "Please select a posted GRN / supplier invoice.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             if (!ReturnLines.Any())
             {
                 MessageBox.Show(
-                    "Cannot save an empty supplier return.",
+                    "Cannot post an empty supplier return.",
                     "Validation",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -554,17 +686,39 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            foreach (var line in ReturnLines)
+            {
+                if (!ValidateCartLine(line))
+                    return;
+            }
+
             RecalculateTotals();
 
-            string message = isDraft
-                ? "Save this supplier return as a draft?"
-                : $"Post supplier return?\n\nThis will deduct physical batch stock and reduce supplier balance by Rs. {NetCredit:N2}.";
+            if (GrossCredit <= 0)
+            {
+                MessageBox.Show(
+                    "Gross return value must be greater than zero.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (RestockingFee > GrossCredit)
+            {
+                MessageBox.Show(
+                    "Restocking fee cannot be greater than gross return value.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
 
             var result = MessageBox.Show(
-                message,
-                isDraft ? "Save Draft" : "Post Supplier Return",
+                $"Post supplier return?\n\nThis will deduct exact batch stock and reduce supplier balance by Rs. {NetCredit:N2}.",
+                "Post Supplier Return",
                 MessageBoxButton.YesNo,
-                isDraft ? MessageBoxImage.Question : MessageBoxImage.Warning);
+                MessageBoxImage.Warning);
 
             if (result != MessageBoxResult.Yes)
                 return;
@@ -576,8 +730,8 @@ namespace POS.BackOffice.UI.ViewModels
                 var header = new SupplierReturnHeader
                 {
                     SupplierId = SelectedSupplier.Id,
-                    GrnHeaderId = SelectedInvoice?.Id,
-                    OriginalInvoiceNo = SelectedInvoice?.SupplierInvoiceNo ?? string.Empty,
+                    GrnHeaderId = SelectedInvoice.Id,
+                    OriginalInvoiceNo = SelectedInvoice.SupplierInvoiceNo,
 
                     ReturnDate = ReturnDate,
                     AuthorizedBy = AuthorizedBy.Trim(),
@@ -587,14 +741,16 @@ namespace POS.BackOffice.UI.ViewModels
                     RestockingFee = RestockingFee,
                     NetCredit = NetCredit,
 
+                    Status = "Posted",
                     CreatedBy = "Admin",
-                    PostedBy = isDraft ? string.Empty : AuthorizedBy.Trim()
+                    PostedBy = AuthorizedBy.Trim()
                 };
 
                 var lines = ReturnLines
                     .Select(l => new SupplierReturnLine
                     {
                         GrnLineId = l.GrnLineId,
+
                         ItemVariantId = l.ItemVariantId,
                         ItemBatchId = l.ItemBatchId,
 
@@ -607,7 +763,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                         ReasonCode = l.ReasonCode,
                         LineRemarks = l.LineRemarks,
-                        LineStatus = "Open",
+                        LineStatus = "Posted",
 
                         ItemCode = l.ItemCode,
                         Description = l.Description,
@@ -617,13 +773,11 @@ namespace POS.BackOffice.UI.ViewModels
                     })
                     .ToList();
 
-                await _returnRepository.SaveSupplierReturnAsync(header, lines, isDraft);
+                await _returnRepository.PostSupplierReturnAsync(header, lines);
 
                 MessageBox.Show(
-                    isDraft
-                        ? "Supplier return draft saved successfully."
-                        : "Supplier return posted successfully. Stock and supplier ledger were updated.",
-                    "Success",
+                    "Supplier return posted successfully. Stock and supplier ledger were updated.",
+                    "Supplier Return",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
 
@@ -631,10 +785,10 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = "Supplier return save/post failed.";
+                StatusMessage = "Supplier return post failed.";
 
                 MessageBox.Show(
-                    $"Database Error:\n\n{ex.Message}",
+                    $"Supplier return failed:\n\n{ex.Message}",
                     "Supplier Return Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -643,6 +797,71 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        private bool ValidateCartLine(SupplierReturnLineEntryDto line)
+        {
+            if (line.GrnLineId <= 0)
+            {
+                MessageBox.Show(
+                    $"GRN line is missing for item '{line.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (line.ItemBatchId <= 0)
+            {
+                MessageBox.Show(
+                    $"Batch is missing for item '{line.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (line.ReturnQty <= 0)
+            {
+                MessageBox.Show(
+                    $"Return quantity must be greater than zero for '{line.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (line.ReturnQty > line.MaxReturnQty)
+            {
+                MessageBox.Show(
+                    $"Cannot return {line.ReturnQty:N3} for '{line.DisplayDescription}'. Maximum returnable quantity is {line.MaxReturnQty:N3}.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (line.HistoricalCost <= 0)
+            {
+                MessageBox.Show(
+                    $"Historical cost is missing for '{line.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(line.ReasonCode))
+            {
+                MessageBox.Show(
+                    $"Reason code is required for '{line.DisplayDescription}'.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
         }
 
         // =========================================================
@@ -663,11 +882,19 @@ namespace POS.BackOffice.UI.ViewModels
 
             SupplierInvoices.Clear();
             ActiveMatrixVariants.Clear();
-            ReturnLines.Clear();
+            ClearReturnLines();
 
             RecalculateTotals();
 
             StatusMessage = "Ready.";
+        }
+
+        private void ClearReturnLines()
+        {
+            foreach (var line in ReturnLines.ToList())
+                line.PropertyChanged -= ReturnLine_PropertyChanged;
+
+            ReturnLines.Clear();
         }
     }
 }

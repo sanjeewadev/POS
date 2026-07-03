@@ -1,0 +1,503 @@
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Admin.LicenseManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="850"
+             d:DesignWidth="1250"
+             Background="#F3F4F6"
+             FontFamily="Segoe UI">
+
+    <UserControl.Resources>
+
+        <Style x:Key="PageTitleText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#1F2937"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="PageSubTitleText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,3,0,0"/>
+        </Style>
+
+        <Style x:Key="SectionTitleText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#2B5B84"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <Style x:Key="FieldLabelText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <Style x:Key="ValueText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <Style x:Key="SmallHelpText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#666666"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#C7C7C7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <Style x:Key="InfoCard" TargetType="Border">
+            <Setter Property="Background" Value="#F8F8F8"/>
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <Style x:Key="ClassicButton" TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="MinWidth" Value="130"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3A3A3A"/>
+            <Setter Property="Background" Value="#E5E7EB"/>
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#D1D5DB"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#C7CBD1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ClassicButton}">
+            <Setter Property="Background" Value="#2B5B84"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#1E405E"/>
+            <Setter Property="MinWidth" Value="160"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#244D70"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1E405E"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerStatusBox" TargetType="Border">
+            <Setter Property="Background" Value="#FFF7F7"/>
+            <Setter Property="BorderBrush" Value="#F2B8B5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0"
+                Background="White"
+                BorderBrush="#C7C7C7"
+                BorderThickness="1"
+                Padding="16"
+                Margin="0,0,0,12">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="390"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="License Management"
+                               Style="{StaticResource PageTitleText}"/>
+
+                    <TextBlock Text="View store license, terminal license, machine code, expiry status, and import renewed licenses."
+                               Style="{StaticResource PageSubTitleText}"/>
+                </StackPanel>
+
+                <Border Grid.Column="1"
+                        Background="#F8F8F8"
+                        BorderBrush="#D0D0D0"
+                        BorderThickness="1"
+                        Padding="10"
+                        VerticalAlignment="Center">
+
+                    <StackPanel>
+                        <TextBlock Text="CURRENT STATUS"
+                                   Foreground="#666666"
+                                   FontSize="11"
+                                   FontWeight="Bold"/>
+
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Foreground="{Binding StatusColor}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- BODY -->
+        <Border Grid.Row="1"
+                Background="White"
+                BorderBrush="#C7C7C7"
+                BorderThickness="1">
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12">
+
+                    <!-- OVERALL STATUS -->
+                    <!-- OVERALL STATUS -->
+                    <Border Style="{StaticResource SectionCard}">
+                        <StackPanel>
+                            <TextBlock Text="Overall License Status"
+                   Style="{StaticResource SectionTitleText}"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Overall Status" Style="{StaticResource FieldLabelText}"/>
+                                    <TextBlock Text="{Binding OverallStatus}"
+                           Foreground="{Binding OverallStatusColor}"
+                           Style="{StaticResource ValueText}"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Mode" Style="{StaticResource FieldLabelText}"/>
+
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource ValueText}">
+                                                <Setter Property="Text" Value="Operational"/>
+                                                <Setter Property="Foreground" Value="#10B981"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsReadOnlyMode}" Value="True">
+                                                        <Setter Property="Text" Value="Read Only"/>
+                                                        <Setter Property="Foreground" Value="#EF4444"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="BackOffice" Style="{StaticResource FieldLabelText}"/>
+
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource ValueText}">
+                                                <Setter Property="Text" Value="Allowed"/>
+                                                <Setter Property="Foreground" Value="#10B981"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CanRunBackOffice}" Value="False">
+                                                        <Setter Property="Text" Value="Blocked"/>
+                                                        <Setter Property="Foreground" Value="#EF4444"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="3">
+                                    <TextBlock Text="Cashier Terminal" Style="{StaticResource FieldLabelText}"/>
+
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource ValueText}">
+                                                <Setter Property="Text" Value="Allowed"/>
+                                                <Setter Property="Foreground" Value="#10B981"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CanRunCashier}" Value="False">
+                                                        <Setter Property="Text" Value="Blocked"/>
+                                                        <Setter Property="Foreground" Value="#EF4444"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- STORE LICENSE + TERMINAL LICENSE -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- STORE LICENSE -->
+                        <Border Grid.Column="0" Style="{StaticResource SectionCard}">
+                            <StackPanel>
+                                <TextBlock Text="Store License"
+                                           Style="{StaticResource SectionTitleText}"/>
+
+                                <TextBlock Text="Store ID" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding StoreId}" Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="Store Name" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding StoreName}" Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="License ID" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding LicenseId}" Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="License Status" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding LicenseStatus}"
+                                           Foreground="{Binding StoreLicenseStatusColor}"
+                                           Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="Expiry Date" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding ExpiryDate}" Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="Days Remaining" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding DaysRemaining}" Style="{StaticResource ValueText}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- TERMINAL LICENSE -->
+                        <Border Grid.Column="2" Style="{StaticResource SectionCard}">
+                            <StackPanel>
+                                <TextBlock Text="Terminal License"
+                                           Style="{StaticResource SectionTitleText}"/>
+
+                                <TextBlock Text="Current Terminal No" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding CurrentTerminalNo}" Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="Terminal License ID" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding TerminalLicenseId}" Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="Terminal License Status" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding TerminalLicenseStatus}"
+                                           Foreground="{Binding TerminalLicenseStatusColor}"
+                                           Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="Terminal Expiry Date" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding TerminalExpiryDate}" Style="{StaticResource ValueText}"/>
+
+                                <TextBlock Text="Terminal Days Remaining" Style="{StaticResource FieldLabelText}"/>
+                                <TextBlock Text="{Binding TerminalDaysRemaining}" Style="{StaticResource ValueText}"/>
+
+                                <Border Style="{StaticResource InfoCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="Only cashier/selling PCs require a terminal license."
+                                                   Foreground="#2B5B84"
+                                                   FontWeight="Bold"
+                                                   FontSize="13"/>
+
+                                        <TextBlock Text="Admin-only BackOffice PCs do not need a separate terminal license, but the store license must be valid."
+                                                   Style="{StaticResource SmallHelpText}"
+                                                   Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- MACHINE CODE -->
+                    <Border Style="{StaticResource SectionCard}">
+                        <StackPanel>
+                            <TextBlock Text="Current Machine"
+                                       Style="{StaticResource SectionTitleText}"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Machine Name" Style="{StaticResource FieldLabelText}"/>
+                                    <TextBlock Text="{Binding CurrentMachineName}" Style="{StaticResource ValueText}"/>
+
+                                    <TextBlock Text="Machine Code" Style="{StaticResource FieldLabelText}"/>
+
+                                    <Border Background="#F8F8F8"
+                                            BorderBrush="#D0D0D0"
+                                            BorderThickness="1"
+                                            Padding="10"
+                                            Margin="0,0,0,10">
+
+                                        <TextBlock Text="{Binding CurrentMachineCode}"
+                                                   Foreground="#111827"
+                                                   FontSize="16"
+                                                   FontWeight="Bold"
+                                                   TextWrapping="Wrap"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="License Request Details" Style="{StaticResource FieldLabelText}"/>
+
+                                    <TextBlock Text="Send the machine code and terminal number to support when requesting a new terminal license."
+                                               Style="{StaticResource SmallHelpText}"
+                                               Margin="0,0,0,12"/>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Copy Machine Code"
+                                                Command="{Binding CopyMachineCodeCommand}"
+                                                Style="{StaticResource ClassicButton}"
+                                                Margin="0,0,8,0"/>
+
+                                        <Button Content="Copy Request Details"
+                                                Command="{Binding CopyLicenseRequestInfoCommand}"
+                                                Style="{StaticResource ClassicButton}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ACTIONS -->
+                    <Border Style="{StaticResource SectionCard}">
+                        <StackPanel>
+                            <TextBlock Text="License Actions"
+                                       Style="{StaticResource SectionTitleText}"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Import a renewed store license or terminal license file provided by support."
+                                               Style="{StaticResource SmallHelpText}"/>
+
+                                    <TextBlock Text="Accepted file types: .dat, .lic, .json"
+                                               Style="{StaticResource SmallHelpText}"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Right">
+
+                                    <Button Content="Refresh"
+                                            Command="{Binding RefreshCommand}"
+                                            Style="{StaticResource ClassicButton}"
+                                            Margin="0,0,8,0"/>
+
+                                    <Button Content="Import License"
+                                            Command="{Binding ImportLicenseCommand}"
+                                            Style="{StaticResource PrimaryButton}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- FOOTER -->
+        <Border Grid.Row="2"
+                Background="White"
+                BorderBrush="#C7C7C7"
+                BorderThickness="1"
+                Padding="12"
+                Margin="0,12,0,0">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           Foreground="{Binding StatusColor}"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal">
+
+                    <Button Content="Refresh"
+                            Command="{Binding RefreshCommand}"
+                            Style="{StaticResource ClassicButton}"
+                            Margin="0,0,8,0"/>
+
+                    <Button Content="Import License"
+                            Command="{Binding ImportLicenseCommand}"
+                            Style="{StaticResource PrimaryButton}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

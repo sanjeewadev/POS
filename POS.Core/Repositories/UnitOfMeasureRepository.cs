@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -9,25 +10,55 @@ using POS.Core.Models;
 
 namespace POS.Core.Repositories
 {
+    public sealed class UnitOfMeasureLinkedDataSummary
+    {
+        public int ItemParentCount { get; init; }
+
+        public bool HasLinkedData => ItemParentCount > 0;
+
+        public string ToUserMessage(string uomCode)
+        {
+            var builder = new StringBuilder();
+
+            builder.AppendLine($"Unit of Measure '{uomCode}' cannot be deleted because it is already linked to item records.");
+            builder.AppendLine();
+
+            if (ItemParentCount > 0)
+                builder.AppendLine($"Linked item records: {ItemParentCount}");
+
+            builder.AppendLine();
+            builder.AppendLine("Make this UOM inactive instead of deleting it.");
+
+            return builder.ToString();
+        }
+    }
+
     public class UnitOfMeasureRepository
     {
+        private const int DefaultTakeLimit = 500;
+        private const int MaxTakeLimit = 2000;
+        private const int MaxDisplayOrder = 9999;
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         private static readonly Regex UomCodeRegex =
-            new Regex("^[A-Z0-9_-]+$", RegexOptions.Compiled);
+            new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         public UnitOfMeasureRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
-        public async Task<IEnumerable<UnitOfMeasure>> GetAllAsync(string searchTerm = "")
+        public async Task<IReadOnlyList<UnitOfMeasure>> GetAllAsync(
+            string searchTerm = "",
+            int take = DefaultTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            take = NormalizeTakeLimit(take);
 
-            var query = context.UnitsOfMeasure
-                .AsNoTracking()
-                .AsQueryable();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<UnitOfMeasure> query = context.UnitsOfMeasure
+                .AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -39,28 +70,36 @@ namespace POS.Core.Repositories
             }
 
             return await query
-                .OrderBy(u => u.DisplayOrder)
+                .OrderBy(u => u.IsActive ? 0 : 1)
+                .ThenBy(u => u.DisplayOrder)
                 .ThenBy(u => u.UomCode)
-                .Take(500)
+                .Take(take)
                 .ToListAsync();
         }
 
-        // Later Item Master should use this for the UOM dropdown.
-        public async Task<IEnumerable<UnitOfMeasure>> GetActiveAsync()
+        // Item Master should use this for the UOM dropdown.
+        // Inactive UOMs must not appear when creating new items.
+        public async Task<IReadOnlyList<UnitOfMeasure>> GetActiveAsync(int take = MaxTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            take = NormalizeTakeLimit(take);
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.UnitsOfMeasure
                 .AsNoTracking()
                 .Where(u => u.IsActive)
                 .OrderBy(u => u.DisplayOrder)
                 .ThenBy(u => u.UomCode)
+                .Take(take)
                 .ToListAsync();
         }
 
         public async Task<UnitOfMeasure?> GetByIdAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return null;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.UnitsOfMeasure
                 .AsNoTracking()
@@ -71,22 +110,41 @@ namespace POS.Core.Repositories
         {
             string normalizedCode = NormalizeCode(code);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.UnitsOfMeasure.AnyAsync(u =>
-                u.UomCode.ToUpper() == normalizedCode &&
+                EF.Functions.Collate(u.UomCode, "NOCASE") == normalizedCode &&
                 u.Id != currentUomId);
         }
 
         public async Task<bool> IsDescriptionUniqueAsync(string description, int currentUomId = 0)
         {
-            string normalizedDescription = NormalizeDescription(description).ToLower();
+            string normalizedDescription = NormalizeDescription(description);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(normalizedDescription))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.UnitsOfMeasure.AnyAsync(u =>
-                u.UomDescription.ToLower() == normalizedDescription &&
+                EF.Functions.Collate(u.UomDescription, "NOCASE") == normalizedDescription &&
                 u.Id != currentUomId);
+        }
+
+        public async Task<UnitOfMeasureLinkedDataSummary> GetLinkedDataSummaryAsync(int uomId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await GetLinkedDataSummaryAsync(context, uomId);
+        }
+
+        public async Task<bool> HasLinkedItemsAsync(int uomId)
+        {
+            var summary = await GetLinkedDataSummaryAsync(uomId);
+            return summary.HasLinkedData;
         }
 
         public async Task AddAsync(UnitOfMeasure uom)
@@ -96,21 +154,22 @@ namespace POS.Core.Repositories
 
             string normalizedCode = NormalizeCode(uom.UomCode);
             string normalizedDescription = NormalizeDescription(uom.UomDescription);
+            int displayOrder = uom.DisplayOrder;
 
             ValidateUomCode(normalizedCode);
             ValidateUomDescription(normalizedDescription);
-            ValidateDisplayOrder(uom.DisplayOrder);
+            ValidateDisplayOrder(displayOrder);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             bool codeExists = await context.UnitsOfMeasure.AnyAsync(u =>
-                u.UomCode.ToUpper() == normalizedCode);
+                EF.Functions.Collate(u.UomCode, "NOCASE") == normalizedCode);
 
             if (codeExists)
                 throw new InvalidOperationException($"UOM code '{normalizedCode}' already exists.");
 
             bool descriptionExists = await context.UnitsOfMeasure.AnyAsync(u =>
-                u.UomDescription.ToLower() == normalizedDescription.ToLower());
+                EF.Functions.Collate(u.UomDescription, "NOCASE") == normalizedDescription);
 
             if (descriptionExists)
                 throw new InvalidOperationException($"UOM description '{normalizedDescription}' already exists.");
@@ -119,6 +178,7 @@ namespace POS.Core.Repositories
 
             uom.UomCode = normalizedCode;
             uom.UomDescription = normalizedDescription;
+            uom.DisplayOrder = displayOrder;
             uom.CreatedAt = now;
             uom.UpdatedAt = now;
             uom.DeactivatedAt = uom.IsActive ? null : now;
@@ -136,11 +196,12 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Invalid UOM record.");
 
             string normalizedDescription = NormalizeDescription(uom.UomDescription);
+            int displayOrder = uom.DisplayOrder;
 
             ValidateUomDescription(normalizedDescription);
-            ValidateDisplayOrder(uom.DisplayOrder);
+            ValidateDisplayOrder(displayOrder);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var existing = await context.UnitsOfMeasure
                 .FirstOrDefaultAsync(u => u.Id == uom.Id);
@@ -149,7 +210,7 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("UOM record was not found.");
 
             bool descriptionExists = await context.UnitsOfMeasure.AnyAsync(u =>
-                u.UomDescription.ToLower() == normalizedDescription.ToLower() &&
+                EF.Functions.Collate(u.UomDescription, "NOCASE") == normalizedDescription &&
                 u.Id != existing.Id);
 
             if (descriptionExists)
@@ -165,52 +226,63 @@ namespace POS.Core.Repositories
             }
 
             DateTime now = DateTime.Now;
+            bool wasActive = existing.IsActive;
+            bool isNowActive = uom.IsActive;
 
             // UOM code is intentionally not updated after creation.
             existing.UomDescription = normalizedDescription;
             existing.AllowDecimals = uom.AllowDecimals;
-            existing.DisplayOrder = uom.DisplayOrder;
-            existing.IsActive = uom.IsActive;
+            existing.DisplayOrder = displayOrder;
+            existing.IsActive = isNowActive;
             existing.UpdatedAt = now;
 
-            if (!existing.IsActive)
-                existing.DeactivatedAt ??= now;
-            else
+            if (wasActive && !isNowActive)
+            {
+                existing.DeactivatedAt = now;
+            }
+            else if (!wasActive && isNowActive)
+            {
                 existing.DeactivatedAt = null;
+            }
+            else if (!isNowActive)
+            {
+                existing.DeactivatedAt ??= now;
+            }
 
             await context.SaveChangesAsync();
         }
 
         public async Task DeactivateAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var uom = await context.UnitsOfMeasure
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (uom == null)
+                return;
+
+            if (!uom.IsActive)
                 return;
 
             DateTime now = DateTime.Now;
 
             uom.IsActive = false;
             uom.UpdatedAt = now;
-            uom.DeactivatedAt ??= now;
+            uom.DeactivatedAt = now;
 
             await context.SaveChangesAsync();
         }
 
-        public async Task<bool> HasLinkedItemsAsync(int uomId)
+        public async Task ReactivateAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
 
-            return await context.ItemParents
-                .AnyAsync(i => i.UnitOfMeasureId == uomId);
-        }
-
-        public async Task DeleteAsync(int id)
-        {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var uom = await context.UnitsOfMeasure
                 .FirstOrDefaultAsync(u => u.Id == id);
@@ -218,17 +290,69 @@ namespace POS.Core.Repositories
             if (uom == null)
                 return;
 
-            bool hasLinkedItems = await context.ItemParents
-                .AnyAsync(i => i.UnitOfMeasureId == id);
+            if (uom.IsActive)
+                return;
 
-            if (hasLinkedItems)
+            DateTime now = DateTime.Now;
+
+            uom.IsActive = true;
+            uom.UpdatedAt = now;
+            uom.DeactivatedAt = null;
+
+            await context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            if (id <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var uom = await context.UnitsOfMeasure
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (uom == null)
+                return;
+
+            var linkedData = await GetLinkedDataSummaryAsync(context, id);
+
+            if (linkedData.HasLinkedData)
             {
                 throw new InvalidOperationException(
-                    "This Unit of Measure is assigned to item records. Deactivate it instead of deleting it.");
+                    linkedData.ToUserMessage(uom.UomCode));
             }
 
             context.UnitsOfMeasure.Remove(uom);
             await context.SaveChangesAsync();
+        }
+
+        private static async Task<UnitOfMeasureLinkedDataSummary> GetLinkedDataSummaryAsync(
+            AppDbContext context,
+            int uomId)
+        {
+            if (uomId <= 0)
+                return new UnitOfMeasureLinkedDataSummary();
+
+            int itemParentCount = await context.ItemParents
+                .AsNoTracking()
+                .CountAsync(i => i.UnitOfMeasureId == uomId);
+
+            return new UnitOfMeasureLinkedDataSummary
+            {
+                ItemParentCount = itemParentCount
+            };
+        }
+
+        private static int NormalizeTakeLimit(int take)
+        {
+            if (take <= 0)
+                return DefaultTakeLimit;
+
+            if (take > MaxTakeLimit)
+                return MaxTakeLimit;
+
+            return take;
         }
 
         private static string NormalizeCode(string code)
@@ -270,8 +394,8 @@ namespace POS.Core.Repositories
             if (displayOrder < 0)
                 throw new InvalidOperationException("Display order cannot be negative.");
 
-            if (displayOrder > 9999)
-                throw new InvalidOperationException("Display order is too large.");
+            if (displayOrder > MaxDisplayOrder)
+                throw new InvalidOperationException($"Display order cannot be greater than {MaxDisplayOrder}.");
         }
     }
 }

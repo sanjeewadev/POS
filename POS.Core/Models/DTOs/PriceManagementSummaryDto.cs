@@ -35,7 +35,7 @@ namespace POS.Core.Models.DTOs
             {
                 if (_movingAverageCost != value)
                 {
-                    _movingAverageCost = value;
+                    _movingAverageCost = RoundMoney(value);
                     OnPropertyChanged();
                     NotifyMarginProperties();
                 }
@@ -49,10 +49,24 @@ namespace POS.Core.Models.DTOs
             {
                 if (_lastLandedCost != value)
                 {
-                    _lastLandedCost = value;
+                    _lastLandedCost = RoundMoney(value);
                     OnPropertyChanged();
                     NotifyMarginProperties();
                 }
+            }
+        }
+
+        public decimal EffectiveCost
+        {
+            get
+            {
+                if (MovingAverageCost > 0)
+                    return MovingAverageCost;
+
+                if (LastLandedCost > 0)
+                    return LastLandedCost;
+
+                return 0m;
             }
         }
 
@@ -69,6 +83,7 @@ namespace POS.Core.Models.DTOs
                     MarkDirty();
                     OnPropertyChanged();
                     NotifyMarginProperties();
+                    NotifyRuleProperties();
                 }
             }
         }
@@ -86,6 +101,7 @@ namespace POS.Core.Models.DTOs
                     MarkDirty();
                     OnPropertyChanged();
                     NotifyMarginProperties();
+                    NotifyRuleProperties();
                 }
             }
         }
@@ -103,6 +119,7 @@ namespace POS.Core.Models.DTOs
                     MarkDirty();
                     OnPropertyChanged();
                     NotifyRuleProperties();
+                    NotifyMarginProperties();
                 }
             }
         }
@@ -120,6 +137,7 @@ namespace POS.Core.Models.DTOs
                     MarkDirty();
                     OnPropertyChanged();
                     NotifyRuleProperties();
+                    NotifyMarginProperties();
                 }
             }
         }
@@ -160,10 +178,10 @@ namespace POS.Core.Models.DTOs
         {
             get
             {
-                if (RetailPrice <= 0)
+                if (RetailPrice <= 0 || EffectiveCost <= 0)
                     return 0m;
 
-                return Math.Round(((RetailPrice - MovingAverageCost) / RetailPrice) * 100m, 2);
+                return Math.Round(((RetailPrice - EffectiveCost) / RetailPrice) * 100m, 2);
             }
         }
 
@@ -171,22 +189,49 @@ namespace POS.Core.Models.DTOs
         {
             get
             {
-                if (WholesalePrice <= 0)
+                if (WholesalePrice <= 0 || EffectiveCost <= 0)
                     return 0m;
 
-                return Math.Round(((WholesalePrice - MovingAverageCost) / WholesalePrice) * 100m, 2);
+                return Math.Round(((WholesalePrice - EffectiveCost) / WholesalePrice) * 100m, 2);
             }
         }
 
-        public bool IsNegativeMargin => RetailPrice > 0 && RetailPrice < MovingAverageCost;
+        public bool IsCostMissing => EffectiveCost <= 0;
 
-        public bool IsLowMargin => RetailPrice > 0 &&
-                                   RetailPrice >= MovingAverageCost &&
-                                   GrossMarginPercentage < 20m;
+        public bool IsNegativeMargin =>
+            RetailPrice > 0 &&
+            EffectiveCost > 0 &&
+            RetailPrice < EffectiveCost;
 
-        public bool IsBelowMinimumPrice => MinimumPrice > 0 && RetailPrice < MinimumPrice;
+        public bool IsLowMargin =>
+            RetailPrice > 0 &&
+            EffectiveCost > 0 &&
+            RetailPrice >= EffectiveCost &&
+            GrossMarginPercentage < 20m;
 
-        public bool IsAboveMaximumPrice => MaximumPrice > 0 && RetailPrice > MaximumPrice;
+        public bool IsBelowMinimumPrice =>
+            MinimumPrice > 0 &&
+            RetailPrice > 0 &&
+            RetailPrice < MinimumPrice;
+
+        public bool IsWholesaleBelowMinimumPrice =>
+            MinimumPrice > 0 &&
+            WholesalePrice > 0 &&
+            WholesalePrice < MinimumPrice;
+
+        public bool IsAboveMaximumPrice =>
+            MaximumPrice > 0 &&
+            RetailPrice > MaximumPrice;
+
+        public bool IsWholesaleAboveMaximumPrice =>
+            MaximumPrice > 0 &&
+            WholesalePrice > MaximumPrice;
+
+        public bool HasMasterPriceChanged =>
+            RetailPrice != OriginalRetailPrice ||
+            WholesalePrice != OriginalWholesalePrice ||
+            MinimumPrice != OriginalMinimumPrice ||
+            MaximumPrice != OriginalMaximumPrice;
 
         public string MarginHealth
         {
@@ -194,6 +239,9 @@ namespace POS.Core.Models.DTOs
             {
                 if (RetailPrice <= 0)
                     return "No Retail Price";
+
+                if (IsCostMissing)
+                    return "Cost Missing";
 
                 if (IsNegativeMargin)
                     return "Negative Margin";
@@ -247,17 +295,38 @@ namespace POS.Core.Models.DTOs
             if (RetailPrice <= 0)
                 errors.Add("Retail price must be greater than zero.");
 
-            if (MinimumPrice > 0 && RetailPrice < MinimumPrice)
+            if (MaximumPrice > 0 &&
+                MinimumPrice > 0 &&
+                MaximumPrice < MinimumPrice)
+            {
+                errors.Add("Maximum price cannot be lower than minimum price.");
+            }
+
+            if (MinimumPrice > 0 &&
+                RetailPrice > 0 &&
+                RetailPrice < MinimumPrice)
+            {
                 errors.Add("Retail price cannot be lower than minimum price.");
+            }
 
-            if (MinimumPrice > 0 && WholesalePrice > 0 && WholesalePrice < MinimumPrice)
+            if (MinimumPrice > 0 &&
+                WholesalePrice > 0 &&
+                WholesalePrice < MinimumPrice)
+            {
                 errors.Add("Wholesale price cannot be lower than minimum price.");
+            }
 
-            if (MaximumPrice > 0 && RetailPrice > MaximumPrice)
+            if (MaximumPrice > 0 &&
+                RetailPrice > MaximumPrice)
+            {
                 errors.Add("Retail price cannot be higher than maximum price.");
+            }
 
-            if (MaximumPrice > 0 && WholesalePrice > MaximumPrice)
+            if (MaximumPrice > 0 &&
+                WholesalePrice > MaximumPrice)
+            {
                 errors.Add("Wholesale price cannot be higher than maximum price.");
+            }
 
             return errors;
         }
@@ -270,8 +339,10 @@ namespace POS.Core.Models.DTOs
 
         private void NotifyMarginProperties()
         {
+            OnPropertyChanged(nameof(EffectiveCost));
             OnPropertyChanged(nameof(GrossMarginPercentage));
             OnPropertyChanged(nameof(WholesaleMarginPercentage));
+            OnPropertyChanged(nameof(IsCostMissing));
             OnPropertyChanged(nameof(IsNegativeMargin));
             OnPropertyChanged(nameof(IsLowMargin));
             OnPropertyChanged(nameof(MarginHealth));
@@ -280,7 +351,10 @@ namespace POS.Core.Models.DTOs
         private void NotifyRuleProperties()
         {
             OnPropertyChanged(nameof(IsBelowMinimumPrice));
+            OnPropertyChanged(nameof(IsWholesaleBelowMinimumPrice));
             OnPropertyChanged(nameof(IsAboveMaximumPrice));
+            OnPropertyChanged(nameof(IsWholesaleAboveMaximumPrice));
+            OnPropertyChanged(nameof(HasMasterPriceChanged));
             OnPropertyChanged(nameof(MarginHealth));
         }
 
@@ -315,6 +389,8 @@ namespace POS.Core.Models.DTOs
 
         public decimal CurrentStock { get; set; }
         public decimal CostPrice { get; set; }
+
+        public decimal EffectiveCost => CostPrice;
 
         public decimal RetailPrice
         {
@@ -366,11 +442,15 @@ namespace POS.Core.Models.DTOs
             }
         }
 
+        public bool HasBatchPriceChanged =>
+            RetailPrice != OriginalRetailPrice ||
+            WholesalePrice != OriginalWholesalePrice;
+
         public decimal RetailMarginPercentage
         {
             get
             {
-                if (RetailPrice <= 0)
+                if (RetailPrice <= 0 || CostPrice <= 0)
                     return 0m;
 
                 return Math.Round(((RetailPrice - CostPrice) / RetailPrice) * 100m, 2);
@@ -381,18 +461,32 @@ namespace POS.Core.Models.DTOs
         {
             get
             {
-                if (WholesalePrice <= 0)
+                if (WholesalePrice <= 0 || CostPrice <= 0)
                     return 0m;
 
                 return Math.Round(((WholesalePrice - CostPrice) / WholesalePrice) * 100m, 2);
             }
         }
 
-        public bool IsExpired => ExpiryDate.HasValue && ExpiryDate.Value.Date < DateTime.Today;
+        public bool IsNegativeMargin =>
+            RetailPrice > 0 &&
+            CostPrice > 0 &&
+            RetailPrice < CostPrice;
 
-        public bool IsExpiringSoon => ExpiryDate.HasValue &&
-                                      ExpiryDate.Value.Date >= DateTime.Today &&
-                                      ExpiryDate.Value.Date <= DateTime.Today.AddDays(30);
+        public bool IsLowMargin =>
+            RetailPrice > 0 &&
+            CostPrice > 0 &&
+            RetailPrice >= CostPrice &&
+            RetailMarginPercentage < 20m;
+
+        public bool IsExpired =>
+            ExpiryDate.HasValue &&
+            ExpiryDate.Value.Date < DateTime.Today;
+
+        public bool IsExpiringSoon =>
+            ExpiryDate.HasValue &&
+            ExpiryDate.Value.Date >= DateTime.Today &&
+            ExpiryDate.Value.Date <= DateTime.Today.AddDays(30);
 
         public string ExpiryStatus
         {
@@ -411,12 +505,33 @@ namespace POS.Core.Models.DTOs
             }
         }
 
+        public string MarginHealth
+        {
+            get
+            {
+                if (RetailPrice <= 0)
+                    return "No Retail Price";
+
+                if (CostPrice <= 0)
+                    return "Cost Missing";
+
+                if (IsNegativeMargin)
+                    return "Negative Margin";
+
+                if (IsLowMargin)
+                    return "Low Margin";
+
+                return "Healthy";
+            }
+        }
+
         public void AcceptChanges()
         {
             _suppressDirtyTracking = true;
 
             OriginalRetailPrice = RetailPrice;
             OriginalWholesalePrice = WholesalePrice;
+
             IsDirty = false;
 
             _suppressDirtyTracking = false;
@@ -452,8 +567,13 @@ namespace POS.Core.Models.DTOs
 
         private void NotifyMarginProperties()
         {
+            OnPropertyChanged(nameof(EffectiveCost));
             OnPropertyChanged(nameof(RetailMarginPercentage));
             OnPropertyChanged(nameof(WholesaleMarginPercentage));
+            OnPropertyChanged(nameof(IsNegativeMargin));
+            OnPropertyChanged(nameof(IsLowMargin));
+            OnPropertyChanged(nameof(MarginHealth));
+            OnPropertyChanged(nameof(HasBatchPriceChanged));
         }
 
         private static decimal RoundMoney(decimal value)

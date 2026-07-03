@@ -27,11 +27,11 @@ namespace POS.Core.Models.DTOs
         public decimal TotalReceivedQty { get; set; }
 
         public decimal TotalOutstandingQty => TotalOrderedQty - TotalReceivedQty < 0
-            ? 0
+            ? 0m
             : TotalOrderedQty - TotalReceivedQty;
 
         public string DisplayText =>
-            $"{PoNumber} | {SupplierName} | Outstanding: {TotalOutstandingQty:N3}";
+            $"{PoNumber} | {SupplierName} | Ordered: {TotalOrderedQty:N3} | Received: {TotalReceivedQty:N3}";
     }
 
     public class GrnPoLineDto
@@ -48,6 +48,8 @@ namespace POS.Core.Models.DTOs
 
         public string Description { get; set; } = string.Empty;
 
+        public string PrintName { get; set; } = string.Empty;
+
         public string VariantDescription { get; set; } = string.Empty;
 
         public string Uom { get; set; } = string.Empty;
@@ -57,26 +59,60 @@ namespace POS.Core.Models.DTOs
         public decimal AlreadyReceivedQty { get; set; }
 
         public decimal OutstandingQty => OrderedQty - AlreadyReceivedQty < 0
-            ? 0
+            ? 0m
             : OrderedQty - AlreadyReceivedQty;
 
         public decimal ExpectedCost { get; set; }
 
-        public bool RequiresExpiry { get; set; }
+        public bool HasBatchTracking { get; set; } = true;
 
-        public string DisplayName
+        public bool HasExpiryTracking { get; set; } = false;
+
+        public bool IsScaleItem { get; set; } = false;
+
+        public bool AllowDecimalQuantity { get; set; } = false;
+
+        public bool RequiresExpiry
         {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(VariantDescription) ||
-                    VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Description;
-                }
-
-                return $"{Description} - {VariantDescription}";
-            }
+            get => HasExpiryTracking;
+            set => HasExpiryTracking = value;
         }
+
+        public string LineDiscountMode { get; set; } = "Amount";
+
+        public decimal LineDiscountValue { get; set; } = 0m;
+
+        public decimal LineDiscount { get; set; } = 0m;
+
+        public decimal VatRatePercent { get; set; } = 0m;
+
+        public bool IsVatIncluded { get; set; } = false;
+
+        public decimal VatAmount { get; set; } = 0m;
+
+        public decimal CurrentRetailPrice { get; set; } = 0m;
+
+        public decimal CurrentWholesalePrice { get; set; } = 0m;
+
+        public decimal CurrentMinimumPrice { get; set; } = 0m;
+
+        public decimal CurrentMaximumPrice { get; set; } = 0m;
+
+        public string FullDisplayName =>
+            GrnDisplayNameHelper.BuildDisplayName(Description, VariantDescription, SkuCode);
+
+        public string ReceiptDisplayName =>
+            GrnDisplayNameHelper.BuildDisplayName(
+                string.IsNullOrWhiteSpace(PrintName) ? Description : PrintName,
+                VariantDescription,
+                FullDisplayName);
+
+        public string DisplayName => FullDisplayName;
+
+        public string VariantDisplayName =>
+            GrnDisplayNameHelper.IsStandardVariantDescription(VariantDescription)
+                ? "Standard"
+                : GrnDisplayNameHelper.NormalizeText(VariantDescription);
     }
 
     public class GrnVariantLookupDto
@@ -93,6 +129,8 @@ namespace POS.Core.Models.DTOs
 
         public string Description { get; set; } = string.Empty;
 
+        public string PrintName { get; set; } = string.Empty;
+
         public string VariantDescription { get; set; } = string.Empty;
 
         public string Uom { get; set; } = string.Empty;
@@ -101,25 +139,61 @@ namespace POS.Core.Models.DTOs
 
         public decimal CurrentCost { get; set; }
 
-        public bool RequiresExpiry { get; set; }
+        public bool HasBatchTracking { get; set; } = true;
 
-        public string DisplayName
+        public bool HasExpiryTracking { get; set; } = false;
+
+        public bool IsScaleItem { get; set; } = false;
+
+        public bool AllowDecimalQuantity { get; set; } = false;
+
+        public bool RequiresExpiry
         {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(VariantDescription) ||
-                    VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Description;
-                }
-
-                return $"{Description} - {VariantDescription}";
-            }
+            get => HasExpiryTracking;
+            set => HasExpiryTracking = value;
         }
+
+        public string LineDiscountMode { get; set; } = "Amount";
+
+        public decimal LineDiscountValue { get; set; } = 0m;
+
+        public decimal LineDiscount { get; set; } = 0m;
+
+        public decimal VatRatePercent { get; set; } = 0m;
+
+        public bool IsVatIncluded { get; set; } = false;
+
+        public decimal VatAmount { get; set; } = 0m;
+
+        public decimal CurrentRetailPrice { get; set; } = 0m;
+
+        public decimal CurrentWholesalePrice { get; set; } = 0m;
+
+        public decimal CurrentMinimumPrice { get; set; } = 0m;
+
+        public decimal CurrentMaximumPrice { get; set; } = 0m;
+
+        public string FullDisplayName =>
+            GrnDisplayNameHelper.BuildDisplayName(Description, VariantDescription, SkuCode);
+
+        public string ReceiptDisplayName =>
+            GrnDisplayNameHelper.BuildDisplayName(
+                string.IsNullOrWhiteSpace(PrintName) ? Description : PrintName,
+                VariantDescription,
+                FullDisplayName);
+
+        public string DisplayName => FullDisplayName;
+
+        public string VariantDisplayName =>
+            GrnDisplayNameHelper.IsStandardVariantDescription(VariantDescription)
+                ? "Standard"
+                : GrnDisplayNameHelper.NormalizeText(VariantDescription);
     }
 
     public partial class GrnLineEntryDto : ObservableObject
     {
+        private bool _isRecalculating;
+
         public int GrnLineId { get; set; }
 
         public int? PoLineId { get; set; }
@@ -136,6 +210,8 @@ namespace POS.Core.Models.DTOs
 
         public string Description { get; set; } = string.Empty;
 
+        public string PrintName { get; set; } = string.Empty;
+
         public string VariantDescription { get; set; } = string.Empty;
 
         public string Uom { get; set; } = string.Empty;
@@ -144,7 +220,18 @@ namespace POS.Core.Models.DTOs
 
         public decimal OutstandingPoQty { get; set; }
 
-        public bool RequiresExpiry { get; set; }
+        public bool HasBatchTracking { get; set; } = true;
+
+        public bool HasExpiryTracking { get; set; } = false;
+
+        public bool IsScaleItem { get; set; } = false;
+
+        public bool AllowDecimalQuantity { get; set; } = false;
+
+        // Internal only. This comes from Item Master.
+        // Do not show this as a user-editable checkbox.
+        [ObservableProperty]
+        private bool _requiresExpiry;
 
         [ObservableProperty]
         private string _batchNo = string.Empty;
@@ -158,8 +245,29 @@ namespace POS.Core.Models.DTOs
         [ObservableProperty]
         private decimal _unitCost;
 
+        // Amount / Percent.
+        [ObservableProperty]
+        private string _lineDiscountMode = "Amount";
+
+        // User-entered discount value.
+        // Amount mode  -> Rs amount.
+        // Percent mode -> percent.
+        [ObservableProperty]
+        private decimal _lineDiscountValue;
+
+        // Final calculated discount amount.
+        // Kept for compatibility with existing GRN logic.
         [ObservableProperty]
         private decimal _lineDiscount;
+
+        [ObservableProperty]
+        private decimal _vatRatePercent;
+
+        [ObservableProperty]
+        private bool _isVatIncluded;
+
+        [ObservableProperty]
+        private decimal _vatAmount;
 
         [ObservableProperty]
         private decimal _landedCost;
@@ -167,19 +275,68 @@ namespace POS.Core.Models.DTOs
         [ObservableProperty]
         private decimal _lineTotal;
 
-        public string DisplayName
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(VariantDescription) ||
-                    VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Description;
-                }
+        // =========================================================
+        // SELLING PRICE UPDATE FIELDS
+        // =========================================================
 
-                return $"{Description} - {VariantDescription}";
-            }
-        }
+        [ObservableProperty]
+        private bool _updateSellingPrices;
+
+        [ObservableProperty]
+        private decimal _currentRetailPrice;
+
+        [ObservableProperty]
+        private decimal _newRetailPrice;
+
+        [ObservableProperty]
+        private decimal _currentWholesalePrice;
+
+        [ObservableProperty]
+        private decimal _newWholesalePrice;
+
+        [ObservableProperty]
+        private decimal _currentMinimumPrice;
+
+        [ObservableProperty]
+        private decimal _newMinimumPrice;
+
+        [ObservableProperty]
+        private decimal _currentMaximumPrice;
+
+        [ObservableProperty]
+        private decimal _newMaximumPrice;
+
+        [ObservableProperty]
+        private decimal _retailMarkupPercent;
+
+        [ObservableProperty]
+        private decimal _wholesaleMarkupPercent;
+
+        // =========================================================
+        // DISPLAY HELPERS
+        // =========================================================
+
+        public bool IsExpiryEnabled => RequiresExpiry;
+
+        public string ExpiryRequirementText => RequiresExpiry
+            ? "Expiry Required"
+            : "No Expiry";
+
+        public string FullDisplayName =>
+            GrnDisplayNameHelper.BuildDisplayName(Description, VariantDescription, SkuCode);
+
+        public string ReceiptDisplayName =>
+            GrnDisplayNameHelper.BuildDisplayName(
+                string.IsNullOrWhiteSpace(PrintName) ? Description : PrintName,
+                VariantDescription,
+                FullDisplayName);
+
+        public string DisplayName => FullDisplayName;
+
+        public string VariantDisplayName =>
+            GrnDisplayNameHelper.IsStandardVariantDescription(VariantDescription)
+                ? "Standard"
+                : GrnDisplayNameHelper.NormalizeText(VariantDescription);
 
         public string BatchDisplayText
         {
@@ -192,8 +349,56 @@ namespace POS.Core.Models.DTOs
             }
         }
 
+        public string ExpiryDisplayText
+        {
+            get
+            {
+                if (!ExpiryDate.HasValue)
+                    return RequiresExpiry ? "Required" : "No Expiry";
+
+                return ExpiryDate.Value.ToString("yyyy-MM-dd");
+            }
+        }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "No Batch";
+
+                return RequiresExpiry ? "Batch + Expiry" : "Batch";
+            }
+        }
+
+        public string VatDisplayText
+        {
+            get
+            {
+                if (VatRatePercent <= 0)
+                    return "No VAT";
+
+                return IsVatIncluded
+                    ? $"VAT {VatRatePercent:N2}% Included"
+                    : $"VAT {VatRatePercent:N2}% Added";
+            }
+        }
+
+        public decimal GrossAmount => Math.Round(ReceivedQty * UnitCost, 2);
+
+        public decimal NetBeforeVat
+        {
+            get
+            {
+                decimal net = GrossAmount - LineDiscount;
+                return net < 0 ? 0m : Math.Round(net, 2);
+            }
+        }
+
         public List<string> ValidateForPost(bool isPoLinked)
         {
+            RecalculateLineAmounts();
+
             var errors = new List<string>();
 
             if (ItemVariantId <= 0)
@@ -202,16 +407,32 @@ namespace POS.Core.Models.DTOs
             if (ReceivedQty <= 0)
                 errors.Add($"{DisplayName}: received quantity must be greater than zero.");
 
+            if (!AllowDecimalQuantity && HasDecimalPart(ReceivedQty))
+            {
+                errors.Add(
+                    $"{DisplayName}: decimal quantity is not allowed for UOM '{Uom}'.");
+            }
+
             if (UnitCost <= 0)
                 errors.Add($"{DisplayName}: unit cost must be greater than zero.");
 
+            if (!IsValidDiscountMode(LineDiscountMode))
+                errors.Add($"{DisplayName}: discount mode must be Amount or Percent.");
+
+            if (LineDiscountValue < 0)
+                errors.Add($"{DisplayName}: discount value cannot be negative.");
+
+            if (IsPercentDiscount && LineDiscountValue > 100)
+                errors.Add($"{DisplayName}: discount percentage cannot be greater than 100.");
+
             if (LineDiscount < 0)
-                errors.Add($"{DisplayName}: line discount cannot be negative.");
+                errors.Add($"{DisplayName}: discount amount cannot be negative.");
 
-            decimal gross = ReceivedQty * UnitCost;
+            if (LineDiscount > GrossAmount)
+                errors.Add($"{DisplayName}: discount amount cannot be greater than line value.");
 
-            if (LineDiscount > gross)
-                errors.Add($"{DisplayName}: line discount cannot be greater than line value.");
+            if (VatRatePercent < 0 || VatRatePercent > 100)
+                errors.Add($"{DisplayName}: VAT rate must be between 0 and 100.");
 
             if (BatchNo != null && BatchNo.Trim().Length > 50)
                 errors.Add($"{DisplayName}: batch number cannot be longer than 50 characters.");
@@ -220,9 +441,292 @@ namespace POS.Core.Models.DTOs
                 errors.Add($"{DisplayName}: expiry date is required.");
 
             if (isPoLinked && OutstandingPoQty > 0 && ReceivedQty > OutstandingPoQty)
-                errors.Add($"{DisplayName}: received quantity cannot exceed outstanding PO quantity.");
+                errors.Add($"{DisplayName}: received quantity cannot exceed PO ordered quantity.");
+
+            if (UpdateSellingPrices)
+            {
+                if (NewRetailPrice < 0 ||
+                    NewWholesalePrice < 0 ||
+                    NewMinimumPrice < 0 ||
+                    NewMaximumPrice < 0)
+                {
+                    errors.Add($"{DisplayName}: selling prices cannot be negative.");
+                }
+
+                if (NewMaximumPrice > 0 && NewMinimumPrice > NewMaximumPrice)
+                {
+                    errors.Add($"{DisplayName}: minimum price cannot be greater than maximum price.");
+                }
+
+                if (RetailMarkupPercent < -100 || WholesaleMarkupPercent < -100)
+                {
+                    errors.Add($"{DisplayName}: markup percentage is invalid.");
+                }
+            }
 
             return errors;
+        }
+
+        public void RecalculateLineAmounts()
+        {
+            if (_isRecalculating)
+                return;
+
+            _isRecalculating = true;
+
+            try
+            {
+                decimal gross = GrossAmount;
+
+                LineDiscount = CalculateDiscountAmount(
+                    gross,
+                    LineDiscountMode,
+                    LineDiscountValue);
+
+                decimal netBeforeVat = gross - LineDiscount;
+
+                if (netBeforeVat < 0)
+                    netBeforeVat = 0m;
+
+                decimal vatRate = VatRatePercent / 100m;
+
+                if (VatRatePercent <= 0)
+                {
+                    VatAmount = 0m;
+                    LineTotal = Math.Round(netBeforeVat, 2);
+                    return;
+                }
+
+                if (IsVatIncluded)
+                {
+                    VatAmount = Math.Round(
+                        netBeforeVat - (netBeforeVat / (1 + vatRate)),
+                        2);
+
+                    LineTotal = Math.Round(netBeforeVat, 2);
+                }
+                else
+                {
+                    VatAmount = Math.Round(netBeforeVat * vatRate, 2);
+                    LineTotal = Math.Round(netBeforeVat + VatAmount, 2);
+                }
+            }
+            finally
+            {
+                _isRecalculating = false;
+            }
+
+            OnPropertyChanged(nameof(GrossAmount));
+            OnPropertyChanged(nameof(NetBeforeVat));
+            OnPropertyChanged(nameof(VatDisplayText));
+        }
+
+        public void ApplyRetailMarkupFromLandedCost()
+        {
+            if (LandedCost <= 0)
+                return;
+
+            if (RetailMarkupPercent != 0)
+            {
+                NewRetailPrice = Math.Round(
+                    LandedCost + (LandedCost * RetailMarkupPercent / 100m),
+                    2);
+            }
+
+            if (WholesaleMarkupPercent != 0)
+            {
+                NewWholesalePrice = Math.Round(
+                    LandedCost + (LandedCost * WholesaleMarkupPercent / 100m),
+                    2);
+            }
+        }
+
+        partial void OnBatchNoChanged(string value)
+        {
+            OnPropertyChanged(nameof(BatchDisplayText));
+        }
+
+        partial void OnExpiryDateChanged(DateTime? value)
+        {
+            OnPropertyChanged(nameof(ExpiryDisplayText));
+        }
+
+        partial void OnRequiresExpiryChanged(bool value)
+        {
+            if (!value)
+                ExpiryDate = null;
+
+            HasExpiryTracking = value;
+
+            OnPropertyChanged(nameof(IsExpiryEnabled));
+            OnPropertyChanged(nameof(ExpiryRequirementText));
+            OnPropertyChanged(nameof(ExpiryDisplayText));
+            OnPropertyChanged(nameof(TrackingText));
+        }
+
+        partial void OnReceivedQtyChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnUnitCostChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnLineDiscountModeChanged(string value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnLineDiscountValueChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnLineDiscountChanged(decimal value)
+        {
+            if (_isRecalculating)
+                return;
+
+            if (IsAmountDiscount)
+                LineDiscountValue = value;
+
+            OnPropertyChanged(nameof(NetBeforeVat));
+        }
+
+        partial void OnVatRatePercentChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnIsVatIncludedChanged(bool value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnLandedCostChanged(decimal value)
+        {
+            if (UpdateSellingPrices)
+                ApplyRetailMarkupFromLandedCost();
+        }
+
+        partial void OnRetailMarkupPercentChanged(decimal value)
+        {
+            if (UpdateSellingPrices)
+                ApplyRetailMarkupFromLandedCost();
+        }
+
+        partial void OnWholesaleMarkupPercentChanged(decimal value)
+        {
+            if (UpdateSellingPrices)
+                ApplyRetailMarkupFromLandedCost();
+        }
+
+        partial void OnUpdateSellingPricesChanged(bool value)
+        {
+            if (!value)
+                return;
+
+            if (NewRetailPrice <= 0)
+                NewRetailPrice = CurrentRetailPrice;
+
+            if (NewWholesalePrice <= 0)
+                NewWholesalePrice = CurrentWholesalePrice;
+
+            if (NewMinimumPrice <= 0)
+                NewMinimumPrice = CurrentMinimumPrice;
+
+            if (NewMaximumPrice <= 0)
+                NewMaximumPrice = CurrentMaximumPrice;
+
+            ApplyRetailMarkupFromLandedCost();
+        }
+
+        private bool IsAmountDiscount =>
+            NormalizeDiscountMode(LineDiscountMode) == "Amount";
+
+        private bool IsPercentDiscount =>
+            NormalizeDiscountMode(LineDiscountMode) == "Percent";
+
+        private static decimal CalculateDiscountAmount(
+            decimal gross,
+            string? discountMode,
+            decimal discountValue)
+        {
+            if (gross <= 0 || discountValue <= 0)
+                return 0m;
+
+            string mode = NormalizeDiscountMode(discountMode);
+
+            if (mode == "Percent")
+                return Math.Round(gross * discountValue / 100m, 2);
+
+            return Math.Round(discountValue, 2);
+        }
+
+        private static bool IsValidDiscountMode(string? value)
+        {
+            string mode = NormalizeDiscountMode(value);
+
+            return mode == "Amount" || mode == "Percent";
+        }
+
+        private static string NormalizeDiscountMode(string? value)
+        {
+            string mode = (value ?? string.Empty).Trim();
+
+            if (mode.Equals("Percent", StringComparison.OrdinalIgnoreCase) ||
+                mode.Equals("%", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Percent";
+            }
+
+            return "Amount";
+        }
+
+        private static bool HasDecimalPart(decimal value)
+        {
+            return value != Math.Truncate(value);
+        }
+    }
+
+    internal static class GrnDisplayNameHelper
+    {
+        public static string BuildDisplayName(
+            string? baseName,
+            string? variantDescription,
+            string? fallback)
+        {
+            string cleanBaseName = NormalizeText(baseName);
+            string cleanVariant = NormalizeText(variantDescription);
+            string cleanFallback = NormalizeText(fallback);
+
+            if (IsStandardVariantDescription(cleanVariant))
+            {
+                if (!string.IsNullOrWhiteSpace(cleanBaseName))
+                    return cleanBaseName;
+
+                return cleanFallback;
+            }
+
+            if (string.IsNullOrWhiteSpace(cleanBaseName))
+                return cleanVariant;
+
+            return $"{cleanBaseName} - {cleanVariant}";
+        }
+
+        public static bool IsStandardVariantDescription(string? value)
+        {
+            string cleanValue = NormalizeText(value);
+
+            return string.IsNullOrWhiteSpace(cleanValue) ||
+                   cleanValue.Equals("Standard", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string NormalizeText(string? value)
+        {
+            return (value ?? string.Empty).Trim();
         }
     }
 }

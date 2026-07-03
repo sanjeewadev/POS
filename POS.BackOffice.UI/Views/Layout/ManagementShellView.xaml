@@ -19,7 +19,7 @@
         <Menu Grid.Row="0" Background="#F0F0F0" BorderBrush="DarkGray" BorderThickness="0,0,0,1" Padding="2,2" VerticalAlignment="Center">
 
             <MenuItem Header="_File">
-                <Button Content="⚙️ Store Settings" Command="{Binding NavigateToStoreConfigurationCommand}" />
+                <Button Content="Terminal Settings" Command="{Binding NavigateToTerminalSettingsCommand}" />
 
                 <Separator />
                 <MenuItem Header="Backup" />
@@ -39,13 +39,19 @@
 
             <MenuItem Header="Inventory _Operation">
                 <MenuItem Header="Goods Received Note (GRN)" Command="{Binding NavigateToGoodsReceivedNoteCommand}" />
+                <MenuItem Header="GRN History / Dashboard" Command="{Binding NavigateToGrnDashboardCommand}" />
+
+                <Separator/>
+
                 <MenuItem Header="Stock Adjustment" Command="{Binding NavigateToStockAdjustmentCommand}" />
                 <MenuItem Header="Stock Balance" Command="{Binding NavigateToStockBalanceCommand}" />
                 <MenuItem Header="Express Items Designer" Command="{Binding NavigateToExpressItemAdminCommand}" />
                 <MenuItem Header="Supplier Return" Command="{Binding NavigateToSupplierReturnCommand}" />
                 <MenuItem Header="Barcode Management" Command="{Binding NavigateToBarcodeManagementCommand}" />
                 <MenuItem Header="Barcode Printer" Command="{Binding NavigateToBarcodePrinterCommand}" />
-                <Button Content="Pricing" Command="{Binding NavigateToPriceManagementCommand}"/>
+                <MenuItem Header="Pricing" Command="{Binding NavigateToPriceManagementCommand}" />
+                <Button Content="Price Change History"
+        Command="{Binding NavigateToPriceChangeHistoryCommand}" />
             </MenuItem>
 
             <MenuItem Header="_Purchasing">
@@ -79,11 +85,19 @@
                 <MenuItem Header="Financial Summary" Command="{Binding NavigateToFinancialSummaryCommand}" />
                 <MenuItem Header="Float Cash Log" Command="{Binding NavigateToFloatCashLogCommand}" />
                 <MenuItem Header="Supplier Report" Command="{Binding NavigateToSupplierReportCommand}"/>
+                <MenuItem Header="Suspended Transactions" Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}" />
             </MenuItem>
 
             <MenuItem Header="_Admin">
-                <MenuItem Header="Suspended Transactions" Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}" />
+                <MenuItem Header="Store Settings" Command="{Binding NavigateToStoreSettingsCommand}" />
+                <Button Content="License Management"
+        Command="{Binding NavigateToLicenseManagementCommand}"/>
                 <MenuItem Header="User Management" Command="{Binding NavigateToUserManagementCommand}" />
+                <Button Content="Terminal Management"
+        Command="{Binding NavigateToTerminalManagementCommand}"
+        />
+                <Button Content="Backup/Restore"
+        Command="{Binding NavigateToBackupRestoreCommand}"/>
             </MenuItem>
 
         </Menu>

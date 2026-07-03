@@ -1,34 +1,95 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Models;
+using POS.Core.Services;
 
 namespace POS.Core.Repositories
 {
+    public sealed class SubCategoryLinkedDataSummary
+    {
+        public int ItemParentCount { get; init; }
+        public int ItemVariantReferenceCount { get; init; }
+        public int DiscountRuleCount { get; init; }
+        public int FreeIssueRuleCount { get; init; }
+
+        public bool HasLinkedData =>
+            ItemParentCount > 0 ||
+            ItemVariantReferenceCount > 0 ||
+            DiscountRuleCount > 0 ||
+            FreeIssueRuleCount > 0;
+
+        public string ToUserMessage(string subCategoryName)
+        {
+            var builder = new StringBuilder();
+
+            builder.AppendLine($"Sub-category '{subCategoryName}' cannot be deleted because it is already linked to other records.");
+            builder.AppendLine();
+            builder.AppendLine("Linked records:");
+
+            if (ItemParentCount > 0)
+                builder.AppendLine($"- Item master records: {ItemParentCount}");
+
+            if (ItemVariantReferenceCount > 0)
+                builder.AppendLine($"- Item variant references: {ItemVariantReferenceCount}");
+
+            if (DiscountRuleCount > 0)
+                builder.AppendLine($"- Discount rules: {DiscountRuleCount}");
+
+            if (FreeIssueRuleCount > 0)
+                builder.AppendLine($"- Free issue rules: {FreeIssueRuleCount}");
+
+            builder.AppendLine();
+            builder.AppendLine("Deactivate this sub-category instead of deleting it.");
+
+            return builder.ToString();
+        }
+    }
+
     public class SubCategoryRepository
     {
+        private const int DefaultTakeLimit = 500;
+        private const int MaxTakeLimit = 2000;
+        private const int MaxSubCategoryCodeLength = 40;
+        private const int MaxDisplayOrder = 999999;
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly AuthService? _authService;
 
         private static readonly Regex SubCategoryCodeRegex =
-            new Regex("^[A-Z0-9_-]+$", RegexOptions.Compiled);
+            new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-        public SubCategoryRepository(IDbContextFactory<AppDbContext> contextFactory)
+        public SubCategoryRepository(
+            IDbContextFactory<AppDbContext> contextFactory,
+            AuthService? authService = null)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+            _authService = authService;
         }
 
-        public async Task<IEnumerable<SubCategory>> GetAllFilteredAsync(int? parentCategoryId = null, string searchTerm = "")
+        public async Task<IReadOnlyList<SubCategory>> GetAllFilteredAsync(
+            int? parentCategoryId = null,
+            string searchTerm = "",
+            bool includeDeactivated = true,
+            int take = DefaultTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            take = NormalizeTakeLimit(take);
 
-            var query = context.SubCategories
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<SubCategory> query = context.SubCategories
                 .Include(s => s.Category)
-                .AsNoTracking()
-                .AsQueryable();
+                .AsNoTracking();
+
+            if (!includeDeactivated)
+            {
+                query = query.Where(s => !s.IsDeactivated && !s.Category.IsDeactivated);
+            }
 
             if (parentCategoryId.HasValue && parentCategoryId.Value > 0)
             {
@@ -48,27 +109,46 @@ namespace POS.Core.Repositories
 
             return await query
                 .OrderBy(s => s.Category.CategoryName)
+                .ThenBy(s => s.IsDeactivated)
+                .ThenBy(s => s.DisplayOrder)
                 .ThenBy(s => s.SubCategoryName)
                 .ThenBy(s => s.SubCategoryCode)
-                .Take(500)
+                .Take(take)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<SubCategory>> GetAllAsync()
+        public async Task<IReadOnlyList<SubCategory>> GetAllAsync(
+            bool includeDeactivated = true,
+            int take = DefaultTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            return await GetAllFilteredAsync(
+                parentCategoryId: null,
+                searchTerm: string.Empty,
+                includeDeactivated: includeDeactivated,
+                take: take);
+        }
 
-            return await context.SubCategories
-                .Include(s => s.Category)
-                .AsNoTracking()
-                .OrderBy(s => s.Category.CategoryName)
-                .ThenBy(s => s.SubCategoryName)
-                .ToListAsync();
+        public async Task<IReadOnlyList<SubCategory>> GetActiveByCategoryAsync(
+            int categoryId,
+            string searchTerm = "",
+            int take = DefaultTakeLimit)
+        {
+            if (categoryId <= 0)
+                return Array.Empty<SubCategory>();
+
+            return await GetAllFilteredAsync(
+                parentCategoryId: categoryId,
+                searchTerm: searchTerm,
+                includeDeactivated: false,
+                take: take);
         }
 
         public async Task<SubCategory?> GetByIdAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return null;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.SubCategories
                 .Include(s => s.Category)
@@ -76,43 +156,67 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
-        // Kept for backward compatibility with your current ViewModel.
-        // This checks globally by final SubCategoryCode.
         public async Task<bool> IsCodeUniqueAsync(string code, int currentSubCategoryId = 0)
         {
             string normalizedCode = NormalizeCode(code);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.SubCategories.AnyAsync(s =>
-                s.SubCategoryCode.ToUpper() == normalizedCode &&
+                s.SubCategoryCode == normalizedCode &&
                 s.Id != currentSubCategoryId);
         }
 
-        // Better version for the updated ViewModel.
-        // This checks uniqueness inside the selected parent category.
-        public async Task<bool> IsCodeUniqueAsync(int categoryId, string code, int currentSubCategoryId = 0)
+        public async Task<bool> IsCodeUniqueAsync(
+            int categoryId,
+            string code,
+            int currentSubCategoryId = 0)
         {
             string normalizedCode = NormalizeCode(code);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (categoryId <= 0 || string.IsNullOrWhiteSpace(normalizedCode))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.SubCategories.AnyAsync(s =>
                 s.CategoryId == categoryId &&
-                s.SubCategoryCode.ToUpper() == normalizedCode &&
+                s.SubCategoryCode == normalizedCode &&
                 s.Id != currentSubCategoryId);
         }
 
-        public async Task<bool> IsNameUniqueAsync(int categoryId, string name, int currentSubCategoryId = 0)
+        public async Task<bool> IsNameUniqueAsync(
+            int categoryId,
+            string name,
+            int currentSubCategoryId = 0)
         {
-            string normalizedName = NormalizeName(name).ToLower();
+            string normalizedName = NormalizeName(name);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (categoryId <= 0 || string.IsNullOrWhiteSpace(normalizedName))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.SubCategories.AnyAsync(s =>
                 s.CategoryId == categoryId &&
-                s.SubCategoryName.ToLower() == normalizedName &&
+                s.SubCategoryName == normalizedName &&
                 s.Id != currentSubCategoryId);
+        }
+
+        public async Task<SubCategoryLinkedDataSummary> GetLinkedDataSummaryAsync(int subCategoryId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await GetLinkedDataSummaryAsync(context, subCategoryId);
+        }
+
+        public async Task<bool> HasLinkedDataAsync(int subCategoryId)
+        {
+            var summary = await GetLinkedDataSummaryAsync(subCategoryId);
+            return summary.HasLinkedData;
         }
 
         public async Task AddAsync(SubCategory subCategory)
@@ -125,11 +229,13 @@ namespace POS.Core.Repositories
 
             string normalizedCode = NormalizeCode(subCategory.SubCategoryCode);
             string normalizedName = NormalizeName(subCategory.SubCategoryName);
+            int displayOrder = NormalizeDisplayOrder(subCategory.DisplayOrder);
 
             ValidateSubCategoryCode(normalizedCode);
             ValidateSubCategoryName(normalizedName);
+            ValidateDisplayOrder(displayOrder);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var parentCategory = await context.Categories
                 .FirstOrDefaultAsync(c => c.Id == subCategory.CategoryId);
@@ -142,25 +248,39 @@ namespace POS.Core.Repositories
 
             bool codeExists = await context.SubCategories.AnyAsync(s =>
                 s.CategoryId == subCategory.CategoryId &&
-                s.SubCategoryCode.ToUpper() == normalizedCode);
+                s.SubCategoryCode == normalizedCode);
 
             if (codeExists)
                 throw new InvalidOperationException($"Sub-category code '{normalizedCode}' already exists under this parent category.");
 
             bool nameExists = await context.SubCategories.AnyAsync(s =>
                 s.CategoryId == subCategory.CategoryId &&
-                s.SubCategoryName.ToLower() == normalizedName.ToLower());
+                s.SubCategoryName == normalizedName);
 
             if (nameExists)
                 throw new InvalidOperationException($"Sub-category name '{normalizedName}' already exists under this parent category.");
 
             DateTime now = DateTime.Now;
+            string currentUser = GetCurrentUsername();
 
             subCategory.SubCategoryCode = normalizedCode;
             subCategory.SubCategoryName = normalizedName;
+            subCategory.DisplayOrder = displayOrder;
             subCategory.CreatedAt = now;
+            subCategory.CreatedBy = currentUser;
             subCategory.UpdatedAt = now;
-            subCategory.DeactivatedAt = subCategory.IsDeactivated ? now : null;
+            subCategory.UpdatedBy = currentUser;
+
+            if (subCategory.IsDeactivated)
+            {
+                subCategory.DeactivatedAt = now;
+                subCategory.DeactivatedBy = currentUser;
+            }
+            else
+            {
+                subCategory.DeactivatedAt = null;
+                subCategory.DeactivatedBy = string.Empty;
+            }
 
             await context.SubCategories.AddAsync(subCategory);
             await context.SaveChangesAsync();
@@ -175,12 +295,15 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Invalid sub-category record.");
 
             string normalizedName = NormalizeName(subCategory.SubCategoryName);
+            int displayOrder = NormalizeDisplayOrder(subCategory.DisplayOrder);
 
             ValidateSubCategoryName(normalizedName);
+            ValidateDisplayOrder(displayOrder);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var existing = await context.SubCategories
+                .Include(s => s.Category)
                 .FirstOrDefaultAsync(s => s.Id == subCategory.Id);
 
             if (existing == null)
@@ -188,28 +311,48 @@ namespace POS.Core.Repositories
 
             bool nameExists = await context.SubCategories.AnyAsync(s =>
                 s.CategoryId == existing.CategoryId &&
-                s.SubCategoryName.ToLower() == normalizedName.ToLower() &&
+                s.SubCategoryName == normalizedName &&
                 s.Id != existing.Id);
 
             if (nameExists)
                 throw new InvalidOperationException($"Sub-category name '{normalizedName}' already exists under this parent category.");
 
-            DateTime now = DateTime.Now;
+            bool wasDeactivated = existing.IsDeactivated;
+            bool isNowDeactivated = subCategory.IsDeactivated;
 
-            // Important:
-            // Parent category and sub-category code are intentionally not updated here.
-            // They should stay stable after creation.
-            existing.SubCategoryName = normalizedName;
-            existing.IsDeactivated = subCategory.IsDeactivated;
-            existing.UpdatedAt = now;
-
-            if (existing.IsDeactivated)
+            if (wasDeactivated && !isNowDeactivated && existing.Category.IsDeactivated)
             {
-                existing.DeactivatedAt ??= now;
+                throw new InvalidOperationException(
+                    "Cannot reactivate this sub-category because its parent category is deactivated.");
             }
-            else
+
+            DateTime now = DateTime.Now;
+            string currentUser = GetCurrentUsername();
+
+            // Parent category and SubCategoryCode are intentionally not updated.
+            // They must remain stable for item links, reports, rules, and future sync.
+            existing.SubCategoryName = normalizedName;
+            existing.DisplayOrder = displayOrder;
+            existing.IsDeactivated = isNowDeactivated;
+            existing.UpdatedAt = now;
+            existing.UpdatedBy = currentUser;
+
+            if (!wasDeactivated && isNowDeactivated)
+            {
+                existing.DeactivatedAt = now;
+                existing.DeactivatedBy = currentUser;
+            }
+            else if (wasDeactivated && !isNowDeactivated)
             {
                 existing.DeactivatedAt = null;
+                existing.DeactivatedBy = string.Empty;
+            }
+            else if (isNowDeactivated)
+            {
+                existing.DeactivatedAt ??= now;
+
+                if (string.IsNullOrWhiteSpace(existing.DeactivatedBy))
+                    existing.DeactivatedBy = currentUser;
             }
 
             await context.SaveChangesAsync();
@@ -217,7 +360,10 @@ namespace POS.Core.Repositories
 
         public async Task DeactivateAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var subCategory = await context.SubCategories
                 .FirstOrDefaultAsync(s => s.Id == id);
@@ -225,68 +371,116 @@ namespace POS.Core.Repositories
             if (subCategory == null)
                 return;
 
+            if (subCategory.IsDeactivated)
+                return;
+
             DateTime now = DateTime.Now;
+            string currentUser = GetCurrentUsername();
 
             subCategory.IsDeactivated = true;
             subCategory.UpdatedAt = now;
-            subCategory.DeactivatedAt ??= now;
+            subCategory.UpdatedBy = currentUser;
+            subCategory.DeactivatedAt = now;
+            subCategory.DeactivatedBy = currentUser;
 
             await context.SaveChangesAsync();
         }
 
-        public async Task<bool> HasLinkedDataAsync(int subCategoryId)
+        public async Task ReactivateAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
 
-            return await HasLinkedDataAsync(context, subCategoryId);
-        }
-
-        public async Task DeleteAsync(int id)
-        {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var subCategory = await context.SubCategories
+                .Include(s => s.Category)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (subCategory == null)
                 return;
 
-            bool hasLinkedData = await HasLinkedDataAsync(context, id);
+            if (!subCategory.IsDeactivated)
+                return;
 
-            if (hasLinkedData)
+            if (subCategory.Category.IsDeactivated)
             {
                 throw new InvalidOperationException(
-                    "This sub-category is linked to item records. Deactivate it instead of deleting it.");
+                    "Cannot reactivate this sub-category because its parent category is deactivated.");
             }
 
-            try
-            {
-                context.SubCategories.Remove(subCategory);
-                await context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                throw new InvalidOperationException(
-                    "This sub-category cannot be deleted because it is linked to other records. Deactivate it instead.");
-            }
+            DateTime now = DateTime.Now;
+            string currentUser = GetCurrentUsername();
+
+            subCategory.IsDeactivated = false;
+            subCategory.UpdatedAt = now;
+            subCategory.UpdatedBy = currentUser;
+            subCategory.DeactivatedAt = null;
+            subCategory.DeactivatedBy = string.Empty;
+
+            await context.SaveChangesAsync();
         }
 
-        private static async Task<bool> HasLinkedDataAsync(AppDbContext context, int subCategoryId)
+        public async Task DeleteAsync(int id)
         {
-            // Safe check for future ItemParent.SubCategoryId.
-            // If the property does not exist yet, this check simply returns false.
-            if (await HasLinkedEntityAsync(context, context.ItemParents, subCategoryId))
-                return true;
+            if (id <= 0)
+                return;
 
-            // Safe check for future ItemVariant.SubCategoryId.
-            // If the property does not exist yet, this check simply returns false.
-            if (await HasLinkedEntityAsync(context, context.ItemVariants, subCategoryId))
-                return true;
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            return false;
+            var subCategory = await context.SubCategories
+                .Include(s => s.Category)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (subCategory == null)
+                return;
+
+            var linkedData = await GetLinkedDataSummaryAsync(context, id);
+
+            if (linkedData.HasLinkedData)
+            {
+                throw new InvalidOperationException(
+                    linkedData.ToUserMessage(subCategory.SubCategoryName));
+            }
+
+            context.SubCategories.Remove(subCategory);
+            await context.SaveChangesAsync();
         }
 
-        private static async Task<bool> HasLinkedEntityAsync<TEntity>(
+        private static async Task<SubCategoryLinkedDataSummary> GetLinkedDataSummaryAsync(
+            AppDbContext context,
+            int subCategoryId)
+        {
+            if (subCategoryId <= 0)
+                return new SubCategoryLinkedDataSummary();
+
+            int itemParentCount = await context.ItemParents
+                .AsNoTracking()
+                .CountAsync(i => i.SubCategoryId == subCategoryId);
+
+            int itemVariantReferenceCount = await CountEntitySubCategoryReferencesAsync(
+                context,
+                context.ItemVariants,
+                subCategoryId);
+
+            int discountRuleCount = await context.DiscountRules
+                .AsNoTracking()
+                .CountAsync(r => r.SubCategoryId == subCategoryId);
+
+            int freeIssueRuleCount = await context.FreeIssueRules
+                .AsNoTracking()
+                .CountAsync(r => r.SubCategoryId == subCategoryId);
+
+            return new SubCategoryLinkedDataSummary
+            {
+                ItemParentCount = itemParentCount,
+                ItemVariantReferenceCount = itemVariantReferenceCount,
+                DiscountRuleCount = discountRuleCount,
+                FreeIssueRuleCount = freeIssueRuleCount
+            };
+        }
+
+        private static async Task<int> CountEntitySubCategoryReferencesAsync<TEntity>(
             AppDbContext context,
             IQueryable<TEntity> query,
             int subCategoryId) where TEntity : class
@@ -295,21 +489,42 @@ namespace POS.Core.Repositories
             var property = entityType?.FindProperty("SubCategoryId");
 
             if (property == null)
-                return false;
+                return 0;
 
             if (property.ClrType == typeof(int))
             {
-                return await query.AnyAsync(e =>
+                return await query.CountAsync(e =>
                     EF.Property<int>(e, "SubCategoryId") == subCategoryId);
             }
 
             if (property.ClrType == typeof(int?))
             {
-                return await query.AnyAsync(e =>
+                return await query.CountAsync(e =>
                     EF.Property<int?>(e, "SubCategoryId") == subCategoryId);
             }
 
-            return false;
+            return 0;
+        }
+
+        private string GetCurrentUsername()
+        {
+            string? username = _authService?.CurrentUser?.Username;
+
+            if (!string.IsNullOrWhiteSpace(username))
+                return username.Trim();
+
+            return Environment.UserName ?? "System";
+        }
+
+        private static int NormalizeTakeLimit(int take)
+        {
+            if (take <= 0)
+                return DefaultTakeLimit;
+
+            if (take > MaxTakeLimit)
+                return MaxTakeLimit;
+
+            return take;
         }
 
         private static string NormalizeCode(string code)
@@ -322,13 +537,18 @@ namespace POS.Core.Repositories
             return (name ?? string.Empty).Trim();
         }
 
+        private static int NormalizeDisplayOrder(int displayOrder)
+        {
+            return displayOrder < 0 ? 0 : displayOrder;
+        }
+
         private static void ValidateSubCategoryCode(string code)
         {
             if (string.IsNullOrWhiteSpace(code))
                 throw new InvalidOperationException("Sub-category code is required.");
 
-            if (code.Length > 20)
-                throw new InvalidOperationException("Sub-category code cannot be longer than 20 characters.");
+            if (code.Length > MaxSubCategoryCodeLength)
+                throw new InvalidOperationException($"Sub-category code cannot be longer than {MaxSubCategoryCodeLength} characters.");
 
             if (!SubCategoryCodeRegex.IsMatch(code))
             {
@@ -344,6 +564,15 @@ namespace POS.Core.Repositories
 
             if (name.Length > 100)
                 throw new InvalidOperationException("Sub-category name cannot be longer than 100 characters.");
+        }
+
+        private static void ValidateDisplayOrder(int displayOrder)
+        {
+            if (displayOrder < 0)
+                throw new InvalidOperationException("Display order cannot be less than zero.");
+
+            if (displayOrder > MaxDisplayOrder)
+                throw new InvalidOperationException($"Display order cannot be greater than {MaxDisplayOrder}.");
         }
     }
 }

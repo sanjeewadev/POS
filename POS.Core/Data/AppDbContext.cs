@@ -1,6 +1,9 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using POS.Core.Models;
+using POS.Core.Models.Licensing;
+using POS.Core.Models.Terminals;
+using POS.Core.Models.Backup;
+using System;
 
 namespace POS.Core.Data
 {
@@ -66,7 +69,9 @@ namespace POS.Core.Data
         public DbSet<CashMovement> CashMovements { get; set; } = null!;
 
         // --- SETTINGS / VOUCHERS / CLAIMS ---
-        public DbSet<SystemSetting> SystemSettings { get; set; } = null!;
+        public DbSet<StoreSettings> StoreSettings { get; set; } = null!;
+
+        public DbSet<TerminalSettings> TerminalSettings { get; set; } = null!;
         public DbSet<GiftVoucher> GiftVouchers { get; set; } = null!;
 
         public DbSet<GiftVoucherTransaction> GiftVoucherTransactions { get; set; }
@@ -83,6 +88,15 @@ namespace POS.Core.Data
         // Keep these because some existing repositories may already use these names.
         public DbSet<SupplierReturnHeader> SupplierReturnHeaders { get; set; } = null!;
         public DbSet<SupplierReturnLine> SupplierReturnLines { get; set; } = null!;
+
+        public DbSet<RegisteredTerminal> RegisteredTerminals { get; set; } = null!;
+
+        public DbSet<InstalledLicense> InstalledLicenses { get; set; } = null!;
+
+        public DbSet<BackupHistory> BackupHistory { get; set; } = null!;
+
+        //new
+        public DbSet<PriceChangeHistory> PriceChangeHistories { get; set; } = null!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -114,8 +128,15 @@ namespace POS.Core.Data
             // =========================================================
             // CATEGORY MASTER
             // =========================================================
+            // =========================================================
+            // CATEGORY MASTER
+            // =========================================================
             modelBuilder.Entity<Category>(entity =>
             {
+                entity.ToTable("Categories");
+
+                entity.HasKey(c => c.Id);
+
                 entity.Property(c => c.CategoryCode)
                     .IsRequired()
                     .HasMaxLength(20)
@@ -126,6 +147,36 @@ namespace POS.Core.Data
                     .HasMaxLength(100)
                     .UseCollation("NOCASE");
 
+                entity.Property(c => c.Description)
+                    .HasMaxLength(250)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(c => c.DisplayOrder)
+                    .HasDefaultValue(0);
+
+                entity.Property(c => c.IsDeactivated)
+                    .HasDefaultValue(false);
+
+                entity.Property(c => c.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(c => c.CreatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(c => c.UpdatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(c => c.UpdatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(c => c.DeactivatedAt);
+
+                entity.Property(c => c.DeactivatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
                 entity.HasIndex(c => c.CategoryCode)
                     .IsUnique();
 
@@ -133,22 +184,57 @@ namespace POS.Core.Data
                     .IsUnique();
 
                 entity.HasIndex(c => c.IsDeactivated);
+
+                entity.HasIndex(c => c.DisplayOrder);
             });
 
             // =========================================================
             // SUB CATEGORY MASTER
             // =========================================================
+            // =========================================================
+            // SUB CATEGORY MASTER
+            // =========================================================
             modelBuilder.Entity<SubCategory>(entity =>
             {
+                entity.ToTable("SubCategories");
+
+                entity.HasKey(s => s.Id);
+
                 entity.Property(s => s.SubCategoryCode)
                     .IsRequired()
-                    .HasMaxLength(20)
+                    .HasMaxLength(40)
                     .UseCollation("NOCASE");
 
                 entity.Property(s => s.SubCategoryName)
                     .IsRequired()
                     .HasMaxLength(100)
                     .UseCollation("NOCASE");
+
+                entity.Property(s => s.DisplayOrder)
+                    .HasDefaultValue(0);
+
+                entity.Property(s => s.IsDeactivated)
+                    .HasDefaultValue(false);
+
+                entity.Property(s => s.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(s => s.CreatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(s => s.UpdatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(s => s.UpdatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(s => s.DeactivatedAt);
+
+                entity.Property(s => s.DeactivatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
 
                 entity.HasOne(s => s.Category)
                     .WithMany(c => c.SubCategories)
@@ -161,7 +247,13 @@ namespace POS.Core.Data
                 entity.HasIndex(s => new { s.CategoryId, s.SubCategoryName })
                     .IsUnique();
 
+                entity.HasIndex(s => s.CategoryId);
+
                 entity.HasIndex(s => s.IsDeactivated);
+
+                entity.HasIndex(s => new { s.CategoryId, s.DisplayOrder });
+
+                entity.HasIndex(s => s.DisplayOrder);
             });
 
             // =========================================================
@@ -517,6 +609,139 @@ namespace POS.Core.Data
                 entity.HasIndex(b => b.IsDeactivated);
             });
 
+            // =========================================================
+            // PRICE CHANGE HISTORY
+            // =========================================================
+            modelBuilder.Entity<PriceChangeHistory>(entity =>
+            {
+                entity.ToTable("PriceChangeHistories");
+
+                entity.HasKey(p => p.Id);
+
+                entity.Property(p => p.PriceChangeNo)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.PriceLevel)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.ChangeSource)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.ItemCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.SkuCode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.Barcode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.ItemDescription)
+                    .HasMaxLength(200);
+
+                entity.Property(p => p.VariantDescription)
+                    .HasMaxLength(250);
+
+                entity.Property(p => p.BatchNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.EffectiveCost)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.OldMinimumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.NewMinimumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.OldRetailPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.NewRetailPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.OldWholesalePrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.NewWholesalePrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.OldMaximumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.NewMaximumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.ChangedBy)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(p => p.ReasonCode)
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.ChangeReason)
+                    .IsRequired()
+                    .HasMaxLength(250);
+
+                entity.Property(p => p.Remarks)
+                    .HasMaxLength(500);
+
+                entity.HasOne(p => p.ItemVariant)
+                    .WithMany()
+                    .HasForeignKey(p => p.ItemVariantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(p => p.ItemBatch)
+                    .WithMany()
+                    .HasForeignKey(p => p.ItemBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(p => p.PriceChangeNo);
+
+                entity.HasIndex(p => p.PriceLevel);
+
+                entity.HasIndex(p => p.ChangeSource);
+
+                entity.HasIndex(p => p.ItemVariantId);
+
+                entity.HasIndex(p => p.ItemBatchId);
+
+                entity.HasIndex(p => p.ItemCode);
+
+                entity.HasIndex(p => p.SkuCode);
+
+                entity.HasIndex(p => p.Barcode);
+
+                entity.HasIndex(p => p.BatchNo);
+
+                entity.HasIndex(p => p.ChangedAt);
+
+                entity.HasIndex(p => p.ChangedBy);
+
+                entity.HasIndex(p => new
+                {
+                    p.ItemVariantId,
+                    p.ChangedAt
+                });
+
+                entity.HasIndex(p => new
+                {
+                    p.PriceLevel,
+                    p.ChangedAt
+                });
+            });
+
 
             // =========================================================
             // INVENTORY TRANSACTION LEDGER
@@ -594,7 +819,8 @@ namespace POS.Core.Data
                 entity.Property(g => g.Status)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation("NOCASE")
+                    .HasDefaultValue("Posted");
 
                 entity.Property(g => g.CreatedBy)
                     .HasMaxLength(50);
@@ -620,6 +846,9 @@ namespace POS.Core.Data
                 entity.Property(g => g.TotalDiscountAmount)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(g => g.TotalVatAmount)
+                    .HasColumnType("decimal(18,2)");
+
                 entity.Property(g => g.NetPayable)
                     .HasColumnType("decimal(18,2)");
 
@@ -636,8 +865,6 @@ namespace POS.Core.Data
                 entity.HasIndex(g => g.GrnNumber)
                     .IsUnique();
 
-                // Important commercial rule:
-                // one supplier invoice should not be posted twice for the same supplier.
                 entity.HasIndex(g => new
                 {
                     g.SupplierId,
@@ -680,7 +907,25 @@ namespace POS.Core.Data
                 entity.Property(l => l.UnitCost)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(l => l.LineDiscountMode)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Amount")
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.LineDiscountValue)
+                    .HasColumnType("decimal(18,2)");
+
                 entity.Property(l => l.LineDiscount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.VatRatePercent)
+                    .HasColumnType("decimal(5,2)");
+
+                entity.Property(l => l.IsVatIncluded)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.VatAmount)
                     .HasColumnType("decimal(18,2)");
 
                 entity.Property(l => l.LandedCost)
@@ -689,9 +934,43 @@ namespace POS.Core.Data
                 entity.Property(l => l.LineTotal)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(l => l.UpdateSellingPrices)
+                    .HasDefaultValue(false);
+
+                entity.Property(l => l.CurrentRetailPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.NewRetailPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.CurrentWholesalePrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.NewWholesalePrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.CurrentMinimumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.NewMinimumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.CurrentMaximumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.NewMaximumPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.RetailMarkupPercent)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.WholesaleMarkupPercent)
+                    .HasColumnType("decimal(18,2)");
+
                 entity.Property(l => l.LineStatus)
                     .IsRequired()
                     .HasMaxLength(30)
+                    .HasDefaultValue("Posted")
                     .UseCollation("NOCASE");
 
                 entity.HasOne(l => l.GrnHeader)
@@ -709,8 +988,6 @@ namespace POS.Core.Data
                     .HasForeignKey(l => l.PoLineId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Enterprise batch audit:
-                // Every posted GRN line should point to the exact ItemBatch it created or updated.
                 entity.HasOne(l => l.ItemBatch)
                     .WithMany()
                     .HasForeignKey(l => l.ItemBatchId)
@@ -728,8 +1005,6 @@ namespace POS.Core.Data
 
                 entity.HasIndex(l => l.LineStatus);
 
-                // Prevent accidental duplicate same item/same batch line inside one GRN.
-                // The ViewModel and repository should merge same item + same batch before posting.
                 entity.HasIndex(l => new
                 {
                     l.GrnHeaderId,
@@ -1005,6 +1280,14 @@ namespace POS.Core.Data
                     {
                         DocumentType = "RTN",
                         Prefix = "RTN-",
+                        NextSequenceNumber = 1,
+                        PaddingLength = 5,
+                        UpdatedAt = seedDate
+                    },
+                    new DocumentSequence
+                    {
+                        DocumentType = "PCH",
+                        Prefix = "PCH-",
                         NextSequenceNumber = 1,
                         PaddingLength = 5,
                         UpdatedAt = seedDate
@@ -1376,11 +1659,26 @@ namespace POS.Core.Data
                 entity.Property(l => l.ExpectedCost)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(l => l.LineDiscountMode)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Amount")
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.LineDiscountValue)
+                    .HasColumnType("decimal(18,2)");
+
                 entity.Property(l => l.LineDiscount)
                     .HasColumnType("decimal(18,2)");
 
                 entity.Property(l => l.TaxCode)
                     .HasMaxLength(20);
+
+                entity.Property(l => l.VatRatePercent)
+                    .HasColumnType("decimal(5,2)");
+
+                entity.Property(l => l.IsVatIncluded)
+                    .HasDefaultValue(false);
 
                 entity.Property(l => l.TaxAmount)
                     .HasColumnType("decimal(18,2)");
@@ -1407,8 +1705,6 @@ namespace POS.Core.Data
 
                 entity.HasIndex(l => l.ItemVariantId);
 
-                // Prevent the same item variant being added twice to the same PO.
-                // The ViewModel should merge quantities instead of duplicate rows.
                 entity.HasIndex(l => new
                 {
                     l.PoHeaderId,
@@ -2894,6 +3190,427 @@ namespace POS.Core.Data
                 entity.HasIndex(c => c.WrittenOffAt);
 
                 entity.HasIndex(c => c.CancelledAt);
+            });
+
+            modelBuilder.Entity<StoreSettings>(entity =>
+            {
+                entity.ToTable("StoreSettings");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.LegalName)
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.Property(e => e.StoreName)
+                    .HasMaxLength(150)
+                    .IsRequired();
+
+                entity.Property(e => e.Brn)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.TaxNo)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.AddressLine1)
+                    .HasMaxLength(250)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.AddressLine2)
+                    .HasMaxLength(250)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.City)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.PostalCode)
+                    .HasMaxLength(50)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.Country)
+                    .HasMaxLength(100)
+                    .HasDefaultValue("Sri Lanka");
+
+                entity.Property(e => e.Phone)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.Email)
+                    .HasMaxLength(150)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.GlobalVatRate)
+                    .HasPrecision(5, 2)
+                    .HasDefaultValue(0m);
+
+                entity.Property(e => e.CurrencyCode)
+                    .HasMaxLength(10)
+                    .HasDefaultValue("LKR");
+
+                entity.Property(e => e.CurrencySymbol)
+                    .HasMaxLength(10)
+                    .HasDefaultValue("Rs.");
+
+                entity.Property(e => e.InvoicePrefix)
+                    .HasMaxLength(20)
+                    .HasDefaultValue("INV");
+
+                entity.Property(e => e.PurchaseOrderPrefix)
+                    .HasMaxLength(20)
+                    .HasDefaultValue("PO");
+
+                entity.Property(e => e.QuotationPrefix)
+                    .HasMaxLength(20)
+                    .HasDefaultValue("QT");
+
+                entity.Property(e => e.ReceiptHeader)
+                    .HasMaxLength(1000)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.ReceiptFooter)
+                    .HasMaxLength(1000)
+                    .HasDefaultValue("Thank You! Come Again.");
+
+                entity.Property(e => e.InvoiceTerms)
+                    .HasMaxLength(4000)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.TimeZoneId)
+                    .HasMaxLength(100)
+                    .HasDefaultValue("Sri Lanka Standard Time");
+
+                entity.Property(e => e.DateFormat)
+                    .HasMaxLength(50)
+                    .HasDefaultValue("dd/MM/yyyy");
+
+                entity.Property(e => e.FinancialYearStartMonth)
+                    .HasDefaultValue(1);
+
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(e => e.UpdatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            modelBuilder.Entity<TerminalSettings>(entity =>
+            {
+                entity.ToTable("TerminalSettings");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.TerminalNo)
+                    .HasMaxLength(20)
+                    .IsRequired();
+
+                entity.Property(e => e.TerminalName)
+                    .HasMaxLength(100)
+                    .HasDefaultValue("Cashier Terminal 01");
+
+                entity.Property(e => e.MachineName)
+                    .HasMaxLength(150)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.Location)
+                    .HasMaxLength(100)
+                    .HasDefaultValue("Main Store");
+
+                entity.Property(e => e.PrinterMode)
+                    .HasMaxLength(50)
+                    .HasDefaultValue("WindowsSpooler");
+
+                entity.Property(e => e.ReceiptPrinterName)
+                    .HasMaxLength(150)
+                    .HasDefaultValue("POS-80");
+
+                entity.Property(e => e.ReceiptPaperWidth)
+                    .HasDefaultValue(80);
+
+                entity.Property(e => e.AutoPrintReceipt)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.ReceiptCopies)
+                    .HasDefaultValue(1);
+
+                entity.Property(e => e.EnableCashDrawer)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.DrawerKickCode)
+                    .HasMaxLength(100)
+                    .HasDefaultValue("27,112,0,25,250");
+
+                entity.Property(e => e.OpenDrawerAfterCashSale)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.ScannerSuffixAction)
+                    .HasMaxLength(50)
+                    .HasDefaultValue("Enter");
+
+                entity.Property(e => e.EnableScale)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.ScaleComPort)
+                    .HasMaxLength(20)
+                    .HasDefaultValue("COM1");
+
+                entity.Property(e => e.ScaleBaudRate)
+                    .HasDefaultValue(9600);
+
+                entity.Property(e => e.EnablePoleDisplay)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.PoleDisplayComPort)
+                    .HasMaxLength(20)
+                    .HasDefaultValue("COM2");
+
+                entity.Property(e => e.PoleWelcomeMessage)
+                    .HasMaxLength(40)
+                    .HasDefaultValue("WELCOME");
+
+                entity.Property(e => e.EnableEftpos)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.EftposProvider)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.EftposPortOrIp)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(e => e.UpdatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.HasIndex(e => e.TerminalNo)
+                    .IsUnique();
+
+                entity.HasIndex(e => e.MachineName);
+
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            modelBuilder.Entity<InstalledLicense>(entity =>
+            {
+                entity.ToTable("InstalledLicenses");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.LicenseId)
+                    .HasMaxLength(80)
+                    .IsRequired();
+
+                entity.Property(e => e.LicenseType)
+                    .HasConversion<string>()
+                    .HasMaxLength(40)
+                    .IsRequired();
+
+                entity.Property(e => e.LicenseStatus)
+                    .HasConversion<string>()
+                    .HasMaxLength(40)
+                    .IsRequired();
+
+                entity.Property(e => e.StoreId)
+                    .HasMaxLength(80)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.StoreName)
+                    .HasMaxLength(200)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.TerminalNo)
+                    .HasMaxLength(30)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.MachineCode)
+                    .HasMaxLength(200)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.IssuedOn)
+                    .IsRequired();
+
+                entity.Property(e => e.ExpiresOn)
+                    .IsRequired();
+
+                entity.Property(e => e.GraceDays)
+                    .HasDefaultValue(7);
+
+                entity.Property(e => e.ImportedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(e => e.ImportedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.LastVerifiedAt);
+
+                entity.Property(e => e.RawLicenseJson)
+                    .HasColumnType("TEXT")
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.Signature)
+                    .HasColumnType("TEXT")
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.Remarks)
+                    .HasMaxLength(500)
+                    .HasDefaultValue(string.Empty);
+
+                entity.HasIndex(e => e.LicenseId);
+
+                entity.HasIndex(e => e.LicenseType);
+
+                entity.HasIndex(e => e.StoreId);
+
+                entity.HasIndex(e => e.TerminalNo);
+
+                entity.HasIndex(e => e.MachineCode);
+
+                entity.HasIndex(e => e.IsActive);
+            });
+
+            modelBuilder.Entity<RegisteredTerminal>(entity =>
+            {
+                entity.ToTable("RegisteredTerminals");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.TerminalNo)
+                    .HasMaxLength(30)
+                    .IsRequired();
+
+                entity.Property(e => e.TerminalName)
+                    .HasMaxLength(120)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.MachineName)
+                    .HasMaxLength(150)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.MachineCode)
+                    .HasMaxLength(200)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.Location)
+                    .HasMaxLength(120)
+                    .HasDefaultValue("Main Store");
+
+                entity.Property(e => e.IsCashierTerminal)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IsBackOfficeAllowed)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.LicenseId)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.LicenseExpiryDate);
+
+                entity.Property(e => e.LicenseLastCheckedAt);
+
+                entity.Property(e => e.LastLoginAt);
+
+                entity.Property(e => e.LastSaleAt);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(e => e.UpdatedAt);
+
+                entity.Property(e => e.UpdatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.Remarks)
+                    .HasMaxLength(500)
+                    .HasDefaultValue(string.Empty);
+
+                entity.HasIndex(e => e.TerminalNo)
+                    .IsUnique();
+
+                entity.HasIndex(e => e.MachineCode);
+
+                entity.HasIndex(e => e.IsCashierTerminal);
+
+                entity.HasIndex(e => e.IsActive);
+
+                entity.HasIndex(e => e.LicenseId);
+            });
+
+            modelBuilder.Entity<BackupHistory>(entity =>
+            {
+                entity.ToTable("BackupHistory");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.ActionType)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(e => e.BackupFilePath)
+                    .HasMaxLength(500)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.BackupFileName)
+                    .HasMaxLength(260)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.Success)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.Message)
+                    .HasMaxLength(1000)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.FileSizeBytes)
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.Checksum)
+                    .HasMaxLength(200)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(e => e.CreatedBy)
+                    .HasMaxLength(100)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.MachineName)
+                    .HasMaxLength(150)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.TerminalNo)
+                    .HasMaxLength(30)
+                    .HasDefaultValue(string.Empty);
+
+                entity.HasIndex(e => e.ActionType);
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => e.Success);
+                entity.HasIndex(e => e.MachineName);
+                entity.HasIndex(e => e.TerminalNo);
             });
         }
 

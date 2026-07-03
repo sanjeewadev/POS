@@ -6,6 +6,7 @@
              mc:Ignorable="d"
              d:DesignHeight="700"
              d:DesignWidth="1200"
+             Loaded="UserControl_Loaded"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
@@ -40,13 +41,6 @@
                     <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                 </Trigger>
             </Style.Triggers>
-        </Style>
-
-        <Style TargetType="ComboBox" x:Key="ClassicCombo">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
         </Style>
 
         <Style TargetType="Button" x:Key="ClassicBtn">
@@ -88,7 +82,7 @@
 
     <Grid Margin="5">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="380"/>
+            <ColumnDefinition Width="410"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -96,6 +90,7 @@
         <!-- LEFT SIDE: ENTRY FORM -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -109,7 +104,7 @@
 
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="105"/>
+                            <ColumnDefinition Width="115"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -129,9 +124,9 @@
                                  ToolTip="Enter a unique code. Example: CAT-001. Cannot be changed after saving."/>
                     </Grid>
 
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="105"/>
+                            <ColumnDefinition Width="115"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -147,18 +142,70 @@
                                  MaxLength="100"/>
                     </Grid>
 
-                    <TextBlock Text="Category code supports A-Z, 0-9, dash, and underscore only."
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Description"
+                                   Style="{StaticResource InlineLabel}"
+                                   VerticalAlignment="Top"
+                                   Margin="0,4,5,0"/>
+
+                        <TextBox Grid.Column="1"
+                                 x:Name="txtDescription"
+                                 Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 BorderBrush="{DynamicResource InputBoxBorderBrush}"
+                                 BorderThickness="1"
+                                 Background="{DynamicResource WhiteBackgroundBrush}"
+                                 Padding="4"
+                                 Height="55"
+                                 MaxLength="250"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Display Order"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="1"
+                                 x:Name="txtDisplayOrder"
+                                 Text="{Binding DisplayOrderText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 MaxLength="6"
+                                 HorizontalContentAlignment="Right"/>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="0 = default"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"
+                                   FontStyle="Italic"/>
+                    </Grid>
+
+                    <TextBlock Text="Category code supports A-Z, 0-9, dash, and underscore only. Code is locked after saving."
                                FontSize="10"
                                Foreground="{DynamicResource SecondaryTextBrush}"
-                               Margin="105,3,0,0"
+                               Margin="115,3,0,0"
                                FontStyle="Italic"
                                TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
             <Border Grid.Row="1"
-                    Style="{StaticResource ClassicGroupBox}"
-                    VerticalAlignment="Top">
+                    Style="{StaticResource ClassicGroupBox}">
                 <StackPanel>
                     <TextBlock Text="2. SETTINGS"
                                Style="{StaticResource HeaderLabel}"
@@ -172,14 +219,14 @@
                               Foreground="{DynamicResource WarningTextBrush}"
                               Margin="0,5,0,0"/>
 
-                    <TextBlock Text="Deactivated categories and their sub-categories will be hidden from new item creation."
+                    <TextBlock Text="Deactivated categories should be hidden from new item creation and cashier selection lists."
                                FontSize="10"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                Margin="20,2,0,0"
                                FontStyle="Italic"
                                TextWrapping="Wrap"/>
 
-                    <TextBlock Text="Use delete only for unused test or wrongly-created categories."
+                    <TextBlock Text="Use delete only for unused test or wrongly-created categories. Used categories should be deactivated."
                                FontSize="10"
                                Foreground="{DynamicResource WarningTextBrush}"
                                Margin="20,8,0,0"
@@ -189,6 +236,35 @@
             </Border>
 
             <Border Grid.Row="2"
+                    Style="{StaticResource ClassicGroupBox}"
+                    VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="3. COMMERCIAL SAFETY"
+                               Style="{StaticResource HeaderLabel}"
+                               Margin="0,0,0,5"/>
+
+                    <TextBlock Text="Safe delete checks linked records before removing a category:"
+                               FontSize="11"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               Margin="0,3,0,3"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="Sub-categories, Item Master, Attribute Assignments, Discount Rules, Free Issue Rules"
+                               FontSize="10"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="If linked records exist, deletion is blocked and deactivation must be used."
+                               FontSize="10"
+                               Foreground="{DynamicResource WarningTextBrush}"
+                               Margin="0,8,0,0"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="3"
                     Background="{DynamicResource PanelBackgroundBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
@@ -265,6 +341,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0"
@@ -282,7 +359,7 @@
                              Height="28"
                              Padding="5,0"
                              Margin="0,0,10,0"
-                             ToolTip="Search by code or name. Press Enter or click Search.">
+                             ToolTip="Search by code, name, or description. Press Enter or click Search.">
 
                         <TextBox.InputBindings>
                             <KeyBinding Key="Enter"
@@ -290,7 +367,14 @@
                         </TextBox.InputBindings>
                     </TextBox>
 
-                    <Button Grid.Column="2"
+                    <CheckBox Grid.Column="2"
+                              Content="Include Deactivated"
+                              IsChecked="{Binding IncludeDeactivated, Mode=TwoWay}"
+                              Foreground="{DynamicResource WhiteBackgroundBrush}"
+                              VerticalAlignment="Center"
+                              Margin="0,0,12,0"/>
+
+                    <Button Grid.Column="3"
                             Content="SEARCH"
                             Command="{Binding SearchCommand}"
                             Style="{StaticResource ClassicBtn}"
@@ -298,7 +382,7 @@
                             Padding="15,0"
                             Margin="0,0,8,0"/>
 
-                    <Button Grid.Column="3"
+                    <Button Grid.Column="4"
                             Content="REFRESH"
                             Command="{Binding LoadDataCommand}"
                             Style="{StaticResource ClassicBtn}"
@@ -324,7 +408,9 @@
                       BorderBrush="{DynamicResource BorderBrush}"
                       BorderThickness="1,0,1,1"
                       SelectionMode="Single"
-                      AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                      AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
@@ -351,20 +437,30 @@
                 </DataGrid.Resources>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Category Code"
+                    <DataGridTextColumn Header="Code"
                                         Binding="{Binding CategoryCode}"
-                                        Width="120"
+                                        Width="110"
                                         IsReadOnly="True"
                                         FontWeight="Bold"/>
 
                     <DataGridTextColumn Header="Category Name"
                                         Binding="{Binding CategoryName}"
-                                        Width="*"
+                                        Width="180"
+                                        IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Description"
+                                        Binding="{Binding Description}"
+                                        Width="230"
+                                        IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Order"
+                                        Binding="{Binding DisplayOrder}"
+                                        Width="70"
                                         IsReadOnly="True"/>
 
                     <DataGridCheckBoxColumn Header="Deactivated"
                                             Binding="{Binding IsDeactivated}"
-                                            Width="110">
+                                            Width="100">
                         <DataGridCheckBoxColumn.ElementStyle>
                             <Style TargetType="CheckBox">
                                 <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -379,9 +475,29 @@
                                         Width="135"
                                         IsReadOnly="True"/>
 
+                    <DataGridTextColumn Header="Created By"
+                                        Binding="{Binding CreatedBy}"
+                                        Width="110"
+                                        IsReadOnly="True"/>
+
                     <DataGridTextColumn Header="Updated"
                                         Binding="{Binding UpdatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
                                         Width="135"
+                                        IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Updated By"
+                                        Binding="{Binding UpdatedBy}"
+                                        Width="110"
+                                        IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Deactivated At"
+                                        Binding="{Binding DeactivatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                        Width="135"
+                                        IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Deactivated By"
+                                        Binding="{Binding DeactivatedBy}"
+                                        Width="120"
                                         IsReadOnly="True"/>
                 </DataGrid.Columns>
             </DataGrid>

@@ -6,6 +6,7 @@
              mc:Ignorable="d"
              d:DesignHeight="700"
              d:DesignWidth="1200"
+             Loaded="UserControl_Loaded"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">

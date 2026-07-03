@@ -17,147 +17,418 @@ namespace POS.Core.Repositories
             _contextFactory = contextFactory;
         }
 
-        // ==============================================================================
-        // 1. AGED PAYABLES
-        // ==============================================================================
+        // =========================================================
+        // 1. SIMPLE OUTSTANDING SUMMARY
+        // =========================================================
+        // Correct source:
+        // SupplierLedgers
+        //
+        // GRN        -> ChargeAmount
+        // DEBIT_NOTE -> PaymentAmount
+        // PAYMENT    -> PaymentAmount
+
+        public async Task<List<SupplierOutstandingSummaryDto>> GetSupplierOutstandingSummaryAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var suppliers = await context.Suppliers
+                .AsNoTracking()
+                .Select(s => new
+                {
+                    s.Id,
+                    s.SupplierCode,
+                    s.SupplierName,
+                    s.CompanyName,
+                    s.IsDeactivated
+                })
+                .ToListAsync();
+
+            var supplierMap = suppliers.ToDictionary(s => s.Id);
+
+            var ledgerRows = await context.SupplierLedgers
+                .AsNoTracking()
+                .Select(l => new
+                {
+                    l.SupplierId,
+                    l.TransactionDate,
+                    l.TransactionType,
+                    l.ChargeAmount,
+                    l.PaymentAmount
+                })
+                .ToListAsync();
+
+            var result = ledgerRows
+                .GroupBy(l => l.SupplierId)
+                .Select(group =>
+                {
+                    supplierMap.TryGetValue(group.Key, out var supplier);
+
+                    decimal totalGrnBilled = group
+                        .Where(l => NormalizeLedgerType(l.TransactionType) == "GRN")
+                        .Sum(l => l.ChargeAmount);
+
+                    decimal totalSupplierReturns = group
+                        .Where(l => IsSupplierReturnType(NormalizeLedgerType(l.TransactionType)))
+                        .Sum(l => l.PaymentAmount);
+
+                    decimal totalPaid = group
+                        .Where(l => NormalizeLedgerType(l.TransactionType) == "PAYMENT")
+                        .Sum(l => l.PaymentAmount);
+
+                    decimal netOutstanding = group.Sum(l => l.ChargeAmount - l.PaymentAmount);
+
+                    return new SupplierOutstandingSummaryDto
+                    {
+                        SupplierId = group.Key,
+                        SupplierCode = supplier?.SupplierCode ?? string.Empty,
+                        SupplierName = supplier?.SupplierName ?? $"Supplier #{group.Key}",
+                        CompanyName = supplier?.CompanyName ?? string.Empty,
+
+                        TotalGrnBilled = Math.Round(totalGrnBilled, 2),
+                        TotalSupplierReturns = Math.Round(totalSupplierReturns, 2),
+                        TotalPaid = Math.Round(totalPaid, 2),
+                        NetOutstanding = Math.Round(netOutstanding, 2),
+
+                        TransactionCount = group.Count(),
+                        LastTransactionDate = group.Max(l => l.TransactionDate)
+                    };
+                })
+                .Where(r =>
+                    r.TotalGrnBilled != 0 ||
+                    r.TotalSupplierReturns != 0 ||
+                    r.TotalPaid != 0 ||
+                    r.NetOutstanding != 0)
+                .OrderByDescending(r => r.NetOutstanding)
+                .ThenBy(r => r.SupplierDisplayName)
+                .ToList();
+
+            return result;
+        }
+
+        // =========================================================
+        // 2. PURCHASING VOLUME
+        // =========================================================
+        // Correct simple source:
+        // Posted GRN headers within selected date range.
+
+        public async Task<List<SupplierPurchaseVolumeDto>> GetPurchasingVolumeAsync(
+            DateTime startDate,
+            DateTime endDate)
+        {
+            NormalizeDateRange(ref startDate, ref endDate);
+
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var suppliers = await context.Suppliers
+                .AsNoTracking()
+                .Select(s => new
+                {
+                    s.Id,
+                    s.SupplierCode,
+                    s.SupplierName,
+                    s.CompanyName
+                })
+                .ToListAsync();
+
+            var supplierMap = suppliers.ToDictionary(s => s.Id);
+
+            DateTime endExclusive = endDate.Date.AddDays(1);
+
+            var grnRows = await context.GrnHeaders
+                .AsNoTracking()
+                .Where(g =>
+                    g.Status == "Posted" &&
+                    g.ReceivedDate >= startDate.Date &&
+                    g.ReceivedDate < endExclusive)
+                .Select(g => new
+                {
+                    g.SupplierId,
+                    g.ReceivedDate,
+                    g.NetPayable
+                })
+                .ToListAsync();
+
+            decimal totalCompanyPurchases = grnRows.Sum(g => g.NetPayable);
+
+            if (totalCompanyPurchases <= 0)
+                return new List<SupplierPurchaseVolumeDto>();
+
+            var result = grnRows
+                .GroupBy(g => g.SupplierId)
+                .Select(group =>
+                {
+                    supplierMap.TryGetValue(group.Key, out var supplier);
+
+                    decimal totalValue = group.Sum(g => g.NetPayable);
+
+                    return new SupplierPurchaseVolumeDto
+                    {
+                        SupplierId = group.Key,
+                        SupplierCode = supplier?.SupplierCode ?? string.Empty,
+                        SupplierName = supplier?.SupplierName ?? $"Supplier #{group.Key}",
+                        CompanyName = supplier?.CompanyName ?? string.Empty,
+
+                        GrnCount = group.Count(),
+                        TotalGrnValue = Math.Round(totalValue, 2),
+                        PercentageOfTotalPurchases = Math.Round(
+                            totalValue / totalCompanyPurchases * 100m,
+                            2),
+                        LastGrnDate = group.Max(g => g.ReceivedDate)
+                    };
+                })
+                .OrderByDescending(r => r.TotalGrnValue)
+                .ThenBy(r => r.SupplierDisplayName)
+                .Take(50)
+                .ToList();
+
+            return result;
+        }
+
+        // =========================================================
+        // 3. SUPPLIER RETURN SUMMARY
+        // =========================================================
+        // Correct simple source:
+        // Posted SupplierReturnHeaders and SupplierReturnLines.
+
+        public async Task<List<SupplierReturnSummaryDto>> GetSupplierReturnSummaryAsync(
+            DateTime startDate,
+            DateTime endDate)
+        {
+            NormalizeDateRange(ref startDate, ref endDate);
+
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var suppliers = await context.Suppliers
+                .AsNoTracking()
+                .Select(s => new
+                {
+                    s.Id,
+                    s.SupplierCode,
+                    s.SupplierName,
+                    s.CompanyName
+                })
+                .ToListAsync();
+
+            var supplierMap = suppliers.ToDictionary(s => s.Id);
+
+            DateTime endExclusive = endDate.Date.AddDays(1);
+
+            var purchaseRows = await context.GrnHeaders
+                .AsNoTracking()
+                .Where(g =>
+                    g.Status == "Posted" &&
+                    g.ReceivedDate >= startDate.Date &&
+                    g.ReceivedDate < endExclusive)
+                .Select(g => new
+                {
+                    g.SupplierId,
+                    g.NetPayable
+                })
+                .ToListAsync();
+
+            var purchaseValueBySupplier = purchaseRows
+                .GroupBy(g => g.SupplierId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(x => x.NetPayable));
+
+            var returnHeaders = await context.SupplierReturnHeaders
+                .Include(h => h.ReturnLines)
+                .AsNoTracking()
+                .Where(h =>
+                    h.Status == "Posted" &&
+                    h.ReturnDate >= startDate.Date &&
+                    h.ReturnDate < endExclusive)
+                .Select(h => new
+                {
+                    h.SupplierId,
+                    h.ReturnDate,
+                    h.GrossCredit,
+                    h.RestockingFee,
+                    h.NetCredit,
+                    Lines = h.ReturnLines
+                        .Select(l => new
+                        {
+                            l.ReturnQty,
+                            l.CreditValue
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            var result = returnHeaders
+                .GroupBy(h => h.SupplierId)
+                .Select(group =>
+                {
+                    supplierMap.TryGetValue(group.Key, out var supplier);
+
+                    decimal purchaseValue = purchaseValueBySupplier.TryGetValue(group.Key, out decimal purchased)
+                        ? purchased
+                        : 0m;
+
+                    decimal netSupplierCredit = group.Sum(h => h.NetCredit);
+
+                    decimal returnValuePercentage = purchaseValue <= 0
+                        ? 0m
+                        : Math.Round(netSupplierCredit / purchaseValue * 100m, 2);
+
+                    return new SupplierReturnSummaryDto
+                    {
+                        SupplierId = group.Key,
+                        SupplierCode = supplier?.SupplierCode ?? string.Empty,
+                        SupplierName = supplier?.SupplierName ?? $"Supplier #{group.Key}",
+                        CompanyName = supplier?.CompanyName ?? string.Empty,
+
+                        ReturnDocumentCount = group.Count(),
+                        TotalReturnedQty = Math.Round(
+                            group.Sum(h => h.Lines.Sum(l => l.ReturnQty)),
+                            3),
+                        GrossReturnValue = Math.Round(group.Sum(h => h.GrossCredit), 2),
+                        RestockingFee = Math.Round(group.Sum(h => h.RestockingFee), 2),
+                        NetSupplierCredit = Math.Round(netSupplierCredit, 2),
+                        PurchaseValueInPeriod = Math.Round(purchaseValue, 2),
+                        ReturnValuePercentage = returnValuePercentage,
+                        LastReturnDate = group.Max(h => h.ReturnDate)
+                    };
+                })
+                .Where(r => r.NetSupplierCredit > 0 || r.TotalReturnedQty > 0)
+                .OrderByDescending(r => r.NetSupplierCredit)
+                .ThenByDescending(r => r.TotalReturnedQty)
+                .ThenBy(r => r.SupplierDisplayName)
+                .ToList();
+
+            return result;
+        }
+
+        // =========================================================
+        // KPI HELPERS
+        // =========================================================
+
+        public async Task<decimal> GetTotalCompanyOutstandingAsync()
+        {
+            var rows = await GetSupplierOutstandingSummaryAsync();
+
+            return Math.Round(
+                rows.Where(r => r.NetOutstanding > 0)
+                    .Sum(r => r.NetOutstanding),
+                2);
+        }
+
+        // =========================================================
+        // TEMPORARY COMPATIBILITY METHODS
+        // =========================================================
+        // Keep these so the older SupplierReportViewModel can still compile
+        // until we replace it in the next step.
+
         public async Task<List<AgedPayableDto>> GetAgedPayablesSummaryAsync()
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var today = DateTime.Today;
+            var rows = await GetSupplierOutstandingSummaryAsync();
 
-            var date30 = today.AddDays(-30);
-            var date60 = today.AddDays(-60);
-            var date90 = today.AddDays(-90);
-
-            // Fetch to memory first to avoid SQLite decimal sum errors
-            var rawData = await context.GrnHeaders
-                .AsNoTracking()
-                .Include(g => g.Supplier)
-                .Where(g => g.NetPayable > 0 && !g.Supplier.IsDeactivated && g.Status == "Posted")
-                .ToListAsync();
-
-            var agedPayables = rawData
-                .GroupBy(g => new { g.SupplierId, g.Supplier.CompanyName })
-                .Select(group => new AgedPayableDto
+            return rows
+                .Where(r => r.NetOutstanding > 0)
+                .Select(r => new AgedPayableDto
                 {
-                    SupplierId = group.Key.SupplierId,
-                    SupplierName = group.Key.CompanyName,
+                    SupplierId = r.SupplierId,
+                    SupplierName = r.SupplierDisplayName,
 
-                    CurrentTo30Days = group.Where(g => g.ReceivedDate >= date30).Sum(g => g.NetPayable),
-                    Days31To60 = group.Where(g => g.ReceivedDate < date30 && g.ReceivedDate >= date60).Sum(g => g.NetPayable),
-                    Days61To90 = group.Where(g => g.ReceivedDate < date60 && g.ReceivedDate >= date90).Sum(g => g.NetPayable),
-                    Over90Days = group.Where(g => g.ReceivedDate < date90).Sum(g => g.NetPayable)
+                    // This is not real invoice aging.
+                    // It is only a temporary compatibility mapping.
+                    CurrentTo30Days = r.NetOutstanding,
+                    Days31To60 = 0m,
+                    Days61To90 = 0m,
+                    Over90Days = 0m
                 })
-                .Where(dto => dto.TotalOwed > 0)
-                .OrderByDescending(dto => dto.TotalOwed)
+                .OrderByDescending(r => r.TotalOwed)
                 .ToList();
-
-            return agedPayables;
         }
 
-        // ==============================================================================
-        // 2. SUPPLIER PURCHASING VOLUME
-        // ==============================================================================
-        public async Task<List<SupplierVolumeDto>> GetPurchasingVolumeAsync(DateTime startDate, DateTime endDate)
+        public async Task<List<SupplierVolumeDto>> GetLegacyPurchasingVolumeAsync(
+            DateTime startDate,
+            DateTime endDate)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            var rows = await GetPurchasingVolumeAsync(startDate, endDate);
 
-            // Fetch only required columns to memory first
-            var rawVolumeData = await context.GrnHeaders
-                .AsNoTracking()
-                .Where(g => g.ReceivedDate >= startDate && g.ReceivedDate <= endDate && g.Status == "Posted")
-                .Select(g => new { g.SupplierId, g.Supplier.CompanyName, g.NetPayable })
-                .ToListAsync();
-
-            // Calculate total company purchases in memory
-            var totalCompanyPurchases = rawVolumeData.Sum(g => g.NetPayable);
-
-            if (totalCompanyPurchases == 0) return new List<SupplierVolumeDto>();
-
-            // Group and calculate percentages in memory
-            var volumeData = rawVolumeData
-                .GroupBy(g => new { g.SupplierId, g.CompanyName })
-                .Select(group => new
+            return rows
+                .Select(r => new SupplierVolumeDto
                 {
-                    SupplierId = group.Key.SupplierId,
-                    SupplierName = group.Key.CompanyName,
-                    TotalGrnValue = group.Sum(g => g.NetPayable)
+                    SupplierId = r.SupplierId,
+                    SupplierName = r.SupplierDisplayName,
+                    TotalGrnValue = r.TotalGrnValue,
+                    PercentageOfTotalStore = (double)r.PercentageOfTotalPurchases
                 })
-                .OrderByDescending(x => x.TotalGrnValue)
-                .Take(20)
                 .ToList();
-
-            return volumeData.Select(v => new SupplierVolumeDto
-            {
-                SupplierId = v.SupplierId,
-                SupplierName = v.SupplierName,
-                TotalGrnValue = v.TotalGrnValue,
-                PercentageOfTotalStore = Math.Round((double)(v.TotalGrnValue / totalCompanyPurchases) * 100, 2)
-            }).ToList();
         }
 
-        // ==============================================================================
-        // 3. RETURN & DEFECT RATES
-        // ==============================================================================
-        public async Task<List<SupplierReturnRateDto>> GetReturnRatesAsync(DateTime startDate, DateTime endDate)
+        public async Task<List<SupplierReturnRateDto>> GetReturnRatesAsync(
+            DateTime startDate,
+            DateTime endDate)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            var rows = await GetSupplierReturnSummaryAsync(startDate, endDate);
 
-            // Fetch raw bought data to memory
-            var rawBoughtData = await context.GrnLines
-                .AsNoTracking()
-                .Where(l => l.GrnHeader.ReceivedDate >= startDate && l.GrnHeader.ReceivedDate <= endDate && l.GrnHeader.Status == "Posted")
-                .Select(l => new { l.GrnHeader.SupplierId, l.GrnHeader.Supplier.CompanyName, l.ReceivedQty })
-                .ToListAsync();
-
-            var boughtData = rawBoughtData
-                .GroupBy(l => new { l.SupplierId, l.CompanyName })
-                .Select(g => new
+            return rows
+                .Select(r => new SupplierReturnRateDto
                 {
-                    SupplierId = g.Key.SupplierId,
-                    SupplierName = g.Key.CompanyName,
-                    BoughtQty = g.Sum(l => l.ReceivedQty)
+                    SupplierId = r.SupplierId,
+                    SupplierName = r.SupplierDisplayName,
+                    TotalItemsBought = 0m,
+                    TotalItemsReturned = r.TotalReturnedQty
                 })
-                .ToDictionary(x => x.SupplierId);
+                .ToList();
+        }
 
-            // Fetch raw return data to memory
-            var rawReturnData = await context.ReturnLines
-                .AsNoTracking()
-                .Where(l => l.ReturnHeader.ReturnDate >= startDate && l.ReturnHeader.ReturnDate <= endDate && l.ReturnHeader.Status == "Posted")
-                .Select(l => new { l.ReturnHeader.SupplierId, l.ReturnQty })
-                .ToListAsync();
+        // Keep old method name used by old ViewModel.
+        public async Task<List<SupplierVolumeDto>> GetPurchasingVolumeLegacyAsync(
+            DateTime startDate,
+            DateTime endDate)
+        {
+            return await GetLegacyPurchasingVolumeAsync(startDate, endDate);
+        }
 
-            var returnData = rawReturnData
-                .GroupBy(l => l.SupplierId)
-                .Select(g => new
-                {
-                    SupplierId = g.Key,
-                    ReturnedQty = g.Sum(l => l.ReturnQty)
-                })
-                .ToDictionary(x => x.SupplierId);
+        // =========================================================
+        // PRIVATE HELPERS
+        // =========================================================
 
-            var resultList = new List<SupplierReturnRateDto>();
+        private static void NormalizeDateRange(
+            ref DateTime startDate,
+            ref DateTime endDate)
+        {
+            startDate = startDate.Date;
+            endDate = endDate.Date;
 
-            // Merge dictionaries
-            foreach (var kvp in boughtData)
+            if (startDate > endDate)
             {
-                var supplierId = kvp.Key;
-                var bought = kvp.Value.BoughtQty;
-                var returned = returnData.ContainsKey(supplierId) ? returnData[supplierId].ReturnedQty : 0;
-
-                resultList.Add(new SupplierReturnRateDto
-                {
-                    SupplierId = supplierId,
-                    SupplierName = kvp.Value.SupplierName,
-                    TotalItemsBought = bought,
-                    TotalItemsReturned = returned
-                });
+                DateTime temp = startDate;
+                startDate = endDate;
+                endDate = temp;
             }
+        }
 
-            return resultList
-                .OrderByDescending(r => r.DefectPercentage)
-                .Where(r => r.TotalItemsBought > 0)
-                .ToList();
+        private static string NormalizeLedgerType(string? value)
+        {
+            string type = NormalizeText(value).ToUpperInvariant();
+
+            if (type == "SUPPLIER_RETURN" || type == "RETURN")
+                return "DEBIT_NOTE";
+
+            if (type == "SUPPLIER_PAYMENT")
+                return "PAYMENT";
+
+            if (string.IsNullOrWhiteSpace(type))
+                return "UNKNOWN";
+
+            return type;
+        }
+
+        private static bool IsSupplierReturnType(string ledgerType)
+        {
+            return ledgerType == "DEBIT_NOTE" ||
+                   ledgerType == "CREDIT_NOTE" ||
+                   ledgerType == "SUPPLIER_RETURN";
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            return (value ?? string.Empty).Trim();
         }
     }
 }

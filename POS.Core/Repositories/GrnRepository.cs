@@ -11,11 +11,15 @@ namespace POS.Core.Repositories
 {
     public class GrnRepository
     {
+        private const string NonBatchStockBucketNo = "GENERAL";
+        private const int DefaultTakeLimit = 500;
+        private const int MaxTakeLimit = 2000;
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         public GrnRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
         // =========================================================
@@ -24,7 +28,7 @@ namespace POS.Core.Repositories
 
         public async Task<IEnumerable<Supplier>> GetActiveSuppliersAsync()
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.Suppliers
                 .AsNoTracking()
@@ -34,15 +38,35 @@ namespace POS.Core.Repositories
                 .ToListAsync();
         }
 
+        public async Task<bool> SupplierInvoiceExistsAsync(
+            int supplierId,
+            string supplierInvoiceNo)
+        {
+            string invoiceNo = NormalizeText(supplierInvoiceNo);
+
+            if (supplierId <= 0 || string.IsNullOrWhiteSpace(invoiceNo))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.GrnHeaders
+                .AsNoTracking()
+                .AnyAsync(g =>
+                    g.SupplierId == supplierId &&
+                    g.SupplierInvoiceNo.ToUpper() == invoiceNo.ToUpper() &&
+                    g.Status != "Cancelled");
+        }
+
         public async Task<List<GrnPoLookupDto>> GetOpenPurchaseOrderLookupsAsync()
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
+            // New rule:
+            // Only Approved POs are available for GRN.
+            // After a PO-based GRN is posted, the PO becomes Closed.
             var rows = await context.PoHeaders
                 .AsNoTracking()
-                .Where(p =>
-                    p.Status == "Approved" ||
-                    p.Status == "Partially Received")
+                .Where(p => p.Status == "Approved")
                 .Where(p => p.PoLines.Any(l => l.ReceivedQty < l.OrderQty))
                 .OrderByDescending(p => p.OrderDate)
                 .ThenBy(p => p.PoNumber)
@@ -83,18 +107,16 @@ namespace POS.Core.Repositories
                 .ToList();
         }
 
-        // Compatibility for existing ViewModel.
+        // Compatibility for existing ViewModel code.
         public async Task<IEnumerable<PoHeader>> GetOpenPurchaseOrdersAsync()
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.PoHeaders
                 .Include(p => p.Supplier)
                 .Include(p => p.PoLines)
                 .AsNoTracking()
-                .Where(p =>
-                    p.Status == "Approved" ||
-                    p.Status == "Partially Received")
+                .Where(p => p.Status == "Approved")
                 .Where(p => p.PoLines.Any(l => l.ReceivedQty < l.OrderQty))
                 .OrderByDescending(p => p.OrderDate)
                 .ThenBy(p => p.PoNumber)
@@ -103,20 +125,18 @@ namespace POS.Core.Repositories
 
         public async Task<PoHeader?> GetApprovedPoDetailsAsync(int poId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var po = await context.PoHeaders
                 .Include(p => p.Supplier)
                 .Include(p => p.PoLines)
                     .ThenInclude(l => l.ItemVariant)
                         .ThenInclude(v => v.ItemParent)
+                            .ThenInclude(p => p.UnitOfMeasure)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p =>
                     p.Id == poId &&
-                    (
-                        p.Status == "Approved" ||
-                        p.Status == "Partially Received"
-                    ));
+                    p.Status == "Approved");
 
             if (po == null)
                 return null;
@@ -132,9 +152,18 @@ namespace POS.Core.Repositories
 
         public async Task<List<GrnPoLineDto>> GetOutstandingPoLinesAsync(int poId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var lines = await context.PoLines
+            var poExists = await context.PoHeaders
+                .AsNoTracking()
+                .AnyAsync(p =>
+                    p.Id == poId &&
+                    p.Status == "Approved");
+
+            if (!poExists)
+                return new List<GrnPoLineDto>();
+
+            return await context.PoLines
                 .AsNoTracking()
                 .Where(l =>
                     l.PoHeaderId == poId &&
@@ -149,18 +178,276 @@ namespace POS.Core.Repositories
                     SkuCode = l.ItemVariant.SkuCode,
                     Barcode = l.ItemVariant.Barcode ?? string.Empty,
                     Description = l.ItemVariant.ItemParent.ItemName,
+                    PrintName = l.ItemVariant.ItemParent.PrintName,
                     VariantDescription = string.IsNullOrWhiteSpace(l.ItemVariant.VariantDescription)
                         ? "Standard"
                         : l.ItemVariant.VariantDescription,
-                    Uom = l.Uom,
+                    Uom = string.IsNullOrWhiteSpace(l.Uom)
+                        ? l.ItemVariant.ItemParent.UnitOfMeasure.UomCode
+                        : l.Uom,
                     OrderedQty = l.OrderQty,
                     AlreadyReceivedQty = l.ReceivedQty,
                     ExpectedCost = l.ExpectedCost,
-                    RequiresExpiry = l.ItemVariant.ItemParent.HasBatchExpiry
+
+                    HasBatchTracking = l.ItemVariant.ItemParent.HasBatchTracking,
+                    HasExpiryTracking = l.ItemVariant.ItemParent.HasExpiryTracking ||
+                                        l.ItemVariant.ItemParent.HasBatchExpiry,
+                    IsScaleItem = l.ItemVariant.ItemParent.IsScaleItem,
+                    AllowDecimalQuantity = l.ItemVariant.ItemParent.UnitOfMeasure.AllowDecimals,
+
+                    LineDiscountMode = string.IsNullOrWhiteSpace(l.LineDiscountMode)
+                        ? "Amount"
+                        : l.LineDiscountMode,
+                    LineDiscountValue = l.LineDiscountValue,
+                    LineDiscount = l.LineDiscount,
+
+                    VatRatePercent = l.VatRatePercent,
+                    IsVatIncluded = l.IsVatIncluded,
+                    VatAmount = l.TaxAmount,
+
+                    CurrentRetailPrice = l.ItemVariant.RetailPrice,
+                    CurrentWholesalePrice = l.ItemVariant.WholesalePrice,
+                    CurrentMinimumPrice = l.ItemVariant.MinimumPrice,
+                    CurrentMaximumPrice = l.ItemVariant.MaximumPrice
+                })
+                .ToListAsync();
+        }
+
+        // =========================================================
+        // SUPPLIER-APPROVED DIRECT GRN ITEM LOOKUPS
+        // =========================================================
+
+        public async Task<IReadOnlyList<ItemMasterSummaryDto>> GetReceivableItemParentsForSupplierAsync(
+            int supplierId,
+            string searchTerm = "",
+            int take = DefaultTakeLimit)
+        {
+            take = NormalizeTakeLimit(take);
+
+            if (supplierId <= 0)
+                return new List<ItemMasterSummaryDto>();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<ItemParent> query = context.ItemParents
+                .AsNoTracking()
+                .Where(p =>
+                    !p.IsDeactivated &&
+                    !p.IsPurchaseLocked &&
+                    p.Variants.Any(v =>
+                        !v.IsDeactivated &&
+                        v.ItemSuppliers.Any(s =>
+                            s.SupplierId == supplierId &&
+                            !s.Supplier.IsDeactivated)));
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                string term = searchTerm.Trim();
+
+                query = query.Where(p =>
+                    EF.Functions.Like(p.ItemCode, $"%{term}%") ||
+                    EF.Functions.Like(p.ItemName, $"%{term}%") ||
+                    EF.Functions.Like(p.Category.CategoryName, $"%{term}%") ||
+                    p.Variants.Any(v =>
+                        EF.Functions.Like(v.SkuCode, $"%{term}%") ||
+                        EF.Functions.Like(v.Barcode, $"%{term}%") ||
+                        EF.Functions.Like(v.VariantDescription, $"%{term}%")));
+            }
+
+            return await query
+                .OrderBy(p => p.ItemName)
+                .ThenBy(p => p.ItemCode)
+                .Select(p => new ItemMasterSummaryDto
+                {
+                    ParentId = p.Id,
+                    ItemCode = p.ItemCode,
+                    ItemName = p.ItemName,
+                    CategoryName = p.Category.CategoryName,
+                    VariantCount = p.Variants.Count(v =>
+                        !v.IsDeactivated &&
+                        v.ItemSuppliers.Any(s =>
+                            s.SupplierId == supplierId &&
+                            !s.Supplier.IsDeactivated)),
+                    TotalStockOnHand = 0m,
+                    IsDeactivated = p.IsDeactivated,
+                    StatusText = p.IsDeactivated ? "Deactivated" : "Active",
+                    HasBatchTracking = p.HasBatchTracking,
+                    HasExpiryTracking = p.HasExpiryTracking || p.HasBatchExpiry
+                })
+                .Take(take)
+                .ToListAsync();
+        }
+
+        public async Task<List<GrnVariantLookupDto>> GetReceivableVariantsByParentForSupplierAsync(
+            int parentId,
+            int supplierId)
+        {
+            if (parentId <= 0 || supplierId <= 0)
+                return new List<GrnVariantLookupDto>();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var rows = await context.ItemVariants
+                .AsNoTracking()
+                .Where(v =>
+                    v.ItemParentId == parentId &&
+                    !v.IsDeactivated &&
+                    !v.ItemParent.IsDeactivated &&
+                    !v.ItemParent.IsPurchaseLocked &&
+                    v.ItemSuppliers.Any(s =>
+                        s.SupplierId == supplierId &&
+                        !s.Supplier.IsDeactivated))
+                .Select(v => new
+                {
+                    ItemVariantId = v.Id,
+                    v.ItemParentId,
+                    ItemCode = v.ItemParent.ItemCode,
+                    v.SkuCode,
+                    Barcode = v.Barcode ?? string.Empty,
+                    Description = v.ItemParent.ItemName,
+                    PrintName = v.ItemParent.PrintName,
+                    VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription)
+                        ? "Standard"
+                        : v.VariantDescription,
+                    Uom = string.IsNullOrWhiteSpace(v.ItemParent.BaseUom)
+                        ? v.ItemParent.UnitOfMeasure.UomCode
+                        : v.ItemParent.BaseUom,
+                    LastSupplierCost = v.ItemSuppliers
+                        .Where(s => s.SupplierId == supplierId)
+                        .Select(s => s.LastCostPrice)
+                        .FirstOrDefault(),
+                    CurrentCost = v.CostPrice,
+                    HasBatchTracking = v.ItemParent.HasBatchTracking,
+                    HasExpiryTracking = v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry,
+                    IsScaleItem = v.ItemParent.IsScaleItem,
+                    AllowDecimalQuantity = v.ItemParent.UnitOfMeasure.AllowDecimals,
+                    CurrentRetailPrice = v.RetailPrice,
+                    CurrentWholesalePrice = v.WholesalePrice,
+                    CurrentMinimumPrice = v.MinimumPrice,
+                    CurrentMaximumPrice = v.MaximumPrice,
+                    TaxCode = string.IsNullOrWhiteSpace(v.ItemParent.TaxCode)
+                        ? "VAT"
+                        : v.ItemParent.TaxCode
                 })
                 .ToListAsync();
 
-            return lines;
+            return rows
+                .Select(r => new GrnVariantLookupDto
+                {
+                    ItemVariantId = r.ItemVariantId,
+                    ItemParentId = r.ItemParentId,
+                    ItemCode = r.ItemCode,
+                    SkuCode = r.SkuCode,
+                    Barcode = r.Barcode,
+                    Description = r.Description,
+                    PrintName = r.PrintName,
+                    VariantDescription = r.VariantDescription,
+                    Uom = string.IsNullOrWhiteSpace(r.Uom) ? "PCS" : r.Uom,
+                    LastSupplierCost = r.LastSupplierCost,
+                    CurrentCost = r.CurrentCost,
+                    HasBatchTracking = r.HasBatchTracking,
+                    HasExpiryTracking = r.HasExpiryTracking,
+                    IsScaleItem = r.IsScaleItem,
+                    AllowDecimalQuantity = r.AllowDecimalQuantity,
+                    CurrentRetailPrice = r.CurrentRetailPrice,
+                    CurrentWholesalePrice = r.CurrentWholesalePrice,
+                    CurrentMinimumPrice = r.CurrentMinimumPrice,
+                    CurrentMaximumPrice = r.CurrentMaximumPrice,
+                    VatRatePercent = ResolveVatRatePercent(r.TaxCode),
+                    IsVatIncluded = false
+                })
+                .OrderBy(v => v.FullDisplayName)
+                .ThenBy(v => v.SkuCode)
+                .ToList();
+        }
+
+        public async Task<GrnVariantLookupDto?> GetReceivableVariantByBarcodeOrSkuAsync(
+            string barcodeOrSku,
+            int supplierId)
+        {
+            string term = NormalizeText(barcodeOrSku);
+
+            if (string.IsNullOrWhiteSpace(term) || supplierId <= 0)
+                return null;
+
+            string upperTerm = term.ToUpperInvariant();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var row = await context.ItemVariants
+                .AsNoTracking()
+                .Where(v =>
+                    !v.IsDeactivated &&
+                    !v.ItemParent.IsDeactivated &&
+                    !v.ItemParent.IsPurchaseLocked &&
+                    (
+                        v.SkuCode.ToUpper() == upperTerm ||
+                        ((v.Barcode ?? string.Empty).ToUpper()) == upperTerm
+                    ) &&
+                    v.ItemSuppliers.Any(s =>
+                        s.SupplierId == supplierId &&
+                        !s.Supplier.IsDeactivated))
+                .Select(v => new
+                {
+                    ItemVariantId = v.Id,
+                    v.ItemParentId,
+                    ItemCode = v.ItemParent.ItemCode,
+                    v.SkuCode,
+                    Barcode = v.Barcode ?? string.Empty,
+                    Description = v.ItemParent.ItemName,
+                    PrintName = v.ItemParent.PrintName,
+                    VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription)
+                        ? "Standard"
+                        : v.VariantDescription,
+                    Uom = string.IsNullOrWhiteSpace(v.ItemParent.BaseUom)
+                        ? v.ItemParent.UnitOfMeasure.UomCode
+                        : v.ItemParent.BaseUom,
+                    LastSupplierCost = v.ItemSuppliers
+                        .Where(s => s.SupplierId == supplierId)
+                        .Select(s => s.LastCostPrice)
+                        .FirstOrDefault(),
+                    CurrentCost = v.CostPrice,
+                    HasBatchTracking = v.ItemParent.HasBatchTracking,
+                    HasExpiryTracking = v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry,
+                    IsScaleItem = v.ItemParent.IsScaleItem,
+                    AllowDecimalQuantity = v.ItemParent.UnitOfMeasure.AllowDecimals,
+                    CurrentRetailPrice = v.RetailPrice,
+                    CurrentWholesalePrice = v.WholesalePrice,
+                    CurrentMinimumPrice = v.MinimumPrice,
+                    CurrentMaximumPrice = v.MaximumPrice,
+                    TaxCode = string.IsNullOrWhiteSpace(v.ItemParent.TaxCode)
+                        ? "VAT"
+                        : v.ItemParent.TaxCode
+                })
+                .FirstOrDefaultAsync();
+
+            if (row == null)
+                return null;
+
+            return new GrnVariantLookupDto
+            {
+                ItemVariantId = row.ItemVariantId,
+                ItemParentId = row.ItemParentId,
+                ItemCode = row.ItemCode,
+                SkuCode = row.SkuCode,
+                Barcode = row.Barcode,
+                Description = row.Description,
+                PrintName = row.PrintName,
+                VariantDescription = row.VariantDescription,
+                Uom = string.IsNullOrWhiteSpace(row.Uom) ? "PCS" : row.Uom,
+                LastSupplierCost = row.LastSupplierCost,
+                CurrentCost = row.CurrentCost,
+                HasBatchTracking = row.HasBatchTracking,
+                HasExpiryTracking = row.HasExpiryTracking,
+                IsScaleItem = row.IsScaleItem,
+                AllowDecimalQuantity = row.AllowDecimalQuantity,
+                CurrentRetailPrice = row.CurrentRetailPrice,
+                CurrentWholesalePrice = row.CurrentWholesalePrice,
+                CurrentMinimumPrice = row.CurrentMinimumPrice,
+                CurrentMaximumPrice = row.CurrentMaximumPrice,
+                VatRatePercent = ResolveVatRatePercent(row.TaxCode),
+                IsVatIncluded = false
+            };
         }
 
         // =========================================================
@@ -177,11 +464,10 @@ namespace POS.Core.Repositories
 
             NormalizeHeader(header);
             NormalizeLines(lines);
-            ValidateSubmittedLineDuplicates(lines);
             RecalculateHeaderTotals(header, lines);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
@@ -190,11 +476,25 @@ namespace POS.Core.Repositories
 
                 DateTime now = DateTime.Now;
 
+                var variantIds = lines
+                    .Select(l => l.ItemVariantId)
+                    .Distinct()
+                    .ToList();
+
+                var variants = await context.ItemVariants
+                    .Include(v => v.ItemParent)
+                        .ThenInclude(p => p.UnitOfMeasure)
+                    .Where(v => variantIds.Contains(v.Id))
+                    .ToDictionaryAsync(v => v.Id);
+
                 header.GrnNumber = await GenerateDocumentNumberAsync(context, "GRN");
                 header.Status = "Posted";
                 header.CreatedAt = now;
                 header.UpdatedAt = now;
                 header.PostedAt = now;
+
+                if (string.IsNullOrWhiteSpace(header.CreatedBy))
+                    header.CreatedBy = "Admin";
 
                 if (string.IsNullOrWhiteSpace(header.PostedBy))
                     header.PostedBy = header.CreatedBy;
@@ -204,6 +504,20 @@ namespace POS.Core.Repositories
                 header.GrnLines = new List<GrnLine>();
 
                 await context.GrnHeaders.AddAsync(header);
+                await context.SaveChangesAsync();
+
+                PrepareLinesForPosting(
+                    lines,
+                    variants,
+                    header.Id,
+                    header.GrnNumber,
+                    now);
+
+                ValidatePreparedLineDuplicates(lines);
+
+                foreach (var line in lines)
+                    await context.GrnLines.AddAsync(line);
+
                 await context.SaveChangesAsync();
 
                 PoHeader? linkedPo = null;
@@ -218,33 +532,6 @@ namespace POS.Core.Repositories
                         throw new InvalidOperationException("Linked Purchase Order was not found.");
                 }
 
-                int lineNumber = 1;
-
-                foreach (var line in lines)
-                {
-                    PrepareNewLine(
-                        line,
-                        header.Id,
-                        header.GrnNumber,
-                        lineNumber,
-                        now);
-
-                    await context.GrnLines.AddAsync(line);
-                    lineNumber++;
-                }
-
-                await context.SaveChangesAsync();
-
-                var variantIds = lines
-                    .Select(l => l.ItemVariantId)
-                    .Distinct()
-                    .ToList();
-
-                var variants = await context.ItemVariants
-                    .Include(v => v.ItemParent)
-                    .Where(v => variantIds.Contains(v.Id))
-                    .ToDictionaryAsync(v => v.Id);
-
                 var stockCache = await LoadCurrentStockCacheAsync(context, variantIds);
 
                 foreach (var line in lines)
@@ -252,131 +539,37 @@ namespace POS.Core.Repositories
                     if (!variants.TryGetValue(line.ItemVariantId, out var variant))
                         throw new InvalidOperationException("One or more received item variants were not found.");
 
-                    // 1. Update linked PO line receiving.
                     if (linkedPo != null)
-                    {
-                        var poLine = ResolvePoLineForGrnLine(linkedPo, line);
+                        ApplyPoReceivingAndCloseLine(linkedPo, line, variant.SkuCode, now);
 
-                        if (poLine == null)
-                        {
-                            throw new InvalidOperationException(
-                                $"GRN line item '{variant.SkuCode}' does not match the linked Purchase Order.");
-                        }
+                    await UpdateSupplierLastCostAsync(
+                        context,
+                        header.SupplierId,
+                        line.ItemVariantId,
+                        line.UnitCost,
+                        now);
 
-                        decimal outstanding = poLine.OrderQty - poLine.ReceivedQty;
+                    UpdateVariantCostAndSellingPrices(
+                        variant,
+                        line,
+                        stockCache,
+                        now);
 
-                        if (line.ReceivedQty > outstanding)
-                        {
-                            throw new InvalidOperationException(
-                                $"Cannot receive {line.ReceivedQty:N3} for item '{variant.SkuCode}'. Outstanding PO quantity is only {outstanding:N3}.");
-                        }
-
-                        poLine.ReceivedQty += line.ReceivedQty;
-                        poLine.LineStatus = CalculatePoLineStatus(poLine.OrderQty, poLine.ReceivedQty);
-                        poLine.UpdatedAt = now;
-
-                        if (poLine.LineStatus == "Closed")
-                            poLine.ClosedAt ??= now;
-                        else
-                            poLine.ClosedAt = null;
-                    }
-
-                    // 2. Supplier-specific last purchase cost.
-                    var itemSupplier = await context.ItemSuppliers
-                        .FirstOrDefaultAsync(s =>
-                            s.SupplierId == header.SupplierId &&
-                            s.ItemVariantId == line.ItemVariantId);
-
-                    if (itemSupplier != null)
-                    {
-                        itemSupplier.LastCostPrice = line.UnitCost;
-                        itemSupplier.UpdatedAt = now;
-                    }
-
-                    // 3. Moving average cost.
-                    decimal currentStock = stockCache.TryGetValue(variant.Id, out var qty)
-                        ? qty
-                        : 0m;
-
-                    decimal newTotalQty = currentStock + line.ReceivedQty;
-
-                    if (newTotalQty > 0)
-                    {
-                        decimal oldTotalValue = currentStock * variant.AverageCost;
-                        decimal newReceivedValue = line.ReceivedQty * line.LandedCost;
-
-                        variant.AverageCost = Math.Round(
-                            (oldTotalValue + newReceivedValue) / newTotalQty,
-                            2);
-                    }
-
-                    variant.CostPrice = line.LandedCost;
-                    variant.UpdatedAt = now;
-
-                    stockCache[variant.Id] = newTotalQty;
-
-                    // 4. Batch bucket.
-                    string targetBatchNo = NormalizeText(line.BatchNo).ToUpperInvariant();
-
-                    if (string.IsNullOrWhiteSpace(targetBatchNo))
-                        throw new InvalidOperationException("Internal error: batch number was not prepared.");
-
-                    var batch = await context.ItemBatches
-                        .FirstOrDefaultAsync(b =>
-                            b.ItemVariantId == variant.Id &&
-                            b.BatchNo == targetBatchNo);
-
-                    if (batch == null)
-                    {
-                        batch = new ItemBatch
-                        {
-                            ItemVariantId = variant.Id,
-                            BatchNo = targetBatchNo,
-                            ExpiryDate = line.ExpiryDate?.Date,
-                            ReceivedDate = header.ReceivedDate.Date,
-                            CostPrice = line.LandedCost,
-                            RetailPrice = variant.RetailPrice,
-                            WholesalePrice = variant.WholesalePrice,
-                            CurrentStock = line.ReceivedQty,
-                            IsDeactivated = false,
-                            CreatedAt = now,
-                            UpdatedAt = now
-                        };
-
-                        await context.ItemBatches.AddAsync(batch);
-                    }
-                    else
-                    {
-                        if (batch.IsDeactivated)
-                        {
-                            throw new InvalidOperationException(
-                                $"Batch '{targetBatchNo}' for item '{variant.SkuCode}' is deactivated.");
-                        }
-
-                        if (line.ExpiryDate.HasValue &&
-                            batch.ExpiryDate.HasValue &&
-                            batch.ExpiryDate.Value.Date != line.ExpiryDate.Value.Date)
-                        {
-                            throw new InvalidOperationException(
-                                $"Batch '{targetBatchNo}' already exists with a different expiry date.");
-                        }
-
-                        if (!batch.ExpiryDate.HasValue && line.ExpiryDate.HasValue)
-                            batch.ExpiryDate = line.ExpiryDate.Value.Date;
-
-                        batch.CurrentStock += line.ReceivedQty;
-                        batch.CostPrice = line.LandedCost;
-                        batch.UpdatedAt = now;
-                    }
+                    var batch = await CreateOrUpdateBatchAsync(
+                        context,
+                        variant,
+                        line,
+                        header,
+                        now);
 
                     line.ItemBatch = batch;
+                    line.ItemBatchId = batch.Id;
 
-                    // 5. Immutable stock transaction.
                     var inventoryTx = new InventoryTransaction
                     {
                         ItemVariantId = variant.Id,
                         ItemBatch = batch,
-                        TransactionDate = header.ReceivedDate,
+                        TransactionDate = header.ReceivedDate.Date,
                         TransactionType = "GRN",
                         ReferenceDocument = header.GrnNumber,
                         ReferenceLineId = line.Id,
@@ -385,54 +578,19 @@ namespace POS.Core.Repositories
                         CreatedBy = header.CreatedBy,
                         CreatedAt = now,
                         Remarks =
-                            $"GRN Receipt | Supplier Invoice: {header.SupplierInvoiceNo} | Batch: {targetBatchNo}"
+                            $"GRN Receipt | Supplier Invoice: {header.SupplierInvoiceNo} | Batch: {line.BatchNo}"
                     };
 
                     await context.InventoryTransactions.AddAsync(inventoryTx);
                 }
 
-                // 6. Update linked PO header status.
                 if (linkedPo != null)
-                {
-                    linkedPo.Status = CalculatePoHeaderStatus(linkedPo.PoLines.ToList());
-                    linkedPo.UpdatedAt = now;
+                    CloseLinkedPurchaseOrderAfterGrn(linkedPo, now);
 
-                    if (linkedPo.Status == "Closed")
-                        linkedPo.ClosedAt ??= now;
-                    else
-                        linkedPo.ClosedAt = null;
-                }
-
-                // 7. Supplier ledger + supplier current balance.
-                var supplier = await context.Suppliers
-                    .FirstOrDefaultAsync(s => s.Id == header.SupplierId);
-
-                if (supplier == null)
-                    throw new InvalidOperationException("Supplier was not found.");
-
-                decimal newSupplierBalance = supplier.CurrentBalance + header.NetPayable;
-
-                var supplierLedger = new SupplierLedger
-                {
-                    SupplierId = supplier.Id,
-                    GrnHeaderId = header.Id,
-                    TransactionDate = header.ReceivedDate,
-                    TransactionType = "GRN",
-                    ReferenceDocument = header.GrnNumber,
-                    ChargeAmount = header.NetPayable,
-                    PaymentAmount = 0m,
-                    BalanceAfterTransaction = newSupplierBalance,
-                    DueDate = header.DueDate,
-                    IsPaid = false,
-                    CreatedBy = header.CreatedBy,
-                    CreatedAt = now,
-                    Remarks = $"Supplier Invoice: {header.SupplierInvoiceNo}"
-                };
-
-                supplier.CurrentBalance = newSupplierBalance;
-                supplier.UpdatedAt = now;
-
-                await context.SupplierLedgers.AddAsync(supplierLedger);
+                await CreateSupplierLedgerEntryAsync(
+                    context,
+                    header,
+                    now);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -448,7 +606,9 @@ namespace POS.Core.Repositories
         // VALIDATION
         // =========================================================
 
-        private static async Task ValidateHeaderAsync(AppDbContext context, GrnHeader header)
+        private static async Task ValidateHeaderAsync(
+            AppDbContext context,
+            GrnHeader header)
         {
             if (header.SupplierId <= 0)
                 throw new InvalidOperationException("Supplier is required.");
@@ -495,8 +655,8 @@ namespace POS.Core.Repositories
             if (header.FreightAmount < 0)
                 throw new InvalidOperationException("Freight amount cannot be negative.");
 
-            if (header.GlobalBillDiscount > header.Subtotal)
-                throw new InvalidOperationException("Global bill discount cannot be greater than GRN subtotal.");
+            if (header.GlobalBillDiscount > header.NetPayable + header.GlobalBillDiscount)
+                throw new InvalidOperationException("Global bill discount cannot be greater than GRN value.");
 
             if (header.Remarks.Length > 500)
                 throw new InvalidOperationException("Remarks cannot be longer than 500 characters.");
@@ -513,8 +673,8 @@ namespace POS.Core.Repositories
                 if (po.SupplierId != header.SupplierId)
                     throw new InvalidOperationException("Linked Purchase Order supplier does not match selected supplier.");
 
-                if (po.Status != "Approved" && po.Status != "Partially Received")
-                    throw new InvalidOperationException("Only approved or partially received Purchase Orders can be received.");
+                if (po.Status != "Approved")
+                    throw new InvalidOperationException("Only approved Purchase Orders can be received.");
             }
         }
 
@@ -530,6 +690,7 @@ namespace POS.Core.Repositories
 
             var variants = await context.ItemVariants
                 .Include(v => v.ItemParent)
+                    .ThenInclude(p => p.UnitOfMeasure)
                 .Where(v => variantIds.Contains(v.Id))
                 .ToDictionaryAsync(v => v.Id);
 
@@ -573,8 +734,25 @@ namespace POS.Core.Repositories
                 if (line.ReceivedQty <= 0)
                     throw new InvalidOperationException($"Received quantity must be greater than zero for item '{variant.SkuCode}'.");
 
+                bool allowDecimals = variant.ItemParent.UnitOfMeasure?.AllowDecimals ?? true;
+
+                if (!allowDecimals && HasDecimalPart(line.ReceivedQty))
+                {
+                    throw new InvalidOperationException(
+                        $"Decimal quantity is not allowed for item '{variant.SkuCode}' with UOM '{variant.ItemParent.BaseUom}'.");
+                }
+
                 if (line.UnitCost <= 0)
                     throw new InvalidOperationException($"Unit cost must be greater than zero for item '{variant.SkuCode}'.");
+
+                if (!IsValidDiscountMode(line.LineDiscountMode))
+                    throw new InvalidOperationException($"Invalid discount mode for item '{variant.SkuCode}'.");
+
+                if (line.LineDiscountValue < 0)
+                    throw new InvalidOperationException($"Discount value cannot be negative for item '{variant.SkuCode}'.");
+
+                if (IsPercentDiscount(line.LineDiscountMode) && line.LineDiscountValue > 100)
+                    throw new InvalidOperationException($"Discount percentage cannot be greater than 100 for item '{variant.SkuCode}'.");
 
                 if (line.LineDiscount < 0)
                     throw new InvalidOperationException($"Line discount cannot be negative for item '{variant.SkuCode}'.");
@@ -584,19 +762,26 @@ namespace POS.Core.Repositories
                 if (line.LineDiscount > gross)
                     throw new InvalidOperationException($"Line discount cannot be greater than line value for item '{variant.SkuCode}'.");
 
+                if (line.VatRatePercent < 0 || line.VatRatePercent > 100)
+                    throw new InvalidOperationException($"VAT rate must be between 0 and 100 for item '{variant.SkuCode}'.");
+
                 if (line.BatchNo.Length > 50)
                     throw new InvalidOperationException($"Batch number is too long for item '{variant.SkuCode}'.");
 
                 if (line.Uom.Length > 20)
                     throw new InvalidOperationException($"UOM is too long for item '{variant.SkuCode}'.");
 
-                // Temporary rule until Item Master tracking ticks are rebuilt:
-                // HasBatchExpiry means expiry-required.
-                if (variant.ItemParent.HasBatchExpiry && !line.ExpiryDate.HasValue)
+                bool requiresExpiry = variant.ItemParent.HasExpiryTracking ||
+                                      variant.ItemParent.HasBatchExpiry;
+
+                if (requiresExpiry && !line.ExpiryDate.HasValue)
                 {
                     throw new InvalidOperationException(
                         $"Expiry date is required for item '{variant.SkuCode}'.");
                 }
+
+                if (!requiresExpiry)
+                    line.ExpiryDate = null;
 
                 if (line.ExpiryDate.HasValue &&
                     line.ExpiryDate.Value.Date < header.ReceivedDate.Date)
@@ -604,6 +789,9 @@ namespace POS.Core.Repositories
                     throw new InvalidOperationException(
                         $"Expiry date cannot be before received date for item '{variant.SkuCode}'.");
                 }
+
+                if (line.UpdateSellingPrices)
+                    ValidateSellingPrices(line, variant.SkuCode);
 
                 if (header.PurchaseOrderId.HasValue && header.PurchaseOrderId.Value > 0)
                 {
@@ -636,22 +824,19 @@ namespace POS.Core.Repositories
                     if (line.ReceivedQty > outstanding)
                     {
                         throw new InvalidOperationException(
-                            $"Cannot receive {line.ReceivedQty:N3} for item '{variant.SkuCode}'. Outstanding PO quantity is {outstanding:N3}.");
+                            $"Cannot receive {line.ReceivedQty:N3} for item '{variant.SkuCode}'. PO ordered remaining quantity is {outstanding:N3}.");
                     }
                 }
             }
         }
 
-        private static void ValidateSubmittedLineDuplicates(List<GrnLine> lines)
+        private static void ValidatePreparedLineDuplicates(List<GrnLine> lines)
         {
             var duplicate = lines
                 .GroupBy(l => new
                 {
                     l.ItemVariantId,
-                    BatchNo = string.IsNullOrWhiteSpace(l.BatchNo)
-                        ? "<AUTO>"
-                        : l.BatchNo.Trim().ToUpperInvariant(),
-                    ExpiryDate = l.ExpiryDate?.Date,
+                    BatchNo = NormalizeText(l.BatchNo).ToUpperInvariant(),
                     PoLineId = l.PoLineId ?? 0
                 })
                 .FirstOrDefault(g => g.Count() > 1);
@@ -659,7 +844,33 @@ namespace POS.Core.Repositories
             if (duplicate != null)
             {
                 throw new InvalidOperationException(
-                    "Duplicate GRN line found. Merge the same item, batch, expiry, and PO line into one row.");
+                    "Duplicate GRN line found. Merge the same item and stock bucket/batch into one row.");
+            }
+        }
+
+        private static void ValidateSellingPrices(GrnLine line, string skuCode)
+        {
+            if (line.NewRetailPrice < 0 ||
+                line.NewWholesalePrice < 0 ||
+                line.NewMinimumPrice < 0 ||
+                line.NewMaximumPrice < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Selling prices cannot be negative for item '{skuCode}'.");
+            }
+
+            if (line.NewMaximumPrice > 0 &&
+                line.NewMinimumPrice > line.NewMaximumPrice)
+            {
+                throw new InvalidOperationException(
+                    $"Minimum price cannot be greater than maximum price for item '{skuCode}'.");
+            }
+
+            if (line.RetailMarkupPercent < -100 ||
+                line.WholesaleMarkupPercent < -100)
+            {
+                throw new InvalidOperationException(
+                    $"Markup percentage is invalid for item '{skuCode}'.");
             }
         }
 
@@ -667,40 +878,78 @@ namespace POS.Core.Repositories
         // CALCULATION
         // =========================================================
 
-        private static void RecalculateHeaderTotals(GrnHeader header, List<GrnLine> lines)
+        private static void RecalculateHeaderTotals(
+            GrnHeader header,
+            List<GrnLine> lines)
         {
-            decimal subtotal = 0m;
+            decimal subtotalGross = 0m;
             decimal lineDiscountTotal = 0m;
+            decimal vatTotal = 0m;
+            decimal lineTotalPayable = 0m;
 
             foreach (var line in lines)
             {
+                NormalizeLine(line);
+
                 decimal gross = line.ReceivedQty * line.UnitCost;
-                decimal lineTotal = gross - line.LineDiscount;
 
-                if (lineTotal < 0)
-                    lineTotal = 0;
+                line.LineDiscount = CalculateDiscountAmount(
+                    gross,
+                    line.LineDiscountMode,
+                    line.LineDiscountValue);
 
-                line.LineTotal = Math.Round(lineTotal, 2);
+                decimal afterLineDiscount = gross - line.LineDiscount;
 
-                subtotal += line.LineTotal;
+                if (afterLineDiscount < 0)
+                    afterLineDiscount = 0m;
+
+                decimal vatRate = line.VatRatePercent / 100m;
+
+                if (line.VatRatePercent <= 0)
+                {
+                    line.VatAmount = 0m;
+                    line.LineTotal = Math.Round(afterLineDiscount, 2);
+                }
+                else if (line.IsVatIncluded)
+                {
+                    line.VatAmount = Math.Round(
+                        afterLineDiscount - (afterLineDiscount / (1 + vatRate)),
+                        2);
+
+                    line.LineTotal = Math.Round(afterLineDiscount, 2);
+                }
+                else
+                {
+                    line.VatAmount = Math.Round(afterLineDiscount * vatRate, 2);
+                    line.LineTotal = Math.Round(afterLineDiscount + line.VatAmount, 2);
+                }
+
+                subtotalGross += gross;
                 lineDiscountTotal += line.LineDiscount;
+                vatTotal += line.VatAmount;
+                lineTotalPayable += line.LineTotal;
             }
 
-            if (header.GlobalBillDiscount > subtotal)
+            if (header.GlobalBillDiscount > lineTotalPayable)
                 throw new InvalidOperationException("Global bill discount cannot be greater than GRN value.");
 
-            header.Subtotal = Math.Round(subtotal, 2);
+            header.Subtotal = Math.Round(subtotalGross, 2);
             header.TotalDiscountAmount = Math.Round(lineDiscountTotal + header.GlobalBillDiscount, 2);
-            header.NetPayable = Math.Round(subtotal - header.GlobalBillDiscount + header.FreightAmount, 2);
+            header.TotalVatAmount = Math.Round(vatTotal, 2);
+
+            decimal netPayable = lineTotalPayable - header.GlobalBillDiscount + header.FreightAmount;
+            header.NetPayable = Math.Round(netPayable < 0 ? 0m : netPayable, 2);
 
             AllocateLandedCost(header, lines);
         }
 
-        private static void AllocateLandedCost(GrnHeader header, List<GrnLine> lines)
+        private static void AllocateLandedCost(
+            GrnHeader header,
+            List<GrnLine> lines)
         {
-            decimal totalBaseValue = lines.Sum(l => l.LineTotal);
+            decimal totalCostBase = lines.Sum(GetLineCostBaseForLandedCost);
 
-            if (totalBaseValue <= 0)
+            if (totalCostBase <= 0)
             {
                 foreach (var line in lines)
                     line.LandedCost = 0m;
@@ -710,19 +959,318 @@ namespace POS.Core.Repositories
 
             foreach (var line in lines)
             {
-                decimal weight = line.LineTotal / totalBaseValue;
+                if (line.ReceivedQty <= 0)
+                {
+                    line.LandedCost = 0m;
+                    continue;
+                }
+
+                decimal lineCostBase = GetLineCostBaseForLandedCost(line);
+                decimal weight = lineCostBase / totalCostBase;
+
                 decimal allocatedFreight = header.FreightAmount * weight;
                 decimal allocatedGlobalDiscount = header.GlobalBillDiscount * weight;
-                decimal landedLineTotal = line.LineTotal + allocatedFreight - allocatedGlobalDiscount;
 
-                line.LandedCost = line.ReceivedQty > 0
-                    ? Math.Round(landedLineTotal / line.ReceivedQty, 2)
-                    : 0m;
+                decimal landedLineTotal = lineCostBase + allocatedFreight - allocatedGlobalDiscount;
+
+                if (landedLineTotal < 0)
+                    landedLineTotal = 0m;
+
+                line.LandedCost = Math.Round(landedLineTotal / line.ReceivedQty, 2);
             }
         }
 
+        private static decimal GetLineCostBaseForLandedCost(GrnLine line)
+        {
+            decimal gross = line.ReceivedQty * line.UnitCost;
+            decimal afterLineDiscount = gross - line.LineDiscount;
+
+            if (afterLineDiscount < 0)
+                afterLineDiscount = 0m;
+
+            if (line.VatRatePercent <= 0)
+                return afterLineDiscount;
+
+            if (!line.IsVatIncluded)
+                return afterLineDiscount;
+
+            decimal vatRate = line.VatRatePercent / 100m;
+
+            if (vatRate <= 0)
+                return afterLineDiscount;
+
+            return afterLineDiscount / (1 + vatRate);
+        }
+
+        private static decimal CalculateDiscountAmount(
+            decimal gross,
+            string? discountMode,
+            decimal discountValue)
+        {
+            if (gross <= 0 || discountValue <= 0)
+                return 0m;
+
+            if (IsPercentDiscount(discountMode))
+                return Math.Round(gross * discountValue / 100m, 2);
+
+            return Math.Round(discountValue, 2);
+        }
+
         // =========================================================
-        // HELPERS
+        // POSTING HELPERS
+        // =========================================================
+
+        private static void PrepareLinesForPosting(
+            List<GrnLine> lines,
+            Dictionary<int, ItemVariant> variants,
+            int grnHeaderId,
+            string grnNumber,
+            DateTime now)
+        {
+            int lineNumber = 1;
+
+            foreach (var line in lines)
+            {
+                if (!variants.TryGetValue(line.ItemVariantId, out var variant))
+                    throw new InvalidOperationException("One or more received item variants were not found.");
+
+                bool hasBatchTracking = variant.ItemParent.HasBatchTracking;
+                bool hasExpiryTracking = variant.ItemParent.HasExpiryTracking ||
+                                         variant.ItemParent.HasBatchExpiry;
+
+                line.Id = 0;
+                line.GrnHeaderId = grnHeaderId;
+                line.GrnHeader = null!;
+                line.ItemVariant = null!;
+                line.PoLine = null;
+                line.ItemBatch = null;
+                line.ItemBatchId = null;
+
+                if (!hasBatchTracking)
+                {
+                    line.BatchNo = NonBatchStockBucketNo;
+                    line.ExpiryDate = null;
+                }
+                else
+                {
+                    line.BatchNo = BuildBatchNo(line.BatchNo, grnNumber, lineNumber);
+
+                    if (!hasExpiryTracking)
+                        line.ExpiryDate = null;
+                }
+
+                line.LineStatus = "Posted";
+                line.CreatedAt = now;
+                line.UpdatedAt = now;
+
+                lineNumber++;
+            }
+        }
+
+        private static void ApplyPoReceivingAndCloseLine(
+            PoHeader linkedPo,
+            GrnLine line,
+            string skuCode,
+            DateTime now)
+        {
+            var poLine = ResolvePoLineForGrnLine(linkedPo, line);
+
+            if (poLine == null)
+            {
+                throw new InvalidOperationException(
+                    $"GRN line item '{skuCode}' does not match the linked Purchase Order.");
+            }
+
+            decimal outstanding = poLine.OrderQty - poLine.ReceivedQty;
+
+            if (line.ReceivedQty > outstanding)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot receive {line.ReceivedQty:N3} for item '{skuCode}'. PO ordered remaining quantity is {outstanding:N3}.");
+            }
+
+            poLine.ReceivedQty += line.ReceivedQty;
+
+            // New user workflow:
+            // After one PO-based GRN, the PO is treated as completed/closed.
+            poLine.LineStatus = "Closed";
+            poLine.ClosedAt ??= now;
+            poLine.UpdatedAt = now;
+        }
+
+        private static void CloseLinkedPurchaseOrderAfterGrn(
+            PoHeader linkedPo,
+            DateTime now)
+        {
+            linkedPo.Status = "Closed";
+            linkedPo.ClosedAt ??= now;
+            linkedPo.UpdatedAt = now;
+
+            foreach (var poLine in linkedPo.PoLines)
+            {
+                poLine.LineStatus = "Closed";
+                poLine.ClosedAt ??= now;
+                poLine.UpdatedAt = now;
+            }
+        }
+
+        private static async Task UpdateSupplierLastCostAsync(
+            AppDbContext context,
+            int supplierId,
+            int itemVariantId,
+            decimal unitCost,
+            DateTime now)
+        {
+            var itemSupplier = await context.ItemSuppliers
+                .FirstOrDefaultAsync(s =>
+                    s.SupplierId == supplierId &&
+                    s.ItemVariantId == itemVariantId);
+
+            if (itemSupplier == null)
+                return;
+
+            itemSupplier.LastCostPrice = unitCost;
+            itemSupplier.UpdatedAt = now;
+        }
+
+        private static void UpdateVariantCostAndSellingPrices(
+            ItemVariant variant,
+            GrnLine line,
+            Dictionary<int, decimal> stockCache,
+            DateTime now)
+        {
+            decimal currentStock = stockCache.TryGetValue(variant.Id, out var qty)
+                ? qty
+                : 0m;
+
+            decimal newTotalQty = currentStock + line.ReceivedQty;
+
+            if (newTotalQty > 0)
+            {
+                decimal oldTotalValue = currentStock * variant.AverageCost;
+                decimal newReceivedValue = line.ReceivedQty * line.LandedCost;
+
+                variant.AverageCost = Math.Round(
+                    (oldTotalValue + newReceivedValue) / newTotalQty,
+                    2);
+            }
+
+            variant.CostPrice = line.LandedCost;
+
+            if (line.UpdateSellingPrices)
+            {
+                variant.RetailPrice = line.NewRetailPrice;
+                variant.WholesalePrice = line.NewWholesalePrice;
+                variant.MinimumPrice = line.NewMinimumPrice;
+                variant.MaximumPrice = line.NewMaximumPrice;
+            }
+
+            variant.UpdatedAt = now;
+            stockCache[variant.Id] = newTotalQty;
+        }
+
+        private static async Task<ItemBatch> CreateOrUpdateBatchAsync(
+            AppDbContext context,
+            ItemVariant variant,
+            GrnLine line,
+            GrnHeader header,
+            DateTime now)
+        {
+            string batchNo = NormalizeText(line.BatchNo).ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(batchNo))
+                throw new InvalidOperationException("Internal error: batch number was not prepared.");
+
+            var batch = await context.ItemBatches
+                .FirstOrDefaultAsync(b =>
+                    b.ItemVariantId == variant.Id &&
+                    b.BatchNo == batchNo);
+
+            if (batch == null)
+            {
+                batch = new ItemBatch
+                {
+                    ItemVariantId = variant.Id,
+                    BatchNo = batchNo,
+                    ExpiryDate = line.ExpiryDate?.Date,
+                    ReceivedDate = header.ReceivedDate.Date,
+                    CostPrice = line.LandedCost,
+                    RetailPrice = variant.RetailPrice,
+                    WholesalePrice = variant.WholesalePrice,
+                    CurrentStock = line.ReceivedQty,
+                    IsDeactivated = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                await context.ItemBatches.AddAsync(batch);
+                return batch;
+            }
+
+            if (batch.IsDeactivated)
+            {
+                throw new InvalidOperationException(
+                    $"Batch '{batchNo}' for item '{variant.SkuCode}' is deactivated.");
+            }
+
+            if (line.ExpiryDate.HasValue &&
+                batch.ExpiryDate.HasValue &&
+                batch.ExpiryDate.Value.Date != line.ExpiryDate.Value.Date)
+            {
+                throw new InvalidOperationException(
+                    $"Batch '{batchNo}' already exists with a different expiry date.");
+            }
+
+            if (!batch.ExpiryDate.HasValue && line.ExpiryDate.HasValue)
+                batch.ExpiryDate = line.ExpiryDate.Value.Date;
+
+            batch.CurrentStock += line.ReceivedQty;
+            batch.CostPrice = line.LandedCost;
+            batch.RetailPrice = variant.RetailPrice;
+            batch.WholesalePrice = variant.WholesalePrice;
+            batch.UpdatedAt = now;
+
+            return batch;
+        }
+
+        private static async Task CreateSupplierLedgerEntryAsync(
+            AppDbContext context,
+            GrnHeader header,
+            DateTime now)
+        {
+            var supplier = await context.Suppliers
+                .FirstOrDefaultAsync(s => s.Id == header.SupplierId);
+
+            if (supplier == null)
+                throw new InvalidOperationException("Supplier was not found.");
+
+            decimal newSupplierBalance = supplier.CurrentBalance + header.NetPayable;
+
+            var supplierLedger = new SupplierLedger
+            {
+                SupplierId = supplier.Id,
+                GrnHeaderId = header.Id,
+                TransactionDate = header.ReceivedDate.Date,
+                TransactionType = "GRN",
+                ReferenceDocument = header.GrnNumber,
+                ChargeAmount = header.NetPayable,
+                PaymentAmount = 0m,
+                BalanceAfterTransaction = newSupplierBalance,
+                DueDate = header.DueDate.Date,
+                IsPaid = false,
+                CreatedBy = header.CreatedBy,
+                CreatedAt = now,
+                Remarks = $"Supplier Invoice: {header.SupplierInvoiceNo}"
+            };
+
+            supplier.CurrentBalance = newSupplierBalance;
+            supplier.UpdatedAt = now;
+
+            await context.SupplierLedgers.AddAsync(supplierLedger);
+        }
+
+        // =========================================================
+        // GENERAL HELPERS
         // =========================================================
 
         private static async Task<string> GenerateDocumentNumberAsync(
@@ -747,7 +1295,8 @@ namespace POS.Core.Repositories
                 await context.SaveChangesAsync();
             }
 
-            string number = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+            string number =
+                $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
 
             sequence.NextSequenceNumber++;
             sequence.UpdatedAt = DateTime.Now;
@@ -781,28 +1330,9 @@ namespace POS.Core.Repositories
                     g => g.Sum(x => x.Quantity));
         }
 
-        private static void PrepareNewLine(
-            GrnLine line,
-            int headerId,
-            string grnNumber,
-            int lineNumber,
-            DateTime now)
-        {
-            line.Id = 0;
-            line.GrnHeaderId = headerId;
-            line.GrnHeader = null!;
-            line.ItemVariant = null!;
-            line.PoLine = null;
-            line.ItemBatch = null;
-            line.ItemBatchId = null;
-
-            line.BatchNo = BuildBatchNo(line.BatchNo, grnNumber, lineNumber);
-            line.LineStatus = "Posted";
-            line.CreatedAt = now;
-            line.UpdatedAt = now;
-        }
-
-        private static PoLine? ResolvePoLineForGrnLine(PoHeader linkedPo, GrnLine line)
+        private static PoLine? ResolvePoLineForGrnLine(
+            PoHeader linkedPo,
+            GrnLine line)
         {
             if (line.PoLineId.HasValue && line.PoLineId.Value > 0)
             {
@@ -813,28 +1343,6 @@ namespace POS.Core.Repositories
             }
 
             return linkedPo.PoLines.FirstOrDefault(l => l.ItemVariantId == line.ItemVariantId);
-        }
-
-        private static string CalculatePoLineStatus(decimal orderQty, decimal receivedQty)
-        {
-            if (receivedQty <= 0)
-                return "Open";
-
-            if (receivedQty < orderQty)
-                return "Partially Received";
-
-            return "Closed";
-        }
-
-        private static string CalculatePoHeaderStatus(List<PoLine> lines)
-        {
-            if (lines.All(l => l.OrderQty > 0 && l.ReceivedQty >= l.OrderQty))
-                return "Closed";
-
-            if (lines.Any(l => l.ReceivedQty > 0))
-                return "Partially Received";
-
-            return "Approved";
         }
 
         private static string BuildBatchNo(
@@ -850,6 +1358,62 @@ namespace POS.Core.Repositories
             return $"SYS-{grnNumber}-L{lineNumber.ToString().PadLeft(3, '0')}";
         }
 
+        private static decimal ResolveVatRatePercent(string? taxCode)
+        {
+            string value = NormalizeText(taxCode).ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(value) ||
+                value == "TAX-FREE" ||
+                value == "NONE" ||
+                value == "NO VAT" ||
+                value == "NOVAT")
+            {
+                return 0m;
+            }
+
+            if (value.Contains("18"))
+                return 18m;
+
+            if (value.Contains("15"))
+                return 15m;
+
+            if (value.Contains("12"))
+                return 12m;
+
+            if (value.Contains("8"))
+                return 8m;
+
+            if (value.Contains("5"))
+                return 5m;
+
+            return 0m;
+        }
+
+        private static bool IsValidDiscountMode(string? value)
+        {
+            string mode = NormalizeDiscountMode(value);
+
+            return mode == "Amount" || mode == "Percent";
+        }
+
+        private static bool IsPercentDiscount(string? value)
+        {
+            return NormalizeDiscountMode(value) == "Percent";
+        }
+
+        private static string NormalizeDiscountMode(string? value)
+        {
+            string mode = NormalizeText(value);
+
+            if (mode.Equals("Percent", StringComparison.OrdinalIgnoreCase) ||
+                mode.Equals("%", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Percent";
+            }
+
+            return "Amount";
+        }
+
         private static void NormalizeHeader(GrnHeader header)
         {
             header.SupplierInvoiceNo = NormalizeText(header.SupplierInvoiceNo);
@@ -857,12 +1421,22 @@ namespace POS.Core.Repositories
             header.CreatedBy = NormalizeText(header.CreatedBy);
             header.PostedBy = NormalizeText(header.PostedBy);
 
+            header.InvoiceDate = header.InvoiceDate.Date;
+            header.ReceivedDate = header.ReceivedDate.Date;
+            header.DueDate = header.DueDate.Date;
+
             if (header.CreditDays == 0 && header.DueDate.Date >= header.InvoiceDate.Date)
             {
                 header.CreditDays = Math.Max(
                     0,
                     (header.DueDate.Date - header.InvoiceDate.Date).Days);
             }
+
+            if (string.IsNullOrWhiteSpace(header.CreatedBy))
+                header.CreatedBy = "Admin";
+
+            if (string.IsNullOrWhiteSpace(header.PostedBy))
+                header.PostedBy = header.CreatedBy;
         }
 
         private static void NormalizeLines(List<GrnLine> lines)
@@ -875,6 +1449,33 @@ namespace POS.Core.Repositories
         {
             line.BatchNo = NormalizeText(line.BatchNo);
             line.Uom = NormalizeText(line.Uom);
+            line.LineDiscountMode = NormalizeDiscountMode(line.LineDiscountMode);
+
+            if (string.IsNullOrWhiteSpace(line.Uom))
+                line.Uom = "PCS";
+
+            if (line.LineDiscountValue <= 0 &&
+                line.LineDiscount > 0 &&
+                line.LineDiscountMode == "Amount")
+            {
+                line.LineDiscountValue = line.LineDiscount;
+            }
+        }
+
+        private static int NormalizeTakeLimit(int take)
+        {
+            if (take <= 0)
+                return DefaultTakeLimit;
+
+            if (take > MaxTakeLimit)
+                return MaxTakeLimit;
+
+            return take;
+        }
+
+        private static bool HasDecimalPart(decimal value)
+        {
+            return value != Math.Truncate(value);
         }
 
         private static string NormalizeText(string? value)

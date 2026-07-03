@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -15,15 +16,48 @@ namespace POS.BackOffice.UI.Views.Pages.Purchasing
             InitializeComponent();
         }
 
+        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not PurchaseOrderViewModel viewModel)
+                return;
+
+            if (!viewModel.InitializeCommand.CanExecute(null))
+                return;
+
+            try
+            {
+                await viewModel.InitializeCommand.ExecuteAsync(null);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to initialize Purchase Order page:\n\n{ex.Message}",
+                    "Purchase Order Page Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         private void DgPoLines_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
-            if (DataContext is PurchaseOrderViewModel viewModel)
+            if (DataContext is not PurchaseOrderViewModel viewModel)
+                return;
+
+            Dispatcher.BeginInvoke(new Action(() =>
             {
-                Dispatcher.BeginInvoke(new Action(() =>
+                try
                 {
                     viewModel.RecalculateTotals();
-                }), DispatcherPriority.Background);
-            }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Failed to recalculate Purchase Order totals:\n\n{ex.Message}",
+                        "Purchase Order Calculation Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }), DispatcherPriority.Background);
         }
     }
 
@@ -40,12 +74,10 @@ namespace POS.BackOffice.UI.Views.Pages.Purchasing
                 values[1] is int moq)
             {
                 if (qty > 0 && moq > 0 && qty < moq)
-                {
-                    return new SolidColorBrush(Color.FromRgb(255, 204, 204));
-                }
+                    return new SolidColorBrush(Color.FromRgb(255, 230, 230));
             }
 
-            return new SolidColorBrush(Color.FromRgb(224, 255, 255));
+            return new SolidColorBrush(Color.FromRgb(255, 255, 224));
         }
 
         public object[] ConvertBack(

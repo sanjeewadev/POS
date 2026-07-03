@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
@@ -8,26 +9,97 @@ using POS.Core.Models;
 
 namespace POS.Core.Repositories
 {
+    public sealed class AttributeGroupLinkedDataSummary
+    {
+        public int ValueCount { get; init; }
+        public int CategoryAssignmentCount { get; init; }
+        public int ItemMappingCount { get; init; }
+
+        public bool HasLinkedData =>
+            ValueCount > 0 ||
+            CategoryAssignmentCount > 0 ||
+            ItemMappingCount > 0;
+
+        public string ToUserMessage(string groupName)
+        {
+            var builder = new StringBuilder();
+
+            builder.AppendLine($"Attribute group '{groupName}' cannot be deleted because it is already linked to other records.");
+            builder.AppendLine();
+            builder.AppendLine("Linked records:");
+
+            if (ValueCount > 0)
+                builder.AppendLine($"- Attribute values: {ValueCount}");
+
+            if (CategoryAssignmentCount > 0)
+                builder.AppendLine($"- Category assignments: {CategoryAssignmentCount}");
+
+            if (ItemMappingCount > 0)
+                builder.AppendLine($"- Item variant mappings: {ItemMappingCount}");
+
+            builder.AppendLine();
+            builder.AppendLine("Deactivate this group instead of deleting it.");
+
+            return builder.ToString();
+        }
+    }
+
+    public sealed class AttributeValueLinkedDataSummary
+    {
+        public int ItemMappingCount { get; init; }
+
+        public bool HasLinkedData => ItemMappingCount > 0;
+
+        public string ToUserMessage(string valueName)
+        {
+            var builder = new StringBuilder();
+
+            builder.AppendLine($"Attribute value '{valueName}' cannot be deleted because it is already used by item variants.");
+            builder.AppendLine();
+
+            if (ItemMappingCount > 0)
+                builder.AppendLine($"Linked item variant mappings: {ItemMappingCount}");
+
+            builder.AppendLine();
+            builder.AppendLine("Deactivate this value instead of deleting it.");
+
+            return builder.ToString();
+        }
+    }
+
     public class AttributeRepository
     {
+        private const int DefaultTakeLimit = 500;
+        private const int MaxTakeLimit = 2000;
+        private const int MaxDisplayOrder = 9999;
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         public AttributeRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
         // =========================================================
         // GROUP MANAGEMENT
         // =========================================================
 
-        public async Task<IEnumerable<AttributeGroup>> GetAllGroupsAsync(string searchTerm = "")
+        public async Task<IReadOnlyList<AttributeGroup>> GetAllGroupsAsync(
+            string searchTerm = "",
+            bool includeDeactivated = true,
+            int take = DefaultTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            take = NormalizeTakeLimit(take);
 
-            var query = context.AttributeGroups
-                .AsNoTracking()
-                .AsQueryable();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<AttributeGroup> query = context.AttributeGroups
+                .AsNoTracking();
+
+            if (!includeDeactivated)
+            {
+                query = query.Where(g => !g.IsDeactivated);
+            }
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -38,15 +110,19 @@ namespace POS.Core.Repositories
             }
 
             return await query
-                .OrderBy(g => g.DisplayOrder)
+                .OrderBy(g => g.IsDeactivated)
+                .ThenBy(g => g.DisplayOrder)
                 .ThenBy(g => g.GroupName)
-                .Take(500)
+                .Take(take)
                 .ToListAsync();
         }
 
         public async Task<AttributeGroup?> GetGroupByIdAsync(int groupId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (groupId <= 0)
+                return null;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.AttributeGroups
                 .AsNoTracking()
@@ -55,13 +131,23 @@ namespace POS.Core.Repositories
 
         public async Task<bool> IsGroupUniqueAsync(string groupName, int currentGroupId = 0)
         {
-            string normalizedName = NormalizeName(groupName).ToLower();
+            string normalizedName = NormalizeName(groupName);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(normalizedName))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.AttributeGroups.AnyAsync(g =>
-                g.GroupName.ToLower() == normalizedName &&
+                EF.Functions.Collate(g.GroupName, "NOCASE") == normalizedName &&
                 g.Id != currentGroupId);
+        }
+
+        public async Task<AttributeGroupLinkedDataSummary> GetGroupLinkedDataSummaryAsync(int groupId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await GetGroupLinkedDataSummaryAsync(context, groupId);
         }
 
         public async Task<AttributeGroup> AddGroupAsync(AttributeGroup group)
@@ -70,14 +156,15 @@ namespace POS.Core.Repositories
                 throw new ArgumentNullException(nameof(group));
 
             string normalizedName = NormalizeName(group.GroupName);
+            int displayOrder = group.DisplayOrder;
 
             ValidateGroupName(normalizedName);
-            ValidateDisplayOrder(group.DisplayOrder, "Group display order");
+            ValidateDisplayOrder(displayOrder, "Group display order");
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             bool nameExists = await context.AttributeGroups.AnyAsync(g =>
-                g.GroupName.ToLower() == normalizedName.ToLower());
+                EF.Functions.Collate(g.GroupName, "NOCASE") == normalizedName);
 
             if (nameExists)
                 throw new InvalidOperationException($"Attribute group '{normalizedName}' already exists.");
@@ -85,6 +172,7 @@ namespace POS.Core.Repositories
             DateTime now = DateTime.Now;
 
             group.GroupName = normalizedName;
+            group.DisplayOrder = displayOrder;
             group.CreatedAt = now;
             group.UpdatedAt = now;
             group.DeactivatedAt = group.IsDeactivated ? now : null;
@@ -104,11 +192,12 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Invalid attribute group record.");
 
             string normalizedName = NormalizeName(group.GroupName);
+            int displayOrder = group.DisplayOrder;
 
             ValidateGroupName(normalizedName);
-            ValidateDisplayOrder(group.DisplayOrder, "Group display order");
+            ValidateDisplayOrder(displayOrder, "Group display order");
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var existing = await context.AttributeGroups
                 .FirstOrDefaultAsync(g => g.Id == group.Id);
@@ -117,30 +206,43 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Attribute group record was not found.");
 
             bool nameExists = await context.AttributeGroups.AnyAsync(g =>
-                g.GroupName.ToLower() == normalizedName.ToLower() &&
+                EF.Functions.Collate(g.GroupName, "NOCASE") == normalizedName &&
                 g.Id != group.Id);
 
             if (nameExists)
                 throw new InvalidOperationException($"Attribute group '{normalizedName}' already exists.");
 
             DateTime now = DateTime.Now;
+            bool wasDeactivated = existing.IsDeactivated;
+            bool isNowDeactivated = group.IsDeactivated;
 
             existing.GroupName = normalizedName;
-            existing.DisplayOrder = group.DisplayOrder;
-            existing.IsDeactivated = group.IsDeactivated;
+            existing.DisplayOrder = displayOrder;
+            existing.IsDeactivated = isNowDeactivated;
             existing.UpdatedAt = now;
 
-            if (existing.IsDeactivated)
-                existing.DeactivatedAt ??= now;
-            else
+            if (!wasDeactivated && isNowDeactivated)
+            {
+                existing.DeactivatedAt = now;
+            }
+            else if (wasDeactivated && !isNowDeactivated)
+            {
                 existing.DeactivatedAt = null;
+            }
+            else if (isNowDeactivated)
+            {
+                existing.DeactivatedAt ??= now;
+            }
 
             await context.SaveChangesAsync();
         }
 
         public async Task DeactivateGroupAsync(int groupId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (groupId <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var group = await context.AttributeGroups
                 .FirstOrDefaultAsync(g => g.Id == groupId);
@@ -148,18 +250,49 @@ namespace POS.Core.Repositories
             if (group == null)
                 return;
 
+            if (group.IsDeactivated)
+                return;
+
             DateTime now = DateTime.Now;
 
             group.IsDeactivated = true;
             group.UpdatedAt = now;
-            group.DeactivatedAt ??= now;
+            group.DeactivatedAt = now;
+
+            await context.SaveChangesAsync();
+        }
+
+        public async Task ReactivateGroupAsync(int groupId)
+        {
+            if (groupId <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var group = await context.AttributeGroups
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            if (group == null)
+                return;
+
+            if (!group.IsDeactivated)
+                return;
+
+            DateTime now = DateTime.Now;
+
+            group.IsDeactivated = false;
+            group.UpdatedAt = now;
+            group.DeactivatedAt = null;
 
             await context.SaveChangesAsync();
         }
 
         public async Task DeleteGroupAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var group = await context.AttributeGroups
                 .FirstOrDefaultAsync(g => g.Id == id);
@@ -167,31 +300,12 @@ namespace POS.Core.Repositories
             if (group == null)
                 return;
 
-            bool hasValues = await context.AttributeValues
-                .AnyAsync(v => v.AttributeGroupId == id);
+            var linkedData = await GetGroupLinkedDataSummaryAsync(context, id);
 
-            if (hasValues)
+            if (linkedData.HasLinkedData)
             {
                 throw new InvalidOperationException(
-                    "This group has attribute values. Delete the values first, or deactivate the group instead.");
-            }
-
-            bool hasCategoryAssignments = await context.CategoryAttributeGroups
-                .AnyAsync(c => c.AttributeGroupId == id);
-
-            if (hasCategoryAssignments)
-            {
-                throw new InvalidOperationException(
-                    "This group is assigned to categories. Remove category assignments first, or deactivate the group instead.");
-            }
-
-            bool hasItemMappings = await context.ItemPropertyMappings
-                .AnyAsync(m => m.AttributeGroupId == id);
-
-            if (hasItemMappings)
-            {
-                throw new InvalidOperationException(
-                    "This group is already used by item variants. Deactivate it instead of deleting it.");
+                    linkedData.ToUserMessage(group.GroupName));
             }
 
             context.AttributeGroups.Remove(group);
@@ -202,18 +316,30 @@ namespace POS.Core.Repositories
         // VALUE MANAGEMENT
         // =========================================================
 
-        public async Task<IEnumerable<AttributeValue>> GetAllValuesFilteredAsync(int? groupId = null, string searchTerm = "")
+        public async Task<IReadOnlyList<AttributeValue>> GetAllValuesFilteredAsync(
+            int? groupId = null,
+            string searchTerm = "",
+            bool includeDeactivated = true,
+            int take = DefaultTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            take = NormalizeTakeLimit(take);
 
-            var query = context.AttributeValues
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<AttributeValue> query = context.AttributeValues
                 .Include(v => v.AttributeGroup)
-                .AsNoTracking()
-                .AsQueryable();
+                .AsNoTracking();
 
             if (groupId.HasValue && groupId.Value > 0)
             {
                 query = query.Where(v => v.AttributeGroupId == groupId.Value);
+            }
+
+            if (!includeDeactivated)
+            {
+                query = query.Where(v =>
+                    !v.IsDeactivated &&
+                    !v.AttributeGroup.IsDeactivated);
             }
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -226,15 +352,34 @@ namespace POS.Core.Repositories
             }
 
             return await query
-                .OrderBy(v => v.DisplayOrder)
+                .OrderBy(v => v.IsDeactivated)
+                .ThenBy(v => v.DisplayOrder)
                 .ThenBy(v => v.ValueName)
-                .Take(500)
+                .Take(take)
                 .ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<AttributeValue>> GetAttributeValuesForGroupAsync(
+            int groupId,
+            bool activeOnly = true,
+            int take = MaxTakeLimit)
+        {
+            if (groupId <= 0)
+                return Array.Empty<AttributeValue>();
+
+            return await GetAllValuesFilteredAsync(
+                groupId: groupId,
+                searchTerm: string.Empty,
+                includeDeactivated: !activeOnly,
+                take: take);
         }
 
         public async Task<AttributeValue?> GetValueByIdAsync(int valueId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (valueId <= 0)
+                return null;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.AttributeValues
                 .Include(v => v.AttributeGroup)
@@ -242,16 +387,29 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(v => v.Id == valueId);
         }
 
-        public async Task<bool> IsValueUniqueAsync(string valueName, int groupId, int currentValueId = 0)
+        public async Task<bool> IsValueUniqueAsync(
+            string valueName,
+            int groupId,
+            int currentValueId = 0)
         {
-            string normalizedName = NormalizeName(valueName).ToLower();
+            string normalizedName = NormalizeName(valueName);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (groupId <= 0 || string.IsNullOrWhiteSpace(normalizedName))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.AttributeValues.AnyAsync(v =>
-                v.ValueName.ToLower() == normalizedName &&
                 v.AttributeGroupId == groupId &&
+                EF.Functions.Collate(v.ValueName, "NOCASE") == normalizedName &&
                 v.Id != currentValueId);
+        }
+
+        public async Task<AttributeValueLinkedDataSummary> GetValueLinkedDataSummaryAsync(int valueId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await GetValueLinkedDataSummaryAsync(context, valueId);
         }
 
         public async Task AddValueAsync(AttributeValue value)
@@ -263,11 +421,12 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("A valid attribute group is required.");
 
             string normalizedName = NormalizeName(value.ValueName);
+            int displayOrder = value.DisplayOrder;
 
             ValidateValueName(normalizedName);
-            ValidateDisplayOrder(value.DisplayOrder, "Value display order");
+            ValidateDisplayOrder(displayOrder, "Value display order");
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var group = await context.AttributeGroups
                 .FirstOrDefaultAsync(g => g.Id == value.AttributeGroupId);
@@ -280,7 +439,7 @@ namespace POS.Core.Repositories
 
             bool nameExists = await context.AttributeValues.AnyAsync(v =>
                 v.AttributeGroupId == value.AttributeGroupId &&
-                v.ValueName.ToLower() == normalizedName.ToLower());
+                EF.Functions.Collate(v.ValueName, "NOCASE") == normalizedName);
 
             if (nameExists)
                 throw new InvalidOperationException($"Value '{normalizedName}' already exists in this group.");
@@ -288,6 +447,7 @@ namespace POS.Core.Repositories
             DateTime now = DateTime.Now;
 
             value.ValueName = normalizedName;
+            value.DisplayOrder = displayOrder;
             value.CreatedAt = now;
             value.UpdatedAt = now;
             value.DeactivatedAt = value.IsDeactivated ? now : null;
@@ -305,13 +465,15 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Invalid attribute value record.");
 
             string normalizedName = NormalizeName(value.ValueName);
+            int displayOrder = value.DisplayOrder;
 
             ValidateValueName(normalizedName);
-            ValidateDisplayOrder(value.DisplayOrder, "Value display order");
+            ValidateDisplayOrder(displayOrder, "Value display order");
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var existing = await context.AttributeValues
+                .Include(v => v.AttributeGroup)
                 .FirstOrDefaultAsync(v => v.Id == value.Id);
 
             if (existing == null)
@@ -319,31 +481,51 @@ namespace POS.Core.Repositories
 
             bool nameExists = await context.AttributeValues.AnyAsync(v =>
                 v.AttributeGroupId == existing.AttributeGroupId &&
-                v.ValueName.ToLower() == normalizedName.ToLower() &&
+                EF.Functions.Collate(v.ValueName, "NOCASE") == normalizedName &&
                 v.Id != existing.Id);
 
             if (nameExists)
                 throw new InvalidOperationException($"Value '{normalizedName}' already exists in this group.");
 
+            bool wasDeactivated = existing.IsDeactivated;
+            bool isNowDeactivated = value.IsDeactivated;
+
+            if (wasDeactivated && !isNowDeactivated && existing.AttributeGroup.IsDeactivated)
+            {
+                throw new InvalidOperationException(
+                    "Cannot reactivate this value because its attribute group is deactivated.");
+            }
+
             DateTime now = DateTime.Now;
 
-            // AttributeGroupId is intentionally not updated here.
+            // AttributeGroupId is intentionally not updated.
             existing.ValueName = normalizedName;
-            existing.DisplayOrder = value.DisplayOrder;
-            existing.IsDeactivated = value.IsDeactivated;
+            existing.DisplayOrder = displayOrder;
+            existing.IsDeactivated = isNowDeactivated;
             existing.UpdatedAt = now;
 
-            if (existing.IsDeactivated)
-                existing.DeactivatedAt ??= now;
-            else
+            if (!wasDeactivated && isNowDeactivated)
+            {
+                existing.DeactivatedAt = now;
+            }
+            else if (wasDeactivated && !isNowDeactivated)
+            {
                 existing.DeactivatedAt = null;
+            }
+            else if (isNowDeactivated)
+            {
+                existing.DeactivatedAt ??= now;
+            }
 
             await context.SaveChangesAsync();
         }
 
         public async Task DeactivateValueAsync(int valueId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (valueId <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var value = await context.AttributeValues
                 .FirstOrDefaultAsync(v => v.Id == valueId);
@@ -351,18 +533,56 @@ namespace POS.Core.Repositories
             if (value == null)
                 return;
 
+            if (value.IsDeactivated)
+                return;
+
             DateTime now = DateTime.Now;
 
             value.IsDeactivated = true;
             value.UpdatedAt = now;
-            value.DeactivatedAt ??= now;
+            value.DeactivatedAt = now;
+
+            await context.SaveChangesAsync();
+        }
+
+        public async Task ReactivateValueAsync(int valueId)
+        {
+            if (valueId <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var value = await context.AttributeValues
+                .Include(v => v.AttributeGroup)
+                .FirstOrDefaultAsync(v => v.Id == valueId);
+
+            if (value == null)
+                return;
+
+            if (!value.IsDeactivated)
+                return;
+
+            if (value.AttributeGroup.IsDeactivated)
+            {
+                throw new InvalidOperationException(
+                    "Cannot reactivate this value because its attribute group is deactivated.");
+            }
+
+            DateTime now = DateTime.Now;
+
+            value.IsDeactivated = false;
+            value.UpdatedAt = now;
+            value.DeactivatedAt = null;
 
             await context.SaveChangesAsync();
         }
 
         public async Task DeleteValueAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var value = await context.AttributeValues
                 .FirstOrDefaultAsync(v => v.Id == id);
@@ -370,13 +590,12 @@ namespace POS.Core.Repositories
             if (value == null)
                 return;
 
-            bool hasItemMappings = await context.ItemPropertyMappings
-                .AnyAsync(m => m.AttributeValueId == id);
+            var linkedData = await GetValueLinkedDataSummaryAsync(context, id);
 
-            if (hasItemMappings)
+            if (linkedData.HasLinkedData)
             {
                 throw new InvalidOperationException(
-                    "This value is already used by item variants. Deactivate it instead of deleting it.");
+                    linkedData.ToUserMessage(value.ValueName));
             }
 
             context.AttributeValues.Remove(value);
@@ -387,9 +606,12 @@ namespace POS.Core.Repositories
         // CATEGORY <-> GROUP ASSIGNMENT
         // =========================================================
 
-        public async Task<List<int>> GetAssignedCategoryIdsForGroupAsync(int groupId)
+        public async Task<IReadOnlyList<int>> GetAssignedCategoryIdsForGroupAsync(int groupId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (groupId <= 0)
+                return Array.Empty<int>();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.CategoryAttributeGroups
                 .AsNoTracking()
@@ -398,10 +620,15 @@ namespace POS.Core.Repositories
                 .ToListAsync();
         }
 
-        public async Task SyncGroupToCategoriesAsync(int groupId, List<int> categoryIds)
+        public async Task SyncGroupToCategoriesAsync(int groupId, IReadOnlyCollection<int> categoryIds)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            if (groupId <= 0)
+                throw new InvalidOperationException("Invalid attribute group record.");
+
+            categoryIds ??= Array.Empty<int>();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
@@ -477,9 +704,90 @@ namespace POS.Core.Repositories
             }
         }
 
+        public async Task<IReadOnlyList<AttributeGroup>> GetAttributeGroupsForCategoryAsync(
+            int categoryId,
+            bool activeOnly = true)
+        {
+            if (categoryId <= 0)
+                return Array.Empty<AttributeGroup>();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<CategoryAttributeGroup> query = context.CategoryAttributeGroups
+                .Include(c => c.AttributeGroup)
+                .AsNoTracking()
+                .Where(c => c.CategoryId == categoryId);
+
+            if (activeOnly)
+            {
+                query = query.Where(c => !c.AttributeGroup.IsDeactivated);
+            }
+
+            return await query
+                .Select(c => c.AttributeGroup)
+                .OrderBy(g => g.DisplayOrder)
+                .ThenBy(g => g.GroupName)
+                .ToListAsync();
+        }
+
         // =========================================================
-        // VALIDATION HELPERS
+        // PRIVATE HELPERS
         // =========================================================
+
+        private static async Task<AttributeGroupLinkedDataSummary> GetGroupLinkedDataSummaryAsync(
+            AppDbContext context,
+            int groupId)
+        {
+            if (groupId <= 0)
+                return new AttributeGroupLinkedDataSummary();
+
+            int valueCount = await context.AttributeValues
+                .AsNoTracking()
+                .CountAsync(v => v.AttributeGroupId == groupId);
+
+            int categoryAssignmentCount = await context.CategoryAttributeGroups
+                .AsNoTracking()
+                .CountAsync(c => c.AttributeGroupId == groupId);
+
+            int itemMappingCount = await context.ItemPropertyMappings
+                .AsNoTracking()
+                .CountAsync(m => m.AttributeGroupId == groupId);
+
+            return new AttributeGroupLinkedDataSummary
+            {
+                ValueCount = valueCount,
+                CategoryAssignmentCount = categoryAssignmentCount,
+                ItemMappingCount = itemMappingCount
+            };
+        }
+
+        private static async Task<AttributeValueLinkedDataSummary> GetValueLinkedDataSummaryAsync(
+            AppDbContext context,
+            int valueId)
+        {
+            if (valueId <= 0)
+                return new AttributeValueLinkedDataSummary();
+
+            int itemMappingCount = await context.ItemPropertyMappings
+                .AsNoTracking()
+                .CountAsync(m => m.AttributeValueId == valueId);
+
+            return new AttributeValueLinkedDataSummary
+            {
+                ItemMappingCount = itemMappingCount
+            };
+        }
+
+        private static int NormalizeTakeLimit(int take)
+        {
+            if (take <= 0)
+                return DefaultTakeLimit;
+
+            if (take > MaxTakeLimit)
+                return MaxTakeLimit;
+
+            return take;
+        }
 
         private static string NormalizeName(string value)
         {
@@ -509,34 +817,8 @@ namespace POS.Core.Repositories
             if (displayOrder < 0)
                 throw new InvalidOperationException($"{fieldName} cannot be negative.");
 
-            if (displayOrder > 9999)
-                throw new InvalidOperationException($"{fieldName} is too large.");
-        }
-
-        public async Task<IEnumerable<AttributeGroup>> GetAttributeGroupsForCategoryAsync(
-    int categoryId,
-    bool activeOnly = true)
-        {
-            if (categoryId <= 0)
-                return new List<AttributeGroup>();
-
-            using var context = await _contextFactory.CreateDbContextAsync();
-
-            var query = context.CategoryAttributeGroups
-                .Include(c => c.AttributeGroup)
-                .AsNoTracking()
-                .Where(c => c.CategoryId == categoryId);
-
-            if (activeOnly)
-            {
-                query = query.Where(c => !c.AttributeGroup.IsDeactivated);
-            }
-
-            return await query
-                .Select(c => c.AttributeGroup)
-                .OrderBy(g => g.DisplayOrder)
-                .ThenBy(g => g.GroupName)
-                .ToListAsync();
+            if (displayOrder > MaxDisplayOrder)
+                throw new InvalidOperationException($"{fieldName} cannot be greater than {MaxDisplayOrder}.");
         }
     }
 }

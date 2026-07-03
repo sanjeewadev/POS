@@ -1,12 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.ViewModels;
 using POS.BackOffice.UI.Views;
 using POS.BackOffice.UI.Views.Layout;
-using POS.BackOffice.UI.Views.Pages.Finance;
+using POS.BackOffice.UI.Views.Pages.Admin;
+using POS.BackOffice.UI.Views.Pages.File;
 using POS.Core.Data;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Services.Backup;
+using POS.Core.Services.Licensing;
 using System;
 using System.Windows;
 
@@ -36,10 +40,19 @@ namespace POS.BackOffice.UI
             services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));
 
-            // 2. Register Security Core
+            // ==========================================
+            // UI SERVICES
+            // ==========================================
+            services.AddSingleton<IMessageBoxService, MessageBoxService>();
+
+            // ==========================================
+            // SECURITY / AUTHENTICATION
+            // ==========================================
             services.AddSingleton<AuthService>();
 
-            // 3. Register ALL Repositories
+            // ==========================================
+            // REPOSITORIES
+            // ==========================================
             services.AddTransient<UserRepository>();
             services.AddTransient<CategoryRepository>();
             services.AddTransient<SubCategoryRepository>();
@@ -48,6 +61,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<ItemMasterRepository>();
             services.AddTransient<UnitOfMeasureRepository>();
             services.AddTransient<GrnRepository>();
+            services.AddTransient<GrnHistoryRepository>();
             services.AddTransient<PoRepository>();
             services.AddTransient<StockAdjustmentRepository>();
             services.AddTransient<StockBalanceRepository>();
@@ -62,47 +76,83 @@ namespace POS.BackOffice.UI
             services.AddTransient<SecurityAuditRepository>();
             services.AddTransient<MasterSalesAnalyticsRepository>();
             services.AddTransient<SalesAnalyticsRepository>();
-            services.AddTransient<SystemSettingsRepository>();
-            // Add this right below your other CRM repositories!
-            services.AddTransient<POS.Core.Repositories.GiftVoucherRepository>();
+            services.AddTransient<GiftVoucherRepository>();
             services.AddTransient<PriceManagementRepository>();
             services.AddTransient<BarcodeManagementRepository>();
             services.AddTransient<BarcodePrinterRepository>();
+            services.AddTransient<FreeIssueRuleRepository>();
+            services.AddTransient<StoreSettingsRepository>();
+            services.AddTransient<TerminalSettingsRepository>();
+            services.AddTransient<TerminalManagementRepository>();
+            services.AddTransient<BackupRepository>();
+            services.AddTransient<LicenseRepository>();
 
-            // 4. Register ALL ViewModels
+            // ==========================================
+            // CORE SERVICES
+            // ==========================================
+            services.AddTransient<POS.Core.Services.IBarcodePrintService, WpfBarcodePrintService>();
+            services.AddTransient<BackupService>();
+
+            // ==========================================
+            // LICENSING SERVICES
+            // BackOffice remains accessible even if license expires.
+            // Cashier app should enforce store/terminal license checks.
+            // ==========================================
+            services.AddTransient<MachineFingerprintService>();
+            services.AddTransient<LicenseSignatureService>();
+            services.AddTransient<LicenseFileService>();
+            services.AddTransient<LicenseManagerService>();
+
+            // ==========================================
+            // ROOT / LOGIN VIEWMODELS
+            // ==========================================
             services.AddSingleton<MainViewModel>();
             services.AddTransient<LoginViewModel>();
 
-            // Dashboard
+            // ==========================================
+            // DASHBOARD
+            // ==========================================
             services.AddTransient<DashboardViewModel>();
 
-            // Inventory ViewModels
+            // ==========================================
+            // INVENTORY SETUP VIEWMODELS
+            // ==========================================
             services.AddTransient<CategoryViewModel>();
             services.AddTransient<SubCategoryViewModel>();
             services.AddTransient<ItemPropertyViewModel>();
             services.AddTransient<SupplierViewModel>();
             services.AddTransient<ItemMasterViewModel>();
             services.AddTransient<UnitOfMeasureViewModel>();
+
+            // ==========================================
+            // INVENTORY OPERATION VIEWMODELS
+            // ==========================================
             services.AddTransient<GrnViewModel>();
+            services.AddTransient<GrnDashboardViewModel>();
             services.AddTransient<StockAdjustmentViewModel>();
             services.AddTransient<StockBalanceViewModel>();
             services.AddTransient<SupplierReturnViewModel>();
             services.AddTransient<ExpressItemAdminViewModel>();
             services.AddTransient<BarcodeManagementViewModel>();
             services.AddTransient<BarcodePrinterViewModel>();
-            services.AddTransient<POS.Core.Services.IBarcodePrintService, POS.BackOffice.UI.Services.WpfBarcodePrintService>();
             services.AddTransient<PriceManagementViewModel>();
 
-            // Purchasing
+            // ==========================================
+            // PURCHASING VIEWMODELS
+            // ==========================================
             services.AddTransient<PurchaseOrderViewModel>();
             services.AddTransient<PurchaseOrderDashboardViewModel>();
 
-            // Finance ViewModels
+            // ==========================================
+            // FINANCE VIEWMODELS
+            // ==========================================
             services.AddTransient<SupplierLedgerViewModel>();
             services.AddTransient<SupplierReportViewModel>();
             services.AddTransient<SupplierClaimsViewModel>();
 
-            // Sales & Analytics ViewModels
+            // ==========================================
+            // SALES / REPORTING VIEWMODELS
+            // ==========================================
             services.AddTransient<SalesExplorerViewModel>();
             services.AddTransient<FloatCashLogViewModel>();
             services.AddTransient<FinancialSummaryViewModel>();
@@ -110,36 +160,51 @@ namespace POS.BackOffice.UI
             services.AddTransient<ItemSalesAnalyticsViewModel>();
             services.AddTransient<CashMovementDashboardViewModel>();
             services.AddTransient<CustomerReturnsAuditViewModel>();
+            services.AddTransient<ReceiptLedgerViewModel>();
 
-            // CRM ViewModels
+            // ==========================================
+            // CRM VIEWMODELS
+            // ==========================================
             services.AddTransient<CustomerMasterViewModel>();
             services.AddTransient<CustomerLedgerViewModel>();
             services.AddTransient<GiftVoucherAdminViewModel>();
+            services.AddTransient<FreeIssueRuleSetupViewModel>();
 
-            // Admin ViewModels
+            // ==========================================
+            // ADMIN VIEWMODELS / VIEWS
+            // ==========================================
             services.AddTransient<UserManagementViewModel>();
             services.AddTransient<SuspendedTransactionsMonitorViewModel>();
-            services.AddTransient<StoreConfigurationViewModel>();
 
-            services.AddTransient<ReceiptLedgerViewModel>();
+            services.AddTransient<StoreSettingsViewModel>();
+            services.AddTransient<StoreSettingsView>();
 
-            // =========================================================
-            // GIFT VOUCHER
-            // =========================================================
-            services.AddTransient<GiftVoucherAdminViewModel>();
+            services.AddTransient<TerminalSettingsViewModel>();
+            services.AddTransient<TerminalSettingsView>();
 
-            services.AddTransient<FreeIssueRuleRepository>();
-            services.AddTransient<FreeItemClaimRepository>();
-            services.AddTransient<FreeIssueRuleSetupViewModel>();
+            services.AddTransient<TerminalManagementViewModel>();
+            services.AddTransient<TerminalManagementView>();
+
+            services.AddTransient<BackupRestoreViewModel>();
+            services.AddTransient<BackupRestoreView>();
+
+            services.AddTransient<LicenseManagementViewModel>();
+            services.AddTransient<LicenseManagementView>();
+
+            // New
+            services.AddTransient<PriceChangeHistoryRepository>();
+            services.AddTransient<PriceChangeHistoryViewModel>();
 
             return services.BuildServiceProvider();
         }
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            if (Services == null) return;
+            if (Services == null)
+                return;
 
             var dbFactory = Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
             using (var context = dbFactory.CreateDbContext())
             {
                 context.Database.EnsureCreated();
@@ -156,6 +221,7 @@ namespace POS.BackOffice.UI
                 var mainViewModel = Services.GetRequiredService<MainViewModel>();
 
                 mainWindow.DataContext = mainViewModel;
+
                 Application.Current.ShutdownMode = ShutdownMode.OnLastWindowClose;
                 mainWindow.Show();
             }

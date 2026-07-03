@@ -1,9 +1,11 @@
-﻿using System;
-using System.Windows;
-using Microsoft.Extensions.DependencyInjection;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.Views.Pages.Admin;
+using POS.BackOffice.UI.Views.Pages.File;
 using POS.Core.Enums;
+using System;
+using System.Windows;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -47,11 +49,40 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         // ==========================================
-        // 0. FILE (Active)
+        // 0. Settings
         // ==========================================
 
         [RelayCommand]
-        private void NavigateToStoreConfiguration() => CurrentPage = _serviceProvider.GetRequiredService<StoreConfigurationViewModel>();
+        private void NavigateToStoreSettings()
+        {
+            CurrentPage = App.Services!.GetRequiredService<StoreSettingsView>();
+        }
+
+        [RelayCommand]
+        private void NavigateToTerminalSettings()
+        {
+            CurrentPage = App.Services!.GetRequiredService<TerminalSettingsView>();
+        }
+
+        [RelayCommand]
+        private void NavigateToBackupRestoreCommand()
+        {
+            CurrentPage = App.Services!.GetRequiredService<BackupRestoreView>();
+        }
+
+        // Licence
+
+        [RelayCommand]
+        private void NavigateToLicenseManagement()
+        {
+            CurrentPage = App.Services!.GetRequiredService<LicenseManagementView>();
+        }
+
+        [RelayCommand]
+        private void NavigateToTerminalManagement()
+        {
+            CurrentPage = App.Services!.GetRequiredService<TerminalManagementView>();
+        }
 
         // ==========================================
         // 1. INVENTORY SETUP COMMANDS (Active)
@@ -87,6 +118,9 @@ namespace POS.BackOffice.UI.ViewModels
         private void NavigateToGoodsReceivedNote() => CurrentPage = _serviceProvider.GetRequiredService<GrnViewModel>();
 
         [RelayCommand]
+        private void NavigateToGrnDashboard() => CurrentPage = _serviceProvider.GetRequiredService<GrnDashboardViewModel>();
+
+        [RelayCommand]
         private void NavigateToBarcodeManagement() => CurrentPage = _serviceProvider.GetRequiredService<BarcodeManagementViewModel>();
 
         [RelayCommand]
@@ -100,6 +134,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToPriceManagement() => CurrentPage = _serviceProvider.GetRequiredService<PriceManagementViewModel>();
+
+        [RelayCommand]
+        private void NavigateToPriceChangeHistory() => CurrentPage = _serviceProvider.GetRequiredService<PriceChangeHistoryViewModel>();
 
         // ==========================================
         // 3. PURCHASING COMMANDS (Active)
@@ -182,6 +219,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToCashMovementDashboard() => CurrentPage = _serviceProvider.GetRequiredService<CashMovementDashboardViewModel>();
+
 
 
 

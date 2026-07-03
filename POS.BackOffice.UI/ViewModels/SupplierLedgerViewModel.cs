@@ -15,173 +15,525 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly SupplierLedgerRepository _repository;
 
-        // --- ACCOUNT SELECTION ---
-        [ObservableProperty] private Supplier? _selectedSupplier;
-
-        // --- KPI CARDS ---
-        [ObservableProperty] private decimal _totalBilled;
-        [ObservableProperty] private decimal _totalCredits;
-        [ObservableProperty] private decimal _totalPaid;
-        [ObservableProperty] private decimal _netOutstanding;
-
-        // --- PAYMENT FORM ---
-        [ObservableProperty] private DateTime _paymentDate = DateTime.Now;
-        [ObservableProperty] private decimal _paymentAmount;
-        [ObservableProperty] private string _selectedPaymentMethod = "Cheque";
-        [ObservableProperty] private string _bankName = string.Empty;
-        [ObservableProperty] private string _referenceNumber = string.Empty;
-        [ObservableProperty] private string _paymentRemarks = string.Empty;
-
-        // --- TAB FILTERING ---
-        [ObservableProperty] private int _selectedTabIndex = 0;
-
-        // --- COLLECTIONS ---
-        public ObservableCollection<Supplier> Suppliers { get; set; } = new();
-        public ObservableCollection<string> PaymentMethods { get; set; } = new(new[] { "Cash", "Cheque", "Credit / Debit Card", "Direct Bank Transfer" });
-
         private List<SupplierLedgerEntryDto> _allLedgerEntries = new();
-        public ObservableCollection<SupplierLedgerEntryDto> LedgerEntries { get; set; } = new();
+
+        // =========================================================
+        // SUPPLIER SELECTION
+        // =========================================================
+
+        [ObservableProperty]
+        private SupplierLedgerSupplierLookupDto? _selectedSupplier;
+
+        [ObservableProperty]
+        private SupplierLedgerEntryDto? _selectedLedgerEntry;
+
+        // =========================================================
+        // KPI CARDS
+        // =========================================================
+
+        [ObservableProperty]
+        private decimal _totalBilled = 0m;
+
+        [ObservableProperty]
+        private decimal _totalCredits = 0m;
+
+        [ObservableProperty]
+        private decimal _totalPaid = 0m;
+
+        [ObservableProperty]
+        private decimal _netOutstanding = 0m;
+
+        // =========================================================
+        // PAYMENT FORM
+        // =========================================================
+
+        [ObservableProperty]
+        private DateTime _paymentDate = DateTime.Now;
+
+        [ObservableProperty]
+        private decimal _paymentAmount = 0m;
+
+        [ObservableProperty]
+        private string _selectedPaymentMethod = "Cheque";
+
+        [ObservableProperty]
+        private string _bankName = string.Empty;
+
+        [ObservableProperty]
+        private string _referenceNumber = string.Empty;
+
+        [ObservableProperty]
+        private string _paymentRemarks = string.Empty;
+
+        // =========================================================
+        // TABS / UI STATE
+        // =========================================================
+
+        [ObservableProperty]
+        private int _selectedTabIndex = 0;
+
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _statusMessage = "Ready.";
+
+        // =========================================================
+        // COLLECTIONS
+        // =========================================================
+
+        public ObservableCollection<SupplierLedgerSupplierLookupDto> Suppliers { get; } = new();
+
+        public ObservableCollection<string> PaymentMethods { get; } = new()
+        {
+            "Cash",
+            "Cheque",
+            "Credit / Debit Card",
+            "Direct Bank Transfer"
+        };
+
+        public ObservableCollection<SupplierLedgerEntryDto> LedgerEntries { get; } = new();
 
         public SupplierLedgerViewModel(SupplierLedgerRepository repository)
         {
             _repository = repository;
-            _ = LoadSuppliersAsync();
+            _ = InitializeAsync();
         }
 
-        private async Task LoadSuppliersAsync()
+        private async Task InitializeAsync()
         {
-            var suppliers = await _repository.GetActiveSuppliersAsync();
-            foreach (var sup in suppliers) Suppliers.Add(sup);
+            IsBusy = true;
+
+            try
+            {
+                Suppliers.Clear();
+
+                var suppliers = await _repository.GetActiveSuppliersAsync();
+
+                foreach (var supplier in suppliers)
+                    Suppliers.Add(supplier);
+
+                StatusMessage = $"Loaded {Suppliers.Count} active supplier(s).";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load suppliers.";
+
+                MessageBox.Show(
+                    $"Failed to load suppliers:\n\n{ex.Message}",
+                    "Supplier Ledger",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
-        // --- CORE FETCHING & MATH ENGINE ---
-        [RelayCommand]
-        private async Task LoadLedgerAsync()
+        // =========================================================
+        // AUTO EVENTS
+        // =========================================================
+
+        partial void OnSelectedSupplierChanged(SupplierLedgerSupplierLookupDto? value)
         {
-            if (SelectedSupplier == null) return;
+            ClearLedgerOnly();
 
-            // Fetch the perfectly chronological statement from our new Repository
-            _allLedgerEntries = await _repository.GetLedgerEntriesAsync(SelectedSupplier.Id);
+            if (value == null)
+            {
+                StatusMessage = "Select a supplier account.";
+                return;
+            }
 
-            CalculateKPIs();
+            StatusMessage = "Supplier selected. Click LOAD LEDGER.";
+        }
+
+        partial void OnSelectedTabIndexChanged(int value)
+        {
             ApplyTabFilter();
         }
 
-        private void CalculateKPIs()
+        partial void OnPaymentAmountChanged(decimal value)
         {
-            TotalBilled = _allLedgerEntries.Where(e => e.EntryType == "GRN").Sum(e => e.ChargeAmount);
+            if (value < 0)
+                PaymentAmount = 0m;
+        }
 
-            // Assuming Returns/Debit Notes are saved as "DEBIT_NOTE" in the future
-            TotalCredits = _allLedgerEntries.Where(e => e.EntryType == "DEBIT_NOTE").Sum(e => e.PaidAmount);
-
-            TotalPaid = _allLedgerEntries.Where(e => e.EntryType == "PAYMENT").Sum(e => e.PaidAmount);
-
-            if (_allLedgerEntries.Any())
+        partial void OnSelectedPaymentMethodChanged(string value)
+        {
+            if (string.Equals(value, "Cash", StringComparison.OrdinalIgnoreCase))
             {
-                // Because the repository reverses the list, the very first item is the most recent balance!
-                NetOutstanding = _allLedgerEntries.First().RunningBalance;
-            }
-            else
-            {
-                NetOutstanding = 0;
+                BankName = string.Empty;
+                ReferenceNumber = string.Empty;
             }
         }
 
-        // --- TAB FILTERING (The "Smart" Tabs) ---
-        partial void OnSelectedTabIndexChanged(int value) => ApplyTabFilter();
+        // =========================================================
+        // LOAD LEDGER
+        // =========================================================
+
+        [RelayCommand]
+        private async Task LoadLedgerAsync()
+        {
+            if (SelectedSupplier == null)
+            {
+                MessageBox.Show(
+                    "Please select a supplier account first.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            IsBusy = true;
+
+            try
+            {
+                _allLedgerEntries = await _repository.GetLedgerEntriesAsync(SelectedSupplier.Id);
+
+                CalculateKpis();
+                ApplyTabFilter();
+
+                StatusMessage = _allLedgerEntries.Count == 0
+                    ? "No ledger transactions found for selected supplier."
+                    : $"Loaded {_allLedgerEntries.Count} ledger transaction(s).";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load supplier ledger.";
+
+                MessageBox.Show(
+                    $"Failed to load supplier ledger:\n\n{ex.Message}",
+                    "Supplier Ledger",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task RefreshAsync()
+        {
+            await LoadLedgerAsync();
+        }
+
+        private void CalculateKpis()
+        {
+            TotalBilled = Math.Round(
+                _allLedgerEntries
+                    .Where(e => e.EntryType == "GRN")
+                    .Sum(e => e.ChargeAmount),
+                2);
+
+            TotalCredits = Math.Round(
+                _allLedgerEntries
+                    .Where(e => IsCreditType(e.EntryType))
+                    .Sum(e => e.PaidAmount),
+                2);
+
+            TotalPaid = Math.Round(
+                _allLedgerEntries
+                    .Where(e => e.EntryType == "PAYMENT")
+                    .Sum(e => e.PaidAmount),
+                2);
+
+            NetOutstanding = _allLedgerEntries.Any()
+                ? Math.Round(_allLedgerEntries.First().RunningBalance, 2)
+                : 0m;
+
+            if (NetOutstanding < 0)
+                NetOutstanding = 0m;
+        }
 
         private void ApplyTabFilter()
         {
             LedgerEntries.Clear();
+
             IEnumerable<SupplierLedgerEntryDto> filtered = _allLedgerEntries;
 
             switch (SelectedTabIndex)
             {
-                case 1: // GRN History
-                    filtered = _allLedgerEntries.Where(e => e.EntryType == "GRN");
+                case 1:
+                    filtered = _allLedgerEntries
+                        .Where(e => e.EntryType == "GRN");
                     break;
-                case 2: // Return History
-                    filtered = _allLedgerEntries.Where(e => e.EntryType == "DEBIT_NOTE");
+
+                case 2:
+                    filtered = _allLedgerEntries
+                        .Where(e => IsCreditType(e.EntryType));
                     break;
-                case 3: // Payment History
-                    filtered = _allLedgerEntries.Where(e => e.EntryType == "PAYMENT");
+
+                case 3:
+                    filtered = _allLedgerEntries
+                        .Where(e => e.EntryType == "PAYMENT");
                     break;
             }
 
-            foreach (var entry in filtered) LedgerEntries.Add(entry);
+            foreach (var entry in filtered)
+                LedgerEntries.Add(entry);
         }
 
-        // --- QUICK FILL BUTTONS ---
-        [RelayCommand]
-        private void AutoFillHalf() => PaymentAmount = Math.Round(NetOutstanding / 2, 2);
+        // =========================================================
+        // QUICK FILL
+        // =========================================================
 
         [RelayCommand]
-        private void AutoFillFull() => PaymentAmount = NetOutstanding;
+        private void AutoFillHalf()
+        {
+            if (NetOutstanding <= 0)
+            {
+                PaymentAmount = 0m;
+                return;
+            }
+
+            PaymentAmount = Math.Round(NetOutstanding / 2m, 2);
+        }
+
+        [RelayCommand]
+        private void AutoFillFull()
+        {
+            PaymentAmount = NetOutstanding > 0
+                ? Math.Round(NetOutstanding, 2)
+                : 0m;
+        }
 
         [RelayCommand]
         private void ClearPayment()
         {
-            PaymentAmount = 0;
+            PaymentDate = DateTime.Now;
+            PaymentAmount = 0m;
             SelectedPaymentMethod = "Cheque";
             BankName = string.Empty;
             ReferenceNumber = string.Empty;
             PaymentRemarks = string.Empty;
-            PaymentDate = DateTime.Now;
+
+            StatusMessage = "Payment form cleared.";
         }
 
-        // --- SECURE PAYMENT PROCESSING ---
+        // =========================================================
+        // POST PAYMENT
+        // =========================================================
+
         [RelayCommand]
         private async Task PostPaymentAsync()
         {
             if (SelectedSupplier == null)
             {
-                MessageBox.Show("Please load a Supplier account first.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Please select and load a supplier account first.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
+            }
+
+            if (!_allLedgerEntries.Any())
+            {
+                MessageBox.Show(
+                    "Please load the supplier ledger before posting a payment.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!ValidatePaymentForm())
+                return;
+
+            var result = MessageBox.Show(
+                $"Post supplier payment?\n\nSupplier: {SelectedSupplier.DisplayText}\nAmount: Rs. {PaymentAmount:N2}\nMethod: {SelectedPaymentMethod}",
+                "Post Supplier Payment",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            IsBusy = true;
+
+            try
+            {
+                var payment = new SupplierLedger
+                {
+                    SupplierId = SelectedSupplier.Id,
+                    TransactionDate = PaymentDate.Date,
+                    TransactionType = "PAYMENT",
+                    ReferenceDocument = string.Empty,
+
+                    ChargeAmount = 0m,
+                    PaymentAmount = Math.Round(PaymentAmount, 2),
+
+                    PaymentMethod = SelectedPaymentMethod.Trim(),
+                    BankName = BankName.Trim(),
+                    ReferenceNumber = ReferenceNumber.Trim(),
+
+                    DueDate = PaymentDate.Date,
+                    IsPaid = true,
+
+                    CreatedBy = "Admin",
+                    CreatedAt = DateTime.Now,
+
+                    Remarks = string.IsNullOrWhiteSpace(PaymentRemarks)
+                        ? "Supplier payment"
+                        : PaymentRemarks.Trim()
+                };
+
+                await _repository.PostPaymentAsync(payment);
+
+                MessageBox.Show(
+                    "Supplier payment posted successfully.",
+                    "Supplier Ledger",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                ClearPayment();
+
+                await LoadLedgerAsync();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Payment posting failed.";
+
+                MessageBox.Show(
+                    $"Payment posting failed:\n\n{ex.Message}",
+                    "Supplier Ledger",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private bool ValidatePaymentForm()
+        {
+            if (NetOutstanding <= 0)
+            {
+                MessageBox.Show(
+                    "This supplier has no outstanding balance to pay.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return false;
             }
 
             if (PaymentAmount <= 0)
             {
-                MessageBox.Show("Payment Amount must be greater than zero.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                MessageBox.Show(
+                    "Payment amount must be greater than zero.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
             }
 
-            if (SelectedPaymentMethod != "Cash" && string.IsNullOrWhiteSpace(ReferenceNumber))
+            if (PaymentAmount > NetOutstanding)
             {
-                MessageBox.Show("A Reference Number or Cheque Number is strictly required for this payment method.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                MessageBox.Show(
+                    $"Payment amount cannot exceed outstanding balance.\n\nOutstanding balance: Rs. {NetOutstanding:N2}",
+                    "Overpayment Blocked",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
             }
 
-            var result = MessageBox.Show($"Post secure payment of Rs. {PaymentAmount:N2} to {SelectedSupplier.CompanyName}?", "Confirm Payment", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result == MessageBoxResult.Yes)
+            if (PaymentDate.Date > DateTime.Now.Date.AddDays(1))
             {
-                try
-                {
-                    var payment = new SupplierLedger
-                    {
-                        SupplierId = SelectedSupplier.Id,
-                        TransactionDate = this.PaymentDate,
-                        TransactionType = "PAYMENT",
-                        ChargeAmount = 0m,
-                        PaymentAmount = this.PaymentAmount,
-                        PaymentMethod = this.SelectedPaymentMethod,
-                        BankName = this.BankName.Trim(),
-                        ReferenceNumber = this.ReferenceNumber.Trim(),
-                        Remarks = this.PaymentRemarks.Trim()
-                    };
-
-                    await _repository.PostPaymentAsync(payment);
-                    MessageBox.Show("Payment successfully processed and applied to the ledger!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    ClearPayment();
-
-                    // Reload everything to instantly update the UI grid and KPI cards
-                    await LoadLedgerAsync();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Database Error: {ex.Message}", "System Protection", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                MessageBox.Show(
+                    "Payment date cannot be in the far future.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
             }
+
+            if (string.IsNullOrWhiteSpace(SelectedPaymentMethod))
+            {
+                MessageBox.Show(
+                    "Payment method is required.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            string method = SelectedPaymentMethod.Trim();
+
+            bool isCash = method.Equals("Cash", StringComparison.OrdinalIgnoreCase);
+            bool isCheque = method.Contains("Cheque", StringComparison.OrdinalIgnoreCase);
+            bool isBankTransfer = method.Contains("Bank", StringComparison.OrdinalIgnoreCase) ||
+                                  method.Contains("Transfer", StringComparison.OrdinalIgnoreCase);
+            bool isCard = method.Contains("Card", StringComparison.OrdinalIgnoreCase);
+
+            if (!isCash && string.IsNullOrWhiteSpace(ReferenceNumber))
+            {
+                MessageBox.Show(
+                    "Reference number / cheque number is required for this payment method.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if ((isCheque || isBankTransfer) && string.IsNullOrWhiteSpace(BankName))
+            {
+                MessageBox.Show(
+                    "Bank name is required for cheque and bank transfer payments.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (PaymentRemarks.Length > 250)
+            {
+                MessageBox.Show(
+                    "Payment remarks cannot be longer than 250 characters.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
+        }
+
+        // =========================================================
+        // CLEAR
+        // =========================================================
+
+        [RelayCommand]
+        private void ClearAll()
+        {
+            SelectedSupplier = null;
+            ClearLedgerOnly();
+            ClearPayment();
+
+            StatusMessage = "Ready.";
+        }
+
+        private void ClearLedgerOnly()
+        {
+            _allLedgerEntries.Clear();
+            LedgerEntries.Clear();
+
+            SelectedLedgerEntry = null;
+
+            TotalBilled = 0m;
+            TotalCredits = 0m;
+            TotalPaid = 0m;
+            NetOutstanding = 0m;
+        }
+
+        private static bool IsCreditType(string entryType)
+        {
+            return entryType == "DEBIT_NOTE" ||
+                   entryType == "CREDIT_NOTE" ||
+                   entryType == "SUPPLIER_RETURN";
         }
     }
 }

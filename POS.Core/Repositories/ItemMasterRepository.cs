@@ -23,6 +23,8 @@ namespace POS.Core.Repositories
 
         public decimal TotalStockOnHand { get; set; }
 
+        public bool IsDeactivated { get; set; }
+
         public string StatusText { get; set; } = string.Empty;
 
         public bool HasBatchTracking { get; set; }
@@ -107,24 +109,36 @@ namespace POS.Core.Repositories
 
     public class ItemMasterRepository
     {
+        private const int DefaultTakeLimit = 500;
+        private const int MaxTakeLimit = 2000;
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         public ItemMasterRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
         // =========================================================
         // ADMIN GRID DATA
         // =========================================================
 
-        public async Task<IEnumerable<ItemMasterSummaryDto>> GetSummariesAsync(string searchTerm = "")
+        public async Task<IReadOnlyList<ItemMasterSummaryDto>> GetSummariesAsync(
+            string searchTerm = "",
+            bool includeDeactivated = false,
+            int take = DefaultTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            take = NormalizeTakeLimit(take);
 
-            var query = context.ItemParents
-                .AsNoTracking()
-                .Where(p => !p.IsDeactivated);
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<ItemParent> query = context.ItemParents
+                .AsNoTracking();
+
+            if (!includeDeactivated)
+            {
+                query = query.Where(p => !p.IsDeactivated);
+            }
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -133,11 +147,16 @@ namespace POS.Core.Repositories
                 query = query.Where(p =>
                     EF.Functions.Like(p.ItemCode, $"%{term}%") ||
                     EF.Functions.Like(p.ItemName, $"%{term}%") ||
-                    EF.Functions.Like(p.Category.CategoryName, $"%{term}%"));
+                    EF.Functions.Like(p.Category.CategoryName, $"%{term}%") ||
+                    p.Variants.Any(v =>
+                        EF.Functions.Like(v.SkuCode, $"%{term}%") ||
+                        EF.Functions.Like(v.Barcode, $"%{term}%") ||
+                        EF.Functions.Like(v.VariantDescription, $"%{term}%")));
             }
 
             var itemsList = await query
-                .OrderBy(p => p.ItemName)
+                .OrderBy(p => p.IsDeactivated)
+                .ThenBy(p => p.ItemName)
                 .ThenBy(p => p.ItemCode)
                 .Select(p => new ItemMasterSummaryDto
                 {
@@ -145,13 +164,16 @@ namespace POS.Core.Repositories
                     ItemCode = p.ItemCode,
                     ItemName = p.ItemName,
                     CategoryName = p.Category.CategoryName,
-                    VariantCount = p.Variants.Count(v => !v.IsDeactivated),
+                    VariantCount = includeDeactivated
+                        ? p.Variants.Count()
+                        : p.Variants.Count(v => !v.IsDeactivated),
                     TotalStockOnHand = 0m,
+                    IsDeactivated = p.IsDeactivated,
                     StatusText = p.IsDeactivated ? "Deactivated" : "Active",
                     HasBatchTracking = p.HasBatchTracking,
                     HasExpiryTracking = p.HasExpiryTracking || p.HasBatchExpiry
                 })
-                .Take(500)
+                .Take(take)
                 .ToListAsync();
 
             if (!itemsList.Any())
@@ -189,7 +211,10 @@ namespace POS.Core.Repositories
 
         public async Task<ItemParent?> GetFullMatrixByIdAsync(int parentId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (parentId <= 0)
+                return null;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.ItemParents
                 .Include(p => p.Category)
@@ -212,10 +237,13 @@ namespace POS.Core.Repositories
         {
             string normalizedCode = NormalizeCode(itemCode);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.ItemParents.AnyAsync(p =>
-                p.ItemCode.ToUpper() == normalizedCode &&
+                EF.Functions.Collate(p.ItemCode, "NOCASE") == normalizedCode &&
                 p.Id != currentParentId);
         }
 
@@ -223,10 +251,13 @@ namespace POS.Core.Repositories
         {
             string normalizedSku = NormalizeCode(skuCode);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(normalizedSku))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.ItemVariants.AnyAsync(v =>
-                v.SkuCode.ToUpper() == normalizedSku &&
+                EF.Functions.Collate(v.SkuCode, "NOCASE") == normalizedSku &&
                 v.Id != currentVariantId);
         }
 
@@ -237,12 +268,10 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(normalizedBarcode))
                 return true;
 
-            string upperBarcode = normalizedBarcode.ToUpperInvariant();
-
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.ItemVariants.AnyAsync(v =>
-                ((v.Barcode ?? string.Empty).ToUpper()) == upperBarcode &&
+                EF.Functions.Collate(v.Barcode ?? string.Empty, "NOCASE") == normalizedBarcode &&
                 v.Id != currentVariantId);
         }
 
@@ -272,8 +301,8 @@ namespace POS.Core.Repositories
 
             ValidateSubmittedVariantDuplicates(variants);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
@@ -498,10 +527,19 @@ namespace POS.Core.Repositories
                 {
                     ItemVariantId = variant.Id,
                     SupplierId = supplier.SupplierId,
-                    SupplierItemCode = NormalizeText(supplier.SupplierItemCode),
+
+                    // UI does not use vendor item code for now.
+                    SupplierItemCode = string.Empty,
+
                     LastCostPrice = supplier.LastCostPrice,
-                    IsPrimary = supplier.IsPrimary,
-                    MinimumOrderQuantity = supplier.MinimumOrderQuantity <= 0 ? 1 : supplier.MinimumOrderQuantity,
+
+                    // User does not want primary supplier behavior.
+                    IsPrimary = false,
+
+                    MinimumOrderQuantity = supplier.MinimumOrderQuantity <= 0
+                        ? 1
+                        : supplier.MinimumOrderQuantity,
+
                     CreatedAt = now,
                     UpdatedAt = now
                 });
@@ -586,10 +624,19 @@ namespace POS.Core.Repositories
                 {
                     ItemVariantId = variantId,
                     SupplierId = supplier.SupplierId,
-                    SupplierItemCode = NormalizeText(supplier.SupplierItemCode),
+
+                    // UI does not use vendor item code for now.
+                    SupplierItemCode = string.Empty,
+
                     LastCostPrice = supplier.LastCostPrice,
-                    IsPrimary = supplier.IsPrimary,
-                    MinimumOrderQuantity = supplier.MinimumOrderQuantity <= 0 ? 1 : supplier.MinimumOrderQuantity,
+
+                    // User does not want primary supplier behavior.
+                    IsPrimary = false,
+
+                    MinimumOrderQuantity = supplier.MinimumOrderQuantity <= 0
+                        ? 1
+                        : supplier.MinimumOrderQuantity,
+
                     CreatedAt = now,
                     UpdatedAt = now
                 });
@@ -648,23 +695,18 @@ namespace POS.Core.Repositories
                     "The same supplier cannot be assigned twice to one variant.");
             }
 
-            if (supplierList.Count(s => s.IsPrimary) > 1)
-            {
-                throw new InvalidOperationException(
-                    "Only one primary supplier is allowed per variant.");
-            }
-
             foreach (var supplier in supplierList)
             {
                 if (supplier.SupplierId <= 0)
                     throw new InvalidOperationException("Invalid supplier assignment.");
 
+                // Existing old links are allowed even if the supplier is later deactivated.
+                // New dropdowns only show active suppliers.
                 bool supplierExists = await context.Suppliers.AnyAsync(s =>
-                    s.Id == supplier.SupplierId &&
-                    !s.IsDeactivated);
+                    s.Id == supplier.SupplierId);
 
                 if (!supplierExists)
-                    throw new InvalidOperationException("One or more selected suppliers are inactive or missing.");
+                    throw new InvalidOperationException("One or more selected suppliers are missing.");
 
                 if (supplier.LastCostPrice < 0)
                     throw new InvalidOperationException("Supplier cost cannot be negative.");
@@ -682,7 +724,7 @@ namespace POS.Core.Repositories
             string sku = NormalizeCode(variant.SkuCode);
 
             bool skuExists = await context.ItemVariants.AnyAsync(v =>
-                v.SkuCode.ToUpper() == sku &&
+                EF.Functions.Collate(v.SkuCode, "NOCASE") == sku &&
                 v.Id != currentVariantId);
 
             if (skuExists)
@@ -695,10 +737,8 @@ namespace POS.Core.Repositories
 
             if (!string.IsNullOrWhiteSpace(barcode))
             {
-                string upperBarcode = barcode.ToUpperInvariant();
-
                 bool barcodeExists = await context.ItemVariants.AnyAsync(v =>
-                    ((v.Barcode ?? string.Empty).ToUpper()) == upperBarcode &&
+                    EF.Functions.Collate(v.Barcode ?? string.Empty, "NOCASE") == barcode &&
                     v.Id != currentVariantId);
 
                 if (barcodeExists)
@@ -715,7 +755,10 @@ namespace POS.Core.Repositories
 
         public async Task DeleteMatrixAsync(int parentId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (parentId <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var parent = await context.ItemParents
                 .Include(p => p.Variants)
@@ -742,7 +785,10 @@ namespace POS.Core.Repositories
 
         public async Task<bool> ParentHasHistoryAsync(int parentId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (parentId <= 0)
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var variantIds = await context.ItemVariants
                 .Where(v => v.ItemParentId == parentId)
@@ -816,11 +862,9 @@ namespace POS.Core.Repositories
 
             string upperTerm = term.ToUpperInvariant();
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
-            // This method is used by BackOffice PO/GRN item entry.
-            // It should not block sale-locked items. Sale locking is handled
-            // by cashier-specific methods below.
+            // Supplier-specific filtering for GRN/PO will be added later inside GRN/PO modules.
             return await context.ItemVariants
                 .Include(v => v.ItemParent)
                 .Include(v => v.ItemSuppliers)
@@ -838,7 +882,10 @@ namespace POS.Core.Repositories
 
         public async Task<List<ItemVariant>> GetVariantsByParentIdAsync(int parentId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (parentId <= 0)
+                return new List<ItemVariant>();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.ItemVariants
                 .Include(v => v.ItemParent)
@@ -862,7 +909,7 @@ namespace POS.Core.Repositories
             string searchTerm,
             string categoryFilter = "ALL CATEGORIES")
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var query = context.ItemParents
                 .AsNoTracking()
@@ -913,7 +960,7 @@ namespace POS.Core.Repositories
             if (itemVariantId <= 0)
                 return new List<CashierBatchDto>();
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             DateTime today = DateTime.Today;
 
@@ -956,7 +1003,7 @@ namespace POS.Core.Repositories
             if (itemBatchId <= 0)
                 return null;
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             DateTime today = DateTime.Today;
 
@@ -989,7 +1036,10 @@ namespace POS.Core.Repositories
 
         public async Task<List<VariantSeekDto>> GetSeekVariantsAsync(int parentId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (parentId <= 0)
+                return new List<VariantSeekDto>();
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var variants = await context.ItemVariants
                 .Where(v =>
@@ -1065,7 +1115,7 @@ namespace POS.Core.Repositories
             if (variantId <= 0)
                 return null;
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var variant = await context.ItemVariants
                 .Include(v => v.ItemParent)
@@ -1093,7 +1143,7 @@ namespace POS.Core.Repositories
 
             string upperTerm = term.ToUpperInvariant();
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var variant = await context.ItemVariants
                 .Include(v => v.ItemParent)
@@ -1155,6 +1205,17 @@ namespace POS.Core.Repositories
         // =========================================================
         // VALIDATION HELPERS
         // =========================================================
+
+        private static int NormalizeTakeLimit(int take)
+        {
+            if (take <= 0)
+                return DefaultTakeLimit;
+
+            if (take > MaxTakeLimit)
+                return MaxTakeLimit;
+
+            return take;
+        }
 
         private static void NormalizeParent(ItemParent parent)
         {
@@ -1288,7 +1349,7 @@ namespace POS.Core.Repositories
                     .OrderBy(x => x));
         }
 
-        private static string NormalizeCode(string value)
+        private static string NormalizeCode(string? value)
         {
             return (value ?? string.Empty).Trim().ToUpperInvariant();
         }

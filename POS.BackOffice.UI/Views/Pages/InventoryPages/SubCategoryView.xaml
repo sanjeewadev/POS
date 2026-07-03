@@ -6,6 +6,7 @@
              mc:Ignorable="d"
              d:DesignHeight="700"
              d:DesignWidth="1200"
+             Loaded="UserControl_Loaded"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
@@ -89,7 +90,7 @@
 
     <Grid Margin="5">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="380"/>
+            <ColumnDefinition Width="390"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -97,6 +98,7 @@
         <!-- LEFT SIDE: ENTRY FORM -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
@@ -108,10 +110,9 @@
                                Style="{StaticResource HeaderLabel}"
                                Margin="0,0,0,5"/>
 
-                    <!-- Parent category search by code -->
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="120"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -128,13 +129,12 @@
                                   IsEditable="False"
                                   IsEnabled="{Binding IsParentSelectionEnabled}"
                                   Style="{StaticResource ClassicCombo}"
-                                  ToolTip="Select parent category by code. Type while the dropdown is focused to search by code."/>
+                                  ToolTip="Select parent category by code."/>
                     </Grid>
 
-                    <!-- Parent category search by name -->
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="120"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -151,17 +151,16 @@
                                   IsEditable="False"
                                   IsEnabled="{Binding IsParentSelectionEnabled}"
                                   Style="{StaticResource ClassicCombo}"
-                                  ToolTip="Select parent category by name. Type while the dropdown is focused to search by name."/>
+                                  ToolTip="Select parent category by name."/>
                     </Grid>
 
                     <Rectangle Height="1"
                                Fill="{DynamicResource LightBorderBrush}"
                                Margin="0,0,0,8"/>
 
-                    <!-- Sub-category code -->
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="120"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -213,16 +212,15 @@
                                          Padding="4,0"
                                          FontWeight="Bold"
                                          CharacterCasing="Upper"
-                                         MaxLength="20"
-                                         ToolTip="Enter suffix only. Example: SOFT. Final code becomes CAT-SOFT."/>
+                                         MaxLength="40"
+                                         ToolTip="Enter suffix only. Example: 01. Final code becomes parent code + suffix."/>
                             </Grid>
                         </Border>
                     </Grid>
 
-                    <!-- Sub-category name -->
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="120"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -237,18 +235,43 @@
                                  MaxLength="100"/>
                     </Grid>
 
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Display Order"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding DisplayOrderText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 MaxLength="6"
+                                 HorizontalContentAlignment="Right"/>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="0 = default"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"
+                                   FontStyle="Italic"/>
+                    </Grid>
+
                     <TextBlock Text="Code supports A-Z, 0-9, dash, and underscore only. Parent and code lock after saving."
                                FontSize="10"
                                Foreground="{DynamicResource SecondaryTextBrush}"
-                               Margin="115,3,0,0"
+                               Margin="120,3,0,0"
                                FontStyle="Italic"
                                TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
 
             <Border Grid.Row="1"
-                    Style="{StaticResource ClassicGroupBox}"
-                    VerticalAlignment="Top">
+                    Style="{StaticResource ClassicGroupBox}">
                 <StackPanel>
                     <TextBlock Text="2. SETTINGS"
                                Style="{StaticResource HeaderLabel}"
@@ -261,7 +284,7 @@
                               Foreground="{DynamicResource WarningTextBrush}"
                               Margin="0,5,0,0"/>
 
-                    <TextBlock Text="Deactivated sub-categories will not appear during new item creation."
+                    <TextBlock Text="Deactivated sub-categories should be hidden from new item creation and cashier selection lists."
                                FontSize="10"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                Margin="20,2,0,0"
@@ -278,6 +301,35 @@
             </Border>
 
             <Border Grid.Row="2"
+                    Style="{StaticResource ClassicGroupBox}"
+                    VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="3. COMMERCIAL SAFETY"
+                               Style="{StaticResource HeaderLabel}"
+                               Margin="0,0,0,5"/>
+
+                    <TextBlock Text="Safe delete checks linked records before removing a sub-category:"
+                               FontSize="11"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
+                               Margin="0,3,0,3"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="Item Master, Discount Rules, Free Issue Rules, and future item variant references."
+                               FontSize="10"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="If linked records exist, deletion is blocked and deactivation must be used."
+                               FontSize="10"
+                               Foreground="{DynamicResource WarningTextBrush}"
+                               Margin="0,8,0,0"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="3"
                     Background="{DynamicResource PanelBackgroundBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
@@ -313,7 +365,7 @@
                                 BorderBrush="{DynamicResource WarningTextBrush}"
                                 Padding="15,0"
                                 Height="30"
-                                ToolTip="Deletes only if the sub-category has no linked item records."/>
+                                ToolTip="Deletes only if the sub-category has no linked records."/>
 
                         <Button Grid.Column="2"
                                 Content="CLEAR"
@@ -344,73 +396,95 @@
 
             <Border Grid.Row="0"
                     Background="{DynamicResource HeaderTextBrush}"
-                    Padding="10"
+                    Padding="8"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1">
 
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="170"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="6"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Column="0"
-                               Text="SUB-CATEGORY DATABASE"
-                               Foreground="{DynamicResource WhiteBackgroundBrush}"
-                               FontSize="14"
-                               FontWeight="Bold"
-                               Margin="0,0,15,0"
-                               VerticalAlignment="Center"/>
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBox Grid.Column="1"
-                             Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"
-                             Height="28"
-                             Padding="5,0"
-                             Margin="0,0,10,0"
-                             ToolTip="Search by parent code, parent name, sub-category code, or sub-category name. Press Enter or click Search.">
+                        <TextBlock Grid.Column="0"
+                                   Text="SUB-CATEGORY DATABASE"
+                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                   FontSize="14"
+                                   FontWeight="Bold"
+                                   Margin="0,0,15,0"
+                                   VerticalAlignment="Center"/>
 
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Enter"
-                                        Command="{Binding SearchCommand}"/>
-                        </TextBox.InputBindings>
-                    </TextBox>
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 Height="28"
+                                 Padding="5,0"
+                                 Margin="0,0,10,0"
+                                 ToolTip="Search by parent code, parent name, sub-category code, or sub-category name. Press Enter or click Search.">
 
-                    <TextBlock Grid.Column="2"
-                               Text="Filter:"
-                               Foreground="{DynamicResource WhiteBackgroundBrush}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Margin="0,0,8,0"/>
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter"
+                                            Command="{Binding SearchCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
 
-                    <ComboBox Grid.Column="3"
-                              ItemsSource="{Binding FilterCategories}"
-                              SelectedItem="{Binding SelectedFilterCategory, Mode=TwoWay}"
-                              DisplayMemberPath="CategoryName"
-                              TextSearch.TextPath="CategoryName"
-                              IsEditable="False"
-                              Style="{StaticResource ClassicCombo}"
-                              Height="28"
-                              Margin="0,0,10,0"/>
+                        <Button Grid.Column="2"
+                                Content="SEARCH"
+                                Command="{Binding SearchCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Height="28"
+                                Padding="15,0"
+                                Margin="0,0,8,0"/>
 
-                    <Button Grid.Column="4"
-                            Content="SEARCH"
-                            Command="{Binding SearchCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="28"
-                            Padding="15,0"
-                            Margin="0,0,8,0"/>
+                        <Button Grid.Column="3"
+                                Content="REFRESH"
+                                Command="{Binding LoadSubCategoriesCommand}"
+                                Style="{StaticResource ClassicBtn}"
+                                Height="28"
+                                Padding="15,0"/>
+                    </Grid>
 
-                    <Button Grid.Column="5"
-                            Content="REFRESH"
-                            Command="{Binding LoadSubCategoriesCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="28"
-                            Padding="15,0"/>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Filter Category:"
+                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding FilterCategories}"
+                                  SelectedItem="{Binding SelectedFilterCategory, Mode=TwoWay}"
+                                  DisplayMemberPath="CategoryName"
+                                  TextSearch.TextPath="CategoryName"
+                                  IsEditable="False"
+                                  Style="{StaticResource ClassicCombo}"
+                                  Height="28"
+                                  Margin="0,0,14,0"/>
+
+                        <CheckBox Grid.Column="2"
+                                  Content="Include Deactivated"
+                                  IsChecked="{Binding IncludeDeactivated, Mode=TwoWay}"
+                                  Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,0"/>
+                    </Grid>
                 </Grid>
             </Border>
 
@@ -431,7 +505,9 @@
                       BorderBrush="{DynamicResource BorderBrush}"
                       BorderThickness="1,0,1,1"
                       SelectionMode="Single"
-                      AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                      AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
@@ -460,18 +536,17 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Parent Code"
                                         Binding="{Binding Category.CategoryCode}"
-                                        Width="110"
+                                        Width="90"
                                         IsReadOnly="True"
                                         FontWeight="Bold"/>
 
                     <DataGridTextColumn Header="Parent Category"
                                         Binding="{Binding Category.CategoryName}"
-                                        Width="160"
+                                        Width="145"
                                         IsReadOnly="True"
-                                        FontWeight="SemiBold"
-                                        Foreground="{DynamicResource HeaderTextBrush}"/>
+                                        FontWeight="SemiBold"/>
 
-                    <DataGridTextColumn Header="Sub-Cat Code"
+                    <DataGridTextColumn Header="Sub Code"
                                         Binding="{Binding SubCategoryCode}"
                                         Width="120"
                                         IsReadOnly="True"
@@ -480,11 +555,17 @@
                     <DataGridTextColumn Header="Sub-Category Name"
                                         Binding="{Binding SubCategoryName}"
                                         Width="*"
+                                        MinWidth="160"
                                         IsReadOnly="True"/>
 
-                    <DataGridCheckBoxColumn Header="Deactivated"
+                    <DataGridTextColumn Header="Order"
+                                        Binding="{Binding DisplayOrder}"
+                                        Width="55"
+                                        IsReadOnly="True"/>
+
+                    <DataGridCheckBoxColumn Header="Inactive"
                                             Binding="{Binding IsDeactivated}"
-                                            Width="105">
+                                            Width="75">
                         <DataGridCheckBoxColumn.ElementStyle>
                             <Style TargetType="CheckBox">
                                 <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -494,14 +575,14 @@
                         </DataGridCheckBoxColumn.ElementStyle>
                     </DataGridCheckBoxColumn>
 
-                    <DataGridTextColumn Header="Created"
-                                        Binding="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
-                                        Width="135"
-                                        IsReadOnly="True"/>
-
                     <DataGridTextColumn Header="Updated"
                                         Binding="{Binding UpdatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
-                                        Width="135"
+                                        Width="125"
+                                        IsReadOnly="True"/>
+
+                    <DataGridTextColumn Header="Updated By"
+                                        Binding="{Binding UpdatedBy}"
+                                        Width="95"
                                         IsReadOnly="True"/>
                 </DataGrid.Columns>
             </DataGrid>

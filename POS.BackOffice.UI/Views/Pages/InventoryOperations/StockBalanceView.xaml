@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:POS.BackOffice.UI.Converters"
              mc:Ignorable="d"
              d:DesignHeight="850"
              d:DesignWidth="1400"
@@ -12,14 +13,21 @@
 
     <UserControl.Resources>
 
-        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+        <conv:SmartQuantityConverter x:Key="SmartQuantityConverter"/>
+
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CFE8FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E5F3FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
+
+        <Style TargetType="{x:Type TextBlock}" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="#003366"/>
             <Setter Property="Margin" Value="0,5,0,8"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="InlineLabel">
+        <Style TargetType="{x:Type TextBlock}" x:Key="InlineLabel">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="Black"/>
@@ -27,23 +35,25 @@
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
 
-        <Style TargetType="TextBox" x:Key="ClassicInput">
+        <Style TargetType="{x:Type TextBox}" x:Key="ClassicInput">
             <Setter Property="Height" Value="24"/>
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
 
-        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+        <Style TargetType="{x:Type ComboBox}" x:Key="ClassicCombo">
             <Setter Property="Height" Value="24"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
 
-        <Style TargetType="Button" x:Key="ClassicBtn">
+        <Style TargetType="{x:Type Button}" x:Key="ClassicBtn">
             <Setter Property="Height" Value="26"/>
             <Setter Property="Background" Value="#E0E0E0"/>
             <Setter Property="Foreground" Value="Black"/>
@@ -62,7 +72,7 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="ExcelBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style TargetType="{x:Type Button}" x:Key="ExcelBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#28A745"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#1E7E34"/>
@@ -73,14 +83,14 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Border" x:Key="ClassicGroupBox">
+        <Style TargetType="{x:Type Border}" x:Key="ClassicGroupBox">
             <Setter Property="BorderBrush" Value="#A0A0A0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="#F0F0F0"/>
             <Setter Property="Padding" Value="10"/>
         </Style>
 
-        <Style TargetType="DataGridColumnHeader">
+        <Style TargetType="{x:Type DataGridColumnHeader}">
             <Setter Property="Background" Value="#E0E0E0"/>
             <Setter Property="Foreground" Value="Black"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -89,7 +99,7 @@
             <Setter Property="BorderBrush" Value="#A0A0A0"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="BaseCell">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="BaseCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="4,0"/>
@@ -97,50 +107,67 @@
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#005555"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#CFE8FF"/>
+                    <Setter Property="Foreground" Value="Black"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#F5F5F5"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="FinancialCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="FinancialCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#F8F8F8"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="WarningCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="WarningCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#FFF7ED"/>
             <Setter Property="Foreground" Value="#B45309"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="DangerCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="DangerCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#FEF2F2"/>
             <Setter Property="Foreground" Value="#991B1B"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="RightText">
+        <Style TargetType="{x:Type TextBlock}" x:Key="RightText">
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0,0,5,0"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="CenterText">
+        <Style TargetType="{x:Type TextBlock}" x:Key="CenterText">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="CenterBoldGreenText" BasedOn="{StaticResource CenterText}">
+        <Style TargetType="{x:Type TextBlock}" x:Key="CenterBoldGreenText" BasedOn="{StaticResource CenterText}">
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="#005500"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="RightBoldText" BasedOn="{StaticResource RightText}">
+        <Style TargetType="{x:Type TextBlock}" x:Key="RightBoldText" BasedOn="{StaticResource RightText}">
             <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style TargetType="{x:Type TextBox}" x:Key="CopyableGridTextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="IBeam"/>
+            <Setter Property="Focusable" Value="True"/>
+        </Style>
+
+        <Style TargetType="{x:Type TextBox}" x:Key="CopyableCenterGridTextBox" BasedOn="{StaticResource CopyableGridTextBox}">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
     </UserControl.Resources>
@@ -254,17 +281,15 @@
                               IsChecked="{Binding HideZeroStock, Mode=TwoWay}"
                               Foreground="#333"
                               FontWeight="SemiBold"
-                              Margin="0,0,25,0"
-                              ToolTip="Removes out-of-stock items from the view."/>
+                              Margin="0,0,25,0"/>
 
                     <CheckBox Content="Show Negative Stock Only"
                               IsChecked="{Binding ShowNegativeOnly, Mode=TwoWay}"
                               Foreground="DarkRed"
                               FontWeight="Bold"
-                              Margin="0,0,25,0"
-                              ToolTip="Audit tool to find stock below zero."/>
+                              Margin="0,0,25,0"/>
 
-                    <TextBlock Text="Tip: Select a row to view batch-level details."
+                    <TextBlock Text="Tip: Select a row to view batch-level details. Item Code, SKU, Barcode, and Batch No can be selected and copied."
                                Foreground="#666"
                                VerticalAlignment="Center"
                                FontStyle="Italic"/>
@@ -300,7 +325,7 @@
                       ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                 <DataGrid.Resources>
-                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                    <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource BaseCell}"/>
                 </DataGrid.Resources>
 
                 <DataGrid.Columns>
@@ -318,21 +343,39 @@
                                         FontWeight="Bold"
                                         CellStyle="{StaticResource WarningCell}"/>
 
-                    <DataGridTextColumn Header="Item Code"
-                                        Binding="{Binding ItemCode}"
-                                        Width="90"
-                                        Foreground="#666"
-                                        CellStyle="{StaticResource FrozenCell}"/>
+                    <DataGridTemplateColumn Header="Item Code"
+                                            Width="90"
+                                            CellStyle="{StaticResource FrozenCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ItemCode}"
+                                         Style="{StaticResource CopyableGridTextBox}"
+                                         Foreground="#666"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="SKU"
-                                        Binding="{Binding SkuCode}"
-                                        Width="120"
-                                        Foreground="#444"/>
+                    <DataGridTemplateColumn Header="SKU"
+                                            Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding SkuCode}"
+                                         Style="{StaticResource CopyableGridTextBox}"
+                                         Foreground="#444"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Barcode"
-                                        Binding="{Binding Barcode}"
-                                        Width="120"
-                                        Foreground="#444"/>
+                    <DataGridTemplateColumn Header="Barcode"
+                                            Width="130">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding Barcode}"
+                                         Style="{StaticResource CopyableGridTextBox}"
+                                         Foreground="#444"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                     <DataGridTextColumn Header="Description"
                                         Binding="{Binding Description}"
@@ -359,7 +402,7 @@
                                         Width="150"/>
 
                     <DataGridTextColumn Header="Qty On Hand"
-                                        Binding="{Binding TotalQtyOnHand, StringFormat=N3}"
+                                        Binding="{Binding TotalQtyOnHand, Converter={StaticResource SmartQuantityConverter}}"
                                         Width="105"
                                         ElementStyle="{StaticResource CenterBoldGreenText}"/>
 
@@ -471,25 +514,31 @@
                                           RowHeight="24">
 
                                     <DataGrid.Resources>
-                                        <Style TargetType="DataGridColumnHeader">
+                                        <Style TargetType="{x:Type DataGridColumnHeader}">
                                             <Setter Property="Background" Value="#334155"/>
                                             <Setter Property="Foreground" Value="White"/>
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                             <Setter Property="Padding" Value="4"/>
                                         </Style>
 
-                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                                        <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource BaseCell}"/>
                                     </DataGrid.Resources>
 
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Batch No"
-                                                            Binding="{Binding BatchNo}"
-                                                            Width="130"
-                                                            FontWeight="Bold"
-                                                            Foreground="#003366"/>
+                                        <DataGridTemplateColumn Header="Batch No"
+                                                                Width="130">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding BatchNo}"
+                                                             Style="{StaticResource CopyableGridTextBox}"
+                                                             Foreground="#003366"
+                                                             FontWeight="Bold"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
 
                                         <DataGridTextColumn Header="Stock"
-                                                            Binding="{Binding CurrentStock, StringFormat=N3}"
+                                                            Binding="{Binding CurrentStock, Converter={StaticResource SmartQuantityConverter}}"
                                                             Width="75"
                                                             Foreground="#005500"
                                                             FontWeight="Bold"
@@ -604,7 +653,7 @@
                                    FontSize="12"
                                    FontWeight="SemiBold"/>
 
-                        <TextBlock Text="{Binding TotalPhysicalQty, StringFormat=N3}"
+                        <TextBlock Text="{Binding TotalPhysicalQty, Converter={StaticResource SmartQuantityConverter}}"
                                    FontWeight="Bold"
                                    Foreground="#005500"
                                    FontSize="13"/>

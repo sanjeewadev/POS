@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:conv="clr-namespace:POS.BackOffice.UI.Converters"
              mc:Ignorable="d"
              d:DesignHeight="850"
              d:DesignWidth="1400"
@@ -11,14 +12,22 @@
              FontSize="12">
 
     <UserControl.Resources>
-        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+
+        <conv:SmartQuantityConverter x:Key="SmartQuantityConverter"/>
+
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CFE8FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E5F3FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
+
+        <Style TargetType="{x:Type TextBlock}" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="#003366"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="InlineLabel">
+        <Style TargetType="{x:Type TextBlock}" x:Key="InlineLabel">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="#333333"/>
@@ -26,23 +35,25 @@
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
 
-        <Style TargetType="TextBox" x:Key="ClassicInput">
+        <Style TargetType="{x:Type TextBox}" x:Key="ClassicInput">
             <Setter Property="Height" Value="27"/>
             <Setter Property="Padding" Value="5,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
 
-        <Style TargetType="ComboBox" x:Key="ClassicCombo">
+        <Style TargetType="{x:Type ComboBox}" x:Key="ClassicCombo">
             <Setter Property="Height" Value="27"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
 
-        <Style TargetType="Button" x:Key="ClassicBtn">
+        <Style TargetType="{x:Type Button}" x:Key="ClassicBtn">
             <Setter Property="Height" Value="30"/>
             <Setter Property="Background" Value="#E0E0E0"/>
             <Setter Property="Foreground" Value="Black"/>
@@ -51,34 +62,57 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#CCCCCC"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.55"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style TargetType="{x:Type Button}" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#005555"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#003333"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#007777"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="SaveBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style TargetType="{x:Type Button}" x:Key="SaveBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#005500"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#003300"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#007700"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="WarningBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style TargetType="{x:Type Button}" x:Key="WarningBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#F59E0B"/>
             <Setter Property="Foreground" Value="Black"/>
             <Setter Property="BorderBrush" Value="#B45309"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FBBF24"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <Style TargetType="Border" x:Key="ClassicGroupBox">
+        <Style TargetType="{x:Type Border}" x:Key="ClassicGroupBox">
             <Setter Property="BorderBrush" Value="#A0A0A0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="#F0F0F0"/>
             <Setter Property="Padding" Value="10"/>
         </Style>
 
-        <Style TargetType="DataGridColumnHeader">
+        <Style TargetType="{x:Type DataGridColumnHeader}">
             <Setter Property="Background" Value="#003366"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -87,7 +121,7 @@
             <Setter Property="BorderBrush" Value="#A0A0A0"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="BaseCell">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="BaseCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="5,0"/>
@@ -95,47 +129,61 @@
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#005555"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#CFE8FF"/>
+                    <Setter Property="Foreground" Value="Black"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#F5F5F5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="EditableCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="EditableCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#FFFFE0"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="WarningCell" BasedOn="{StaticResource BaseCell}">
+        <Style TargetType="{x:Type DataGridCell}" x:Key="WarningCell" BasedOn="{StaticResource BaseCell}">
             <Setter Property="Background" Value="#FEF2F2"/>
             <Setter Property="Foreground" Value="#991B1B"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="RightText">
+        <Style TargetType="{x:Type TextBlock}" x:Key="RightText">
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0,0,5,0"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="CenterText">
+        <Style TargetType="{x:Type TextBlock}" x:Key="CenterText">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <Style TargetType="TextBox" x:Key="GridEditBox">
+        <Style TargetType="{x:Type TextBox}" x:Key="GridEditBox">
             <Setter Property="Padding" Value="4,0"/>
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="#FFFFE0"/>
+            <Setter Property="Foreground" Value="Black"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
+
+        <Style TargetType="{x:Type TextBox}" x:Key="CopyableGridTextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="IBeam"/>
+            <Setter Property="Focusable" Value="True"/>
+        </Style>
+
     </UserControl.Resources>
 
     <Grid Margin="8">
@@ -148,7 +196,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="8"/>
-            <ColumnDefinition Width="460"/>
+            <ColumnDefinition Width="470"/>
         </Grid.ColumnDefinitions>
 
         <!-- COMMAND CENTER -->
@@ -158,6 +206,7 @@
 
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -173,18 +222,22 @@
                         <ColumnDefinition Width="170"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                        <TextBlock Text="Search Item / SKU / Barcode:" Style="{StaticResource InlineLabel}"/>
+                        <TextBlock Text="Search Item / SKU / Barcode:"
+                                   Style="{StaticResource InlineLabel}"/>
+
                         <TextBox Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClassicInput}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                        <TextBlock Text="Margin Health:" Style="{StaticResource InlineLabel}" Foreground="#991B1B"/>
+                        <TextBlock Text="Margin Health:"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="#991B1B"/>
+
                         <ComboBox ItemsSource="{Binding MarginFilters}"
                                   SelectedItem="{Binding SelectedMarginFilter, Mode=TwoWay}"
                                   Style="{StaticResource ClassicCombo}"
@@ -192,13 +245,19 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Margin="0,0,15,0">
-                        <TextBlock Text="Expiry Filter:" Style="{StaticResource InlineLabel}"/>
+                        <TextBlock Text="Expiry Filter:"
+                                   Style="{StaticResource InlineLabel}"/>
+
                         <ComboBox ItemsSource="{Binding ExpiryFilters}"
                                   SelectedItem="{Binding SelectedExpiryFilter, Mode=TwoWay}"
                                   Style="{StaticResource ClassicCombo}"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,8,0">
+                    <StackPanel Grid.Column="3"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,8,0">
+
                         <Button Content="Refresh"
                                 Command="{Binding LoadDataCommand}"
                                 Style="{StaticResource ActionBtn}"
@@ -219,34 +278,7 @@
                             VerticalAlignment="Bottom"
                             Margin="0,0,8,0"/>
 
-                    <StackPanel Grid.Column="5"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Bottom"
-                                Margin="0,0,12,0">
-
-                        <Border Background="White" BorderBrush="#A0A0A0" BorderThickness="1" Padding="8,4" Margin="0,0,5,0">
-                            <TextBlock>
-                                <Run Text="Items: "/>
-                                <Run Text="{Binding TotalItems}" FontWeight="Bold"/>
-                            </TextBlock>
-                        </Border>
-
-                        <Border Background="#FFFFE0" BorderBrush="#A0A0A0" BorderThickness="1" Padding="8,4" Margin="0,0,5,0">
-                            <TextBlock>
-                                <Run Text="Changed Items: "/>
-                                <Run Text="{Binding DirtyItemCount}" FontWeight="Bold"/>
-                            </TextBlock>
-                        </Border>
-
-                        <Border Background="#FEF2F2" BorderBrush="#A0A0A0" BorderThickness="1" Padding="8,4">
-                            <TextBlock>
-                                <Run Text="Changed Batches: "/>
-                                <Run Text="{Binding DirtyBatchCount}" FontWeight="Bold"/>
-                            </TextBlock>
-                        </Border>
-                    </StackPanel>
-
-                    <Border Grid.Column="6"
+                    <Border Grid.Column="5"
                             Background="#E0FFFF"
                             BorderBrush="#005555"
                             BorderThickness="1"
@@ -258,6 +290,65 @@
                                    FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis"/>
                     </Border>
+                </Grid>
+
+                <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="15"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Price Change Reason *"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="#003366"/>
+
+                        <TextBox Text="{Binding ChangeReason, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 Height="32"
+                                 ToolTip="Required before saving. Example: Supplier cost increase, expiry markdown, market price change, manager approved correction."/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Bottom">
+
+                        <Border Background="White"
+                                BorderBrush="#A0A0A0"
+                                BorderThickness="1"
+                                Padding="8,4"
+                                Margin="0,0,5,0">
+
+                            <TextBlock>
+                                <Run Text="Items: "/>
+                                <Run Text="{Binding TotalItems, Mode=OneWay}" FontWeight="Bold"/>
+                            </TextBlock>
+                        </Border>
+
+                        <Border Background="#FFFFE0"
+                                BorderBrush="#A0A0A0"
+                                BorderThickness="1"
+                                Padding="8,4"
+                                Margin="0,0,5,0">
+
+                            <TextBlock>
+                                <Run Text="Changed Items: "/>
+                                <Run Text="{Binding DirtyItemCount, Mode=OneWay}" FontWeight="Bold"/>
+                            </TextBlock>
+                        </Border>
+
+                        <Border Background="#FEF2F2"
+                                BorderBrush="#A0A0A0"
+                                BorderThickness="1"
+                                Padding="8,4">
+
+                            <TextBlock>
+                                <Run Text="Changed Batches: "/>
+                                <Run Text="{Binding DirtyBatchCount, Mode=OneWay}" FontWeight="Bold"/>
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Border>
@@ -287,7 +378,7 @@
                                    VerticalAlignment="Center"
                                    Margin="0"/>
 
-                        <TextBlock Text="Edit yellow cells only. Select a row to inspect active batch markdown prices."
+                        <TextBlock Text="Edit yellow cells only. Cost is read-only. Every saved change is written to price history."
                                    FontStyle="Italic"
                                    Foreground="#666666"
                                    Margin="15,0,0,0"
@@ -317,100 +408,126 @@
                           ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                     <DataGrid.Resources>
-                        <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                        <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource BaseCell}"/>
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Item Code"
-                                            Binding="{Binding ItemCode}"
-                                            Width="90"
-                                            IsReadOnly="True"
-                                            CellStyle="{StaticResource FrozenCell}"/>
+                        <DataGridTemplateColumn Header="Item Code"
+                                                Width="90"
+                                                IsReadOnly="True"
+                                                CellStyle="{StaticResource FrozenCell}">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding ItemCode, Mode=OneWay}"
+                                             Style="{StaticResource CopyableGridTextBox}"
+                                             Foreground="#666666"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="SKU"
-                                            Binding="{Binding SkuCode}"
-                                            Width="115"
-                                            IsReadOnly="True"
-                                            CellStyle="{StaticResource FrozenCell}"/>
+                        <DataGridTemplateColumn Header="SKU"
+                                                Width="115"
+                                                IsReadOnly="True"
+                                                CellStyle="{StaticResource FrozenCell}">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding SkuCode, Mode=OneWay}"
+                                             Style="{StaticResource CopyableGridTextBox}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <DataGridTextColumn Header="Description"
-                                            Binding="{Binding DisplayDescription}"
+                                            Binding="{Binding DisplayDescription, Mode=OneWay}"
                                             Width="260"
                                             IsReadOnly="True"
                                             CellStyle="{StaticResource FrozenCell}"/>
 
-                        <DataGridTextColumn Header="Barcode"
-                                            Binding="{Binding Barcode}"
-                                            Width="130"
-                                            IsReadOnly="True"/>
+                        <DataGridTemplateColumn Header="Barcode"
+                                                Width="130"
+                                                IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding Barcode, Mode=OneWay}"
+                                             Style="{StaticResource CopyableGridTextBox}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <DataGridTextColumn Header="SOH"
-                                            Binding="{Binding TotalSoh, StringFormat={}{0:N3}}"
+                                            Binding="{Binding TotalSoh, Mode=OneWay, Converter={StaticResource SmartQuantityConverter}}"
                                             Width="80"
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource CenterText}"/>
 
+                        <DataGridTextColumn Header="Effective Cost"
+                                            Binding="{Binding EffectiveCost, Mode=OneWay, StringFormat=N2}"
+                                            Width="105"
+                                            IsReadOnly="True"
+                                            ElementStyle="{StaticResource RightText}"/>
+
                         <DataGridTextColumn Header="MAC"
-                                            Binding="{Binding MovingAverageCost, StringFormat={}{0:N2}}"
+                                            Binding="{Binding MovingAverageCost, Mode=OneWay, StringFormat=N2}"
                                             Width="85"
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource RightText}"/>
 
                         <DataGridTextColumn Header="Last Cost"
-                                            Binding="{Binding LastLandedCost, StringFormat={}{0:N2}}"
+                                            Binding="{Binding LastLandedCost, Mode=OneWay, StringFormat=N2}"
                                             Width="85"
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource RightText}"/>
 
                         <DataGridTextColumn Header="Minimum"
-                                            Binding="{Binding MinimumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                            Binding="{Binding MinimumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
                                             Width="90"
                                             CellStyle="{StaticResource EditableCell}"
                                             ElementStyle="{StaticResource RightText}"
                                             EditingElementStyle="{StaticResource GridEditBox}"/>
 
                         <DataGridTextColumn Header="Retail"
-                                            Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                            Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
                                             Width="90"
                                             CellStyle="{StaticResource EditableCell}"
                                             ElementStyle="{StaticResource RightText}"
                                             EditingElementStyle="{StaticResource GridEditBox}"/>
 
                         <DataGridTextColumn Header="Wholesale"
-                                            Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                            Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
                                             Width="95"
                                             CellStyle="{StaticResource EditableCell}"
                                             ElementStyle="{StaticResource RightText}"
                                             EditingElementStyle="{StaticResource GridEditBox}"/>
 
                         <DataGridTextColumn Header="Maximum"
-                                            Binding="{Binding MaximumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                            Binding="{Binding MaximumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
                                             Width="90"
                                             CellStyle="{StaticResource EditableCell}"
                                             ElementStyle="{StaticResource RightText}"
                                             EditingElementStyle="{StaticResource GridEditBox}"/>
 
                         <DataGridTextColumn Header="Retail Margin"
-                                            Binding="{Binding GrossMarginPercentage, StringFormat={}{0:N2}%}"
+                                            Binding="{Binding GrossMarginPercentage, Mode=OneWay, StringFormat={}{0:N2}%}"
                                             Width="100"
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource CenterText}"/>
 
                         <DataGridTextColumn Header="W/S Margin"
-                                            Binding="{Binding WholesaleMarginPercentage, StringFormat={}{0:N2}%}"
+                                            Binding="{Binding WholesaleMarginPercentage, Mode=OneWay, StringFormat={}{0:N2}%}"
                                             Width="100"
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource CenterText}"/>
 
                         <DataGridTextColumn Header="Health"
-                                            Binding="{Binding MarginHealth}"
-                                            Width="130"
-                                            IsReadOnly="True"/>
+                                            Binding="{Binding MarginHealth, Mode=OneWay}"
+                                            Width="135"
+                                            IsReadOnly="True"
+                                            CellStyle="{StaticResource WarningCell}"/>
 
                         <DataGridCheckBoxColumn Header="Changed"
-                        Binding="{Binding IsDirty, Mode=OneWay}"
-                        Width="75"
-                        IsReadOnly="True"/>
+                                                Binding="{Binding IsDirty, Mode=OneWay}"
+                                                Width="75"
+                                                IsReadOnly="True"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
@@ -421,7 +538,7 @@
               Grid.Column="2">
 
             <Grid.Style>
-                <Style TargetType="Grid">
+                <Style TargetType="{x:Type Grid}">
                     <Setter Property="Visibility" Value="Collapsed"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsBatchPanelVisible}" Value="True">
@@ -474,12 +591,12 @@
                             Margin="0,0,0,8">
 
                         <StackPanel>
-                            <TextBlock Text="{Binding SelectedItem.ItemCode}"
+                            <TextBlock Text="{Binding SelectedItem.ItemCode, Mode=OneWay}"
                                        Foreground="#666666"
                                        FontWeight="Bold"
                                        FontSize="11"/>
 
-                            <TextBlock Text="{Binding SelectedItem.DisplayDescription}"
+                            <TextBlock Text="{Binding SelectedItem.DisplayDescription, Mode=OneWay}"
                                        Foreground="#003366"
                                        FontWeight="Bold"
                                        FontSize="15"
@@ -494,12 +611,12 @@
 
                                 <TextBlock Grid.Column="0">
                                     <Run Text="Retail Margin: "/>
-                                    <Run Text="{Binding SelectedItem.GrossMarginPercentage, StringFormat={}{0:N2}%}" FontWeight="Bold"/>
+                                    <Run Text="{Binding SelectedItem.GrossMarginPercentage, Mode=OneWay, StringFormat={}{0:N2}%}" FontWeight="Bold"/>
                                 </TextBlock>
 
                                 <TextBlock Grid.Column="1" HorizontalAlignment="Right">
                                     <Run Text="Health: "/>
-                                    <Run Text="{Binding SelectedItem.MarginHealth}" FontWeight="Bold"/>
+                                    <Run Text="{Binding SelectedItem.MarginHealth, Mode=OneWay}" FontWeight="Bold"/>
                                 </TextBlock>
                             </Grid>
                         </StackPanel>
@@ -525,7 +642,7 @@
                               ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                         <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="{x:Type DataGridColumnHeader}">
                                 <Setter Property="Background" Value="#E0E0E0"/>
                                 <Setter Property="Foreground" Value="Black"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
@@ -534,63 +651,77 @@
                                 <Setter Property="BorderBrush" Value="#A0A0A0"/>
                             </Style>
 
-                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                            <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource BaseCell}"/>
                         </DataGrid.Resources>
 
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Batch"
-                                                Binding="{Binding BatchNo}"
-                                                Width="105"
-                                                IsReadOnly="True"
-                                                CellStyle="{StaticResource FrozenCell}"/>
+                            <DataGridTemplateColumn Header="Batch"
+                                                    Width="115"
+                                                    IsReadOnly="True"
+                                                    CellStyle="{StaticResource FrozenCell}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding BatchNo, Mode=OneWay}"
+                                                 Style="{StaticResource CopyableGridTextBox}"
+                                                 Foreground="#003366"
+                                                 FontWeight="Bold"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
 
                             <DataGridTextColumn Header="Stock"
-                                                Binding="{Binding CurrentStock, StringFormat={}{0:N3}}"
+                                                Binding="{Binding CurrentStock, Mode=OneWay, Converter={StaticResource SmartQuantityConverter}}"
                                                 Width="70"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
 
                             <DataGridTextColumn Header="Cost"
-                                                Binding="{Binding CostPrice, StringFormat={}{0:N2}}"
+                                                Binding="{Binding CostPrice, Mode=OneWay, StringFormat=N2}"
                                                 Width="75"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource RightText}"/>
 
                             <DataGridTextColumn Header="Retail"
-                                                Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                                Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
                                                 Width="85"
                                                 CellStyle="{StaticResource EditableCell}"
                                                 ElementStyle="{StaticResource RightText}"
                                                 EditingElementStyle="{StaticResource GridEditBox}"/>
 
                             <DataGridTextColumn Header="Wholesale"
-                                                Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                                Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
                                                 Width="90"
                                                 CellStyle="{StaticResource EditableCell}"
                                                 ElementStyle="{StaticResource RightText}"
                                                 EditingElementStyle="{StaticResource GridEditBox}"/>
 
-                            <DataGridTextColumn Header="Margin"
-                                                Binding="{Binding RetailMarginPercentage, StringFormat={}{0:N2}%}"
-                                                Width="75"
+                            <DataGridTextColumn Header="Retail Margin"
+                                                Binding="{Binding RetailMarginPercentage, Mode=OneWay, StringFormat={}{0:N2}%}"
+                                                Width="95"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
 
+                            <DataGridTextColumn Header="Health"
+                                                Binding="{Binding MarginHealth, Mode=OneWay}"
+                                                Width="105"
+                                                IsReadOnly="True"
+                                                CellStyle="{StaticResource WarningCell}"/>
+
                             <DataGridTextColumn Header="Expiry"
-                                                Binding="{Binding ExpiryDate, StringFormat=d}"
+                                                Binding="{Binding ExpiryDate, Mode=OneWay, StringFormat=d}"
                                                 Width="85"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
 
                             <DataGridTextColumn Header="Status"
-                                                Binding="{Binding ExpiryStatus}"
+                                                Binding="{Binding ExpiryStatus, Mode=OneWay}"
                                                 Width="105"
                                                 IsReadOnly="True"/>
 
                             <DataGridCheckBoxColumn Header="Changed"
-                        Binding="{Binding IsDirty, Mode=OneWay}"
-                        Width="70"
-                        IsReadOnly="True"/>
+                                                    Binding="{Binding IsDirty, Mode=OneWay}"
+                                                    Width="70"
+                                                    IsReadOnly="True"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -601,7 +732,7 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0"
-                                   Text="Batch price changes affect only active batch markdown pricing. Master item price is saved together with selected batch prices."
+                                   Text="Batch price changes affect only active batch markdown pricing. Master item price and selected batch prices are saved with price history."
                                    Foreground="#555555"
                                    FontStyle="Italic"
                                    TextWrapping="Wrap"
@@ -628,7 +759,7 @@
                 BorderThickness="1">
 
             <Border.Style>
-                <Style TargetType="Border">
+                <Style TargetType="{x:Type Border}">
                     <Setter Property="Visibility" Value="Visible"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsBatchPanelVisible}" Value="True">
@@ -638,7 +769,10 @@
                 </Style>
             </Border.Style>
 
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Margin="20">
+
                 <TextBlock Text="Select an item from the pricing grid."
                            Foreground="#555555"
                            FontWeight="Bold"
@@ -649,6 +783,12 @@
                            Foreground="#777777"
                            FontStyle="Italic"
                            Margin="0,8,0,0"
+                           TextAlignment="Center"/>
+
+                <TextBlock Text="Price history will be saved when changes are committed."
+                           Foreground="#003366"
+                           FontWeight="SemiBold"
+                           Margin="0,15,0,0"
                            TextAlignment="Center"/>
             </StackPanel>
         </Border>

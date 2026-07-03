@@ -84,6 +84,8 @@ namespace POS.Cashier.UI
             services.AddTransient<DiscountRuleRepository>();
 
             return services.BuildServiceProvider();
+
+
         }
 
         protected override void OnStartup(StartupEventArgs e)

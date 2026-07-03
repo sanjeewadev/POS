@@ -6,6 +6,7 @@
              mc:Ignorable="d"
              d:DesignHeight="900"
              d:DesignWidth="1400"
+             Loaded="UserControl_Loaded"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
@@ -136,26 +137,15 @@
             <Setter Property="Background" Value="{DynamicResource HighlightBackgroundBrush}"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="RightText">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="CenterText">
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
     </UserControl.Resources>
 
     <Grid Margin="5">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="390"/>
+            <ColumnDefinition Width="410"/>
             <ColumnDefinition Width="5"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT: ITEM DATABASE -->
         <Border Grid.Column="0"
                 Background="{DynamicResource HeaderTextBrush}"
                 Padding="8"
@@ -175,7 +165,7 @@
                                FontWeight="Bold"
                                Margin="0,0,0,8"/>
 
-                    <Grid>
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -186,7 +176,7 @@
                                  Text="{Binding MasterSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClassicInput}"
                                  Margin="0,0,5,0"
-                                 ToolTip="Search item code, name, or category. Press Enter or click Search.">
+                                 ToolTip="Search item code, name, category, SKU, barcode, or variant. Press Enter or click Search.">
                             <TextBox.InputBindings>
                                 <KeyBinding Key="Enter" Command="{Binding SearchItemsCommand}"/>
                             </TextBox.InputBindings>
@@ -205,6 +195,12 @@
                                 Style="{StaticResource ClassicBtn}"
                                 Padding="10,0"/>
                     </Grid>
+
+                    <CheckBox Content="Include Deactivated Items"
+                              IsChecked="{Binding IncludeDeactivatedItems, Mode=TwoWay}"
+                              Foreground="{DynamicResource WhiteBackgroundBrush}"
+                              FontWeight="SemiBold"
+                              Margin="2,0,0,0"/>
                 </StackPanel>
 
                 <DataGrid Grid.Row="1"
@@ -222,7 +218,9 @@
                           Background="{DynamicResource WhiteBackgroundBrush}"
                           BorderThickness="0"
                           SelectionMode="Single"
-                          AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                          AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
@@ -237,24 +235,27 @@
                         <DataGridTextColumn Header="Name"
                                             Binding="{Binding ItemName, Mode=OneWay}"
                                             Width="*"
+                                            MinWidth="140"
                                             FontWeight="SemiBold"/>
 
                         <DataGridTextColumn Header="Vars"
                                             Binding="{Binding VariantCount, Mode=OneWay}"
-                                            Width="45"
-                                            Foreground="{DynamicResource SuccessBorderBrush}">
+                                            Width="45">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="HorizontalAlignment" Value="Center"/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Status"
+                                            Binding="{Binding StatusText, Mode=OneWay}"
+                                            Width="90"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
         </Border>
 
-        <!-- RIGHT: ITEM EDITOR -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -262,7 +263,6 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- ACTION BAR -->
             <Border Grid.Row="0"
                     Background="{DynamicResource PanelBackgroundBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
@@ -283,8 +283,7 @@
                             Command="{Binding DeleteCommand}"
                             Style="{StaticResource ClassicBtn}"
                             Foreground="{DynamicResource WarningTextBrush}"
-                            BorderBrush="{DynamicResource WarningTextBrush}"
-                            ToolTip="Safe delete: deactivates item and variants."/>
+                            BorderBrush="{DynamicResource WarningTextBrush}"/>
 
                     <TextBlock Grid.Column="1"
                                Text="{Binding StatusMessage}"
@@ -309,7 +308,6 @@
                 </Grid>
             </Border>
 
-            <!-- IDENTITY -->
             <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}">
                 <StackPanel>
                     <TextBlock Text="1. CLASSIFICATION &amp; IDENTITY"
@@ -408,8 +406,7 @@
                                          VerticalContentAlignment="Center"
                                          Padding="4,0"
                                          CharacterCasing="Upper"
-                                         FontWeight="Bold"
-                                         ToolTip="Enter item code suffix after category/sub-category prefix."/>
+                                         FontWeight="Bold"/>
                             </Grid>
                         </Border>
 
@@ -444,8 +441,7 @@
                         <TextBox Grid.Column="1"
                                  Text="{Binding CurrentItem.PrintName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClassicInput}"
-                                 MaxLength="50"
-                                 ToolTip="Short name for receipts."/>
+                                 MaxLength="50"/>
 
                         <TextBlock Grid.Column="3"
                                    Text="Base UOM *"
@@ -481,7 +477,6 @@
                                   Style="{StaticResource ClassicCombo}"/>
                     </Grid>
 
-                    <!-- NEW SEPARATED TRACKING / POS FLAGS -->
                     <Border Background="{DynamicResource WhiteBackgroundBrush}"
                             BorderBrush="{DynamicResource LightBorderBrush}"
                             BorderThickness="1"
@@ -497,14 +492,13 @@
                             <CheckBox Content="Batch Tracking"
                                       IsChecked="{Binding BulkHasBatchTracking, Mode=TwoWay}"
                                       Margin="0,0,15,0"
-                                      FontWeight="Bold"
-                                      ToolTip="Default ON. Stock will be stored and sold by batch."/>
+                                      FontWeight="Bold"/>
 
                             <CheckBox Content="Expiry Tracking"
                                       IsChecked="{Binding BulkHasExpiryTracking, Mode=TwoWay}"
+                                      IsEnabled="{Binding BulkHasBatchTracking}"
                                       Margin="0,0,15,0"
-                                      FontWeight="SemiBold"
-                                      ToolTip="GRN requires expiry date when this is enabled."/>
+                                      FontWeight="SemiBold"/>
 
                             <CheckBox Content="Scale Item"
                                       IsChecked="{Binding BulkIsScaleItem, Mode=TwoWay}"
@@ -537,12 +531,10 @@
                 </StackPanel>
             </Border>
 
-            <!-- TABS -->
             <TabControl Grid.Row="2"
                         Background="{DynamicResource WhiteBackgroundBrush}"
                         BorderBrush="{DynamicResource BorderBrush}">
 
-                <!-- MATRIX BUILDER -->
                 <TabItem Header="Matrix Builder &amp; Defaults" Style="{StaticResource ClassicTab}">
                     <Grid Margin="10">
                         <Grid.ColumnDefinitions>
@@ -551,7 +543,6 @@
                             <ColumnDefinition Width="430"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- LEFT: PROPERTY BUILDER -->
                         <Border Grid.Column="0"
                                 Style="{StaticResource ClassicGroupBox}"
                                 VerticalAlignment="Stretch">
@@ -568,7 +559,7 @@
                                     <TextBlock Text="2. MATRIX VARIANT BUILDER"
                                                Style="{StaticResource HeaderLabel}"/>
 
-                                    <TextBlock Text="Select one property group and add one or more values. Example: Color = Red, Yellow; Size = Medium. Then generate variants."
+                                    <TextBlock Text="For simple/no-variant items such as carrot, loose rice, sugar, or basic stationery, leave matrix values empty and click Generate Variants. The system will create one internal Standard variant, but Standard will not print in the final product name."
                                                Foreground="{DynamicResource SecondaryTextBrush}"
                                                FontSize="11"
                                                TextWrapping="Wrap"
@@ -657,7 +648,6 @@
                                                                             <Border Background="{DynamicResource HighlightBackgroundBrush}"
                                                                                     BorderBrush="{DynamicResource InputBoxBorderBrush}"
                                                                                     BorderThickness="1"
-                                                                                    CornerRadius="10"
                                                                                     Padding="8,3"
                                                                                     Margin="0,0,6,6">
 
@@ -704,7 +694,6 @@
                             </Grid>
                         </Border>
 
-                        <!-- RIGHT: BULK DEFAULTS -->
                         <Border Grid.Column="2"
                                 Style="{StaticResource ClassicGroupBox}"
                                 VerticalAlignment="Stretch">
@@ -853,7 +842,7 @@
                                         BorderThickness="1"
                                         Padding="8">
 
-                                    <TextBlock Text="Batch Tracking is enabled by default. Expiry Tracking is optional and only makes expiry date mandatory during GRN."
+                                    <TextBlock Text="For non-batch items, untick Batch Tracking. The system can still use an internal hidden stock bucket later, but cashier should not show batch selection for those items."
                                                TextWrapping="Wrap"
                                                FontSize="11"
                                                Foreground="{DynamicResource SecondaryTextBrush}"/>
@@ -863,100 +852,205 @@
                     </Grid>
                 </TabItem>
 
-                <!-- VARIANT PRICING -->
                 <TabItem Header="Variant Pricing &amp; SKUs" Style="{StaticResource ClassicTab}">
                     <Grid Margin="10">
-                        <DataGrid ItemsSource="{Binding GeneratedVariants}"
-                                  SelectedItem="{Binding SelectedVariantForSupplierEdit, Mode=TwoWay}"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  CanUserDeleteRows="False"
-                                  GridLinesVisibility="All"
-                                  HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
-                                  VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
-                                  RowHeight="26"
-                                  HeadersVisibility="Column"
-                                  Background="{DynamicResource WhiteBackgroundBrush}"
-                                  BorderThickness="1"
-                                  BorderBrush="{DynamicResource BorderBrush}"
-                                  SelectionMode="Single"
-                                  AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- SUPPLIER ASSIGN TOOLBAR -->
+                        <Border Grid.Row="0"
+                Background="{DynamicResource HighlightBackgroundBrush}"
+                BorderBrush="{DynamicResource LightBorderBrush}"
+                BorderThickness="1"
+                Padding="8">
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox Grid.Column="0"
+                          Content="Select All Variants"
+                          IsChecked="{Binding SelectAllVariantsForSupplierAssignment, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          FontWeight="Bold"
+                          Foreground="{DynamicResource HeaderTextBrush}"/>
+
+                                <TextBlock Grid.Column="2"
+                           Text="{Binding SelectedSupplierAssignmentCount, StringFormat={}Selected: {0}}"
+                           VerticalAlignment="Center"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource WarningTextBrush}"/>
+
+                                <Button Grid.Column="4"
+                        Content="ASSIGN SUPPLIER"
+                        Command="{Binding AssignSupplierToSelectedVariantsCommand}"
+                        Style="{StaticResource ActionBtn}"
+                        Height="26"
+                        Padding="16,0"/>
+
+                                <TextBlock Grid.Column="6"
+                           Text="Tick variants, assign supplier, then click SAVE FULL ITEM."
+                           FontSize="11"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- VARIANT GRID -->
+                        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding GeneratedVariants}"
+                  SelectedItem="{Binding SelectedVariantForSupplierEdit, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  GridLinesVisibility="All"
+                  HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                  VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                  RowHeight="26"
+                  HeadersVisibility="Column"
+                  Background="{DynamicResource WhiteBackgroundBrush}"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  SelectionMode="Single"
+                  AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                             <DataGrid.Resources>
                                 <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                             </DataGrid.Resources>
 
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="SKU"
-                                                    Binding="{Binding SkuCode, Mode=OneWay}"
-                                                    Width="150"
-                                                    FontWeight="SemiBold"
-                                                    IsReadOnly="True"
-                                                    CellStyle="{StaticResource FrozenCell}"/>
 
-                                <DataGridTextColumn Header="Attributes"
-                                                    Binding="{Binding VariantDescription, Mode=OneWay}"
-                                                    Width="*"
-                                                    IsReadOnly="True"
-                                                    CellStyle="{StaticResource FrozenCell}"/>
+                                <DataGridTemplateColumn Header="Select" Width="65">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelectedForSupplierAssignment, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      Command="{Binding DataContext.RefreshSupplierAssignmentSelectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn Header="Full Product Name"
+                                    Binding="{Binding FullDisplayName, Mode=OneWay}"
+                                    Width="230"
+                                    FontWeight="Bold"
+                                    IsReadOnly="True"
+                                    CellStyle="{StaticResource FrozenCell}"/>
+
+                                <DataGridTextColumn Header="Receipt Name"
+                                    Binding="{Binding ReceiptDisplayName, Mode=OneWay}"
+                                    Width="200"
+                                    IsReadOnly="True"
+                                    CellStyle="{StaticResource FrozenCell}"/>
+
+                                <DataGridTextColumn Header="SKU"
+                                    Binding="{Binding SkuCode, Mode=OneWay}"
+                                    Width="150"
+                                    IsReadOnly="True"/>
+
+                                <DataGridTextColumn Header="Variant"
+                                    Binding="{Binding VariantDisplayName, Mode=OneWay}"
+                                    Width="130"
+                                    IsReadOnly="True"/>
 
                                 <DataGridTextColumn Header="Barcode"
-                                                    Binding="{Binding Barcode, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                    Width="135"/>
+                                    Binding="{Binding Barcode, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                    Width="135"/>
 
                                 <DataGridTextColumn Header="Cost"
-                                                    Binding="{Binding CostPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                    Width="80"/>
+                                    Binding="{Binding CostPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                    Width="80"/>
 
                                 <DataGridTextColumn Header="Retail Rs."
-                                                    Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                    Width="90"
-                                                    FontWeight="Bold"
-                                                    Foreground="{DynamicResource SuccessBorderBrush}"
-                                                    CellStyle="{StaticResource RetailCell}"/>
+                                    Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                    Width="90"
+                                    FontWeight="Bold"
+                                    Foreground="{DynamicResource SuccessBorderBrush}"
+                                    CellStyle="{StaticResource RetailCell}"/>
 
                                 <DataGridTextColumn Header="Wholesale"
-                                                    Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                    Width="90"/>
+                                    Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                    Width="90"/>
 
                                 <DataGridTextColumn Header="Min"
-                                                    Binding="{Binding MinimumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                    Width="70"/>
+                                    Binding="{Binding MinimumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                    Width="70"/>
 
                                 <DataGridTextColumn Header="Max"
-                                                    Binding="{Binding MaximumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                    Width="70"/>
+                                    Binding="{Binding MaximumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                    Width="70"/>
 
                                 <DataGridTextColumn Header="Reorder"
-                                                    Binding="{Binding ReorderLevel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                                    Width="75"/>
+                                    Binding="{Binding ReorderLevel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                    Width="75"/>
 
                                 <DataGridCheckBoxColumn Header="Inactive"
-                                                        Binding="{Binding IsDeactivated, Mode=TwoWay}"
-                                                        Width="80"/>
+                                        Binding="{Binding IsDeactivated, Mode=TwoWay}"
+                                        Width="80"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
                 </TabItem>
 
-                <!-- SUPPLIERS -->
                 <TabItem Header="Approved Suppliers" Style="{StaticResource ClassicTab}">
                     <Grid Margin="10">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="8"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <!-- BULK SUPPLIER ASSIGNMENT -->
+                        <!-- SELECT VARIANT -->
                         <Border Grid.Row="0"
-                                Background="{DynamicResource HighlightBackgroundBrush}"
-                                BorderBrush="{DynamicResource LightBorderBrush}"
-                                BorderThickness="1"
-                                Padding="10">
+                Background="{DynamicResource WhiteBackgroundBrush}"
+                BorderBrush="{DynamicResource LightBorderBrush}"
+                BorderThickness="1"
+                Padding="10">
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                           Text="Manage Suppliers For Selected Variant:"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
+                           Margin="0,0,10,0"
+                           VerticalAlignment="Center"/>
+
+                                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding GeneratedVariants}"
+                          SelectedItem="{Binding SelectedVariantForSupplierEdit, Mode=TwoWay}"
+                          DisplayMemberPath="FullDisplayName"
+                          Style="{StaticResource ClassicCombo}"
+                          ToolTip="You can also select a variant from the Pricing tab."/>
+                            </Grid>
+                        </Border>
+
+                        <!-- ADD / EDIT SUPPLIER LINK -->
+                        <Border Grid.Row="2"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource LightBorderBrush}"
+                BorderThickness="1"
+                Padding="10">
 
                             <Grid>
                                 <Grid.RowDefinitions>
@@ -966,263 +1060,140 @@
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0"
-                                           Text="BULK ASSIGN SUPPLIER TO ALL VARIANTS"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource HeaderTextBrush}"/>
+                           Text="ADD / EDIT SUPPLIER LINK"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource HeaderTextBrush}"/>
 
                                 <Grid Grid.Row="2">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="80"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="15"/>
-                                        <ColumnDefinition Width="110"/>
-                                        <ColumnDefinition Width="150"/>
-                                        <ColumnDefinition Width="15"/>
                                         <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="15"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="15"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Grid.Column="0"
-                                               Text="Supplier"
-                                               Style="{StaticResource InlineLabel}"/>
+                               Text="Supplier"
+                               Style="{StaticResource InlineLabel}"/>
 
                                     <ComboBox Grid.Column="1"
-                                              ItemsSource="{Binding AvailableSuppliers}"
-                                              SelectedItem="{Binding BulkSupplierToAssign, Mode=TwoWay}"
-                                              DisplayMemberPath="SupplierName"
-                                              IsEditable="True"
-                                              IsTextSearchEnabled="True"
-                                              TextSearch.TextPath="SupplierName"
-                                              Style="{StaticResource ClassicCombo}"/>
+                              ItemsSource="{Binding AvailableSuppliers}"
+                              SelectedItem="{Binding SupplierToAdd, Mode=TwoWay}"
+                              DisplayMemberPath="SupplierName"
+                              IsEditable="True"
+                              IsTextSearchEnabled="True"
+                              TextSearch.TextPath="SupplierName"
+                              Style="{StaticResource ClassicCombo}"/>
 
                                     <TextBlock Grid.Column="3"
-                                               Text="Vendor Prefix"
-                                               Style="{StaticResource InlineLabel}"/>
+                               Text="Cost Rs."
+                               Style="{StaticResource InlineLabel}"/>
 
                                     <TextBox Grid.Column="4"
-                                             Text="{Binding BulkSupplierItemCodePrefix, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource ClassicInput}"
-                                             MaxLength="40"
-                                             ToolTip="Optional. Vendor code becomes Prefix-SKU."/>
+                             Text="{Binding SupplierCostInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}"
+                             HorizontalContentAlignment="Right"
+                             FontWeight="Bold"/>
 
                                     <TextBlock Grid.Column="6"
-                                               Text="Cost Rs."
-                                               Style="{StaticResource InlineLabel}"/>
+                               Text="MOQ"
+                               Style="{StaticResource InlineLabel}"/>
 
                                     <TextBox Grid.Column="7"
-                                             Text="{Binding BulkSupplierCostInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource ClassicInput}"
-                                             HorizontalContentAlignment="Right"
-                                             FontWeight="Bold"/>
+                             Text="{Binding SupplierMinimumOrderQuantityInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}"
+                             HorizontalContentAlignment="Right"/>
+
+                                    <Button Grid.Column="9"
+                            Content="SAVE SUPPLIER LINK"
+                            Command="{Binding AddSupplierToVariantCommand}"
+                            Style="{StaticResource ActionBtn}"
+                            Padding="15,0"/>
+
+                                    <Button Grid.Column="11"
+                            Content="CLEAR EDIT"
+                            Command="{Binding ClearSupplierEditCommand}"
+                            Style="{StaticResource ClassicBtn}"
+                            Padding="12,0"/>
                                 </Grid>
                             </Grid>
                         </Border>
 
-                        <Grid Grid.Row="2" Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="20"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0"
-                                       Text="MOQ"
-                                       Style="{StaticResource InlineLabel}"/>
-
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding BulkSupplierMinimumOrderQuantityInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ClassicInput}"
-                                     HorizontalContentAlignment="Right"/>
-
-                            <CheckBox Grid.Column="3"
-                                      Content="Make Primary Supplier For All Variants"
-                                      IsChecked="{Binding BulkSupplierIsPrimaryInput, Mode=TwoWay}"
-                                      FontWeight="SemiBold"
-                                      Foreground="{DynamicResource PrimaryTextBrush}"
-                                      VerticalAlignment="Center"/>
-
-                            <Button Grid.Column="5"
-                                    Content="APPLY SUPPLIER TO ALL VARIANTS"
-                                    Command="{Binding ApplySupplierToAllVariantsCommand}"
-                                    Style="{StaticResource ActionBtn}"
-                                    Padding="15,0"/>
-                        </Grid>
-
-                        <!-- SINGLE VARIANT SUPPLIER MANAGEMENT -->
-                        <Border Grid.Row="3"
-                                Background="{DynamicResource WhiteBackgroundBrush}"
-                                BorderBrush="{DynamicResource LightBorderBrush}"
-                                BorderThickness="1"
-                                Padding="10"
-                                Margin="0,0,0,8">
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Grid.Column="0"
-                                           Text="Manage Suppliers For Selected Variant:"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           Margin="0,0,10,0"
-                                           VerticalAlignment="Center"/>
-
-                                <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding GeneratedVariants}"
-                                          SelectedItem="{Binding SelectedVariantForSupplierEdit, Mode=TwoWay}"
-                                          DisplayMemberPath="VariantDescription"
-                                          Style="{StaticResource ClassicCombo}"
-                                          ToolTip="You can also select a variant from the Pricing tab."/>
-                            </Grid>
-                        </Border>
-
-                        <Grid Grid.Row="4" Margin="0,0,0,10">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="8"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Grid Grid.Row="0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="15"/>
-                                    <ColumnDefinition Width="85"/>
-                                    <ColumnDefinition Width="130"/>
-                                    <ColumnDefinition Width="15"/>
-                                    <ColumnDefinition Width="70"/>
-                                    <ColumnDefinition Width="90"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Grid.Column="0"
-                                           Text="Supplier"
-                                           Style="{StaticResource InlineLabel}"/>
-
-                                <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding AvailableSuppliers}"
-                                          SelectedItem="{Binding SupplierToAdd, Mode=TwoWay}"
-                                          DisplayMemberPath="SupplierName"
-                                          IsEditable="True"
-                                          IsTextSearchEnabled="True"
-                                          TextSearch.TextPath="SupplierName"
-                                          Style="{StaticResource ClassicCombo}"/>
-
-                                <TextBlock Grid.Column="3"
-                                           Text="Vendor SKU"
-                                           Style="{StaticResource InlineLabel}"/>
-
-                                <TextBox Grid.Column="4"
-                                         Text="{Binding SupplierItemCodeInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"
-                                         MaxLength="100"/>
-
-                                <TextBlock Grid.Column="6"
-                                           Text="Cost Rs."
-                                           Style="{StaticResource InlineLabel}"/>
-
-                                <TextBox Grid.Column="7"
-                                         Text="{Binding SupplierCostInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"
-                                         HorizontalContentAlignment="Right"
-                                         FontWeight="Bold"/>
-                            </Grid>
-
-                            <Grid Grid.Row="2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="20"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Grid.Column="0"
-                                           Text="MOQ"
-                                           Style="{StaticResource InlineLabel}"/>
-
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding SupplierMinimumOrderQuantityInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"
-                                         HorizontalContentAlignment="Right"/>
-
-                                <CheckBox Grid.Column="3"
-                                          Content="Primary Supplier"
-                                          IsChecked="{Binding SupplierIsPrimaryInput, Mode=TwoWay}"
-                                          FontWeight="SemiBold"
-                                          Foreground="{DynamicResource PrimaryTextBrush}"
-                                          VerticalAlignment="Center"/>
-
-                                <Button Grid.Column="5"
-                                        Content="ADD SUPPLIER TO SELECTED VARIANT"
-                                        Command="{Binding AddSupplierToVariantCommand}"
-                                        Style="{StaticResource ClassicBtn}"
-                                        Padding="15,0"/>
-                            </Grid>
-                        </Grid>
-
-                        <DataGrid Grid.Row="5"
-                                  ItemsSource="{Binding SelectedVariantSuppliers}"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  CanUserDeleteRows="False"
-                                  IsReadOnly="True"
-                                  GridLinesVisibility="All"
-                                  HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
-                                  VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
-                                  RowHeight="26"
-                                  HeadersVisibility="Column"
-                                  Background="{DynamicResource WhiteBackgroundBrush}"
-                                  BorderThickness="1"
-                                  BorderBrush="{DynamicResource BorderBrush}"
-                                  SelectionMode="Single"
-                                  AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                        <!-- SUPPLIER LINKS GRID -->
+                        <DataGrid Grid.Row="4"
+                  ItemsSource="{Binding SelectedVariantSuppliers}"
+                  SelectedItem="{Binding SelectedSupplierLinkForEdit, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="True"
+                  GridLinesVisibility="All"
+                  HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                  VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                  RowHeight="28"
+                  HeadersVisibility="Column"
+                  Background="{DynamicResource WhiteBackgroundBrush}"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  SelectionMode="Single"
+                  AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
 
                             <DataGrid.Resources>
                                 <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                             </DataGrid.Resources>
 
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Supplier Name"
-                                                    Binding="{Binding Supplier.SupplierName, Mode=OneWay}"
-                                                    Width="*"
-                                                    FontWeight="SemiBold"/>
+                                <DataGridTextColumn Header="Supplier Code"
+                                    Binding="{Binding Supplier.SupplierCode, Mode=OneWay}"
+                                    Width="130"
+                                    FontWeight="Bold"/>
 
-                                <DataGridTextColumn Header="Vendor Item Code"
-                                                    Binding="{Binding SupplierItemCode, Mode=OneWay}"
-                                                    Width="160"
-                                                    Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                <DataGridTextColumn Header="Supplier Name"
+                                    Binding="{Binding Supplier.SupplierName, Mode=OneWay}"
+                                    Width="*"
+                                    FontWeight="SemiBold"/>
 
                                 <DataGridTextColumn Header="Cost Rs."
-                                                    Binding="{Binding LastCostPrice, Mode=OneWay, StringFormat=N2}"
-                                                    Width="100"
-                                                    FontWeight="Bold"/>
-
-                                <DataGridCheckBoxColumn Header="Primary"
-                                                        Binding="{Binding IsPrimary, Mode=OneWay}"
-                                                        Width="80"/>
+                                    Binding="{Binding LastCostPrice, Mode=OneWay, StringFormat=N2}"
+                                    Width="120"
+                                    FontWeight="Bold">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            <Setter Property="Padding" Value="0,0,6,0"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
 
                                 <DataGridTextColumn Header="MOQ"
-                                                    Binding="{Binding MinimumOrderQuantity, Mode=OneWay}"
-                                                    Width="70"/>
+                                    Binding="{Binding MinimumOrderQuantity, Mode=OneWay}"
+                                    Width="80">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
 
                                 <DataGridTemplateColumn Header="Action" Width="90">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Button Content="Remove"
-                                                    Command="{Binding DataContext.RemoveSupplierFromVariantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    Background="Transparent"
-                                                    BorderThickness="0"
-                                                    Foreground="{DynamicResource WarningTextBrush}"
-                                                    Cursor="Hand"
-                                                    FontWeight="Bold"/>
+                                    Command="{Binding DataContext.RemoveSupplierFromVariantCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="{DynamicResource WarningTextBrush}"
+                                    Cursor="Hand"
+                                    FontWeight="Bold"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

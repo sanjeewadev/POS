@@ -7,7 +7,7 @@
              xmlns:crm="clr-namespace:POS.BackOffice.UI.Views.Pages.Crm"
              xmlns:reports="clr-namespace:POS.BackOffice.UI.Views.Pages.Reports"
              xmlns:sales="clr-namespace:POS.BackOffice.UI.Views.Pages.Sales"
-             xmlns:filepages="clr-namespace:POS.BackOffice.UI.Views.Pages.File"
+             xmlns:file="clr-namespace:POS.BackOffice.UI.Views.Pages.File"
              xmlns:finance="clr-namespace:POS.BackOffice.UI.Views.Pages.Finance"
              xmlns:inventorypages="clr-namespace:POS.BackOffice.UI.Views.Pages.InventoryPages"
              xmlns:inventoryoperations="clr-namespace:POS.BackOffice.UI.Views.Pages.InventoryOperations"
@@ -48,6 +48,9 @@
             <DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
                 <inventoryoperations:GrnView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:GrnDashboardViewModel}">
+                <inventoryoperations:GrnDashboardView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type viewmodels:StockAdjustmentViewModel}">
                 <inventoryoperations:StockAdjustmentView />
             </DataTemplate>
@@ -68,6 +71,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type viewmodels:PriceManagementViewModel}">
                 <inventoryoperations:PriceManagementView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:PriceChangeHistoryViewModel}">
+                <inventoryoperations:PriceChangeHistoryView />
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type viewmodels:PurchaseOrderViewModel}">
@@ -128,9 +134,27 @@
             <DataTemplate DataType="{x:Type viewmodels:SuspendedTransactionsMonitorViewModel}">
                 <admin:SuspendedTransactionsMonitorView />
             </DataTemplate>
-            <DataTemplate DataType="{x:Type viewmodels:StoreConfigurationViewModel}">
-                <filepages:StoreConfigurationView />
+
+            <DataTemplate DataType="{x:Type viewmodels:StoreSettingsViewModel}">
+                <admin:StoreSettingsView />
             </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewmodels:TerminalSettingsViewModel}">
+                <file:TerminalSettingsView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewmodels:LicenseManagementViewModel}">
+                <admin:LicenseManagementView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewmodels:TerminalManagementViewModel}">
+                <admin:TerminalManagementView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewmodels:BackupRestoreViewModel}">
+                <admin:BackupRestoreView />
+            </DataTemplate>
+
 
         </ResourceDictionary>
     </Application.Resources>

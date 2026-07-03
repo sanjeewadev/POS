@@ -1,41 +1,52 @@
 ﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Reports.SupplierReportView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="850" d:DesignWidth="1400"
-             Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="850"
+             d:DesignWidth="1400"
+             Background="#D4D0C8"
+             FontFamily="Segoe UI"
+             FontSize="12">
 
     <UserControl.Resources>
-        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CFE8FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E5F3FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
+
+        <Style TargetType="{x:Type TextBlock}" x:Key="HeaderLabel">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="#003366"/>
-            <Setter Property="Margin" Value="0,5,0,10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="InlineLabel">
+        <Style TargetType="{x:Type TextBlock}" x:Key="InlineLabel">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Foreground" Value="#333333"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,5,0"/>
         </Style>
 
-        <Style TargetType="DatePicker" x:Key="ClassicDate">
-            <Setter Property="Height" Value="26"/>
+        <Style TargetType="{x:Type DatePicker}" x:Key="ClassicDate">
+            <Setter Property="Height" Value="27"/>
+            <Setter Property="Width" Value="135"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Width" Value="130"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
         </Style>
 
-        <Style TargetType="Button" x:Key="ClassicBtn">
-            <Setter Property="Height" Value="28"/>
+        <Style TargetType="{x:Type Button}" x:Key="ClassicBtn">
+            <Setter Property="Height" Value="30"/>
             <Setter Property="Background" Value="#E0E0E0"/>
             <Setter Property="Foreground" Value="Black"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Padding" Value="15,0"/>
+            <Setter Property="Padding" Value="14,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderBrush" Value="#808080"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -43,10 +54,13 @@
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#CCCCCC"/>
                 </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.55"/>
+                </Trigger>
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style TargetType="{x:Type Button}" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
             <Setter Property="Background" Value="#005555"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#003333"/>
@@ -57,7 +71,7 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Border" x:Key="ClassicGroupBox">
+        <Style TargetType="{x:Type Border}" x:Key="ClassicGroupBox">
             <Setter Property="BorderBrush" Value="#A0A0A0"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="#F0F0F0"/>
@@ -65,14 +79,23 @@
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
-        <Style TargetType="Border" x:Key="KpiCard">
+        <Style TargetType="{x:Type Border}" x:Key="KpiCard">
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="20,15"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
             <Setter Property="Background" Value="White"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="BaseCell">
+        <Style TargetType="{x:Type DataGridColumnHeader}">
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+        </Style>
+
+        <Style TargetType="{x:Type DataGridCell}" x:Key="BaseCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="5,0"/>
@@ -80,170 +103,468 @@
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#005555"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="#CFE8FF"/>
+                    <Setter Property="Foreground" Value="Black"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="RightElement">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="Margin" Value="0,0,5,0"/>
+        <Style TargetType="{x:Type DataGridCell}" x:Key="FrozenCell" BasedOn="{StaticResource BaseCell}">
+            <Setter Property="Background" Value="#F5F5F5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
-        <Style TargetType="TextBlock" x:Key="RightBoldElement" BasedOn="{StaticResource RightElement}">
+
+        <Style TargetType="{x:Type TextBlock}" x:Key="RightText">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0,0,5,0"/>
+        </Style>
+
+        <Style TargetType="{x:Type TextBlock}" x:Key="RightBoldText" BasedOn="{StaticResource RightText}">
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
-        <Style TargetType="TextBlock" x:Key="DangerElement" BasedOn="{StaticResource RightBoldElement}">
-            <Setter Property="Foreground" Value="#A94044"/>
+
+        <Style TargetType="{x:Type TextBlock}" x:Key="CenterText">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+
+        <Style TargetType="{x:Type TextBox}" x:Key="CopyableGridTextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="IBeam"/>
+            <Setter Property="Focusable" Value="True"/>
+        </Style>
+
     </UserControl.Resources>
 
-    <Grid Margin="10">
+    <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
+        <!-- FILTER BAR -->
+        <Border Grid.Row="0"
+                Style="{StaticResource ClassicGroupBox}">
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="14"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="18"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="REPORTING PERIOD:" Style="{StaticResource HeaderLabel}" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0"
+                           Text="SUPPLIER REPORT PERIOD:"
+                           Style="{StaticResource HeaderLabel}"
+                           Margin="0,0,18,0"
+                           VerticalAlignment="Center"/>
 
-                <TextBlock Grid.Column="1" Text="From Date:" Style="{StaticResource InlineLabel}"/>
-                <DatePicker Grid.Column="2" SelectedDate="{Binding StartDate}" Style="{StaticResource ClassicDate}" Margin="0,0,15,0"/>
+                <TextBlock Grid.Column="1"
+                           Text="From"
+                           Style="{StaticResource InlineLabel}"/>
 
-                <TextBlock Grid.Column="3" Text="To Date:" Style="{StaticResource InlineLabel}"/>
-                <DatePicker Grid.Column="4" SelectedDate="{Binding EndDate}" Style="{StaticResource ClassicDate}" Margin="0,0,20,0"/>
+                <DatePicker Grid.Column="2"
+                            SelectedDate="{Binding StartDate, Mode=TwoWay}"
+                            Style="{StaticResource ClassicDate}"
+                            Margin="0,0,0,0"/>
 
-                <Button Grid.Column="5" Content="⚡ GENERATE REPORT" Command="{Binding GenerateReportCommand}" Style="{StaticResource ActionBtn}" HorizontalAlignment="Left" Padding="30,0" FontSize="13"/>
+                <TextBlock Grid.Column="3"
+                           Text="To"
+                           Style="{StaticResource InlineLabel}"
+                           Margin="15,0,5,0"/>
 
-                <StackPanel Grid.Column="6" Orientation="Horizontal">
-                    <Button Content="📊 Export to Excel" Command="{Binding ExportToExcelCommand}" Style="{StaticResource ClassicBtn}" Margin="0,0,10,0"/>
-                    <Button Content="🖨️ Export PDF" Command="{Binding ExportToPdfCommand}" Style="{StaticResource ClassicBtn}"/>
-                </StackPanel>
+                <DatePicker Grid.Column="4"
+                            SelectedDate="{Binding EndDate, Mode=TwoWay}"
+                            Style="{StaticResource ClassicDate}"/>
+
+                <Button Grid.Column="6"
+                        Content="GENERATE"
+                        Command="{Binding GenerateReportCommand}"
+                        Style="{StaticResource ActionBtn}"
+                        Width="120"/>
+
+                <Button Grid.Column="8"
+                        Content="Reset 30 Days"
+                        Command="{Binding ResetPeriodCommand}"
+                        Style="{StaticResource ClassicBtn}"
+                        Width="120"/>
+
+                <Button Grid.Column="10"
+                        Content="Export Excel"
+                        Command="{Binding ExportToExcelCommand}"
+                        Style="{StaticResource ClassicBtn}"
+                        Width="110"/>
+
+                <Button Grid.Column="12"
+                        Content="Export PDF"
+                        Command="{Binding ExportToPdfCommand}"
+                        Style="{StaticResource ClassicBtn}"
+                        Width="100"/>
+
+                <Border Grid.Column="14"
+                        Background="#E0FFFF"
+                        BorderBrush="#005555"
+                        BorderThickness="1"
+                        Padding="8,3"
+                        VerticalAlignment="Center">
+
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="#003366"
+                               FontWeight="SemiBold"
+                               FontSize="11"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="300"/>
+                </Border>
             </Grid>
         </Border>
 
-        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,8">
-            <Border Style="{StaticResource KpiCard}" BorderBrush="#D97706" Background="#FFF8EB">
+        <!-- KPI CARDS -->
+        <UniformGrid Grid.Row="1"
+                     Columns="4"
+                     Margin="0,0,0,8">
+
+            <Border Style="{StaticResource KpiCard}"
+                    BorderBrush="#D97706"
+                    Background="#FFF8EB">
+
                 <StackPanel>
-                    <TextBlock Text="TOTAL COMPANY OUTSTANDING DEBT (A/P)" FontSize="11" FontWeight="Bold" Foreground="#D97706"/>
-                    <TextBlock Text="{Binding TotalCompanyDebt, StringFormat=Rs. \{0:N2\}}" FontSize="26" FontWeight="Bold" Foreground="#A94044" Margin="0,5,0,0" ToolTip="Total amount owed across all suppliers"/>
+                    <TextBlock Text="TOTAL COMPANY OUTSTANDING"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="#D97706"/>
+
+                    <TextBlock Text="{Binding TotalCompanyDebt, StringFormat={}Rs. {0:N2}}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="#A94044"
+                               Margin="0,5,0,0"/>
+
+                    <TextBlock Text="{Binding SupplierWithDebtCount, StringFormat={}Suppliers: {0}}"
+                               FontSize="11"
+                               Foreground="#666666"
+                               Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource KpiCard}" BorderBrush="#005555">
+            <Border Style="{StaticResource KpiCard}"
+                    BorderBrush="#005555">
+
                 <StackPanel>
-                    <TextBlock Text="REPORTING TIMEFRAME" FontSize="11" FontWeight="Bold" Foreground="#666"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <TextBlock Text="{Binding StartDate, StringFormat=dd-MMM-yyyy}" FontSize="18" FontWeight="Bold" Foreground="#003366"/>
-                        <TextBlock Text="  to  " FontSize="18" Foreground="#666"/>
-                        <TextBlock Text="{Binding EndDate, StringFormat=dd-MMM-yyyy}" FontSize="18" FontWeight="Bold" Foreground="#003366"/>
-                    </StackPanel>
+                    <TextBlock Text="PURCHASES IN PERIOD"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="#005555"/>
+
+                    <TextBlock Text="{Binding TotalPurchaseValue, StringFormat={}Rs. {0:N2}}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="#003366"
+                               Margin="0,5,0,0"/>
+
+                    <TextBlock Text="{Binding SupplierWithPurchaseCount, StringFormat={}Suppliers: {0}}"
+                               FontSize="11"
+                               Foreground="#666666"
+                               Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource KpiCard}" BorderBrush="#A0A0A0" Margin="0">
+            <Border Style="{StaticResource KpiCard}"
+                    BorderBrush="#A94044">
+
                 <StackPanel>
-                    <TextBlock Text="DATA STATUS" FontSize="11" FontWeight="Bold" Foreground="#666"/>
-                    <TextBlock Text="Live Read-Only Ledger" FontSize="18" FontWeight="SemiBold" Foreground="#28A745" Margin="0,8,0,0"/>
+                    <TextBlock Text="SUPPLIER RETURNS IN PERIOD"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="#A94044"/>
+
+                    <TextBlock Text="{Binding TotalSupplierReturnValue, StringFormat={}Rs. {0:N2}}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="#A94044"
+                               Margin="0,5,0,0"/>
+
+                    <TextBlock Text="{Binding SupplierWithReturnCount, StringFormat={}Suppliers: {0}}"
+                               FontSize="11"
+                               Foreground="#666666"
+                               Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
+
+            <Border Style="{StaticResource KpiCard}"
+                    BorderBrush="#28A745"
+                    Margin="0">
+
+                <StackPanel>
+                    <TextBlock Text="TOTAL RETURNED QTY"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Foreground="#28A745"/>
+
+                    <TextBlock Text="{Binding TotalReturnedQty, StringFormat={}{0:N3}}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="#005500"
+                               Margin="0,5,0,0"/>
+
+                    <TextBlock Text="{Binding ReportPeriodText}"
+                               FontSize="11"
+                               Foreground="#666666"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
         </UniformGrid>
 
-        <Border Grid.Row="2" Background="White" BorderBrush="#A0A0A0" BorderThickness="1">
-            <TabControl Background="#F0F0F0" BorderThickness="0,0,0,1" BorderBrush="#A0A0A0">
+        <!-- REPORT TABS -->
+        <Border Grid.Row="2"
+                Background="White"
+                BorderBrush="#A0A0A0"
+                BorderThickness="1">
+
+            <TabControl Background="#F0F0F0"
+                        BorderThickness="0,0,0,1"
+                        BorderBrush="#A0A0A0">
+
                 <TabControl.Resources>
-                    <Style TargetType="TabItem">
-                        <Setter Property="Padding" Value="15,8"/>
-                        <Setter Property="FontWeight" Value="Bold"/>
+                    <Style TargetType="{x:Type TabItem}">
+                        <Setter Property="Padding" Value="16,8"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="FontSize" Value="13"/>
-                        <Setter Property="Foreground" Value="#555"/>
+                        <Setter Property="Foreground" Value="#555555"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Foreground" Value="#003366"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
                 </TabControl.Resources>
 
-                <TabItem Header="Aged Payables Summary (Who Do We Owe?)">
-                    <DataGrid ItemsSource="{Binding AgedPayables}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                              HeadersVisibility="Column" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0" 
-                              RowHeight="30" Background="White" BorderThickness="0" SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                <!-- TAB 1 -->
+                <TabItem Header="Supplier Outstanding Summary">
+                    <DataGrid ItemsSource="{Binding OutstandingSummaries}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="All"
+                              HorizontalGridLinesBrush="#E0E0E0"
+                              VerticalGridLinesBrush="#E0E0E0"
+                              RowHeight="31"
+                              Background="White"
+                              BorderThickness="0"
+                              SelectionMode="Single"
+                              AlternatingRowBackground="#F9F9F9"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+
                         <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#E0E0E0"/>
-                                <Setter Property="Foreground" Value="Black"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Padding" Value="6"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                            </Style>
-                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                            <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource BaseCell}"/>
                         </DataGrid.Resources>
+
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="350" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="0 - 30 Days" Binding="{Binding CurrentTo30Days, StringFormat=N2}" Width="*" ElementStyle="{StaticResource RightElement}"/>
-                            <DataGridTextColumn Header="31 - 60 Days" Binding="{Binding Days31To60, StringFormat=N2}" Width="*" ElementStyle="{StaticResource RightElement}"/>
-                            <DataGridTextColumn Header="61 - 90 Days" Binding="{Binding Days61To90, StringFormat=N2}" Width="*" ElementStyle="{StaticResource RightElement}"/>
-                            <DataGridTextColumn Header="Over 90 Days" Binding="{Binding Over90Days, StringFormat=N2}" Width="*" ElementStyle="{StaticResource DangerElement}"/>
-                            <DataGridTextColumn Header="Total Owed (Rs.)" Binding="{Binding TotalOwed, StringFormat=N2}" Width="150" ElementStyle="{StaticResource RightBoldElement}" Foreground="#003366"/>
+                            <DataGridTemplateColumn Header="Supplier"
+                                                    Width="320"
+                                                    CellStyle="{StaticResource FrozenCell}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding SupplierDisplayName , Mode=OneWay}"
+                                                 Style="{StaticResource CopyableGridTextBox}"
+                                                 FontWeight="Bold"
+                                                 Foreground="#003366"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Total GRN Billed"
+                                                Binding="{Binding TotalGrnBilled, StringFormat=N2}"
+                                                Width="150"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Supplier Returns"
+                                                Binding="{Binding TotalSupplierReturns, StringFormat=N2}"
+                                                Width="150"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Total Paid"
+                                                Binding="{Binding TotalPaid, StringFormat=N2}"
+                                                Width="140"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Net Outstanding"
+                                                Binding="{Binding NetOutstanding, StringFormat=N2}"
+                                                Width="160"
+                                                ElementStyle="{StaticResource RightBoldText}"/>
+
+                            <DataGridTextColumn Header="Transactions"
+                                                Binding="{Binding TransactionCount}"
+                                                Width="110"
+                                                ElementStyle="{StaticResource CenterText}"/>
+
+                            <DataGridTextColumn Header="Last Transaction"
+                                                Binding="{Binding LastTransactionDate, StringFormat=dd-MM-yyyy}"
+                                                Width="130"
+                                                ElementStyle="{StaticResource CenterText}"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </TabItem>
 
-                <TabItem Header="Purchasing Volume (Top 20 Partners)">
-                    <DataGrid ItemsSource="{Binding PurchasingVolumes}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                              HeadersVisibility="Column" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0" 
-                              RowHeight="30" Background="White" BorderThickness="0" SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                <!-- TAB 2 -->
+                <TabItem Header="Purchasing Volume">
+                    <DataGrid ItemsSource="{Binding PurchasingVolumes}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="All"
+                              HorizontalGridLinesBrush="#E0E0E0"
+                              VerticalGridLinesBrush="#E0E0E0"
+                              RowHeight="31"
+                              Background="White"
+                              BorderThickness="0"
+                              SelectionMode="Single"
+                              AlternatingRowBackground="#F9F9F9"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+
                         <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#E0E0E0"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Padding" Value="6"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                            </Style>
-                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                            <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource BaseCell}"/>
                         </DataGrid.Resources>
+
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="350" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Total GRN Value (Rs.)" Binding="{Binding TotalGrnValue, StringFormat=N2}" Width="250" ElementStyle="{StaticResource RightElement}"/>
-                            <DataGridTextColumn Header="% of Total Store Purchases" Binding="{Binding PercentageOfTotalStore, StringFormat=\{0:N2\}%}" Width="*" ElementStyle="{StaticResource RightBoldElement}" Foreground="#005555"/>
+                            <DataGridTemplateColumn Header="Supplier"
+                                                    Width="340"
+                                                    CellStyle="{StaticResource FrozenCell}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding SupplierDisplayName, Mode=OneWay}"
+                                                 Style="{StaticResource CopyableGridTextBox}"
+                                                 FontWeight="Bold"
+                                                 Foreground="#003366"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="GRN Count"
+                                                Binding="{Binding GrnCount}"
+                                                Width="110"
+                                                ElementStyle="{StaticResource CenterText}"/>
+
+                            <DataGridTextColumn Header="Total GRN Value"
+                                                Binding="{Binding TotalGrnValue, StringFormat=N2}"
+                                                Width="170"
+                                                ElementStyle="{StaticResource RightBoldText}"/>
+
+                            <DataGridTextColumn Header="% of Total Purchases"
+                                                Binding="{Binding PercentageOfTotalPurchases, StringFormat={}{0:N2}%}"
+                                                Width="170"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Last GRN Date"
+                                                Binding="{Binding LastGrnDate, StringFormat=dd-MM-yyyy}"
+                                                Width="140"
+                                                ElementStyle="{StaticResource CenterText}"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </TabItem>
 
-                <TabItem Header="Return &amp; Defect Rates">
-                    <DataGrid ItemsSource="{Binding ReturnRates}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                              HeadersVisibility="Column" GridLinesVisibility="All" HorizontalGridLinesBrush="#E0E0E0" VerticalGridLinesBrush="#E0E0E0" 
-                              RowHeight="30" Background="White" BorderThickness="0" SelectionMode="Single" AlternatingRowBackground="#F9F9F9">
+                <!-- TAB 3 -->
+                <TabItem Header="Supplier Return Summary">
+                    <DataGrid ItemsSource="{Binding SupplierReturns}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="All"
+                              HorizontalGridLinesBrush="#E0E0E0"
+                              VerticalGridLinesBrush="#E0E0E0"
+                              RowHeight="31"
+                              Background="White"
+                              BorderThickness="0"
+                              SelectionMode="Single"
+                              AlternatingRowBackground="#F9F9F9"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+
                         <DataGrid.Resources>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#E0E0E0"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter Property="Padding" Value="6"/>
-                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                                <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                            </Style>
-                            <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
+                            <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource BaseCell}"/>
                         </DataGrid.Resources>
+
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="350" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Total Units Bought" Binding="{Binding TotalItemsBought, StringFormat=N2}" Width="200" ElementStyle="{StaticResource RightElement}"/>
-                            <DataGridTextColumn Header="Total Units Returned" Binding="{Binding TotalItemsReturned, StringFormat=N2}" Width="200" ElementStyle="{StaticResource RightElement}"/>
-                            <DataGridTextColumn Header="Defect / Return Rate (%)" Binding="{Binding DefectPercentage, StringFormat=\{0:N2\}%}" Width="*" ElementStyle="{StaticResource DangerElement}"/>
+                            <DataGridTemplateColumn Header="Supplier"
+                                                    Width="320"
+                                                    CellStyle="{StaticResource FrozenCell}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding SupplierDisplayName, Mode=OneWay}"
+                                                 Style="{StaticResource CopyableGridTextBox}"
+                                                 FontWeight="Bold"
+                                                 Foreground="#003366"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Return Docs"
+                                                Binding="{Binding ReturnDocumentCount}"
+                                                Width="110"
+                                                ElementStyle="{StaticResource CenterText}"/>
+
+                            <DataGridTextColumn Header="Returned Qty"
+                                                Binding="{Binding TotalReturnedQty, StringFormat=N3}"
+                                                Width="130"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Gross Return"
+                                                Binding="{Binding GrossReturnValue, StringFormat=N2}"
+                                                Width="135"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Restocking Fee"
+                                                Binding="{Binding RestockingFee, StringFormat=N2}"
+                                                Width="135"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Net Credit"
+                                                Binding="{Binding NetSupplierCredit, StringFormat=N2}"
+                                                Width="135"
+                                                ElementStyle="{StaticResource RightBoldText}"/>
+
+                            <DataGridTextColumn Header="Purchase Value"
+                                                Binding="{Binding PurchaseValueInPeriod, StringFormat=N2}"
+                                                Width="140"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Return %"
+                                                Binding="{Binding ReturnValuePercentage, StringFormat={}{0:N2}%}"
+                                                Width="100"
+                                                ElementStyle="{StaticResource RightText}"/>
+
+                            <DataGridTextColumn Header="Last Return"
+                                                Binding="{Binding LastReturnDate, StringFormat=dd-MM-yyyy}"
+                                                Width="120"
+                                                ElementStyle="{StaticResource CenterText}"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </TabItem>

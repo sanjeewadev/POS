@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
+using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -15,22 +17,18 @@ namespace POS.BackOffice.UI.ViewModels
     public class MatrixPropertySelection
     {
         public AttributeGroup Group { get; set; } = null!;
-
         public AttributeValue Value { get; set; } = null!;
-
         public string DisplayText => $"{Group.GroupName}: {Value.ValueName}";
     }
 
     public class MatrixPropertyGroupSelection
     {
         public AttributeGroup Group { get; set; } = null!;
-
         public string GroupName => Group.GroupName;
-
         public ObservableCollection<MatrixPropertySelection> Values { get; } = new();
     }
 
-    public partial class ItemMasterViewModel : ObservableObject
+    public partial class ItemMasterViewModel : ViewModelBase
     {
         private readonly ItemMasterRepository _itemMasterRepository;
         private readonly CategoryRepository _categoryRepository;
@@ -38,21 +36,26 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly AttributeRepository _attributeRepository;
         private readonly UnitOfMeasureRepository _uomRepository;
         private readonly SupplierRepository _supplierRepository;
+        private readonly IMessageBoxService _messageBoxService;
 
-        private bool _isLoadingItem = false;
-        private bool _isClearing = false;
+        private bool _isInitialized;
+        private bool _isLoadingItem;
+        private bool _isClearing;
+        private bool _isUpdatingSupplierSelection;
 
-        private static readonly Random _random = new Random();
+        private static readonly Random _random = new();
 
         private static readonly Regex CodeRegex =
-            new Regex("^[A-Z0-9_-]+$", RegexOptions.Compiled);
-
-        // =========================================================
-        // ZONE 1: PARENT IDENTITY & CLASSIFICATION
-        // =========================================================
+            new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         [ObservableProperty]
-        private ItemParent _currentItem = new();
+        private ItemParent _currentItem = new()
+        {
+            HasBatchTracking = true,
+            HasExpiryTracking = false,
+            HasBatchExpiry = false,
+            AllowCashierDiscount = true
+        };
 
         [ObservableProperty]
         private Category? _selectedCategory;
@@ -75,10 +78,6 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _selectedTaxCode = string.Empty;
 
-        // =========================================================
-        // ZONE 2: VARIANT BUILDER
-        // =========================================================
-
         [ObservableProperty]
         private AttributeGroup? _selectedPropertyKey;
 
@@ -86,12 +85,7 @@ namespace POS.BackOffice.UI.ViewModels
         private AttributeValue? _propertyValueInput;
 
         public ObservableCollection<MatrixPropertySelection> DynamicProperties { get; } = new();
-
         public ObservableCollection<MatrixPropertyGroupSelection> SelectedPropertyGroups { get; } = new();
-
-        // =========================================================
-        // ZONE 3: BULK PRICING & TRACKING DEFAULTS
-        // =========================================================
 
         [ObservableProperty]
         private decimal _bulkCost = 0m;
@@ -120,28 +114,17 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private bool _bulkIsScaleItem = false;
 
-        // Correct new flag:
-        // Default ON because your cashier will sell from selected batches.
         [ObservableProperty]
         private bool _bulkHasBatchTracking = true;
 
-        // Correct new flag:
-        // Expiry is separate from batch.
         [ObservableProperty]
         private bool _bulkHasExpiryTracking = false;
 
-        // Legacy compatibility only.
-        // Old XAML/repositories used this combined "Batch / Expiry" flag.
         [ObservableProperty]
         private bool _bulkHasBatchExpiry = false;
 
-        // Kept for future serial workflow, but the new UI should not show it yet.
         [ObservableProperty]
         private bool _bulkIsSerialized = false;
-
-        // =========================================================
-        // ZONE 4: ITEM DATABASE GRID
-        // =========================================================
 
         public ObservableCollection<ItemMasterSummaryDto> Items { get; } = new();
 
@@ -149,11 +132,10 @@ namespace POS.BackOffice.UI.ViewModels
         private string _masterSearchText = string.Empty;
 
         [ObservableProperty]
-        private ItemMasterSummaryDto? _selectedDatabaseItem;
+        private bool _includeDeactivatedItems = false;
 
-        // =========================================================
-        // ZONE 5: GENERATED VARIANTS
-        // =========================================================
+        [ObservableProperty]
+        private ItemMasterSummaryDto? _selectedDatabaseItem;
 
         public ObservableCollection<ItemVariant> GeneratedVariants { get; } = new();
 
@@ -161,37 +143,32 @@ namespace POS.BackOffice.UI.ViewModels
         private ItemVariant? _selectedVariantForSupplierEdit;
 
         // =========================================================
-        // ZONE 6: SINGLE VARIANT SUPPLIER MANAGEMENT
+        // VARIANT SUPPLIER ASSIGNMENT SELECTION
         // =========================================================
 
-        public ObservableCollection<Supplier> AvailableSuppliers { get; } = new();
+        [ObservableProperty]
+        private bool _selectAllVariantsForSupplierAssignment = false;
 
+        [ObservableProperty]
+        private int _selectedSupplierAssignmentCount = 0;
+
+        public ObservableCollection<Supplier> AvailableSuppliers { get; } = new();
         public ObservableCollection<ItemSupplier> SelectedVariantSuppliers { get; } = new();
+
+        [ObservableProperty]
+        private ItemSupplier? _selectedSupplierLinkForEdit;
 
         [ObservableProperty]
         private Supplier? _supplierToAdd;
 
         [ObservableProperty]
-        private string _supplierItemCodeInput = string.Empty;
-
-        [ObservableProperty]
         private decimal _supplierCostInput = 0m;
-
-        [ObservableProperty]
-        private bool _supplierIsPrimaryInput = false;
 
         [ObservableProperty]
         private int _supplierMinimumOrderQuantityInput = 1;
 
-        // =========================================================
-        // ZONE 7: BULK SUPPLIER ASSIGNMENT
-        // =========================================================
-
         [ObservableProperty]
         private Supplier? _bulkSupplierToAssign;
-
-        [ObservableProperty]
-        private string _bulkSupplierItemCodePrefix = string.Empty;
 
         [ObservableProperty]
         private decimal _bulkSupplierCostInput = 0m;
@@ -199,21 +176,10 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private int _bulkSupplierMinimumOrderQuantityInput = 1;
 
-        [ObservableProperty]
-        private bool _bulkSupplierIsPrimaryInput = true;
-
-        // =========================================================
-        // LOOKUPS
-        // =========================================================
-
         public ObservableCollection<Category> Categories { get; } = new();
-
         public ObservableCollection<SubCategory> SubCategories { get; } = new();
-
         public ObservableCollection<AttributeGroup> PropertyKeys { get; } = new();
-
         public ObservableCollection<AttributeValue> PropertyValues { get; } = new();
-
         public ObservableCollection<UnitOfMeasure> Uoms { get; } = new();
 
         public ObservableCollection<string> TaxCodes { get; } = new(new[]
@@ -222,10 +188,6 @@ namespace POS.BackOffice.UI.ViewModels
             "VAT-18",
             "VAT-5"
         });
-
-        // =========================================================
-        // UI STATE
-        // =========================================================
 
         [ObservableProperty]
         private bool _isBusy = false;
@@ -239,20 +201,25 @@ namespace POS.BackOffice.UI.ViewModels
             SubCategoryRepository subCategoryRepository,
             AttributeRepository attributeRepository,
             UnitOfMeasureRepository uomRepository,
-            SupplierRepository supplierRepository)
+            SupplierRepository supplierRepository,
+            IMessageBoxService messageBoxService)
         {
-            _itemMasterRepository = itemMasterRepository;
-            _categoryRepository = categoryRepository;
-            _subCategoryRepository = subCategoryRepository;
-            _attributeRepository = attributeRepository;
-            _uomRepository = uomRepository;
-            _supplierRepository = supplierRepository;
-
-            _ = InitializeAsync();
+            _itemMasterRepository = itemMasterRepository ?? throw new ArgumentNullException(nameof(itemMasterRepository));
+            _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
+            _subCategoryRepository = subCategoryRepository ?? throw new ArgumentNullException(nameof(subCategoryRepository));
+            _attributeRepository = attributeRepository ?? throw new ArgumentNullException(nameof(attributeRepository));
+            _uomRepository = uomRepository ?? throw new ArgumentNullException(nameof(uomRepository));
+            _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
+            _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
         }
 
+        [RelayCommand(CanExecute = nameof(CanInitialize))]
         private async Task InitializeAsync()
         {
+            if (_isInitialized)
+                return;
+
+            _isInitialized = true;
             IsBusy = true;
 
             try
@@ -266,11 +233,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to initialize Item Master.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to initialize Item Master:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -294,18 +259,14 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var uom in uoms)
                 Uoms.Add(uom);
 
-            var suppliers = await _supplierRepository.GetAllAsync();
+            var suppliers = await _supplierRepository.GetActiveAsync();
 
-            foreach (var supplier in suppliers.Where(s => !s.IsDeactivated).OrderBy(s => s.SupplierName))
+            foreach (var supplier in suppliers.OrderBy(s => s.SupplierCode).ThenBy(s => s.SupplierName))
                 AvailableSuppliers.Add(supplier);
 
             SelectedTaxCode = TaxCodes.FirstOrDefault() ?? string.Empty;
             SelectedUom = Uoms.FirstOrDefault();
         }
-
-        // =========================================================
-        // CATEGORY / SUBCATEGORY / PROPERTY LOADING
-        // =========================================================
 
         partial void OnSelectedCategoryChanged(Category? value)
         {
@@ -338,6 +299,7 @@ namespace POS.BackOffice.UI.ViewModels
                 GeneratedVariants.Clear();
                 SelectedVariantSuppliers.Clear();
                 SelectedVariantForSupplierEdit = null;
+                UpdateSupplierAssignmentSelectionCount();
 
                 await LoadSubCategoriesAsync(categoryId);
                 await LoadPropertyKeysForCategoryAsync(categoryId);
@@ -348,11 +310,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to load category details.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load category details:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -413,7 +373,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             var groups = await _attributeRepository.GetAttributeGroupsForCategoryAsync(categoryId);
 
-            foreach (var group in groups)
+            foreach (var group in groups.Where(g => !g.IsDeactivated).OrderBy(g => g.DisplayOrder).ThenBy(g => g.GroupName))
                 PropertyKeys.Add(group);
         }
 
@@ -439,16 +399,14 @@ namespace POS.BackOffice.UI.ViewModels
 
                 var values = await _attributeRepository.GetAllValuesFilteredAsync(groupId, "");
 
-                foreach (var value in values.Where(v => !v.IsDeactivated))
+                foreach (var value in values.Where(v => !v.IsDeactivated).OrderBy(v => v.DisplayOrder).ThenBy(v => v.ValueName))
                     PropertyValues.Add(value);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load property values:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
         }
 
@@ -456,10 +414,6 @@ namespace POS.BackOffice.UI.ViewModels
         {
             AddPropertyCommand.NotifyCanExecuteChanged();
         }
-
-        // =========================================================
-        // DATABASE ITEM SELECTION / LOADING
-        // =========================================================
 
         partial void OnSelectedDatabaseItemChanged(ItemMasterSummaryDto? value)
         {
@@ -510,15 +464,9 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedTaxCode = fullItem.TaxCode;
 
                 BulkIsScaleItem = fullItem.IsScaleItem;
-
-                // New separated flags.
                 BulkHasBatchTracking = fullItem.HasBatchTracking;
-
-                // Legacy fallback:
-                // old records may only have HasBatchExpiry.
                 BulkHasExpiryTracking = fullItem.HasExpiryTracking || fullItem.HasBatchExpiry;
                 BulkHasBatchExpiry = BulkHasExpiryTracking;
-
                 BulkIsSerialized = fullItem.IsSerialized;
 
                 GeneratedVariants.Clear();
@@ -526,29 +474,33 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedVariantForSupplierEdit = null;
 
                 foreach (var variant in fullItem.Variants
-                             .Where(v => !v.IsDeactivated)
-                             .OrderBy(v => v.VariantDescription)
+                             .OrderBy(v => v.IsDeactivated)
+                             .ThenBy(v => v.VariantDescription)
                              .ThenBy(v => v.SkuCode))
                 {
                     variant.PropertyMappings ??= new List<ItemPropertyMapping>();
                     variant.ItemSuppliers ??= new List<ItemSupplier>();
+                    variant.IsSelectedForSupplierAssignment = false;
+
+                    ApplyParentDisplayNames(variant);
 
                     GeneratedVariants.Add(variant);
                 }
 
                 RebuildBuilderSelectionFromVariants();
+                UpdateSupplierAssignmentSelectionCount();
 
-                StatusMessage = $"Loaded item: {fullItem.ItemCode}";
+                StatusMessage = fullItem.IsDeactivated
+                    ? $"Loaded deactivated item: {fullItem.ItemCode}"
+                    : $"Loaded item: {fullItem.ItemCode}";
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load item.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load item:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -585,10 +537,6 @@ namespace POS.BackOffice.UI.ViewModels
                 });
             }
         }
-
-        // =========================================================
-        // MATRIX PROPERTY SELECTION
-        // =========================================================
 
         [RelayCommand(CanExecute = nameof(CanAddProperty))]
         private void AddProperty()
@@ -674,10 +622,6 @@ namespace POS.BackOffice.UI.ViewModels
             PropertyValueInput = null;
         }
 
-        // =========================================================
-        // VARIANT GENERATION
-        // =========================================================
-
         [RelayCommand(CanExecute = nameof(CanGenerateVariants))]
         private async Task GenerateVariantsAsync()
         {
@@ -702,6 +646,7 @@ namespace POS.BackOffice.UI.ViewModels
                     SkuCode = itemCode,
                     VariantDescription = "Standard",
                     Barcode = await GenerateInternalBarcodeAsync(usedBarcodes),
+                    AverageCost = BulkCost,
                     CostPrice = BulkCost,
                     RetailPrice = BulkRetailPrice,
                     WholesalePrice = BulkWholesalePrice,
@@ -709,13 +654,18 @@ namespace POS.BackOffice.UI.ViewModels
                     MaximumPrice = BulkMaximumPrice,
                     ReorderLevel = BulkReorderLevel,
                     ItemSuppliers = new List<ItemSupplier>(),
-                    PropertyMappings = new List<ItemPropertyMapping>()
+                    PropertyMappings = new List<ItemPropertyMapping>(),
+                    IsSelectedForSupplierAssignment = false
                 };
 
+                ApplyParentDisplayNames(standardVariant);
                 RestoreSupplierLinksIfAvailable(standardVariant, existingSupplierLinks);
+
                 GeneratedVariants.Add(standardVariant);
 
-                StatusMessage = "1 standard variant generated.";
+                UpdateSupplierAssignmentSelectionCount();
+
+                StatusMessage = "1 standard variant generated. The word 'Standard' will not be printed in the final product name.";
                 NotifyCommandStates();
                 return;
             }
@@ -737,6 +687,7 @@ namespace POS.BackOffice.UI.ViewModels
                     SkuCode = sku,
                     VariantDescription = description,
                     Barcode = await GenerateInternalBarcodeAsync(usedBarcodes),
+                    AverageCost = BulkCost,
                     CostPrice = BulkCost,
                     RetailPrice = BulkRetailPrice,
                     WholesalePrice = BulkWholesalePrice,
@@ -744,7 +695,8 @@ namespace POS.BackOffice.UI.ViewModels
                     MaximumPrice = BulkMaximumPrice,
                     ReorderLevel = BulkReorderLevel,
                     ItemSuppliers = new List<ItemSupplier>(),
-                    PropertyMappings = new List<ItemPropertyMapping>()
+                    PropertyMappings = new List<ItemPropertyMapping>(),
+                    IsSelectedForSupplierAssignment = false
                 };
 
                 foreach (var selection in combo)
@@ -756,9 +708,13 @@ namespace POS.BackOffice.UI.ViewModels
                     });
                 }
 
+                ApplyParentDisplayNames(variant);
                 RestoreSupplierLinksIfAvailable(variant, existingSupplierLinks);
+
                 GeneratedVariants.Add(variant);
             }
+
+            UpdateSupplierAssignmentSelectionCount();
 
             StatusMessage = $"{GeneratedVariants.Count} variant(s) generated.";
             NotifyCommandStates();
@@ -778,9 +734,9 @@ namespace POS.BackOffice.UI.ViewModels
                     {
                         SupplierId = s.SupplierId,
                         Supplier = s.Supplier,
-                        SupplierItemCode = s.SupplierItemCode,
+                        SupplierItemCode = string.Empty,
                         LastCostPrice = s.LastCostPrice,
-                        IsPrimary = s.IsPrimary,
+                        IsPrimary = false,
                         MinimumOrderQuantity = s.MinimumOrderQuantity <= 0 ? 1 : s.MinimumOrderQuantity
                     })
                     .ToList() ?? new List<ItemSupplier>();
@@ -896,10 +852,6 @@ namespace POS.BackOffice.UI.ViewModels
             return clean.Length <= 4 ? clean : clean.Substring(0, 4);
         }
 
-        // =========================================================
-        // BULK PRICE CALCULATION
-        // =========================================================
-
         partial void OnBulkCostChanged(decimal value)
         {
             CalculateBulkPricesFromMarkup();
@@ -921,9 +873,26 @@ namespace POS.BackOffice.UI.ViewModels
             CalculateBulkPricesFromMarkup();
         }
 
+        partial void OnBulkHasBatchTrackingChanged(bool value)
+        {
+            if (!value)
+            {
+                BulkHasExpiryTracking = false;
+                BulkHasBatchExpiry = false;
+            }
+
+            NotifyCommandStates();
+        }
+
         partial void OnBulkHasExpiryTrackingChanged(bool value)
         {
-            // Legacy compatibility: old code still reads HasBatchExpiry.
+            if (value && !BulkHasBatchTracking)
+            {
+                BulkHasExpiryTracking = false;
+                BulkHasBatchExpiry = false;
+                return;
+            }
+
             BulkHasBatchExpiry = value;
         }
 
@@ -931,6 +900,11 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (BulkHasExpiryTracking != value)
                 BulkHasExpiryTracking = value;
+        }
+
+        partial void OnBulkIsScaleItemChanged(bool value)
+        {
+            SaveCommand.NotifyCanExecuteChanged();
         }
 
         private void CalculateBulkPricesFromMarkup()
@@ -947,11 +921,10 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (!GeneratedVariants.Any())
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Generate variants first before applying bulk defaults.",
-                    "No Variants",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "No Variants");
+
                 return;
             }
 
@@ -959,12 +932,15 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var variant in variants)
             {
+                variant.AverageCost = BulkCost;
                 variant.CostPrice = BulkCost;
                 variant.RetailPrice = BulkRetailPrice;
                 variant.WholesalePrice = BulkWholesalePrice;
                 variant.MinimumPrice = BulkMinimumPrice;
                 variant.MaximumPrice = BulkMaximumPrice;
                 variant.ReorderLevel = BulkReorderLevel;
+
+                ApplyParentDisplayNames(variant);
             }
 
             RefreshGeneratedVariantGrid(variants);
@@ -986,20 +962,211 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedVariantForSupplierEdit = GeneratedVariants
                     .FirstOrDefault(v => string.Equals(v.SkuCode, selectedSku, StringComparison.OrdinalIgnoreCase));
             }
+
+            UpdateSupplierAssignmentSelectionCount();
         }
 
         // =========================================================
-        // SINGLE VARIANT SUPPLIER MANAGEMENT
+        // VARIANT SUPPLIER SELECTION / ASSIGNMENT
         // =========================================================
+
+        partial void OnSelectAllVariantsForSupplierAssignmentChanged(bool value)
+        {
+            if (_isUpdatingSupplierSelection)
+                return;
+
+            var variants = GeneratedVariants.ToList();
+
+            foreach (var variant in variants)
+                variant.IsSelectedForSupplierAssignment = value;
+
+            RefreshGeneratedVariantGrid(variants);
+            UpdateSupplierAssignmentSelectionCount();
+        }
+
+        [RelayCommand]
+        private void RefreshSupplierAssignmentSelection()
+        {
+            UpdateSupplierAssignmentSelectionCount();
+        }
+
+        private void UpdateSupplierAssignmentSelectionCount()
+        {
+            int selectedCount = GeneratedVariants.Count(v => v.IsSelectedForSupplierAssignment);
+            bool allSelected = GeneratedVariants.Any() && selectedCount == GeneratedVariants.Count;
+
+            _isUpdatingSupplierSelection = true;
+
+            try
+            {
+                SelectedSupplierAssignmentCount = selectedCount;
+                SelectAllVariantsForSupplierAssignment = allSelected;
+            }
+            finally
+            {
+                _isUpdatingSupplierSelection = false;
+            }
+
+            AssignSupplierToSelectedVariantsCommand.NotifyCanExecuteChanged();
+        }
+
+        [RelayCommand(CanExecute = nameof(CanAssignSupplierToSelectedVariants))]
+        private void AssignSupplierToSelectedVariants()
+        {
+            UpdateSupplierAssignmentSelectionCount();
+
+            var selectedVariants = GeneratedVariants
+                .Where(v => v.IsSelectedForSupplierAssignment)
+                .ToList();
+
+            if (!selectedVariants.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "Please tick one or more variants first.",
+                    "Selection Required");
+
+                return;
+            }
+
+            if (!AvailableSuppliers.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "No active suppliers found. Please create suppliers first.",
+                    "Supplier Required");
+
+                return;
+            }
+
+            decimal defaultCost = selectedVariants
+                .FirstOrDefault(v => v.CostPrice > 0)?.CostPrice ?? BulkCost;
+
+            if (defaultCost < 0)
+                defaultCost = 0m;
+
+            var dialog = new AssignVariantSuppliersDialog(
+                AvailableSuppliers.ToList(),
+                defaultCost,
+                defaultMoq: 1,
+                selectedVariantCount: selectedVariants.Count)
+            {
+                Owner = GetDialogOwner()
+            };
+
+            bool? dialogResult = dialog.ShowDialog();
+
+            if (dialogResult != true)
+                return;
+
+            Supplier? supplier = dialog.SelectedSupplier;
+
+            if (supplier == null)
+            {
+                _messageBoxService.ShowWarning(
+                    "Please select a supplier.",
+                    "Validation");
+
+                return;
+            }
+
+            if (dialog.SupplierCost < 0)
+            {
+                _messageBoxService.ShowWarning(
+                    "Supplier cost cannot be negative.",
+                    "Validation");
+
+                return;
+            }
+
+            if (dialog.MinimumOrderQuantity <= 0)
+            {
+                _messageBoxService.ShowWarning(
+                    "Minimum order quantity must be greater than zero.",
+                    "Validation");
+
+                return;
+            }
+
+            int addedCount = 0;
+            int updatedCount = 0;
+
+            foreach (var variant in selectedVariants)
+            {
+                AddOrUpdateSupplierLinkForVariant(
+                    variant,
+                    supplier,
+                    dialog.SupplierCost,
+                    dialog.MinimumOrderQuantity,
+                    ref addedCount,
+                    ref updatedCount);
+            }
+
+            if (SelectedVariantForSupplierEdit != null &&
+                selectedVariants.Any(v => string.Equals(v.SkuCode, SelectedVariantForSupplierEdit.SkuCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                RebuildSelectedVariantSuppliers();
+            }
+
+            StatusMessage =
+                $"Supplier assignment completed. Selected variants: {selectedVariants.Count}, Added: {addedCount}, Updated: {updatedCount}. Click SAVE FULL ITEM to update the database.";
+
+            NotifyCommandStates();
+        }
+
+        private void AddOrUpdateSupplierLinkForVariant(
+            ItemVariant variant,
+            Supplier supplier,
+            decimal cost,
+            int minimumOrderQuantity,
+            ref int addedCount,
+            ref int updatedCount)
+        {
+            variant.ItemSuppliers ??= new List<ItemSupplier>();
+
+            var existing = variant.ItemSuppliers
+                .FirstOrDefault(s => s.SupplierId == supplier.Id);
+
+            if (existing == null)
+            {
+                variant.ItemSuppliers.Add(new ItemSupplier
+                {
+                    SupplierId = supplier.Id,
+                    Supplier = supplier,
+                    ItemVariantId = variant.Id,
+                    SupplierItemCode = string.Empty,
+                    LastCostPrice = cost,
+                    MinimumOrderQuantity = minimumOrderQuantity,
+                    IsPrimary = false
+                });
+
+                addedCount++;
+                return;
+            }
+
+            existing.Supplier = supplier;
+            existing.SupplierItemCode = string.Empty;
+            existing.LastCostPrice = cost;
+            existing.MinimumOrderQuantity = minimumOrderQuantity;
+            existing.IsPrimary = false;
+            updatedCount++;
+        }
+
+        private static Window? GetDialogOwner()
+        {
+            return Application.Current?.Windows
+                       .OfType<Window>()
+                       .FirstOrDefault(w => w.IsActive)
+                   ?? Application.Current?.MainWindow;
+        }
 
         partial void OnSelectedVariantForSupplierEditChanged(ItemVariant? value)
         {
             SelectedVariantSuppliers.Clear();
+            SelectedSupplierLinkForEdit = null;
 
             if (value == null)
             {
+                SupplierToAdd = null;
                 SupplierCostInput = 0m;
-                SupplierIsPrimaryInput = false;
                 SupplierMinimumOrderQuantityInput = 1;
                 AddSupplierToVariantCommand.NotifyCanExecuteChanged();
                 return;
@@ -1008,12 +1175,45 @@ namespace POS.BackOffice.UI.ViewModels
             value.ItemSuppliers ??= new List<ItemSupplier>();
 
             foreach (var supplier in value.ItemSuppliers)
+            {
+                supplier.SupplierItemCode = string.Empty;
+                supplier.IsPrimary = false;
                 SelectedVariantSuppliers.Add(supplier);
+            }
 
+            SupplierToAdd = null;
             SupplierCostInput = value.CostPrice;
-            SupplierIsPrimaryInput = !SelectedVariantSuppliers.Any();
             SupplierMinimumOrderQuantityInput = 1;
 
+            AddSupplierToVariantCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnSelectedSupplierLinkForEditChanged(ItemSupplier? value)
+        {
+            if (value == null)
+                return;
+
+            SupplierToAdd =
+                AvailableSuppliers.FirstOrDefault(s => s.Id == value.SupplierId) ??
+                value.Supplier;
+
+            SupplierCostInput = value.LastCostPrice;
+            SupplierMinimumOrderQuantityInput = value.MinimumOrderQuantity <= 0
+                ? 1
+                : value.MinimumOrderQuantity;
+
+            AddSupplierToVariantCommand.NotifyCanExecuteChanged();
+        }
+
+        [RelayCommand]
+        private void ClearSupplierEdit()
+        {
+            SelectedSupplierLinkForEdit = null;
+            SupplierToAdd = null;
+            SupplierCostInput = SelectedVariantForSupplierEdit?.CostPrice ?? 0m;
+            SupplierMinimumOrderQuantityInput = 1;
+
+            StatusMessage = "Supplier edit cleared.";
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
         }
 
@@ -1037,62 +1237,103 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedVariantForSupplierEdit == null)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select a variant first.",
-                    "Selection Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Selection Required");
+
                 return;
             }
 
             if (SupplierToAdd == null)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select a supplier.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation");
+
                 return;
             }
 
             if (SupplierCostInput < 0)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Supplier cost cannot be negative.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation");
+
                 return;
             }
 
             if (SupplierMinimumOrderQuantityInput <= 0)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Minimum order quantity must be greater than zero.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation");
+
                 return;
             }
 
             SelectedVariantForSupplierEdit.ItemSuppliers ??= new List<ItemSupplier>();
 
-            if (SelectedVariantForSupplierEdit.ItemSuppliers.Any(s => s.SupplierId == SupplierToAdd.Id))
+            ItemSupplier? editTarget = null;
+
+            if (SelectedSupplierLinkForEdit != null)
             {
-                MessageBox.Show(
-                    "This supplier is already attached to this variant.",
-                    "Duplicate Supplier",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                editTarget = SelectedVariantForSupplierEdit.ItemSuppliers
+                    .FirstOrDefault(s => ReferenceEquals(s, SelectedSupplierLinkForEdit));
+
+                editTarget ??= SelectedVariantForSupplierEdit.ItemSuppliers
+                    .FirstOrDefault(s => s.SupplierId == SelectedSupplierLinkForEdit.SupplierId);
+            }
+
+            if (editTarget != null)
+            {
+                bool targetSupplierAlreadyExists = SelectedVariantForSupplierEdit.ItemSuppliers.Any(s =>
+                    !ReferenceEquals(s, editTarget) &&
+                    s.SupplierId == SupplierToAdd.Id);
+
+                if (targetSupplierAlreadyExists)
+                {
+                    _messageBoxService.ShowWarning(
+                        "This supplier is already assigned to the selected variant.",
+                        "Duplicate Supplier");
+
+                    return;
+                }
+
+                editTarget.SupplierId = SupplierToAdd.Id;
+                editTarget.Supplier = SupplierToAdd;
+                editTarget.ItemVariantId = SelectedVariantForSupplierEdit.Id;
+                editTarget.SupplierItemCode = string.Empty;
+                editTarget.LastCostPrice = SupplierCostInput;
+                editTarget.MinimumOrderQuantity = SupplierMinimumOrderQuantityInput;
+                editTarget.IsPrimary = false;
+
+                RebuildSelectedVariantSuppliers();
+
+                SelectedSupplierLinkForEdit = SelectedVariantSuppliers
+                    .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
+
+                StatusMessage = "Supplier link updated. Click SAVE FULL ITEM to update the database.";
                 return;
             }
 
-            bool makePrimary = SupplierIsPrimaryInput || !SelectedVariantForSupplierEdit.ItemSuppliers.Any();
+            var existing = SelectedVariantForSupplierEdit.ItemSuppliers
+                .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
 
-            if (makePrimary)
+            if (existing != null)
             {
-                foreach (var existing in SelectedVariantForSupplierEdit.ItemSuppliers)
-                    existing.IsPrimary = false;
+                existing.Supplier = SupplierToAdd;
+                existing.SupplierItemCode = string.Empty;
+                existing.LastCostPrice = SupplierCostInput;
+                existing.MinimumOrderQuantity = SupplierMinimumOrderQuantityInput;
+                existing.IsPrimary = false;
+
+                RebuildSelectedVariantSuppliers();
+
+                SelectedSupplierLinkForEdit = SelectedVariantSuppliers
+                    .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
+
+                StatusMessage = "Existing supplier link updated. Click SAVE FULL ITEM to update the database.";
+                return;
             }
 
             var newSupplierLink = new ItemSupplier
@@ -1100,22 +1341,20 @@ namespace POS.BackOffice.UI.ViewModels
                 SupplierId = SupplierToAdd.Id,
                 Supplier = SupplierToAdd,
                 ItemVariantId = SelectedVariantForSupplierEdit.Id,
-                SupplierItemCode = NormalizeText(SupplierItemCodeInput),
+                SupplierItemCode = string.Empty,
                 LastCostPrice = SupplierCostInput,
-                IsPrimary = makePrimary,
+                IsPrimary = false,
                 MinimumOrderQuantity = SupplierMinimumOrderQuantityInput
             };
 
             SelectedVariantForSupplierEdit.ItemSuppliers.Add(newSupplierLink);
-            SelectedVariantSuppliers.Add(newSupplierLink);
 
-            SupplierToAdd = null;
-            SupplierItemCodeInput = string.Empty;
-            SupplierCostInput = SelectedVariantForSupplierEdit.CostPrice;
-            SupplierIsPrimaryInput = false;
-            SupplierMinimumOrderQuantityInput = 1;
+            RebuildSelectedVariantSuppliers();
 
-            StatusMessage = "Supplier added to selected variant.";
+            SelectedSupplierLinkForEdit = SelectedVariantSuppliers
+                .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
+
+            StatusMessage = "Supplier link added. Click SAVE FULL ITEM to update the database.";
         }
 
         [RelayCommand]
@@ -1124,16 +1363,27 @@ namespace POS.BackOffice.UI.ViewModels
             if (itemSupplier == null || SelectedVariantForSupplierEdit == null)
                 return;
 
-            SelectedVariantSuppliers.Remove(itemSupplier);
-            SelectedVariantForSupplierEdit.ItemSuppliers.Remove(itemSupplier);
+            var suppliers = SelectedVariantForSupplierEdit.ItemSuppliers?
+                .ToList() ?? new List<ItemSupplier>();
 
-            if (itemSupplier.IsPrimary && SelectedVariantForSupplierEdit.ItemSuppliers.Any())
+            var removeTarget = suppliers.FirstOrDefault(s =>
+                ReferenceEquals(s, itemSupplier) ||
+                s.SupplierId == itemSupplier.SupplierId);
+
+            if (removeTarget != null)
+                suppliers.Remove(removeTarget);
+
+            SelectedVariantForSupplierEdit.ItemSuppliers = suppliers;
+
+            if (SelectedSupplierLinkForEdit != null &&
+                SelectedSupplierLinkForEdit.SupplierId == itemSupplier.SupplierId)
             {
-                SelectedVariantForSupplierEdit.ItemSuppliers.First().IsPrimary = true;
-                RebuildSelectedVariantSuppliers();
+                ClearSupplierEdit();
             }
 
-            StatusMessage = "Supplier removed from selected variant.";
+            RebuildSelectedVariantSuppliers();
+
+            StatusMessage = "Supplier removed from selected variant. Click SAVE FULL ITEM to update the database.";
         }
 
         private void RebuildSelectedVariantSuppliers()
@@ -1143,13 +1393,15 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedVariantForSupplierEdit?.ItemSuppliers == null)
                 return;
 
-            foreach (var supplier in SelectedVariantForSupplierEdit.ItemSuppliers)
+            foreach (var supplier in SelectedVariantForSupplierEdit.ItemSuppliers
+                         .OrderBy(s => s.Supplier?.SupplierCode)
+                         .ThenBy(s => s.Supplier?.SupplierName))
+            {
+                supplier.SupplierItemCode = string.Empty;
+                supplier.IsPrimary = false;
                 SelectedVariantSuppliers.Add(supplier);
+            }
         }
-
-        // =========================================================
-        // BULK SUPPLIER ASSIGNMENT
-        // =========================================================
 
         partial void OnBulkSupplierToAssignChanged(Supplier? value)
         {
@@ -1171,41 +1423,37 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (!GeneratedVariants.Any())
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Generate variants first before assigning suppliers.",
-                    "No Variants",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "No Variants");
+
                 return;
             }
 
             if (BulkSupplierToAssign == null)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select a supplier.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation");
+
                 return;
             }
 
             if (BulkSupplierCostInput < 0)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Supplier cost cannot be negative.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation");
+
                 return;
             }
 
             if (BulkSupplierMinimumOrderQuantityInput <= 0)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Minimum order quantity must be greater than zero.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation");
+
                 return;
             }
 
@@ -1215,16 +1463,6 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var variant in GeneratedVariants)
             {
                 variant.ItemSuppliers ??= new List<ItemSupplier>();
-
-                if (BulkSupplierIsPrimaryInput)
-                {
-                    foreach (var existingSupplier in variant.ItemSuppliers)
-                        existingSupplier.IsPrimary = false;
-                }
-
-                string vendorCode = BuildBulkVendorItemCode(
-                    BulkSupplierItemCodePrefix,
-                    variant.SkuCode);
 
                 var existing = variant.ItemSuppliers
                     .FirstOrDefault(s => s.SupplierId == BulkSupplierToAssign.Id);
@@ -1236,10 +1474,10 @@ namespace POS.BackOffice.UI.ViewModels
                         SupplierId = BulkSupplierToAssign.Id,
                         Supplier = BulkSupplierToAssign,
                         ItemVariantId = variant.Id,
-                        SupplierItemCode = vendorCode,
+                        SupplierItemCode = string.Empty,
                         LastCostPrice = BulkSupplierCostInput,
                         MinimumOrderQuantity = BulkSupplierMinimumOrderQuantityInput,
-                        IsPrimary = BulkSupplierIsPrimaryInput || !variant.ItemSuppliers.Any()
+                        IsPrimary = false
                     };
 
                     variant.ItemSuppliers.Add(link);
@@ -1248,45 +1486,19 @@ namespace POS.BackOffice.UI.ViewModels
                 else
                 {
                     existing.Supplier = BulkSupplierToAssign;
-                    existing.SupplierItemCode = vendorCode;
+                    existing.SupplierItemCode = string.Empty;
                     existing.LastCostPrice = BulkSupplierCostInput;
                     existing.MinimumOrderQuantity = BulkSupplierMinimumOrderQuantityInput;
-                    existing.IsPrimary = BulkSupplierIsPrimaryInput || existing.IsPrimary;
+                    existing.IsPrimary = false;
                     updatedCount++;
-                }
-
-                if (!variant.ItemSuppliers.Any(s => s.IsPrimary))
-                {
-                    var first = variant.ItemSuppliers.FirstOrDefault();
-                    if (first != null)
-                        first.IsPrimary = true;
                 }
             }
 
             if (SelectedVariantForSupplierEdit != null)
                 RebuildSelectedVariantSuppliers();
 
-            StatusMessage = $"Supplier bulk assignment completed. Added: {addedCount}, Updated: {updatedCount}.";
+            StatusMessage = $"Supplier bulk assignment completed. Added: {addedCount}, Updated: {updatedCount}. Click SAVE FULL ITEM to update the database.";
         }
-
-        private static string BuildBulkVendorItemCode(string prefix, string skuCode)
-        {
-            string cleanPrefix = NormalizeText(prefix);
-            string cleanSku = NormalizeText(skuCode);
-
-            if (string.IsNullOrWhiteSpace(cleanPrefix))
-                return string.Empty;
-
-            string value = $"{cleanPrefix}-{cleanSku}";
-
-            return value.Length <= 100
-                ? value
-                : value.Substring(0, 100);
-        }
-
-        // =========================================================
-        // SAVE / SEARCH / DELETE
-        // =========================================================
 
         [RelayCommand(CanExecute = nameof(CanSave))]
         private async Task SaveAsync()
@@ -1300,47 +1512,47 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
+                ApplyParentDisplayNamesToAllVariants();
+
                 bool itemCodeUnique = await _itemMasterRepository.IsItemCodeUniqueAsync(
                     itemCode,
                     CurrentItem.Id);
 
                 if (!itemCodeUnique)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         $"Item code '{itemCode}' already exists.",
-                        "Duplicate Item Code",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Duplicate Item Code");
+
                     return;
                 }
 
-                if (CurrentItem.Id == 0)
+                foreach (var variant in GeneratedVariants)
                 {
-                    foreach (var variant in GeneratedVariants)
+                    bool skuUnique = await _itemMasterRepository.IsSkuCodeUniqueAsync(
+                        variant.SkuCode,
+                        variant.Id);
+
+                    if (!skuUnique)
                     {
-                        bool skuUnique = await _itemMasterRepository.IsSkuCodeUniqueAsync(variant.SkuCode);
+                        _messageBoxService.ShowWarning(
+                            $"SKU '{variant.SkuCode}' already exists.",
+                            "Duplicate SKU");
 
-                        if (!skuUnique)
-                        {
-                            MessageBox.Show(
-                                $"SKU '{variant.SkuCode}' already exists.",
-                                "Duplicate SKU",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
-                            return;
-                        }
+                        return;
+                    }
 
-                        bool barcodeUnique = await _itemMasterRepository.IsBarcodeUniqueAsync(variant.Barcode);
+                    bool barcodeUnique = await _itemMasterRepository.IsBarcodeUniqueAsync(
+                        variant.Barcode,
+                        variant.Id);
 
-                        if (!barcodeUnique)
-                        {
-                            MessageBox.Show(
-                                $"Barcode '{variant.Barcode}' already exists.",
-                                "Duplicate Barcode",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
-                            return;
-                        }
+                    if (!barcodeUnique)
+                    {
+                        _messageBoxService.ShowWarning(
+                            $"Barcode '{variant.Barcode}' already exists.",
+                            "Duplicate Barcode");
+
+                        return;
                     }
                 }
 
@@ -1352,14 +1564,9 @@ namespace POS.BackOffice.UI.ViewModels
                 CurrentItem.TaxCode = SelectedTaxCode;
 
                 CurrentItem.IsScaleItem = BulkIsScaleItem;
-
-                // New separated tracking flags.
                 CurrentItem.HasBatchTracking = BulkHasBatchTracking;
                 CurrentItem.HasExpiryTracking = BulkHasExpiryTracking;
-
-                // Legacy compatibility.
                 CurrentItem.HasBatchExpiry = BulkHasExpiryTracking;
-
                 CurrentItem.IsSerialized = BulkIsSerialized;
 
                 CurrentItem.Category = null!;
@@ -1382,6 +1589,8 @@ namespace POS.BackOffice.UI.ViewModels
                     {
                         supplier.ItemVariant = null!;
                         supplier.Supplier = null!;
+                        supplier.SupplierItemCode = string.Empty;
+                        supplier.IsPrimary = false;
                     }
                 }
 
@@ -1399,32 +1608,26 @@ namespace POS.BackOffice.UI.ViewModels
 
                 StatusMessage = "Item saved successfully.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowInformation(
                     "Item saved successfully.",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Success");
             }
             catch (InvalidOperationException ex)
             {
                 StatusMessage = "Save blocked.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     ex.Message,
-                    "Save Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Save Blocked");
             }
             catch (Exception ex)
             {
                 string message = ex.InnerException?.Message ?? ex.Message;
                 StatusMessage = "Save failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to save item:\n\n{message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -1445,11 +1648,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to load item database.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load item database:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -1461,12 +1662,16 @@ namespace POS.BackOffice.UI.ViewModels
         {
             Items.Clear();
 
-            var data = await _itemMasterRepository.GetSummariesAsync(MasterSearchText);
+            var data = await _itemMasterRepository.GetSummariesAsync(
+                searchTerm: MasterSearchText,
+                includeDeactivated: IncludeDeactivatedItems);
 
             foreach (var item in data)
                 Items.Add(item);
 
-            StatusMessage = $"{Items.Count} item record(s) loaded.";
+            StatusMessage = IncludeDeactivatedItems
+                ? $"{Items.Count} item record(s) loaded, including deactivated items."
+                : $"{Items.Count} active item record(s) loaded.";
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -1527,18 +1732,15 @@ namespace POS.BackOffice.UI.ViewModels
             GeneratedVariants.Clear();
             SelectedVariantSuppliers.Clear();
             SelectedVariantForSupplierEdit = null;
+            UpdateSupplierAssignmentSelectionCount();
 
             SupplierToAdd = null;
-            SupplierItemCodeInput = string.Empty;
             SupplierCostInput = 0m;
-            SupplierIsPrimaryInput = false;
             SupplierMinimumOrderQuantityInput = 1;
 
             BulkSupplierToAssign = null;
-            BulkSupplierItemCodePrefix = string.Empty;
             BulkSupplierCostInput = 0m;
             BulkSupplierMinimumOrderQuantityInput = 1;
-            BulkSupplierIsPrimaryInput = true;
 
             SelectedDatabaseItem = null;
 
@@ -1555,14 +1757,14 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedDatabaseItem == null)
                 return;
 
-            var result = MessageBox.Show(
+            bool confirmed = _messageBoxService.ShowConfirmation(
                 $"Deactivate item '{SelectedDatabaseItem.ItemName}' and all its variants?\n\n" +
-                "This keeps sales, GRN, stock, and transaction history safe.",
+                "This keeps sales, GRN, stock, and transaction history safe.\n\n" +
+                "To find it again later, tick 'Include Deactivated' in the Item Database.",
                 "Confirm Deactivation",
-                MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
 
             IsBusy = true;
@@ -1580,11 +1782,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Delete/deactivate failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to deactivate item:\n\n{ex.Message}",
-                    "Delete Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Delete Error");
             }
             finally
             {
@@ -1592,13 +1792,16 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // =========================================================
-        // PROPERTY CHANGE HANDLERS
-        // =========================================================
-
         partial void OnMasterSearchTextChanged(string value)
         {
-            StatusMessage = "Type search text and click SEARCH.";
+            if (_isInitialized)
+                StatusMessage = "Type search text and click SEARCH.";
+        }
+
+        partial void OnIncludeDeactivatedItemsChanged(bool value)
+        {
+            if (_isInitialized && !IsBusy)
+                _ = LoadMasterGridAsync();
         }
 
         partial void OnItemSuffixChanged(string value)
@@ -1624,12 +1827,17 @@ namespace POS.BackOffice.UI.ViewModels
 
         private void NotifyCommandStates()
         {
+            InitializeCommand.NotifyCanExecuteChanged();
+
             LoadMasterGridCommand.NotifyCanExecuteChanged();
             SearchItemsCommand.NotifyCanExecuteChanged();
             RefreshDatabaseCommand.NotifyCanExecuteChanged();
 
             AddPropertyCommand.NotifyCanExecuteChanged();
             GenerateVariantsCommand.NotifyCanExecuteChanged();
+
+            RefreshSupplierAssignmentSelectionCommand.NotifyCanExecuteChanged();
+            AssignSupplierToSelectedVariantsCommand.NotifyCanExecuteChanged();
 
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
             ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
@@ -1638,9 +1846,10 @@ namespace POS.BackOffice.UI.ViewModels
             DeleteCommand.NotifyCanExecuteChanged();
         }
 
-        // =========================================================
-        // COMMAND STATE
-        // =========================================================
+        private bool CanInitialize()
+        {
+            return !IsBusy && !_isInitialized;
+        }
 
         private bool CanRunCommand()
         {
@@ -1657,6 +1866,12 @@ namespace POS.BackOffice.UI.ViewModels
         private bool CanGenerateVariants()
         {
             return !IsBusy;
+        }
+
+        private bool CanAssignSupplierToSelectedVariants()
+        {
+            return !IsBusy &&
+                   GeneratedVariants.Any(v => v.IsSelectedForSupplierAssignment);
         }
 
         private bool CanAddSupplierToVariant()
@@ -1687,10 +1902,6 @@ namespace POS.BackOffice.UI.ViewModels
             return !IsBusy && SelectedDatabaseItem != null;
         }
 
-        // =========================================================
-        // VALIDATION
-        // =========================================================
-
         private string BuildItemCode()
         {
             string code = IsCodeReadOnly && string.IsNullOrWhiteSpace(ItemSuffix)
@@ -1704,21 +1915,13 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedCategory == null)
             {
-                MessageBox.Show(
-                    "Please select a category.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Please select a category.", "Validation Error");
                 return false;
             }
 
             if (SelectedSubCategory == null)
             {
-                MessageBox.Show(
-                    "Please select a sub-category.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Please select a sub-category.", "Validation Error");
                 return false;
             }
 
@@ -1731,42 +1934,39 @@ namespace POS.BackOffice.UI.ViewModels
                 BulkMinimumPrice < 0 ||
                 BulkMaximumPrice < 0)
             {
-                MessageBox.Show(
-                    "Price values cannot be negative.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Price values cannot be negative.", "Validation Error");
                 return false;
             }
 
             if (BulkMaximumPrice > 0 && BulkMinimumPrice > BulkMaximumPrice)
             {
-                MessageBox.Show(
-                    "Minimum price cannot be greater than maximum price.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Minimum price cannot be greater than maximum price.", "Validation Error");
                 return false;
             }
 
             if (BulkReorderLevel < 0)
             {
-                MessageBox.Show(
-                    "Reorder level cannot be negative.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Reorder level cannot be negative.", "Validation Error");
                 return false;
             }
 
             if (!BulkHasBatchTracking && BulkHasExpiryTracking)
             {
-                MessageBox.Show(
-                    "Expiry tracking requires batch tracking.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Expiry tracking requires batch tracking.", "Validation Error");
                 return false;
+            }
+
+            if (BulkIsScaleItem && SelectedUom != null && !SelectedUom.AllowDecimals)
+            {
+                bool continueAnyway = _messageBoxService.ShowConfirmation(
+                    $"The selected UOM '{SelectedUom.UomCode}' does not allow decimals.\n\n" +
+                    "Scale items normally need a decimal UOM such as KG, G, L, or M.\n\n" +
+                    "Continue anyway?",
+                    "Scale Item Warning",
+                    MessageBoxImage.Warning);
+
+                if (!continueAnyway)
+                    return false;
             }
 
             return true;
@@ -1779,62 +1979,38 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (string.IsNullOrWhiteSpace(CurrentItem.ItemName))
             {
-                MessageBox.Show(
-                    "Item name is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Item name is required.", "Validation Error");
                 return false;
             }
 
             if (CurrentItem.ItemName.Trim().Length > 150)
             {
-                MessageBox.Show(
-                    "Item name cannot be longer than 150 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Item name cannot be longer than 150 characters.", "Validation Error");
                 return false;
             }
 
             if (!string.IsNullOrWhiteSpace(CurrentItem.PrintName) &&
                 CurrentItem.PrintName.Trim().Length > 50)
             {
-                MessageBox.Show(
-                    "Print name cannot be longer than 50 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Print name cannot be longer than 50 characters.", "Validation Error");
                 return false;
             }
 
             if (SelectedUom == null)
             {
-                MessageBox.Show(
-                    "Please select a Unit of Measure.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Please select a Unit of Measure.", "Validation Error");
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(SelectedTaxCode))
             {
-                MessageBox.Show(
-                    "Please select a tax code.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Please select a tax code.", "Validation Error");
                 return false;
             }
 
             if (!GeneratedVariants.Any())
             {
-                MessageBox.Show(
-                    "Generate variants before saving.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Generate variants before saving.", "Validation Error");
                 return false;
             }
 
@@ -1842,49 +2018,39 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 variant.ItemSuppliers ??= new List<ItemSupplier>();
 
-                if (variant.ItemSuppliers.Count(s => s.IsPrimary) > 1)
-                {
-                    MessageBox.Show(
-                        $"Variant '{variant.SkuCode}' has more than one primary supplier.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return false;
-                }
-
                 var duplicateSupplier = variant.ItemSuppliers
                     .GroupBy(s => s.SupplierId)
                     .FirstOrDefault(g => g.Count() > 1);
 
                 if (duplicateSupplier != null)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         $"Variant '{variant.SkuCode}' has the same supplier assigned more than once.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Validation Error");
+
                     return false;
                 }
 
                 foreach (var supplier in variant.ItemSuppliers)
                 {
+                    supplier.SupplierItemCode = string.Empty;
+                    supplier.IsPrimary = false;
+
                     if (supplier.MinimumOrderQuantity <= 0)
                     {
-                        MessageBox.Show(
+                        _messageBoxService.ShowWarning(
                             $"Variant '{variant.SkuCode}' has invalid supplier MOQ.",
-                            "Validation Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
+                            "Validation Error");
+
                         return false;
                     }
 
                     if (supplier.LastCostPrice < 0)
                     {
-                        MessageBox.Show(
+                        _messageBoxService.ShowWarning(
                             $"Variant '{variant.SkuCode}' has invalid supplier cost.",
-                            "Validation Error",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
+                            "Validation Error");
+
                         return false;
                     }
                 }
@@ -1893,52 +2059,54 @@ namespace POS.BackOffice.UI.ViewModels
             return true;
         }
 
-        private static bool ValidateItemCode(string itemCode)
+        private bool ValidateItemCode(string itemCode)
         {
             if (string.IsNullOrWhiteSpace(itemCode))
             {
-                MessageBox.Show(
-                    "Item code is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Item code is required.", "Validation Error");
                 return false;
             }
 
             if (itemCode.Length > 50)
             {
-                MessageBox.Show(
-                    "Item code cannot be longer than 50 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning("Item code cannot be longer than 50 characters.", "Validation Error");
                 return false;
             }
 
             if (itemCode.EndsWith("-"))
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Item code is incomplete. Please enter the item suffix after the category/sub-category prefix.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
             if (!CodeRegex.IsMatch(itemCode))
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Item code can only contain letters, numbers, dash, and underscore.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
             return true;
         }
 
-        private static string NormalizeCode(string value)
+        private void ApplyParentDisplayNamesToAllVariants()
+        {
+            foreach (var variant in GeneratedVariants)
+                ApplyParentDisplayNames(variant);
+        }
+
+        private void ApplyParentDisplayNames(ItemVariant variant)
+        {
+            variant.ParentItemName = NormalizeText(CurrentItem.ItemName);
+            variant.ParentPrintName = NormalizeText(CurrentItem.PrintName);
+        }
+
+        private static string NormalizeCode(string? value)
         {
             return (value ?? string.Empty).Trim().ToUpperInvariant();
         }

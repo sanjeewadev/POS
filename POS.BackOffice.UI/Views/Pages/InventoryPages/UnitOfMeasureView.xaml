@@ -6,6 +6,7 @@
              mc:Ignorable="d"
              d:DesignHeight="700"
              d:DesignWidth="1200"
+             Loaded="UserControl_Loaded"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
@@ -183,9 +184,10 @@
                                    Style="{StaticResource InlineLabel}"/>
 
                         <TextBox Grid.Column="1"
-                                 Text="{Binding DisplayOrder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                 Text="{Binding DisplayOrderText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClassicInput}"
                                  HorizontalContentAlignment="Right"
+                                 MaxLength="4"
                                  ToolTip="Lower numbers show first. Example: PCS = 10, KG = 20."/>
 
                         <TextBlock Grid.Column="2"
@@ -243,7 +245,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- EMPTY SPACE / GUIDANCE -->
+            <!-- GUIDANCE -->
             <Border Grid.Row="2"
                     Style="{StaticResource ClassicGroupBox}"
                     VerticalAlignment="Top">
@@ -253,12 +255,19 @@
                                Foreground="{DynamicResource WarningTextBrush}"
                                Margin="0,0,0,5"/>
 
-                    <TextBlock Text="After this update, Item Master should save UnitOfMeasureId instead of a plain UOM text value. We will update Item Master later."
+                    <TextBlock Text="Item Master should use active UOMs only. Existing item history remains safe even when a UOM is made inactive."
                                FontSize="11"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                TextWrapping="Wrap"/>
 
                     <TextBlock Text="Safe delete works only for unused UOMs. If a UOM is already assigned to items, make it inactive instead."
+                               FontSize="10"
+                               Foreground="{DynamicResource WarningTextBrush}"
+                               Margin="0,8,0,0"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="Allow Decimal Quantities cannot be changed after the UOM is assigned to item records."
                                FontSize="10"
                                Foreground="{DynamicResource WarningTextBrush}"
                                Margin="0,8,0,0"
@@ -404,7 +413,9 @@
                       BorderBrush="{DynamicResource BorderBrush}"
                       BorderThickness="1,0,1,1"
                       SelectionMode="Single"
-                      AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                      AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                 <DataGrid.Resources>
                     <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
@@ -425,6 +436,7 @@
                     <DataGridTextColumn Header="Description"
                                         Binding="{Binding UomDescription}"
                                         Width="*"
+                                        MinWidth="180"
                                         IsReadOnly="True"
                                         FontWeight="SemiBold"/>
 

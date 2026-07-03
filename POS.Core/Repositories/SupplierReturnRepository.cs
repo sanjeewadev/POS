@@ -8,6 +8,63 @@ using POS.Core.Models;
 
 namespace POS.Core.Repositories
 {
+    public class SupplierLookupDto
+    {
+        public int Id { get; set; }
+
+        public string SupplierCode { get; set; } = string.Empty;
+        public string SupplierName { get; set; } = string.Empty;
+        public string CompanyName { get; set; } = string.Empty;
+
+        public decimal CurrentBalance { get; set; }
+
+        public string DisplayText
+        {
+            get
+            {
+                string code = NormalizeText(SupplierCode);
+                string name = NormalizeText(SupplierName);
+                string company = NormalizeText(CompanyName);
+
+                string main = string.IsNullOrWhiteSpace(code)
+                    ? name
+                    : $"{code} - {name}";
+
+                if (!string.IsNullOrWhiteSpace(company) &&
+                    !company.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"{main} ({company})";
+                }
+
+                return main;
+            }
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            return (value ?? string.Empty).Trim();
+        }
+    }
+
+    public class SupplierInvoiceLookupDto
+    {
+        public int Id { get; set; }
+
+        public string GrnNumber { get; set; } = string.Empty;
+        public string SupplierInvoiceNo { get; set; } = string.Empty;
+
+        public DateTime InvoiceDate { get; set; }
+        public DateTime ReceivedDate { get; set; }
+
+        public decimal NetPayable { get; set; }
+
+        public int ReturnableLineCount { get; set; }
+        public decimal ReturnableQty { get; set; }
+
+        public string DisplayText =>
+            $"{SupplierInvoiceNo} | {GrnNumber} | {ReceivedDate:yyyy-MM-dd} | Returnable: {ReturnableQty:0.###}";
+    }
+
     public class SupplierReturnSourceDto
     {
         public int GrnHeaderId { get; set; }
@@ -32,6 +89,7 @@ namespace POS.Core.Repositories
         public decimal MaxReturnQty { get; set; }
 
         public decimal HistoricalCost { get; set; }
+
         public decimal CreditValue => Math.Round(MaxReturnQty * HistoricalCost, 2);
     }
 
@@ -48,30 +106,191 @@ namespace POS.Core.Repositories
         // LOOKUPS
         // =========================================================
 
-        public async Task<List<Supplier>> GetActiveSuppliersAsync()
+        public async Task<List<SupplierLookupDto>> GetActiveSuppliersAsync()
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.Suppliers
                 .AsNoTracking()
                 .Where(s => !s.IsDeactivated)
-                .OrderBy(s => string.IsNullOrWhiteSpace(s.CompanyName) ? s.SupplierName : s.CompanyName)
-                .ThenBy(s => s.SupplierCode)
+                .OrderBy(s => s.SupplierCode)
+                .ThenBy(s => s.SupplierName)
+                .Select(s => new SupplierLookupDto
+                {
+                    Id = s.Id,
+                    SupplierCode = s.SupplierCode,
+                    SupplierName = s.SupplierName,
+                    CompanyName = s.CompanyName,
+                    CurrentBalance = s.CurrentBalance
+                })
                 .ToListAsync();
         }
 
-        public async Task<List<GrnHeader>> GetSupplierInvoicesAsync(int supplierId)
+        public async Task<List<SupplierInvoiceLookupDto>> GetSupplierInvoicesAsync(int supplierId)
         {
+            if (supplierId <= 0)
+                return new List<SupplierInvoiceLookupDto>();
+
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            return await context.GrnHeaders
+            var grns = await context.GrnHeaders
                 .AsNoTracking()
                 .Where(g =>
                     g.SupplierId == supplierId &&
                     g.Status == "Posted")
                 .OrderByDescending(g => g.ReceivedDate)
                 .ThenByDescending(g => g.GrnNumber)
+                .Take(300)
+                .Select(g => new
+                {
+                    g.Id,
+                    g.GrnNumber,
+                    g.SupplierInvoiceNo,
+                    g.InvoiceDate,
+                    g.ReceivedDate,
+                    g.NetPayable
+                })
                 .ToListAsync();
+
+            if (!grns.Any())
+                return new List<SupplierInvoiceLookupDto>();
+
+            var grnIds = grns
+                .Select(g => g.Id)
+                .ToList();
+
+            var grnLines = await context.GrnLines
+                .AsNoTracking()
+                .Where(l =>
+                    grnIds.Contains(l.GrnHeaderId) &&
+                    l.ReceivedQty > 0)
+                .Select(l => new
+                {
+                    l.Id,
+                    l.GrnHeaderId,
+                    l.ItemBatchId,
+                    l.ReceivedQty
+                })
+                .ToListAsync();
+
+            if (!grnLines.Any())
+                return new List<SupplierInvoiceLookupDto>();
+
+            var grnLineIds = grnLines
+                .Select(l => l.Id)
+                .ToList();
+
+            var batchIds = grnLines
+                .Where(l => l.ItemBatchId.HasValue)
+                .Select(l => l.ItemBatchId!.Value)
+                .Distinct()
+                .ToList();
+
+            var previousReturnRows = await context.SupplierReturnLines
+                .Include(l => l.ReturnHeader)
+                .AsNoTracking()
+                .Where(l =>
+                    l.GrnLineId.HasValue &&
+                    grnLineIds.Contains(l.GrnLineId.Value) &&
+                    l.ReturnHeader != null &&
+                    l.ReturnHeader.Status == "Posted")
+                .Select(l => new
+                {
+                    GrnLineId = l.GrnLineId!.Value,
+                    l.ReturnQty
+                })
+                .ToListAsync();
+
+            var returnedByGrnLine = previousReturnRows
+                .GroupBy(x => x.GrnLineId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(x => x.ReturnQty));
+
+            var batchStockById = new Dictionary<int, decimal>();
+
+            if (batchIds.Any())
+            {
+                var batchRows = await context.ItemBatches
+                    .AsNoTracking()
+                    .Where(b =>
+                        batchIds.Contains(b.Id) &&
+                        !b.IsDeactivated)
+                    .Select(b => new
+                    {
+                        b.Id,
+                        b.CurrentStock
+                    })
+                    .ToListAsync();
+
+                batchStockById = batchRows
+                    .ToDictionary(
+                        b => b.Id,
+                        b => b.CurrentStock);
+            }
+
+            var result = new List<SupplierInvoiceLookupDto>();
+
+            foreach (var grn in grns)
+            {
+                var linesForGrn = grnLines
+                    .Where(l => l.GrnHeaderId == grn.Id)
+                    .ToList();
+
+                int returnableLineCount = 0;
+                decimal totalReturnableQty = 0m;
+
+                foreach (var line in linesForGrn)
+                {
+                    if (!line.ItemBatchId.HasValue)
+                        continue;
+
+                    decimal alreadyReturned = returnedByGrnLine.TryGetValue(line.Id, out decimal returned)
+                        ? returned
+                        : 0m;
+
+                    decimal remainingFromReceipt = line.ReceivedQty - alreadyReturned;
+
+                    if (remainingFromReceipt <= 0)
+                        continue;
+
+                    decimal currentBatchStock = batchStockById.TryGetValue(line.ItemBatchId.Value, out decimal stock)
+                        ? stock
+                        : 0m;
+
+                    if (currentBatchStock <= 0)
+                        continue;
+
+                    decimal returnableQty = Math.Min(remainingFromReceipt, currentBatchStock);
+
+                    if (returnableQty <= 0)
+                        continue;
+
+                    returnableLineCount++;
+                    totalReturnableQty += returnableQty;
+                }
+
+                if (returnableLineCount <= 0 || totalReturnableQty <= 0)
+                    continue;
+
+                result.Add(new SupplierInvoiceLookupDto
+                {
+                    Id = grn.Id,
+                    GrnNumber = grn.GrnNumber,
+                    SupplierInvoiceNo = grn.SupplierInvoiceNo,
+                    InvoiceDate = grn.InvoiceDate,
+                    ReceivedDate = grn.ReceivedDate,
+                    NetPayable = grn.NetPayable,
+                    ReturnableLineCount = returnableLineCount,
+                    ReturnableQty = totalReturnableQty
+                });
+            }
+
+            return result
+                .OrderByDescending(g => g.ReceivedDate)
+                .ThenByDescending(g => g.GrnNumber)
+                .Take(100)
+                .ToList();
         }
 
         public async Task<List<SupplierReturnSourceDto>> GetReturnableBatchesForGrnAsync(int grnHeaderId)
@@ -91,13 +310,21 @@ namespace POS.Core.Repositories
                 .Include(l => l.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
-                .Where(l => l.GrnHeaderId == grnHeaderId)
+                .Where(l =>
+                    l.GrnHeaderId == grnHeaderId &&
+                    l.ReceivedQty > 0)
                 .OrderBy(l => l.ItemVariant!.ItemParent!.ItemCode)
                 .ThenBy(l => l.ItemVariant!.VariantDescription)
                 .ToListAsync();
 
             if (!grnLines.Any())
                 return new List<SupplierReturnSourceDto>();
+
+            var exactBatchIds = grnLines
+                .Where(l => l.ItemBatchId.HasValue)
+                .Select(l => l.ItemBatchId!.Value)
+                .Distinct()
+                .ToList();
 
             var variantIds = grnLines
                 .Select(l => l.ItemVariantId)
@@ -113,9 +340,14 @@ namespace POS.Core.Repositories
             var batches = await context.ItemBatches
                 .AsNoTracking()
                 .Where(b =>
-                    variantIds.Contains(b.ItemVariantId) &&
-                    batchNos.Contains(b.BatchNo.ToUpper()) &&
-                    !b.IsDeactivated)
+                    !b.IsDeactivated &&
+                    (
+                        exactBatchIds.Contains(b.Id) ||
+                        (
+                            variantIds.Contains(b.ItemVariantId) &&
+                            batchNos.Contains(b.BatchNo.ToUpper())
+                        )
+                    ))
                 .ToListAsync();
 
             var grnLineIds = grnLines
@@ -137,7 +369,6 @@ namespace POS.Core.Repositories
                 })
                 .ToListAsync();
 
-            // SQLite decimal-safe aggregation: group after ToListAsync().
             var returnedByGrnLine = previousReturnRows
                 .GroupBy(x => x.GrnLineId)
                 .ToDictionary(
@@ -148,11 +379,21 @@ namespace POS.Core.Repositories
 
             foreach (var line in grnLines)
             {
-                string lineBatchNo = NormalizeText(line.BatchNo).ToUpperInvariant();
+                ItemBatch? batch = null;
 
-                var batch = batches.FirstOrDefault(b =>
-                    b.ItemVariantId == line.ItemVariantId &&
-                    string.Equals(b.BatchNo, lineBatchNo, StringComparison.OrdinalIgnoreCase));
+                if (line.ItemBatchId.HasValue)
+                {
+                    batch = batches.FirstOrDefault(b => b.Id == line.ItemBatchId.Value);
+                }
+
+                if (batch == null)
+                {
+                    string lineBatchNo = NormalizeText(line.BatchNo);
+
+                    batch = batches.FirstOrDefault(b =>
+                        b.ItemVariantId == line.ItemVariantId &&
+                        b.BatchNo.Equals(lineBatchNo, StringComparison.OrdinalIgnoreCase));
+                }
 
                 if (batch == null)
                     continue;
@@ -163,10 +404,17 @@ namespace POS.Core.Repositories
 
                 decimal remainingFromOriginalReceipt = line.ReceivedQty - alreadyReturned;
 
-                if (remainingFromOriginalReceipt < 0)
-                    remainingFromOriginalReceipt = 0m;
+                if (remainingFromOriginalReceipt <= 0)
+                    continue;
 
                 decimal maxReturnQty = Math.Min(remainingFromOriginalReceipt, batch.CurrentStock);
+
+                if (maxReturnQty <= 0)
+                    continue;
+
+                decimal historicalCost = line.LandedCost > 0
+                    ? line.LandedCost
+                    : line.UnitCost;
 
                 result.Add(new SupplierReturnSourceDto
                 {
@@ -193,7 +441,7 @@ namespace POS.Core.Repositories
                     CurrentBatchStock = batch.CurrentStock,
                     MaxReturnQty = maxReturnQty,
 
-                    HistoricalCost = line.LandedCost > 0 ? line.LandedCost : line.UnitCost
+                    HistoricalCost = historicalCost
                 });
             }
 
@@ -220,13 +468,12 @@ namespace POS.Core.Repositories
         }
 
         // =========================================================
-        // SAVE / POST
+        // POST SUPPLIER RETURN
         // =========================================================
 
-        public async Task SaveSupplierReturnAsync(
+        public async Task PostSupplierReturnAsync(
             SupplierReturnHeader header,
-            List<SupplierReturnLine> lines,
-            bool isDraft)
+            List<SupplierReturnLine> lines)
         {
             if (header == null)
                 throw new ArgumentNullException(nameof(header));
@@ -245,89 +492,39 @@ namespace POS.Core.Repositories
             try
             {
                 await ValidateHeaderAsync(context, header);
-                await ValidateLinesAsync(context, header, lines, isDraft);
+                await ValidateLinesAsync(context, header, lines);
 
                 DateTime now = DateTime.Now;
 
-                SupplierReturnHeader dbHeader;
+                header.Id = 0;
+                header.ReturnNumber = await GenerateDocumentNumberAsync(context, "RTN");
+                header.Status = "Posted";
+                header.CreatedAt = now;
+                header.UpdatedAt = now;
+                header.PostedAt = now;
 
-                if (header.Id == 0)
-                {
-                    header.ReturnNumber = await GenerateDocumentNumberAsync(context, "RTN");
-                    header.Status = isDraft ? "Draft" : "Posted";
-                    header.CreatedAt = now;
-                    header.UpdatedAt = now;
+                if (string.IsNullOrWhiteSpace(header.CreatedBy))
+                    header.CreatedBy = header.AuthorizedBy;
 
-                    if (!isDraft)
-                    {
-                        header.PostedAt = now;
+                if (string.IsNullOrWhiteSpace(header.PostedBy))
+                    header.PostedBy = header.AuthorizedBy;
 
-                        if (string.IsNullOrWhiteSpace(header.PostedBy))
-                            header.PostedBy = header.AuthorizedBy;
-                    }
+                header.Supplier = null!;
+                header.GrnHeader = null;
+                header.ReturnLines = new List<SupplierReturnLine>();
 
-                    header.Supplier = null!;
-                    header.GrnHeader = null;
-                    header.ReturnLines = new List<SupplierReturnLine>();
-
-                    await context.SupplierReturnHeaders.AddAsync(header);
-                    await context.SaveChangesAsync();
-
-                    dbHeader = header;
-                }
-                else
-                {
-                    dbHeader = await context.SupplierReturnHeaders
-                        .FirstOrDefaultAsync(h => h.Id == header.Id)
-                        ?? throw new InvalidOperationException("Supplier return document was not found.");
-
-                    if (dbHeader.Status == "Posted")
-                        throw new InvalidOperationException("Posted supplier return cannot be modified.");
-
-                    if (dbHeader.Status == "Cancelled")
-                        throw new InvalidOperationException("Cancelled supplier return cannot be modified.");
-
-                    dbHeader.SupplierId = header.SupplierId;
-                    dbHeader.GrnHeaderId = header.GrnHeaderId;
-                    dbHeader.OriginalInvoiceNo = header.OriginalInvoiceNo;
-                    dbHeader.ReturnDate = header.ReturnDate;
-                    dbHeader.AuthorizedBy = header.AuthorizedBy;
-                    dbHeader.Remarks = header.Remarks;
-                    dbHeader.GrossCredit = header.GrossCredit;
-                    dbHeader.RestockingFee = header.RestockingFee;
-                    dbHeader.NetCredit = header.NetCredit;
-                    dbHeader.Status = isDraft ? "Draft" : "Posted";
-                    dbHeader.UpdatedAt = now;
-
-                    if (!isDraft)
-                    {
-                        dbHeader.PostedAt = now;
-
-                        if (string.IsNullOrWhiteSpace(dbHeader.PostedBy))
-                            dbHeader.PostedBy = dbHeader.AuthorizedBy;
-                    }
-
-                    var existingLines = await context.SupplierReturnLines
-                        .Where(l => l.ReturnHeaderId == dbHeader.Id)
-                        .ToListAsync();
-
-                    context.SupplierReturnLines.RemoveRange(existingLines);
-
-                    await context.SaveChangesAsync();
-                }
+                await context.SupplierReturnHeaders.AddAsync(header);
+                await context.SaveChangesAsync();
 
                 foreach (var line in lines)
                 {
-                    PrepareNewLine(line, dbHeader.Id, isDraft, now);
+                    PrepareNewLine(line, header.Id, now);
                     await context.SupplierReturnLines.AddAsync(line);
                 }
 
                 await context.SaveChangesAsync();
 
-                if (!isDraft)
-                {
-                    await PostInventoryAndLedgerAsync(context, dbHeader, lines, now);
-                }
+                await PostInventoryAndLedgerAsync(context, header, lines, now);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -337,6 +534,19 @@ namespace POS.Core.Repositories
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        // Compatibility method for older callers.
+        // Draft supplier returns are intentionally disabled.
+        public async Task SaveSupplierReturnAsync(
+            SupplierReturnHeader header,
+            List<SupplierReturnLine> lines,
+            bool isDraft)
+        {
+            if (isDraft)
+                throw new InvalidOperationException("Draft supplier returns are not supported. Please post the supplier return directly.");
+
+            await PostSupplierReturnAsync(header, lines);
         }
 
         private static async Task PostInventoryAndLedgerAsync(
@@ -358,6 +568,9 @@ namespace POS.Core.Repositories
             {
                 if (!batches.TryGetValue(line.ItemBatchId, out var batch))
                     throw new InvalidOperationException($"Batch ID {line.ItemBatchId} was not found.");
+
+                if (batch.IsDeactivated)
+                    throw new InvalidOperationException($"Batch '{batch.BatchNo}' is deactivated.");
 
                 if (batch.CurrentStock < line.ReturnQty)
                 {
@@ -398,6 +611,7 @@ namespace POS.Core.Repositories
             var ledger = new SupplierLedger
             {
                 SupplierId = supplier.Id,
+                GrnHeaderId = header.GrnHeaderId,
                 TransactionDate = header.ReturnDate,
                 TransactionType = "DEBIT_NOTE",
                 ReferenceDocument = header.ReturnNumber,
@@ -436,21 +650,21 @@ namespace POS.Core.Repositories
             if (!supplierExists)
                 throw new InvalidOperationException("Selected supplier is inactive or missing.");
 
-            if (header.GrnHeaderId.HasValue && header.GrnHeaderId.Value > 0)
-            {
-                var grn = await context.GrnHeaders
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(g => g.Id == header.GrnHeaderId.Value);
+            if (!header.GrnHeaderId.HasValue || header.GrnHeaderId.Value <= 0)
+                throw new InvalidOperationException("Supplier return must be linked to a posted GRN.");
 
-                if (grn == null)
-                    throw new InvalidOperationException("Linked GRN was not found.");
+            var grn = await context.GrnHeaders
+                .AsNoTracking()
+                .FirstOrDefaultAsync(g => g.Id == header.GrnHeaderId.Value);
 
-                if (grn.Status != "Posted")
-                    throw new InvalidOperationException("Only posted GRNs can be used for supplier returns.");
+            if (grn == null)
+                throw new InvalidOperationException("Linked GRN was not found.");
 
-                if (grn.SupplierId != header.SupplierId)
-                    throw new InvalidOperationException("Linked GRN supplier does not match selected supplier.");
-            }
+            if (grn.Status != "Posted")
+                throw new InvalidOperationException("Only posted GRNs can be used for supplier returns.");
+
+            if (grn.SupplierId != header.SupplierId)
+                throw new InvalidOperationException("Linked GRN supplier does not match selected supplier.");
 
             if (header.ReturnDate.Date > DateTime.Now.Date.AddDays(1))
                 throw new InvalidOperationException("Return date cannot be in the far future.");
@@ -483,8 +697,7 @@ namespace POS.Core.Repositories
         private static async Task ValidateLinesAsync(
             AppDbContext context,
             SupplierReturnHeader header,
-            List<SupplierReturnLine> lines,
-            bool isDraft)
+            List<SupplierReturnLine> lines)
         {
             var variantIds = lines
                 .Select(l => l.ItemVariantId)
@@ -502,6 +715,9 @@ namespace POS.Core.Repositories
                 .Distinct()
                 .ToList();
 
+            if (grnLineIds.Count != lines.Count)
+                throw new InvalidOperationException("Every supplier return line must be linked to a GRN line.");
+
             var variants = await context.ItemVariants
                 .Include(v => v.ItemParent)
                 .Where(v => variantIds.Contains(v.Id))
@@ -511,11 +727,9 @@ namespace POS.Core.Repositories
                 .Where(b => batchIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id);
 
-            var grnLines = grnLineIds.Any()
-                ? await context.GrnLines
-                    .Where(l => grnLineIds.Contains(l.Id))
-                    .ToDictionaryAsync(l => l.Id)
-                : new Dictionary<int, GrnLine>();
+            var grnLines = await context.GrnLines
+                .Where(l => grnLineIds.Contains(l.Id))
+                .ToDictionaryAsync(l => l.Id);
 
             var previousReturnRows = await context.SupplierReturnLines
                 .Include(l => l.ReturnHeader)
@@ -523,7 +737,6 @@ namespace POS.Core.Repositories
                 .Where(l =>
                     l.GrnLineId.HasValue &&
                     grnLineIds.Contains(l.GrnLineId.Value) &&
-                    l.ReturnHeaderId != header.Id &&
                     l.ReturnHeader != null &&
                     l.ReturnHeader.Status == "Posted")
                 .Select(l => new
@@ -564,6 +777,27 @@ namespace POS.Core.Repositories
                 if (batch.IsDeactivated)
                     throw new InvalidOperationException($"Batch '{batch.BatchNo}' is deactivated.");
 
+                if (!line.GrnLineId.HasValue || line.GrnLineId.Value <= 0)
+                    throw new InvalidOperationException($"GRN line is required for item '{variant.SkuCode}'.");
+
+                if (!grnLines.TryGetValue(line.GrnLineId.Value, out var grnLine))
+                    throw new InvalidOperationException($"Linked GRN line was not found for item '{variant.SkuCode}'.");
+
+                if (!header.GrnHeaderId.HasValue ||
+                    grnLine.GrnHeaderId != header.GrnHeaderId.Value)
+                {
+                    throw new InvalidOperationException($"GRN line does not belong to the selected GRN for item '{variant.SkuCode}'.");
+                }
+
+                if (grnLine.ItemVariantId != line.ItemVariantId)
+                    throw new InvalidOperationException($"GRN line item does not match return item '{variant.SkuCode}'.");
+
+                if (grnLine.ItemBatchId.HasValue &&
+                    grnLine.ItemBatchId.Value != line.ItemBatchId)
+                {
+                    throw new InvalidOperationException($"Return batch does not match the original GRN batch for item '{variant.SkuCode}'.");
+                }
+
                 if (line.ReturnQty <= 0)
                     throw new InvalidOperationException($"Return quantity must be greater than zero for item '{variant.SkuCode}'.");
 
@@ -573,7 +807,26 @@ namespace POS.Core.Repositories
                         $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Batch stock is only {batch.CurrentStock:N3}.");
                 }
 
-                if (line.HistoricalCost <= 0)
+                decimal alreadyReturned = returnedByGrnLine.TryGetValue(grnLine.Id, out decimal returned)
+                    ? returned
+                    : 0m;
+
+                decimal remainingFromReceipt = grnLine.ReceivedQty - alreadyReturned;
+
+                if (remainingFromReceipt < 0)
+                    remainingFromReceipt = 0m;
+
+                if (line.ReturnQty > remainingFromReceipt)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Remaining returnable GRN quantity is {remainingFromReceipt:N3}.");
+                }
+
+                decimal historicalCost = grnLine.LandedCost > 0
+                    ? grnLine.LandedCost
+                    : grnLine.UnitCost;
+
+                if (historicalCost <= 0)
                     throw new InvalidOperationException($"Historical cost must be greater than zero for item '{variant.SkuCode}'.");
 
                 if (string.IsNullOrWhiteSpace(line.ReasonCode))
@@ -585,35 +838,9 @@ namespace POS.Core.Repositories
                 if (line.LineRemarks.Length > 250)
                     throw new InvalidOperationException($"Line remarks are too long for item '{variant.SkuCode}'.");
 
-                if (line.GrnLineId.HasValue && line.GrnLineId.Value > 0)
-                {
-                    if (!grnLines.TryGetValue(line.GrnLineId.Value, out var grnLine))
-                        throw new InvalidOperationException($"Linked GRN line was not found for item '{variant.SkuCode}'.");
-
-                    if (header.GrnHeaderId.HasValue &&
-                        grnLine.GrnHeaderId != header.GrnHeaderId.Value)
-                    {
-                        throw new InvalidOperationException($"GRN line does not belong to the selected GRN for item '{variant.SkuCode}'.");
-                    }
-
-                    if (grnLine.ItemVariantId != line.ItemVariantId)
-                        throw new InvalidOperationException($"GRN line item does not match return item '{variant.SkuCode}'.");
-
-                    decimal alreadyReturned = returnedByGrnLine.TryGetValue(grnLine.Id, out decimal returned)
-                        ? returned
-                        : 0m;
-
-                    decimal remainingFromReceipt = grnLine.ReceivedQty - alreadyReturned;
-
-                    if (line.ReturnQty > remainingFromReceipt)
-                    {
-                        throw new InvalidOperationException(
-                            $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Remaining returnable GRN quantity is {remainingFromReceipt:N3}.");
-                    }
-                }
-
                 line.BatchNo = batch.BatchNo;
                 line.ExpiryDate = batch.ExpiryDate;
+                line.HistoricalCost = Math.Round(historicalCost, 2);
                 line.CreditValue = Math.Round(line.ReturnQty * line.HistoricalCost, 2);
             }
         }
@@ -621,11 +848,15 @@ namespace POS.Core.Repositories
         private static void ValidateSubmittedLineDuplicates(List<SupplierReturnLine> lines)
         {
             var duplicate = lines
-                .GroupBy(l => l.ItemBatchId)
+                .GroupBy(l => new
+                {
+                    l.GrnLineId,
+                    l.ItemBatchId
+                })
                 .FirstOrDefault(g => g.Count() > 1);
 
             if (duplicate != null)
-                throw new InvalidOperationException("Duplicate batch found. The same physical batch can appear only once in one supplier return.");
+                throw new InvalidOperationException("Duplicate return line found. The same GRN batch can appear only once in one supplier return.");
         }
 
         // =========================================================
@@ -681,7 +912,8 @@ namespace POS.Core.Repositories
                 await context.SaveChangesAsync();
             }
 
-            string number = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+            string number =
+                $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
 
             sequence.NextSequenceNumber++;
             sequence.UpdatedAt = DateTime.Now;
@@ -694,18 +926,17 @@ namespace POS.Core.Repositories
         private static void PrepareNewLine(
             SupplierReturnLine line,
             int headerId,
-            bool isDraft,
             DateTime now)
         {
             line.Id = 0;
             line.ReturnHeaderId = headerId;
 
-            line.ReturnHeader = null!;
+            line.ReturnHeader = null;
             line.GrnLine = null;
             line.ItemVariant = null;
             line.ItemBatch = null;
 
-            line.LineStatus = isDraft ? "Open" : "Posted";
+            line.LineStatus = "Posted";
             line.CreatedAt = now;
             line.UpdatedAt = now;
         }

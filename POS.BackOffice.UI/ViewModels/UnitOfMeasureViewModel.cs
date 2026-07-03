@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -12,14 +14,15 @@ namespace POS.BackOffice.UI.ViewModels
 {
     public partial class UnitOfMeasureViewModel : ViewModelBase
     {
+        private const int MaxDisplayOrder = 9999;
+
         private readonly UnitOfMeasureRepository _uomRepository;
+        private readonly IMessageBoxService _messageBoxService;
+
+        private bool _isInitialized;
 
         private static readonly Regex UomCodeRegex =
-            new Regex("^[A-Z0-9_-]+$", RegexOptions.Compiled);
-
-        // =========================================================
-        // FORM FIELDS
-        // =========================================================
+            new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         [ObservableProperty]
         private string _uomCode = string.Empty;
@@ -31,7 +34,7 @@ namespace POS.BackOffice.UI.ViewModels
         private bool _allowDecimals = false;
 
         [ObservableProperty]
-        private int _displayOrder = 0;
+        private string _displayOrderText = "0";
 
         [ObservableProperty]
         private bool _isActive = true;
@@ -42,16 +45,8 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private bool _isCodeReadOnly = false;
 
-        // =========================================================
-        // FILTER FIELDS
-        // =========================================================
-
         [ObservableProperty]
         private string _searchText = string.Empty;
-
-        // =========================================================
-        // UI STATE
-        // =========================================================
 
         [ObservableProperty]
         private bool _isBusy = false;
@@ -59,21 +54,23 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
-        // =========================================================
-        // DATA COLLECTION
-        // =========================================================
-
         public ObservableCollection<UnitOfMeasure> Uoms { get; } = new();
 
-        public UnitOfMeasureViewModel(UnitOfMeasureRepository uomRepository)
+        public UnitOfMeasureViewModel(
+            UnitOfMeasureRepository uomRepository,
+            IMessageBoxService messageBoxService)
         {
-            _uomRepository = uomRepository;
-
-            _ = InitializeAsync();
+            _uomRepository = uomRepository ?? throw new ArgumentNullException(nameof(uomRepository));
+            _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
         }
 
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task InitializeAsync()
         {
+            if (_isInitialized)
+                return;
+
+            _isInitialized = true;
             await LoadDataAsync();
         }
 
@@ -84,31 +81,34 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                Uoms.Clear();
-
-                var data = await _uomRepository.GetAllAsync(SearchText);
-
-                foreach (var item in data)
-                {
-                    Uoms.Add(item);
-                }
-
-                StatusMessage = $"{Uoms.Count} UOM record(s) loaded.";
+                await LoadDataInternalAsync();
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load UOM records.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load UOM records:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
                 IsBusy = false;
             }
+        }
+
+        private async Task LoadDataInternalAsync()
+        {
+            Uoms.Clear();
+
+            var data = await _uomRepository.GetAllAsync(SearchText);
+
+            foreach (var item in data)
+            {
+                Uoms.Add(item);
+            }
+
+            StatusMessage = $"{Uoms.Count} UOM record(s) loaded.";
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -127,71 +127,69 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanSave))]
         private async Task SaveAsync()
         {
-            string code = NormalizeCode(UomCode);
+            string code = SelectedUom == null
+                ? NormalizeCode(UomCode)
+                : NormalizeCode(SelectedUom.UomCode);
+
             string description = NormalizeDescription(UomDescription);
 
-            if (!ValidateInput(code, description, DisplayOrder))
+            if (!TryParseDisplayOrder(DisplayOrderText, out int displayOrder))
+                return;
+
+            if (!ValidateInput(code, description, displayOrder))
                 return;
 
             IsBusy = true;
 
             try
             {
+                int currentId = SelectedUom?.Id ?? 0;
+
+                bool isCodeUnique = await _uomRepository.IsCodeUniqueAsync(code, currentId);
+                if (!isCodeUnique)
+                {
+                    _messageBoxService.ShowWarning(
+                        $"The UOM Code '{code}' is already in use.",
+                        "Duplicate UOM Code");
+
+                    return;
+                }
+
+                bool isDescriptionUnique = await _uomRepository.IsDescriptionUniqueAsync(
+                    description,
+                    currentId);
+
+                if (!isDescriptionUnique)
+                {
+                    _messageBoxService.ShowWarning(
+                        $"The UOM Description '{description}' is already in use.",
+                        "Duplicate UOM Description");
+
+                    return;
+                }
+
                 if (SelectedUom == null)
                 {
-                    bool isCodeUnique = await _uomRepository.IsCodeUniqueAsync(code, 0);
-
-                    if (!isCodeUnique)
-                    {
-                        MessageBox.Show(
-                            $"The UOM Code '{code}' is already in use.",
-                            "Duplicate UOM Code",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                        return;
-                    }
-
-                    bool isDescriptionUnique = await _uomRepository.IsDescriptionUniqueAsync(description, 0);
-
-                    if (!isDescriptionUnique)
-                    {
-                        MessageBox.Show(
-                            $"The UOM Description '{description}' is already in use.",
-                            "Duplicate UOM Description",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                        return;
-                    }
-
                     var newUom = new UnitOfMeasure
                     {
                         UomCode = code,
                         UomDescription = description,
                         AllowDecimals = AllowDecimals,
-                        DisplayOrder = DisplayOrder,
+                        DisplayOrder = displayOrder,
                         IsActive = IsActive
                     };
 
                     await _uomRepository.AddAsync(newUom);
 
-                    StatusMessage = "Unit of Measure created successfully.";
+                    await LoadDataInternalAsync();
+                    ResetForm("Unit of Measure created successfully.");
+
+                    _messageBoxService.ShowInformation(
+                        "Unit of Measure created successfully.",
+                        "Success");
                 }
                 else
                 {
-                    bool isDescriptionUnique = await _uomRepository.IsDescriptionUniqueAsync(
-                        description,
-                        SelectedUom.Id);
-
-                    if (!isDescriptionUnique)
-                    {
-                        MessageBox.Show(
-                            $"The UOM Description '{description}' is already in use.",
-                            "Duplicate UOM Description",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                        return;
-                    }
-
                     var updatedUom = new UnitOfMeasure
                     {
                         Id = SelectedUom.Id,
@@ -201,43 +199,35 @@ namespace POS.BackOffice.UI.ViewModels
 
                         UomDescription = description,
                         AllowDecimals = AllowDecimals,
-                        DisplayOrder = DisplayOrder,
+                        DisplayOrder = displayOrder,
                         IsActive = IsActive
                     };
 
                     await _uomRepository.UpdateAsync(updatedUom);
 
-                    StatusMessage = "Unit of Measure updated successfully.";
+                    await LoadDataInternalAsync();
+                    ResetForm("Unit of Measure updated successfully.");
+
+                    _messageBoxService.ShowInformation(
+                        "Unit of Measure updated successfully.",
+                        "Success");
                 }
-
-                await LoadDataAsync();
-                Clear();
-
-                MessageBox.Show(
-                    "Unit of Measure saved successfully.",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
             }
             catch (InvalidOperationException ex)
             {
                 StatusMessage = "Save blocked.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     ex.Message,
-                    "Save Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Save Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Save failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"An error occurred while saving:\n\n{ex.Message}",
-                    "Save Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Save Error");
             }
             finally
             {
@@ -248,18 +238,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void Clear()
         {
-            UomCode = string.Empty;
-            UomDescription = string.Empty;
-            AllowDecimals = false;
-            DisplayOrder = 0;
-            IsActive = true;
-            SelectedUom = null;
-            IsCodeReadOnly = false;
-
-            StatusMessage = "Ready for new Unit of Measure.";
-
-            SaveCommand.NotifyCanExecuteChanged();
-            DeleteCommand.NotifyCanExecuteChanged();
+            ResetForm("Ready for new Unit of Measure.");
         }
 
         [RelayCommand(CanExecute = nameof(CanDelete))]
@@ -268,53 +247,78 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedUom == null)
                 return;
 
-            var result = MessageBox.Show(
-                $"Delete Unit of Measure '{SelectedUom.UomCode}'?\n\n" +
-                "This only works if the UOM is not assigned to item records.\n\n" +
-                "If it is already used, uncheck 'Unit is Active' and click SAVE.",
+            var selected = SelectedUom;
+
+            IsBusy = true;
+
+            try
+            {
+                var linkedData = await _uomRepository.GetLinkedDataSummaryAsync(selected.Id);
+
+                if (linkedData.HasLinkedData)
+                {
+                    StatusMessage = "Delete blocked.";
+
+                    _messageBoxService.ShowWarning(
+                        linkedData.ToUserMessage(selected.UomCode),
+                        "Delete Blocked");
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Linked data check failed.";
+
+                _messageBoxService.ShowError(
+                    $"Could not check linked records:\n\n{ex.Message}",
+                    "Delete Check Error");
+
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Delete Unit of Measure '{selected.UomCode}'?\n\n" +
+                "This is only safe for wrongly-created or unused test UOM records.\n\n" +
+                "For real business records, make the UOM inactive instead.",
                 "Confirm Safe Delete",
-                MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
 
             IsBusy = true;
 
             try
             {
-                await _uomRepository.DeleteAsync(SelectedUom.Id);
+                await _uomRepository.DeleteAsync(selected.Id);
 
-                await LoadDataAsync();
-                Clear();
+                await LoadDataInternalAsync();
+                ResetForm("Unit of Measure deleted successfully.");
 
-                StatusMessage = "Unit of Measure deleted successfully.";
-
-                MessageBox.Show(
+                _messageBoxService.ShowInformation(
                     "Unit of Measure deleted successfully.",
-                    "Deleted",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Deleted");
             }
             catch (InvalidOperationException ex)
             {
                 StatusMessage = "Delete blocked.";
 
-                MessageBox.Show(
-                    $"{ex.Message}\n\nTo hide this UOM from new item creation, uncheck 'Unit is Active' and click SAVE.",
-                    "Delete Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Delete Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Delete failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"An error occurred while deleting:\n\n{ex.Message}",
-                    "Delete Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Delete Error");
             }
             finally
             {
@@ -322,14 +326,27 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // =========================================================
-        // PROPERTY CHANGE HANDLERS
-        // =========================================================
+        private void ResetForm(string statusMessage)
+        {
+            UomCode = string.Empty;
+            UomDescription = string.Empty;
+            AllowDecimals = false;
+            DisplayOrderText = "0";
+            IsActive = true;
+            SelectedUom = null;
+            IsCodeReadOnly = false;
+            StatusMessage = statusMessage;
+
+            SaveCommand.NotifyCanExecuteChanged();
+            DeleteCommand.NotifyCanExecuteChanged();
+        }
 
         partial void OnSearchTextChanged(string value)
         {
-            // Do not hit the database on every key press.
-            StatusMessage = "Type search text and click SEARCH.";
+            if (_isInitialized)
+            {
+                StatusMessage = "Type search text and click SEARCH.";
+            }
         }
 
         partial void OnSelectedUomChanged(UnitOfMeasure? value)
@@ -339,7 +356,7 @@ namespace POS.BackOffice.UI.ViewModels
                 UomCode = value.UomCode ?? string.Empty;
                 UomDescription = value.UomDescription ?? string.Empty;
                 AllowDecimals = value.AllowDecimals;
-                DisplayOrder = value.DisplayOrder;
+                DisplayOrderText = value.DisplayOrder.ToString(CultureInfo.InvariantCulture);
                 IsActive = value.IsActive;
                 IsCodeReadOnly = true;
 
@@ -364,23 +381,20 @@ namespace POS.BackOffice.UI.ViewModels
             SaveCommand.NotifyCanExecuteChanged();
         }
 
-        partial void OnDisplayOrderChanged(int value)
+        partial void OnDisplayOrderTextChanged(string value)
         {
             SaveCommand.NotifyCanExecuteChanged();
         }
 
         partial void OnIsBusyChanged(bool value)
         {
+            InitializeCommand.NotifyCanExecuteChanged();
             LoadDataCommand.NotifyCanExecuteChanged();
             SearchCommand.NotifyCanExecuteChanged();
             RefreshCommand.NotifyCanExecuteChanged();
             SaveCommand.NotifyCanExecuteChanged();
             DeleteCommand.NotifyCanExecuteChanged();
         }
-
-        // =========================================================
-        // COMMAND STATE
-        // =========================================================
 
         private bool CanRunCommand()
         {
@@ -389,17 +403,15 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanSave()
         {
-            return !IsBusy;
+            return !IsBusy &&
+                   !string.IsNullOrWhiteSpace(UomCode) &&
+                   !string.IsNullOrWhiteSpace(UomDescription);
         }
 
         private bool CanDelete()
         {
             return !IsBusy && SelectedUom != null;
         }
-
-        // =========================================================
-        // VALIDATION HELPERS
-        // =========================================================
 
         private static string NormalizeCode(string code)
         {
@@ -411,75 +423,111 @@ namespace POS.BackOffice.UI.ViewModels
             return (description ?? string.Empty).Trim();
         }
 
-        private static bool ValidateInput(string code, string description, int displayOrder)
+        private bool TryParseDisplayOrder(string value, out int displayOrder)
         {
-            if (string.IsNullOrWhiteSpace(code))
+            displayOrder = 0;
+
+            string rawValue = (value ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(rawValue))
             {
-                MessageBox.Show(
-                    "UOM Code is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return false;
+                displayOrder = 0;
+                DisplayOrderText = "0";
+                return true;
             }
 
-            if (code.Length > 10)
-            {
-                MessageBox.Show(
-                    "UOM Code cannot be longer than 10 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return false;
-            }
+            bool parsed = int.TryParse(
+                rawValue,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out displayOrder);
 
-            if (!UomCodeRegex.IsMatch(code))
+            if (!parsed)
             {
-                MessageBox.Show(
-                    "UOM Code can only contain letters, numbers, dash, and underscore.\n\nExamples: PCS, KG, LTR, BOX",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return false;
-            }
+                _messageBoxService.ShowWarning(
+                    "Display Order must be a whole number.",
+                    "Validation Error");
 
-            if (string.IsNullOrWhiteSpace(description))
-            {
-                MessageBox.Show(
-                    "UOM Description is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return false;
-            }
-
-            if (description.Length > 100)
-            {
-                MessageBox.Show(
-                    "UOM Description cannot be longer than 100 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
                 return false;
             }
 
             if (displayOrder < 0)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Display Order cannot be negative.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
-            if (displayOrder > 9999)
+            if (displayOrder > MaxDisplayOrder)
             {
-                MessageBox.Show(
-                    "Display Order is too large.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    $"Display Order cannot be greater than {MaxDisplayOrder}.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ValidateInput(
+            string code,
+            string description,
+            int displayOrder)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                _messageBoxService.ShowWarning(
+                    "UOM Code is required.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (code.Length > 10)
+            {
+                _messageBoxService.ShowWarning(
+                    "UOM Code cannot be longer than 10 characters.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (!UomCodeRegex.IsMatch(code))
+            {
+                _messageBoxService.ShowWarning(
+                    "UOM Code can only contain letters, numbers, dash, and underscore.\n\nExamples: PCS, KG, LTR, BOX",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                _messageBoxService.ShowWarning(
+                    "UOM Description is required.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (description.Length > 100)
+            {
+                _messageBoxService.ShowWarning(
+                    "UOM Description cannot be longer than 100 characters.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (displayOrder < 0 || displayOrder > MaxDisplayOrder)
+            {
+                _messageBoxService.ShowWarning(
+                    $"Display Order must be between 0 and {MaxDisplayOrder}.",
+                    "Validation Error");
+
                 return false;
             }
 

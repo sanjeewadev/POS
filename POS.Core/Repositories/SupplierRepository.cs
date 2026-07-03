@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -9,43 +10,120 @@ using POS.Core.Models;
 
 namespace POS.Core.Repositories
 {
+    public sealed class SupplierLinkedDataSummary
+    {
+        public int PurchaseOrderCount { get; init; }
+        public int GrnCount { get; init; }
+        public int SupplierReturnCount { get; init; }
+        public int SupplierLedgerCount { get; init; }
+        public int ItemSupplierCount { get; init; }
+        public int FreeIssueRuleCount { get; init; }
+        public int FreeItemClaimCount { get; init; }
+
+        public bool HasLinkedData =>
+            PurchaseOrderCount > 0 ||
+            GrnCount > 0 ||
+            SupplierReturnCount > 0 ||
+            SupplierLedgerCount > 0 ||
+            ItemSupplierCount > 0 ||
+            FreeIssueRuleCount > 0 ||
+            FreeItemClaimCount > 0;
+
+        public string ToUserMessage(string supplierName)
+        {
+            var builder = new StringBuilder();
+
+            builder.AppendLine($"Supplier '{supplierName}' cannot be deleted because it is already linked to system records.");
+            builder.AppendLine();
+            builder.AppendLine("Linked records:");
+
+            if (PurchaseOrderCount > 0)
+                builder.AppendLine($"- Purchase Orders: {PurchaseOrderCount}");
+
+            if (GrnCount > 0)
+                builder.AppendLine($"- GRNs: {GrnCount}");
+
+            if (SupplierReturnCount > 0)
+                builder.AppendLine($"- Supplier Returns: {SupplierReturnCount}");
+
+            if (SupplierLedgerCount > 0)
+                builder.AppendLine($"- Supplier Ledger Entries: {SupplierLedgerCount}");
+
+            if (ItemSupplierCount > 0)
+                builder.AppendLine($"- Item Supplier Assignments: {ItemSupplierCount}");
+
+            if (FreeIssueRuleCount > 0)
+                builder.AppendLine($"- Free Issue Rules: {FreeIssueRuleCount}");
+
+            if (FreeItemClaimCount > 0)
+                builder.AppendLine($"- Free Item Claims: {FreeItemClaimCount}");
+
+            builder.AppendLine();
+            builder.AppendLine("Suspend / deactivate this supplier instead of deleting it.");
+
+            return builder.ToString();
+        }
+    }
+
     public class SupplierRepository
     {
+        private const int DefaultTakeLimit = 500;
+        private const int MaxTakeLimit = 2000;
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         private static readonly Regex SupplierCodeRegex =
-            new Regex("^[A-Z0-9_-]+$", RegexOptions.Compiled);
+            new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private static readonly Regex PhoneRegex =
-            new Regex("^[0-9+\\-\\s()]{7,20}$", RegexOptions.Compiled);
+            new("^[0-9+\\-\\s()]{7,20}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         public SupplierRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
         // Used by dropdowns across the system:
         // PO, GRN, Supplier Return, Item Supplier assignment.
-        public async Task<IEnumerable<Supplier>> GetAllAsync()
+        // Only active suppliers should appear here.
+        public async Task<IReadOnlyList<Supplier>> GetAllAsync(int take = MaxTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            return await GetActiveAsync(take);
+        }
+
+        public async Task<IReadOnlyList<Supplier>> GetActiveAsync(int take = MaxTakeLimit)
+        {
+            take = NormalizeTakeLimit(take);
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.Suppliers
                 .AsNoTracking()
                 .Where(s => !s.IsDeactivated)
                 .OrderBy(s => s.SupplierName)
                 .ThenBy(s => s.SupplierCode)
+                .Take(take)
                 .ToListAsync();
         }
 
         // Used by the Supplier Master grid.
-        public async Task<IEnumerable<Supplier>> GetAllFilteredAsync(string searchTerm = "")
+        // This must include deactivated suppliers so old suppliers can be searched and edited.
+        public async Task<IReadOnlyList<Supplier>> GetAllFilteredAsync(
+            string searchTerm = "",
+            bool includeDeactivated = true,
+            int take = DefaultTakeLimit)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            take = NormalizeTakeLimit(take);
 
-            var query = context.Suppliers
-                .AsNoTracking()
-                .AsQueryable();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<Supplier> query = context.Suppliers
+                .AsNoTracking();
+
+            if (!includeDeactivated)
+            {
+                query = query.Where(s => !s.IsDeactivated);
+            }
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -57,19 +135,24 @@ namespace POS.Core.Repositories
                     EF.Functions.Like(s.CompanyName, $"%{term}%") ||
                     EF.Functions.Like(s.ContactPerson, $"%{term}%") ||
                     EF.Functions.Like(s.Phone1, $"%{term}%") ||
-                    EF.Functions.Like(s.Phone2, $"%{term}%"));
+                    EF.Functions.Like(s.Phone2, $"%{term}%") ||
+                    EF.Functions.Like(s.Email, $"%{term}%"));
             }
 
             return await query
-                .OrderBy(s => s.SupplierName)
+                .OrderBy(s => s.IsDeactivated)
+                .ThenBy(s => s.SupplierName)
                 .ThenBy(s => s.SupplierCode)
-                .Take(500)
+                .Take(take)
                 .ToListAsync();
         }
 
         public async Task<Supplier?> GetByIdAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return null;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return await context.Suppliers
                 .AsNoTracking()
@@ -80,11 +163,27 @@ namespace POS.Core.Repositories
         {
             string normalizedCode = NormalizeCode(code);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+                return false;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             return !await context.Suppliers.AnyAsync(s =>
-                s.SupplierCode.ToUpper() == normalizedCode &&
+                EF.Functions.Collate(s.SupplierCode, "NOCASE") == normalizedCode &&
                 s.Id != currentSupplierId);
+        }
+
+        public async Task<SupplierLinkedDataSummary> GetLinkedDataSummaryAsync(int supplierId)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await GetLinkedDataSummaryAsync(context, supplierId);
+        }
+
+        public async Task<bool> HasLinkedDataAsync(int supplierId)
+        {
+            var summary = await GetLinkedDataSummaryAsync(supplierId);
+            return summary.HasLinkedData;
         }
 
         public async Task AddAsync(Supplier supplier)
@@ -95,10 +194,10 @@ namespace POS.Core.Repositories
             NormalizeSupplierForSave(supplier, isNew: true);
             ValidateSupplier(supplier, isNew: true);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             bool codeExists = await context.Suppliers.AnyAsync(s =>
-                s.SupplierCode.ToUpper() == supplier.SupplierCode);
+                EF.Functions.Collate(s.SupplierCode, "NOCASE") == supplier.SupplierCode);
 
             if (codeExists)
                 throw new InvalidOperationException($"Supplier code '{supplier.SupplierCode}' already exists.");
@@ -128,7 +227,7 @@ namespace POS.Core.Repositories
             NormalizeSupplierForSave(supplier, isNew: false);
             ValidateSupplier(supplier, isNew: false);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var existing = await context.Suppliers
                 .FirstOrDefaultAsync(s => s.Id == supplier.Id);
@@ -137,6 +236,8 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Supplier record was not found.");
 
             DateTime now = DateTime.Now;
+            bool wasDeactivated = existing.IsDeactivated;
+            bool isNowDeactivated = supplier.IsDeactivated;
 
             // SupplierCode is intentionally not updated after creation.
             // CurrentBalance is intentionally not updated by Supplier Master.
@@ -153,46 +254,56 @@ namespace POS.Core.Repositories
             existing.VatNumber = supplier.HasVat ? supplier.VatNumber : string.Empty;
             existing.DefaultCreditDays = supplier.DefaultCreditDays;
 
-            existing.IsDeactivated = supplier.IsDeactivated;
+            existing.IsDeactivated = isNowDeactivated;
             existing.UpdatedAt = now;
 
-            if (existing.IsDeactivated)
-                existing.DeactivatedAt ??= now;
-            else
+            if (!wasDeactivated && isNowDeactivated)
+            {
+                existing.DeactivatedAt = now;
+            }
+            else if (wasDeactivated && !isNowDeactivated)
+            {
                 existing.DeactivatedAt = null;
+            }
+            else if (isNowDeactivated)
+            {
+                existing.DeactivatedAt ??= now;
+            }
 
             await context.SaveChangesAsync();
         }
 
         public async Task DeactivateAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var supplier = await context.Suppliers
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (supplier == null)
+                return;
+
+            if (supplier.IsDeactivated)
                 return;
 
             DateTime now = DateTime.Now;
 
             supplier.IsDeactivated = true;
             supplier.UpdatedAt = now;
-            supplier.DeactivatedAt ??= now;
+            supplier.DeactivatedAt = now;
 
             await context.SaveChangesAsync();
         }
 
-        public async Task<bool> HasLinkedDataAsync(int supplierId)
+        public async Task ReactivateAsync(int id)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (id <= 0)
+                return;
 
-            return await HasLinkedDataAsync(context, supplierId);
-        }
-
-        public async Task DeleteAsync(int id)
-        {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
 
             var supplier = await context.Suppliers
                 .FirstOrDefaultAsync(s => s.Id == id);
@@ -200,12 +311,37 @@ namespace POS.Core.Repositories
             if (supplier == null)
                 return;
 
-            bool hasLinkedData = await HasLinkedDataAsync(context, id);
+            if (!supplier.IsDeactivated)
+                return;
 
-            if (hasLinkedData)
+            DateTime now = DateTime.Now;
+
+            supplier.IsDeactivated = false;
+            supplier.UpdatedAt = now;
+            supplier.DeactivatedAt = null;
+
+            await context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            if (id <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var supplier = await context.Suppliers
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (supplier == null)
+                return;
+
+            var linkedData = await GetLinkedDataSummaryAsync(context, id);
+
+            if (linkedData.HasLinkedData)
             {
                 throw new InvalidOperationException(
-                    "This supplier is linked to existing system records. Suspend/deactivate the supplier instead of deleting it.");
+                    linkedData.ToUserMessage(supplier.SupplierName));
             }
 
             try
@@ -220,32 +356,34 @@ namespace POS.Core.Repositories
             }
         }
 
-        private static async Task<bool> HasLinkedDataAsync(AppDbContext context, int supplierId)
+        private static async Task<SupplierLinkedDataSummary> GetLinkedDataSummaryAsync(
+            AppDbContext context,
+            int supplierId)
         {
-            // Purchase Orders
-            if (await HasLinkedEntityAsync(context, context.PoHeaders, supplierId))
-                return true;
+            if (supplierId <= 0)
+                return new SupplierLinkedDataSummary();
 
-            // GRNs
-            if (await HasLinkedEntityAsync(context, context.GrnHeaders, supplierId))
-                return true;
+            int poCount = await CountLinkedEntityAsync(context, context.PoHeaders, supplierId);
+            int grnCount = await CountLinkedEntityAsync(context, context.GrnHeaders, supplierId);
+            int returnCount = await CountLinkedEntityAsync(context, context.SupplierReturnHeaders, supplierId);
+            int ledgerCount = await CountLinkedEntityAsync(context, context.SupplierLedgers, supplierId);
+            int itemSupplierCount = await CountLinkedEntityAsync(context, context.ItemSuppliers, supplierId);
+            int freeIssueRuleCount = await CountLinkedEntityAsync(context, context.FreeIssueRules, supplierId);
+            int freeItemClaimCount = await CountLinkedEntityAsync(context, context.FreeItemClaimLogs, supplierId);
 
-            // Supplier Returns
-            if (await HasLinkedEntityAsync(context, context.SupplierReturnHeaders, supplierId))
-                return true;
-
-            // Supplier Ledger
-            if (await HasLinkedEntityAsync(context, context.SupplierLedgers, supplierId))
-                return true;
-
-            // Item-Supplier assignment
-            if (await HasLinkedEntityAsync(context, context.ItemSuppliers, supplierId))
-                return true;
-
-            return false;
+            return new SupplierLinkedDataSummary
+            {
+                PurchaseOrderCount = poCount,
+                GrnCount = grnCount,
+                SupplierReturnCount = returnCount,
+                SupplierLedgerCount = ledgerCount,
+                ItemSupplierCount = itemSupplierCount,
+                FreeIssueRuleCount = freeIssueRuleCount,
+                FreeItemClaimCount = freeItemClaimCount
+            };
         }
 
-        private static async Task<bool> HasLinkedEntityAsync<TEntity>(
+        private static async Task<int> CountLinkedEntityAsync<TEntity>(
             AppDbContext context,
             IQueryable<TEntity> query,
             int supplierId) where TEntity : class
@@ -254,21 +392,32 @@ namespace POS.Core.Repositories
             var property = entityType?.FindProperty("SupplierId");
 
             if (property == null)
-                return false;
+                return 0;
 
             if (property.ClrType == typeof(int))
             {
-                return await query.AnyAsync(e =>
+                return await query.CountAsync(e =>
                     EF.Property<int>(e, "SupplierId") == supplierId);
             }
 
             if (property.ClrType == typeof(int?))
             {
-                return await query.AnyAsync(e =>
+                return await query.CountAsync(e =>
                     EF.Property<int?>(e, "SupplierId") == supplierId);
             }
 
-            return false;
+            return 0;
+        }
+
+        private static int NormalizeTakeLimit(int take)
+        {
+            if (take <= 0)
+                return DefaultTakeLimit;
+
+            if (take > MaxTakeLimit)
+                return MaxTakeLimit;
+
+            return take;
         }
 
         private static void NormalizeSupplierForSave(Supplier supplier, bool isNew)
@@ -293,7 +442,7 @@ namespace POS.Core.Repositories
             return (value ?? string.Empty).Trim().ToUpperInvariant();
         }
 
-        private static string NormalizeText(string value)
+        private static string NormalizeText(string? value)
         {
             return (value ?? string.Empty).Trim();
         }

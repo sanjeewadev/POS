@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -35,10 +37,14 @@ namespace POS.BackOffice.UI.ViewModels
 
     public partial class ItemPropertyViewModel : ViewModelBase
     {
+        private const int MaxDisplayOrder = 9999;
+
         private readonly AttributeRepository _attributeRepository;
         private readonly CategoryRepository _categoryRepository;
+        private readonly IMessageBoxService _messageBoxService;
 
-        private bool _isApplyingSelection = false;
+        private bool _isInitialized;
+        private bool _isApplyingSelection;
 
         // =========================================================
         // GROUP FIELDS
@@ -48,7 +54,7 @@ namespace POS.BackOffice.UI.ViewModels
         private string _groupNameInput = string.Empty;
 
         [ObservableProperty]
-        private int _groupDisplayOrder = 0;
+        private string _groupDisplayOrderText = "0";
 
         [ObservableProperty]
         private bool _isGroupDeactivated = false;
@@ -76,7 +82,7 @@ namespace POS.BackOffice.UI.ViewModels
         private string _valueNameInput = string.Empty;
 
         [ObservableProperty]
-        private int _valueDisplayOrder = 0;
+        private string _valueDisplayOrderText = "0";
 
         [ObservableProperty]
         private bool _isValueDeactivated = false;
@@ -109,16 +115,21 @@ namespace POS.BackOffice.UI.ViewModels
 
         public ItemPropertyViewModel(
             AttributeRepository attributeRepository,
-            CategoryRepository categoryRepository)
+            CategoryRepository categoryRepository,
+            IMessageBoxService messageBoxService)
         {
-            _attributeRepository = attributeRepository;
-            _categoryRepository = categoryRepository;
-
-            _ = InitializeAsync();
+            _attributeRepository = attributeRepository ?? throw new ArgumentNullException(nameof(attributeRepository));
+            _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
+            _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
         }
 
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task InitializeAsync()
         {
+            if (_isInitialized)
+                return;
+
+            _isInitialized = true;
             IsBusy = true;
 
             try
@@ -132,11 +143,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to initialize item property page.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to initialize item property page:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -152,7 +161,9 @@ namespace POS.BackOffice.UI.ViewModels
         {
             Categories.Clear();
 
-            var categories = await _categoryRepository.GetAllAsync();
+            var categories = await _categoryRepository.GetAllAsync(
+                searchTerm: string.Empty,
+                includeDeactivated: true);
 
             foreach (var cat in categories.OrderBy(c => c.CategoryName))
             {
@@ -170,15 +181,15 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnCategorySearchTextChanged(string value)
         {
-            string search = (value ?? string.Empty).Trim().ToLower();
+            string search = (value ?? string.Empty).Trim().ToLowerInvariant();
 
             foreach (var cat in Categories)
             {
                 cat.IsVisible =
                     string.IsNullOrWhiteSpace(search) ||
-                    cat.CategoryCode.ToLower().Contains(search) ||
-                    cat.CategoryName.ToLower().Contains(search) ||
-                    cat.DisplayName.ToLower().Contains(search);
+                    cat.CategoryCode.ToLowerInvariant().Contains(search) ||
+                    cat.CategoryName.ToLowerInvariant().Contains(search) ||
+                    cat.DisplayName.ToLowerInvariant().Contains(search);
             }
         }
 
@@ -200,11 +211,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to load groups.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load groups:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -216,7 +225,9 @@ namespace POS.BackOffice.UI.ViewModels
         {
             AttributeGroups.Clear();
 
-            var groups = await _attributeRepository.GetAllGroupsAsync(GroupSearchText);
+            var groups = await _attributeRepository.GetAllGroupsAsync(
+                searchTerm: GroupSearchText,
+                includeDeactivated: true);
 
             foreach (var group in groups)
             {
@@ -232,9 +243,10 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnGroupSearchTextChanged(string value)
         {
-            // Do not hit the database on every key press.
-            // The updated XAML will use Search button or Enter key.
-            StatusMessage = "Type search text and click SEARCH.";
+            if (_isInitialized)
+            {
+                StatusMessage = "Type search text and click SEARCH.";
+            }
         }
 
         partial void OnSelectedAttributeGroupChanged(AttributeGroup? value)
@@ -247,6 +259,8 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task ApplySelectedGroupAsync(AttributeGroup? value)
         {
+            IsBusy = true;
+
             try
             {
                 if (value != null)
@@ -254,7 +268,7 @@ namespace POS.BackOffice.UI.ViewModels
                     _isApplyingSelection = true;
 
                     GroupNameInput = value.GroupName ?? string.Empty;
-                    GroupDisplayOrder = value.DisplayOrder;
+                    GroupDisplayOrderText = value.DisplayOrder.ToString(CultureInfo.InvariantCulture);
                     IsGroupDeactivated = value.IsDeactivated;
 
                     IsValueManagerEnabled = true;
@@ -262,7 +276,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                     SelectedAttributeValue = null;
                     ValueNameInput = string.Empty;
-                    ValueDisplayOrder = 0;
+                    ValueDisplayOrderText = "0";
                     IsValueDeactivated = false;
 
                     foreach (var cat in Categories)
@@ -280,12 +294,17 @@ namespace POS.BackOffice.UI.ViewModels
                     await LoadValuesInternalAsync();
 
                     StatusMessage = $"Editing group: {value.GroupName}";
-
-                    _isApplyingSelection = false;
                 }
                 else
                 {
+                    _isApplyingSelection = true;
+
                     AttributeValues.Clear();
+                    SelectedAttributeValue = null;
+                    ValueNameInput = string.Empty;
+                    ValueDisplayOrderText = "0";
+                    IsValueDeactivated = false;
+
                     IsValueManagerEnabled = false;
                     ValueManagerHeader = "Please select a group from the left to add values.";
 
@@ -293,24 +312,28 @@ namespace POS.BackOffice.UI.ViewModels
                     {
                         cat.IsSelected = false;
                     }
+
+                    StatusMessage = "Ready for new group.";
                 }
             }
             catch (Exception ex)
             {
-                _isApplyingSelection = false;
                 StatusMessage = "Failed to apply selected group.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load selected group details:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
+            finally
+            {
+                _isApplyingSelection = false;
+                IsBusy = false;
 
-            SaveGroupCommand.NotifyCanExecuteChanged();
-            DeleteGroupCommand.NotifyCanExecuteChanged();
-            SaveValueCommand.NotifyCanExecuteChanged();
-            DeleteValueCommand.NotifyCanExecuteChanged();
+                SaveGroupCommand.NotifyCanExecuteChanged();
+                DeleteGroupCommand.NotifyCanExecuteChanged();
+                SaveValueCommand.NotifyCanExecuteChanged();
+                DeleteValueCommand.NotifyCanExecuteChanged();
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanSaveGroup))]
@@ -318,7 +341,10 @@ namespace POS.BackOffice.UI.ViewModels
         {
             string groupName = NormalizeName(GroupNameInput);
 
-            if (!ValidateGroupInput(groupName, GroupDisplayOrder))
+            if (!TryParseDisplayOrder(GroupDisplayOrderText, "Group Display Order", out int displayOrder))
+                return;
+
+            if (!ValidateGroupInput(groupName, displayOrder))
                 return;
 
             IsBusy = true;
@@ -331,11 +357,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (!isUnique)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         $"The group '{groupName}' already exists.",
-                        "Duplicate Group",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Duplicate Group");
+
                     return;
                 }
 
@@ -346,7 +371,7 @@ namespace POS.BackOffice.UI.ViewModels
                     savedGroup = new AttributeGroup
                     {
                         GroupName = groupName,
-                        DisplayOrder = GroupDisplayOrder,
+                        DisplayOrder = displayOrder,
                         IsDeactivated = IsGroupDeactivated
                     };
 
@@ -358,7 +383,7 @@ namespace POS.BackOffice.UI.ViewModels
                     {
                         Id = SelectedAttributeGroup.Id,
                         GroupName = groupName,
-                        DisplayOrder = GroupDisplayOrder,
+                        DisplayOrder = displayOrder,
                         IsDeactivated = IsGroupDeactivated
                     };
 
@@ -373,25 +398,27 @@ namespace POS.BackOffice.UI.ViewModels
                 await _attributeRepository.SyncGroupToCategoriesAsync(savedGroup.Id, checkedCategoryIds);
 
                 await LoadGroupsInternalAsync();
-                ClearGroup();
+                ResetGroupForm("Group saved successfully.");
 
-                StatusMessage = "Group saved successfully.";
-
-                MessageBox.Show(
+                _messageBoxService.ShowInformation(
                     "Group saved successfully.",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Success");
+            }
+            catch (InvalidOperationException ex)
+            {
+                StatusMessage = "Group save blocked.";
+
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Save Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Group save failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Error saving group:\n\n{ex.Message}",
-                    "Save Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Save Error");
             }
             finally
             {
@@ -402,11 +429,16 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void ClearGroup()
         {
+            ResetGroupForm("Ready for new group.");
+        }
+
+        private void ResetGroupForm(string statusMessage)
+        {
             _isApplyingSelection = true;
 
             SelectedAttributeGroup = null;
             GroupNameInput = string.Empty;
-            GroupDisplayOrder = 0;
+            GroupDisplayOrderText = "0";
             IsGroupDeactivated = false;
             CategorySearchText = string.Empty;
 
@@ -418,7 +450,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             SelectedAttributeValue = null;
             ValueNameInput = string.Empty;
-            ValueDisplayOrder = 0;
+            ValueDisplayOrderText = "0";
             IsValueDeactivated = false;
             AttributeValues.Clear();
 
@@ -427,7 +459,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             _isApplyingSelection = false;
 
-            StatusMessage = "Ready for new group.";
+            StatusMessage = statusMessage;
 
             SaveGroupCommand.NotifyCanExecuteChanged();
             DeleteGroupCommand.NotifyCanExecuteChanged();
@@ -441,53 +473,78 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedAttributeGroup == null)
                 return;
 
-            var result = MessageBox.Show(
-                $"Delete group '{SelectedAttributeGroup.GroupName}'?\n\n" +
-                "This only works if the group has no values, no category assignments, and no item variant usage.\n\n" +
-                "If it is already used, deactivate it instead.",
+            var selected = SelectedAttributeGroup;
+
+            IsBusy = true;
+
+            try
+            {
+                var linkedData = await _attributeRepository.GetGroupLinkedDataSummaryAsync(selected.Id);
+
+                if (linkedData.HasLinkedData)
+                {
+                    StatusMessage = "Delete blocked.";
+
+                    _messageBoxService.ShowWarning(
+                        linkedData.ToUserMessage(selected.GroupName),
+                        "Delete Blocked");
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Linked data check failed.";
+
+                _messageBoxService.ShowError(
+                    $"Could not check linked records:\n\n{ex.Message}",
+                    "Delete Check Error");
+
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Delete group '{selected.GroupName}'?\n\n" +
+                "This is only safe for wrongly-created or unused test groups.\n\n" +
+                "For real business records, deactivate the group instead.",
                 "Confirm Safe Delete",
-                MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
 
             IsBusy = true;
 
             try
             {
-                await _attributeRepository.DeleteGroupAsync(SelectedAttributeGroup.Id);
+                await _attributeRepository.DeleteGroupAsync(selected.Id);
 
                 await LoadGroupsInternalAsync();
-                ClearGroup();
+                ResetGroupForm("Group deleted successfully.");
 
-                StatusMessage = "Group deleted successfully.";
-
-                MessageBox.Show(
+                _messageBoxService.ShowInformation(
                     "Group deleted successfully.",
-                    "Deleted",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Deleted");
             }
             catch (InvalidOperationException ex)
             {
                 StatusMessage = "Delete blocked.";
 
-                MessageBox.Show(
-                    $"{ex.Message}\n\nTo hide this group, tick 'Deactivate Group' and click SAVE.",
-                    "Delete Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Delete Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Delete failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Error deleting group:\n\n{ex.Message}",
-                    "Delete Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Delete Error");
             }
             finally
             {
@@ -513,11 +570,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to load values.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load values:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -533,8 +588,9 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             var values = await _attributeRepository.GetAllValuesFilteredAsync(
-                SelectedAttributeGroup.Id,
-                ValueSearchText);
+                groupId: SelectedAttributeGroup.Id,
+                searchTerm: ValueSearchText,
+                includeDeactivated: true);
 
             foreach (var value in values)
             {
@@ -550,19 +606,30 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnValueSearchTextChanged(string value)
         {
-            // Do not hit the database on every key press.
-            // The updated XAML will use Search button or Enter key.
+            if (_isInitialized && SelectedAttributeGroup != null)
+            {
+                StatusMessage = "Type value search text and click SEARCH.";
+            }
         }
 
         partial void OnSelectedAttributeValueChanged(AttributeValue? value)
         {
+            if (_isApplyingSelection)
+                return;
+
             if (value != null)
             {
                 ValueNameInput = value.ValueName ?? string.Empty;
-                ValueDisplayOrder = value.DisplayOrder;
+                ValueDisplayOrderText = value.DisplayOrder.ToString(CultureInfo.InvariantCulture);
                 IsValueDeactivated = value.IsDeactivated;
 
                 StatusMessage = $"Editing value: {value.ValueName}";
+            }
+            else
+            {
+                ValueNameInput = string.Empty;
+                ValueDisplayOrderText = "0";
+                IsValueDeactivated = false;
             }
 
             SaveValueCommand.NotifyCanExecuteChanged();
@@ -574,17 +641,19 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedAttributeGroup == null)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select an attribute group before adding values.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return;
             }
 
             string valueName = NormalizeName(ValueNameInput);
 
-            if (!ValidateValueInput(valueName, ValueDisplayOrder))
+            if (!TryParseDisplayOrder(ValueDisplayOrderText, "Value Display Order", out int displayOrder))
+                return;
+
+            if (!ValidateValueInput(valueName, displayOrder))
                 return;
 
             IsBusy = true;
@@ -600,11 +669,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (!isUnique)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         $"The value '{valueName}' already exists in this group.",
-                        "Duplicate Value",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Duplicate Value");
+
                     return;
                 }
 
@@ -614,7 +682,7 @@ namespace POS.BackOffice.UI.ViewModels
                     {
                         AttributeGroupId = SelectedAttributeGroup.Id,
                         ValueName = valueName,
-                        DisplayOrder = ValueDisplayOrder,
+                        DisplayOrder = displayOrder,
                         IsDeactivated = IsValueDeactivated
                     };
 
@@ -631,7 +699,7 @@ namespace POS.BackOffice.UI.ViewModels
                         AttributeGroupId = SelectedAttributeValue.AttributeGroupId,
 
                         ValueName = valueName,
-                        DisplayOrder = ValueDisplayOrder,
+                        DisplayOrder = displayOrder,
                         IsDeactivated = IsValueDeactivated
                     };
 
@@ -640,17 +708,23 @@ namespace POS.BackOffice.UI.ViewModels
                 }
 
                 await LoadValuesInternalAsync();
-                ClearValue();
+                ResetValueForm(StatusMessage);
+            }
+            catch (InvalidOperationException ex)
+            {
+                StatusMessage = "Value save blocked.";
+
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Save Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Value save failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Database Error:\n\n{ex.Message}",
-                    "Save Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Save Error");
             }
             finally
             {
@@ -661,14 +735,20 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void ClearValue()
         {
+            ResetValueForm(
+                SelectedAttributeGroup == null
+                    ? "Please select a group first."
+                    : $"Ready to add values to: {SelectedAttributeGroup.GroupName}");
+        }
+
+        private void ResetValueForm(string statusMessage)
+        {
             SelectedAttributeValue = null;
             ValueNameInput = string.Empty;
-            ValueDisplayOrder = 0;
+            ValueDisplayOrderText = "0";
             IsValueDeactivated = false;
 
-            StatusMessage = SelectedAttributeGroup == null
-                ? "Please select a group first."
-                : $"Ready to add values to: {SelectedAttributeGroup.GroupName}";
+            StatusMessage = statusMessage;
 
             SaveValueCommand.NotifyCanExecuteChanged();
             DeleteValueCommand.NotifyCanExecuteChanged();
@@ -680,53 +760,78 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedAttributeValue == null)
                 return;
 
-            var result = MessageBox.Show(
-                $"Delete value '{SelectedAttributeValue.ValueName}'?\n\n" +
-                "This only works if the value is not used by item variants.\n\n" +
-                "If it is already used, deactivate it instead.",
+            var selected = SelectedAttributeValue;
+
+            IsBusy = true;
+
+            try
+            {
+                var linkedData = await _attributeRepository.GetValueLinkedDataSummaryAsync(selected.Id);
+
+                if (linkedData.HasLinkedData)
+                {
+                    StatusMessage = "Delete blocked.";
+
+                    _messageBoxService.ShowWarning(
+                        linkedData.ToUserMessage(selected.ValueName),
+                        "Delete Blocked");
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Linked data check failed.";
+
+                _messageBoxService.ShowError(
+                    $"Could not check linked records:\n\n{ex.Message}",
+                    "Delete Check Error");
+
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Delete value '{selected.ValueName}'?\n\n" +
+                "This is only safe for wrongly-created or unused test values.\n\n" +
+                "For real business records, deactivate the value instead.",
                 "Confirm Safe Delete",
-                MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
 
             IsBusy = true;
 
             try
             {
-                await _attributeRepository.DeleteValueAsync(SelectedAttributeValue.Id);
+                await _attributeRepository.DeleteValueAsync(selected.Id);
 
                 await LoadValuesInternalAsync();
-                ClearValue();
+                ResetValueForm("Value deleted successfully.");
 
-                StatusMessage = "Value deleted successfully.";
-
-                MessageBox.Show(
+                _messageBoxService.ShowInformation(
                     "Value deleted successfully.",
-                    "Deleted",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Deleted");
             }
             catch (InvalidOperationException ex)
             {
                 StatusMessage = "Delete blocked.";
 
-                MessageBox.Show(
-                    $"{ex.Message}\n\nTo hide this value, tick 'Deactivate Value' and click SAVE.",
-                    "Delete Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Delete Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Delete failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Error deleting value:\n\n{ex.Message}",
-                    "Delete Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Delete Error");
             }
             finally
             {
@@ -743,7 +848,7 @@ namespace POS.BackOffice.UI.ViewModels
             SaveGroupCommand.NotifyCanExecuteChanged();
         }
 
-        partial void OnGroupDisplayOrderChanged(int value)
+        partial void OnGroupDisplayOrderTextChanged(string value)
         {
             SaveGroupCommand.NotifyCanExecuteChanged();
         }
@@ -753,13 +858,15 @@ namespace POS.BackOffice.UI.ViewModels
             SaveValueCommand.NotifyCanExecuteChanged();
         }
 
-        partial void OnValueDisplayOrderChanged(int value)
+        partial void OnValueDisplayOrderTextChanged(string value)
         {
             SaveValueCommand.NotifyCanExecuteChanged();
         }
 
         partial void OnIsBusyChanged(bool value)
         {
+            InitializeCommand.NotifyCanExecuteChanged();
+
             LoadGroupsCommand.NotifyCanExecuteChanged();
             SearchGroupsCommand.NotifyCanExecuteChanged();
             SaveGroupCommand.NotifyCanExecuteChanged();
@@ -783,7 +890,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanSaveGroup()
         {
-            return !IsBusy;
+            return !IsBusy && !string.IsNullOrWhiteSpace(GroupNameInput);
         }
 
         private bool CanDeleteGroup()
@@ -793,7 +900,10 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanSaveValue()
         {
-            return !IsBusy && SelectedAttributeGroup != null && IsValueManagerEnabled;
+            return !IsBusy &&
+                   SelectedAttributeGroup != null &&
+                   IsValueManagerEnabled &&
+                   !string.IsNullOrWhiteSpace(ValueNameInput);
         }
 
         private bool CanDeleteValue()
@@ -810,70 +920,115 @@ namespace POS.BackOffice.UI.ViewModels
             return (value ?? string.Empty).Trim();
         }
 
-        private static bool ValidateGroupInput(string groupName, int displayOrder)
+        private bool TryParseDisplayOrder(
+            string value,
+            string fieldName,
+            out int displayOrder)
         {
-            if (string.IsNullOrWhiteSpace(groupName))
+            displayOrder = 0;
+
+            string rawValue = (value ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(rawValue))
             {
-                MessageBox.Show(
-                    "Group Name is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return false;
+                displayOrder = 0;
+                return true;
             }
 
-            if (groupName.Length > 50)
+            bool parsed = int.TryParse(
+                rawValue,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out displayOrder);
+
+            if (!parsed)
             {
-                MessageBox.Show(
-                    "Group Name cannot be longer than 50 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    $"{fieldName} must be a whole number.",
+                    "Validation Error");
+
                 return false;
             }
 
             if (displayOrder < 0)
             {
-                MessageBox.Show(
-                    "Group Display Order cannot be negative.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    $"{fieldName} cannot be negative.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (displayOrder > MaxDisplayOrder)
+            {
+                _messageBoxService.ShowWarning(
+                    $"{fieldName} cannot be greater than {MaxDisplayOrder}.",
+                    "Validation Error");
+
                 return false;
             }
 
             return true;
         }
 
-        private static bool ValidateValueInput(string valueName, int displayOrder)
+        private bool ValidateGroupInput(string groupName, int displayOrder)
+        {
+            if (string.IsNullOrWhiteSpace(groupName))
+            {
+                _messageBoxService.ShowWarning(
+                    "Group Name is required.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (groupName.Length > 50)
+            {
+                _messageBoxService.ShowWarning(
+                    "Group Name cannot be longer than 50 characters.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (displayOrder < 0 || displayOrder > MaxDisplayOrder)
+            {
+                _messageBoxService.ShowWarning(
+                    $"Group Display Order must be between 0 and {MaxDisplayOrder}.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ValidateValueInput(string valueName, int displayOrder)
         {
             if (string.IsNullOrWhiteSpace(valueName))
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Value Name is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
             if (valueName.Length > 50)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Value Name cannot be longer than 50 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
-            if (displayOrder < 0)
+            if (displayOrder < 0 || displayOrder > MaxDisplayOrder)
             {
-                MessageBox.Show(
-                    "Value Display Order cannot be negative.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    $"Value Display Order must be between 0 and {MaxDisplayOrder}.",
+                    "Validation Error");
+
                 return false;
             }
 

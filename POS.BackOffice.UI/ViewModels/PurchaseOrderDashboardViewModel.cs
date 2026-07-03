@@ -2,10 +2,10 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -15,6 +15,9 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly PoRepository _poRepository;
         private readonly SupplierRepository _supplierRepository;
+        private readonly IMessageBoxService _messageBoxService;
+
+        private bool _isInitialized;
 
         // =========================================================
         // FILTERS
@@ -35,6 +38,9 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private DateTime? _filterEndDate;
 
+        [ObservableProperty]
+        private bool _showCancelledPurchaseOrders = false;
+
         // =========================================================
         // SELECTION / DETAILS
         // =========================================================
@@ -53,15 +59,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         public ObservableCollection<Supplier> FilterSuppliers { get; } = new();
 
-        public ObservableCollection<string> FilterStatuses { get; } = new(new[]
-        {
-            "All",
-            "Draft",
-            "Approved",
-            "Partially Received",
-            "Closed",
-            "Cancelled"
-        });
+        public ObservableCollection<string> FilterStatuses { get; } = new();
 
         // =========================================================
         // UI STATE
@@ -73,39 +71,52 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
+        public bool IsDetailsOpen => ViewingPoDetails != null;
+
         public PurchaseOrderDashboardViewModel(
             PoRepository poRepository,
-            SupplierRepository supplierRepository)
+            SupplierRepository supplierRepository,
+            IMessageBoxService messageBoxService)
         {
-            _poRepository = poRepository;
-            _supplierRepository = supplierRepository;
+            _poRepository = poRepository ?? throw new ArgumentNullException(nameof(poRepository));
+            _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
+            _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
 
             FilterStartDate = DateTime.Now.AddDays(-30);
             FilterEndDate = DateTime.Now;
 
-            _ = InitializeAsync();
+            RefreshStatusFilters();
         }
 
+        // =========================================================
+        // INITIALIZE
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task InitializeAsync()
         {
+            if (_isInitialized)
+                return;
+
             IsBusy = true;
 
             try
             {
+                RefreshStatusFilters();
+
                 await LoadFilterSuppliersAsync();
                 await LoadDataInternalAsync();
 
+                _isInitialized = true;
                 StatusMessage = $"{PurchaseOrders.Count} purchase order(s) loaded.";
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to initialize PO dashboard.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to initialize PO dashboard:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -121,10 +132,28 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var supplier in suppliers
                          .Where(s => !s.IsDeactivated)
-                         .OrderBy(s => s.SupplierName))
+                         .OrderBy(s => s.SupplierName)
+                         .ThenBy(s => s.SupplierCode))
             {
                 FilterSuppliers.Add(supplier);
             }
+        }
+
+        private void RefreshStatusFilters()
+        {
+            string current = SelectedStatusFilter;
+
+            FilterStatuses.Clear();
+
+            FilterStatuses.Add("All");
+            FilterStatuses.Add("Approved");
+            FilterStatuses.Add("Closed");
+
+            if (ShowCancelledPurchaseOrders)
+                FilterStatuses.Add("Cancelled");
+
+            if (!FilterStatuses.Contains(current))
+                SelectedStatusFilter = "All";
         }
 
         // =========================================================
@@ -156,8 +185,20 @@ namespace POS.BackOffice.UI.ViewModels
             StatusMessage = "Date filter changed. Click SEARCH.";
         }
 
+        partial void OnShowCancelledPurchaseOrdersChanged(bool value)
+        {
+            RefreshStatusFilters();
+
+            StatusMessage = value
+                ? "Cancelled POs will be included after SEARCH."
+                : "Cancelled POs are hidden. Click SEARCH to refresh.";
+        }
+
         partial void OnViewingPoDetailsChanged(PoHeader? value)
         {
+            OnPropertyChanged(nameof(IsDetailsOpen));
+
+            CloseDetailsCommand.NotifyCanExecuteChanged();
             CancelPoCommand.NotifyCanExecuteChanged();
             ClonePoCommand.NotifyCanExecuteChanged();
             PrintPoCommand.NotifyCanExecuteChanged();
@@ -165,10 +206,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnIsBusyChanged(bool value)
         {
+            InitializeCommand.NotifyCanExecuteChanged();
             SearchCommand.NotifyCanExecuteChanged();
             RefreshDatabaseCommand.NotifyCanExecuteChanged();
             ClearFiltersCommand.NotifyCanExecuteChanged();
             ViewDetailsCommand.NotifyCanExecuteChanged();
+            CloseDetailsCommand.NotifyCanExecuteChanged();
             CancelPoCommand.NotifyCanExecuteChanged();
             ClonePoCommand.NotifyCanExecuteChanged();
             PrintPoCommand.NotifyCanExecuteChanged();
@@ -187,6 +230,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task RefreshDatabaseAsync()
         {
+            await LoadFilterSuppliersAsync();
             await LoadDataAsync();
         }
 
@@ -197,17 +241,24 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 await LoadDataInternalAsync();
+
                 StatusMessage = $"{PurchaseOrders.Count} purchase order(s) loaded.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                StatusMessage = "Search blocked.";
+
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Filter Error");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load purchase orders.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load purchase orders:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -231,12 +282,11 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedSupplierFilter?.Id,
                 SelectedStatusFilter,
                 FilterStartDate,
-                FilterEndDate);
+                FilterEndDate,
+                ShowCancelledPurchaseOrders);
 
             foreach (var po in data)
-            {
                 PurchaseOrders.Add(po);
-            }
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -244,9 +294,12 @@ namespace POS.BackOffice.UI.ViewModels
         {
             SearchText = string.Empty;
             SelectedSupplierFilter = null;
+            ShowCancelledPurchaseOrders = false;
             SelectedStatusFilter = "All";
             FilterStartDate = DateTime.Now.AddDays(-30);
             FilterEndDate = DateTime.Now;
+
+            RefreshStatusFilters();
 
             await LoadDataAsync();
         }
@@ -269,26 +322,24 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (fullPo == null)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         "Selected Purchase Order was not found.",
-                        "Not Found",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Not Found");
                     return;
                 }
 
                 ViewingPoDetails = fullPo;
+                SelectedPo = summary;
+
                 StatusMessage = $"Viewing {fullPo.PoNumber}.";
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load PO details.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load PO details:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -296,11 +347,16 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanCloseDetails))]
         private void CloseDetails()
         {
             ViewingPoDetails = null;
             StatusMessage = "Returned to dashboard.";
+        }
+
+        private bool CanCloseDetails()
+        {
+            return !IsBusy && ViewingPoDetails != null;
         }
 
         // =========================================================
@@ -313,14 +369,12 @@ namespace POS.BackOffice.UI.ViewModels
             if (ViewingPoDetails == null)
                 return;
 
-            var result = MessageBox.Show(
+            bool confirm = _messageBoxService.ShowConfirmation(
                 $"Cancel Purchase Order '{ViewingPoDetails.PoNumber}'?\n\n" +
                 "This is only allowed if no quantities have been received.",
-                "Confirm PO Cancellation",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+                "Confirm PO Cancellation");
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirm)
                 return;
 
             IsBusy = true;
@@ -332,11 +386,9 @@ namespace POS.BackOffice.UI.ViewModels
                     cancelledBy: "Admin",
                     reason: "Cancelled from PO dashboard.");
 
-                MessageBox.Show(
+                _messageBoxService.ShowInformation(
                     "Purchase Order cancelled successfully.",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Success");
 
                 ViewingPoDetails = null;
                 await LoadDataInternalAsync();
@@ -347,21 +399,17 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Cancellation blocked.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     ex.Message,
-                    "Action Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Action Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to cancel PO.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to cancel PO:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -375,34 +423,29 @@ namespace POS.BackOffice.UI.ViewModels
             if (ViewingPoDetails == null)
                 return;
 
-            var result = MessageBox.Show(
+            bool confirm = _messageBoxService.ShowConfirmation(
                 $"Clone '{ViewingPoDetails.PoNumber}' into a new Purchase Order?",
-                "Clone PO",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                "Clone PO");
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirm)
                 return;
+
+            IsBusy = true;
 
             try
             {
                 if (App.Services == null)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         "Application service container is not available.",
-                        "Clone Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Clone Error");
                     return;
                 }
 
                 var createPoViewModel = App.Services.GetRequiredService<PurchaseOrderViewModel>();
 
-                // Give the target ViewModel a short chance to finish async lookup loading.
-                for (int i = 0; i < 10 && !createPoViewModel.Suppliers.Any(); i++)
-                {
-                    await Task.Delay(100);
-                }
+                if (createPoViewModel.InitializeCommand.CanExecute(null))
+                    await createPoViewModel.InitializeCommand.ExecuteAsync(null);
 
                 createPoViewModel.ClearCommand.Execute(null);
 
@@ -411,16 +454,16 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (supplier == null)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         "Cannot clone because the supplier is inactive or not loaded.",
-                        "Clone Blocked",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Clone Blocked");
                     return;
                 }
 
                 createPoViewModel.SelectedSupplier = supplier;
-                createPoViewModel.SelectedTerms = ViewingPoDetails.Terms;
+                createPoViewModel.SelectedTerms = string.IsNullOrWhiteSpace(ViewingPoDetails.Terms)
+                    ? "Credit"
+                    : ViewingPoDetails.Terms;
                 createPoViewModel.CreditDaysInput = ViewingPoDetails.CreditDays;
                 createPoViewModel.OrderDate = DateTime.Now;
                 createPoViewModel.ExpectedDate = DateTime.Now.AddDays(7);
@@ -431,27 +474,44 @@ namespace POS.BackOffice.UI.ViewModels
 
                 foreach (var line in ViewingPoDetails.PoLines)
                 {
-                    createPoViewModel.PoLines.Add(new PoLine
+                    var newLine = new PoLine
                     {
                         ItemVariantId = line.ItemVariantId,
                         ItemCode = !string.IsNullOrWhiteSpace(line.ItemCode)
                             ? line.ItemCode
                             : line.ItemVariant?.ItemParent?.ItemCode ?? string.Empty,
+                        SkuCode = line.ItemVariant?.SkuCode ?? string.Empty,
                         VariantDescription = !string.IsNullOrWhiteSpace(line.VariantDescription)
                             ? line.VariantDescription
-                            : line.ItemVariant?.VariantDescription ?? "Standard",
+                            : string.IsNullOrWhiteSpace(line.ItemVariant?.VariantDescription)
+                                ? "Standard"
+                                : line.ItemVariant.VariantDescription,
                         Description = !string.IsNullOrWhiteSpace(line.Description)
                             ? line.Description
                             : line.ItemVariant?.ItemParent?.ItemName ?? string.Empty,
+                        PrintName = line.ItemVariant?.ItemParent?.PrintName ?? string.Empty,
                         Barcode = line.ItemVariant?.Barcode ?? string.Empty,
-                        Uom = line.Uom,
+                        Uom = string.IsNullOrWhiteSpace(line.Uom) ? "PCS" : line.Uom,
                         OrderQty = line.OrderQty,
                         ExpectedCost = line.ExpectedCost,
+                        LineDiscountMode = string.IsNullOrWhiteSpace(line.LineDiscountMode)
+                            ? "Amount"
+                            : line.LineDiscountMode,
+                        LineDiscountValue = line.LineDiscountValue,
                         LineDiscount = line.LineDiscount,
-                        TaxCode = line.TaxCode,
+                        TaxCode = string.IsNullOrWhiteSpace(line.TaxCode)
+                            ? "VAT"
+                            : line.TaxCode,
+                        VatRatePercent = line.VatRatePercent,
+                        IsVatIncluded = line.IsVatIncluded,
+                        TaxAmount = line.TaxAmount,
+                        LineTotal = line.LineTotal,
                         SupplierItemCode = line.SupplierItemCode,
-                        Moq = 1
-                    });
+                        Moq = line.Moq <= 0 ? 1 : line.Moq,
+                        LineStatus = "Open"
+                    };
+
+                    createPoViewModel.PoLines.Add(newLine);
                 }
 
                 createPoViewModel.RecalculateTotals();
@@ -460,15 +520,20 @@ namespace POS.BackOffice.UI.ViewModels
                 mainViewModel.CurrentPage = createPoViewModel;
 
                 ViewingPoDetails = null;
+
                 StatusMessage = "PO cloned into new Purchase Order form.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                StatusMessage = "Failed to clone PO.";
+
+                _messageBoxService.ShowError(
                     $"Failed to clone PO:\n\n{ex.Message}",
-                    "Clone Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Clone Error");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -478,11 +543,10 @@ namespace POS.BackOffice.UI.ViewModels
             if (ViewingPoDetails == null)
                 return;
 
-            MessageBox.Show(
-                $"PDF export for {ViewingPoDetails.PoNumber} will be connected after the PO and GRN workflow is stable.",
-                "PDF Export",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            _messageBoxService.ShowInformation(
+                $"PDF export for {ViewingPoDetails.PoNumber} is not connected yet.\n\n" +
+                "We will connect PDF export after PO save, dashboard, GRN posting, and GRN history are stable.",
+                "PDF Export");
         }
 
         // =========================================================
@@ -504,9 +568,13 @@ namespace POS.BackOffice.UI.ViewModels
             if (IsBusy || ViewingPoDetails == null)
                 return false;
 
-            return ViewingPoDetails.Status != "Closed" &&
-                   ViewingPoDetails.Status != "Cancelled" &&
-                   !ViewingPoDetails.PoLines.Any(l => l.ReceivedQty > 0);
+            if (ViewingPoDetails.Status == "Closed" ||
+                ViewingPoDetails.Status == "Cancelled")
+            {
+                return false;
+            }
+
+            return !ViewingPoDetails.PoLines.Any(l => l.ReceivedQty > 0);
         }
 
         private bool CanClonePo()

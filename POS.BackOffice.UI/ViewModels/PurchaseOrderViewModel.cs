@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -14,16 +14,62 @@ namespace POS.BackOffice.UI.ViewModels
 {
     public partial class PoMatrixEntryDto : ObservableObject
     {
+        private bool _isRecalculating;
+
         public int ItemVariantId { get; set; }
+
+        public int ItemParentId { get; set; }
+
         public string ItemCode { get; set; } = string.Empty;
-        public string VariantDescription { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
+
+        public string SkuCode { get; set; } = string.Empty;
+
         public string Barcode { get; set; } = string.Empty;
+
+        public string VariantDescription { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        public string PrintName { get; set; } = string.Empty;
+
         public string Uom { get; set; } = string.Empty;
+
         public decimal CurrentSOH { get; set; } = 0m;
-        public string TaxCode { get; set; } = "TAX-FREE";
+
+        public string TaxCode { get; set; } = "VAT";
+
         public string SupplierItemCode { get; set; } = string.Empty;
+
         public int Moq { get; set; } = 1;
+
+        public bool AllowDecimalQuantity { get; set; } = false;
+
+        public string FullDisplayName =>
+            PoVmDisplayNameHelper.BuildDisplayName(Description, VariantDescription, SkuCode);
+
+        public string ReceiptDisplayName =>
+            PoVmDisplayNameHelper.BuildDisplayName(
+                string.IsNullOrWhiteSpace(PrintName) ? Description : PrintName,
+                VariantDescription,
+                FullDisplayName);
+
+        public string DisplayName => FullDisplayName;
+
+        public string VariantDisplayName =>
+            PoVmDisplayNameHelper.IsStandardVariantDescription(VariantDescription)
+                ? "Standard"
+                : PoVmDisplayNameHelper.NormalizeText(VariantDescription);
+
+        public decimal GrossAmount => Math.Round(OrderQty * ExpectedCost, 2);
+
+        public decimal NetBeforeVat
+        {
+            get
+            {
+                decimal net = GrossAmount - LineDiscount;
+                return net < 0 ? 0m : Math.Round(net, 2);
+            }
+        }
 
         [ObservableProperty]
         private decimal _orderQty = 0m;
@@ -32,13 +78,163 @@ namespace POS.BackOffice.UI.ViewModels
         private decimal _expectedCost = 0m;
 
         [ObservableProperty]
+        private string _lineDiscountMode = "Amount";
+
+        [ObservableProperty]
+        private decimal _lineDiscountValue = 0m;
+
+        [ObservableProperty]
         private decimal _lineDiscount = 0m;
+
+        [ObservableProperty]
+        private decimal _vatRatePercent = 0m;
+
+        [ObservableProperty]
+        private bool _isVatIncluded = false;
+
+        [ObservableProperty]
+        private decimal _vatAmount = 0m;
+
+        [ObservableProperty]
+        private decimal _lineTotal = 0m;
+
+        public void RecalculateLineAmounts()
+        {
+            if (_isRecalculating)
+                return;
+
+            _isRecalculating = true;
+
+            try
+            {
+                decimal gross = GrossAmount;
+
+                LineDiscount = CalculateDiscountAmount(
+                    gross,
+                    LineDiscountMode,
+                    LineDiscountValue);
+
+                decimal afterDiscount = gross - LineDiscount;
+
+                if (afterDiscount < 0)
+                    afterDiscount = 0m;
+
+                decimal vatRate = VatRatePercent / 100m;
+
+                if (VatRatePercent <= 0)
+                {
+                    VatAmount = 0m;
+                    LineTotal = Math.Round(afterDiscount, 2);
+                }
+                else if (IsVatIncluded)
+                {
+                    VatAmount = Math.Round(
+                        afterDiscount - (afterDiscount / (1 + vatRate)),
+                        2);
+
+                    LineTotal = Math.Round(afterDiscount, 2);
+                }
+                else
+                {
+                    VatAmount = Math.Round(afterDiscount * vatRate, 2);
+                    LineTotal = Math.Round(afterDiscount + VatAmount, 2);
+                }
+            }
+            finally
+            {
+                _isRecalculating = false;
+            }
+
+            OnPropertyChanged(nameof(GrossAmount));
+            OnPropertyChanged(nameof(NetBeforeVat));
+        }
+
+        partial void OnOrderQtyChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnExpectedCostChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnLineDiscountModeChanged(string value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnLineDiscountValueChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnLineDiscountChanged(decimal value)
+        {
+            if (_isRecalculating)
+                return;
+
+            if (IsAmountDiscount(LineDiscountMode))
+                LineDiscountValue = value;
+
+            RecalculateLineAmounts();
+        }
+
+        partial void OnVatRatePercentChanged(decimal value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        partial void OnIsVatIncludedChanged(bool value)
+        {
+            RecalculateLineAmounts();
+        }
+
+        private static decimal CalculateDiscountAmount(
+            decimal gross,
+            string? discountMode,
+            decimal discountValue)
+        {
+            if (gross <= 0 || discountValue <= 0)
+                return 0m;
+
+            if (IsPercentDiscount(discountMode))
+                return Math.Round(gross * discountValue / 100m, 2);
+
+            return Math.Round(discountValue, 2);
+        }
+
+        private static bool IsAmountDiscount(string? value)
+        {
+            return NormalizeDiscountMode(value) == "Amount";
+        }
+
+        private static bool IsPercentDiscount(string? value)
+        {
+            return NormalizeDiscountMode(value) == "Percent";
+        }
+
+        private static string NormalizeDiscountMode(string? value)
+        {
+            string mode = (value ?? string.Empty).Trim();
+
+            if (mode.Equals("Percent", StringComparison.OrdinalIgnoreCase) ||
+                mode.Equals("%", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Percent";
+            }
+
+            return "Amount";
+        }
     }
 
     public partial class PurchaseOrderViewModel : ObservableObject
     {
         private readonly PoRepository _poRepository;
-        private readonly ItemMasterRepository _itemMasterRepository;
+        private readonly IMessageBoxService _messageBoxService;
+
+        private bool _isInitialized;
+        private bool _isClearing;
 
         // =========================================================
         // HEADER
@@ -77,6 +273,39 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private string _matrixFilterText = string.Empty;
+
+        [ObservableProperty]
+        private decimal _bulkMatrixQuantity = 0m;
+
+        [ObservableProperty]
+        private decimal _bulkMatrixExpectedCost = 0m;
+
+        [ObservableProperty]
+        private bool _bulkMatrixVatIncluded = false;
+
+        // =========================================================
+        // BULK DISCOUNT / VAT
+        // =========================================================
+
+        public ObservableCollection<string> DiscountModes { get; } = new(new[]
+        {
+            "Amount",
+            "Percent"
+        });
+
+        [ObservableProperty]
+        private string _bulkDiscountMode = "Amount";
+
+        [ObservableProperty]
+        private decimal _bulkDiscountValue = 0m;
+
+        // Kept for older XAML/logic compatibility.
+        [ObservableProperty]
+        private decimal _bulkVatRatePercent = 0m;
+
+        // Kept for older XAML/logic compatibility.
+        [ObservableProperty]
+        private bool _bulkIsVatIncluded = false;
 
         // =========================================================
         // TOTALS
@@ -130,48 +359,64 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
+        public bool IsSupplierSelected => SelectedSupplier != null;
+
+        public bool IsEntryEnabled => SelectedSupplier != null && !IsBusy;
+
         public PurchaseOrderViewModel(
             PoRepository poRepository,
-            ItemMasterRepository itemMasterRepository)
+            IMessageBoxService messageBoxService)
         {
-            _poRepository = poRepository;
-            _itemMasterRepository = itemMasterRepository;
+            _poRepository = poRepository ?? throw new ArgumentNullException(nameof(poRepository));
+            _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
 
-            _ = InitializeAsync();
+            PoLines.CollectionChanged += (_, _) =>
+            {
+                SaveOrderCommand.NotifyCanExecuteChanged();
+                ApplyBulkDiscountModeToLinesCommand.NotifyCanExecuteChanged();
+                ApplyBulkDiscountValueToLinesCommand.NotifyCanExecuteChanged();
+            };
+
+            ActiveMatrixVariants.CollectionChanged += (_, _) =>
+            {
+                ApplyBulkMatrixQuantityCommand.NotifyCanExecuteChanged();
+                ApplyBulkMatrixExpectedCostCommand.NotifyCanExecuteChanged();
+            };
         }
 
+        // =========================================================
+        // INITIALIZE
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task InitializeAsync()
         {
+            if (_isInitialized)
+                return;
+
             IsBusy = true;
 
             try
             {
                 Suppliers.Clear();
                 AvailableItems.Clear();
+                ClearLoadedMatrixOnly();
 
                 var suppliers = await _poRepository.GetActiveSuppliersAsync();
+
                 foreach (var supplier in suppliers)
-                {
                     Suppliers.Add(supplier);
-                }
 
-                var items = await _itemMasterRepository.GetSummariesAsync();
-                foreach (var item in items)
-                {
-                    AvailableItems.Add(item);
-                }
-
-                StatusMessage = "Purchase Order page loaded.";
+                _isInitialized = true;
+                StatusMessage = "Purchase Order page loaded. Select a supplier first.";
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to initialize Purchase Order page.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to initialize Purchase Order page:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -185,18 +430,41 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedSupplierChanged(Supplier? value)
         {
+            OnPropertyChanged(nameof(IsSupplierSelected));
+            OnPropertyChanged(nameof(IsEntryEnabled));
+
             SupplierCode = value?.SupplierCode ?? string.Empty;
 
+            if (_isClearing)
+                return;
+
             if (value != null && value.DefaultCreditDays > 0)
-            {
                 CreditDaysInput = value.DefaultCreditDays;
+
+            if (PoLines.Any())
+            {
+                PoLines.Clear();
+                RecalculateTotals();
+
+                _messageBoxService.ShowInformation(
+                    "PO lines were cleared because the supplier was changed.",
+                    "Supplier Changed");
             }
 
             ClearLoadedMatrixOnly();
 
-            StatusMessage = value == null
-                ? "Select a supplier before adding items."
-                : $"Selected supplier: {value.SupplierName}";
+            if (value == null)
+            {
+                AvailableItems.Clear();
+                StatusMessage = "Select a supplier before adding items.";
+                NotifyCommandStates();
+                return;
+            }
+
+            StatusMessage = $"Selected supplier: {value.SupplierName}. Loading approved items.";
+            _ = LoadSupplierApprovedItemsAsync(value.Id);
+
+            NotifyCommandStates();
         }
 
         partial void OnSelectedTermsChanged(string value)
@@ -216,22 +484,24 @@ namespace POS.BackOffice.UI.ViewModels
             RecalculateTotals();
         }
 
-        // =========================================================
-        // ITEM / MATRIX LOADING
-        // =========================================================
+        partial void OnMatrixFilterTextChanged(string value)
+        {
+            ApplyMatrixFilter();
+        }
 
         partial void OnSelectedItemChanged(ItemMasterSummaryDto? value)
         {
+            if (_isClearing)
+                return;
+
             if (value == null)
                 return;
 
             if (SelectedSupplier == null)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select a supplier first before loading items.",
-                    "Supplier Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Supplier Required");
 
                 SelectedItem = null;
                 return;
@@ -240,80 +510,76 @@ namespace POS.BackOffice.UI.ViewModels
             _ = LoadVariantsForGridAsync(value.ParentId);
         }
 
-        private async Task LoadVariantsForGridAsync(int parentId)
+        partial void OnBulkMatrixQuantityChanged(decimal value)
         {
+            ApplyBulkMatrixQuantityCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnBulkMatrixExpectedCostChanged(decimal value)
+        {
+            ApplyBulkMatrixExpectedCostCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnBulkMatrixVatIncludedChanged(bool value)
+        {
+            foreach (var item in ActiveMatrixVariants)
+            {
+                item.IsVatIncluded = value;
+                item.RecalculateLineAmounts();
+            }
+
+            StatusMessage = value
+                ? "VAT included applied to visible matrix rows."
+                : "VAT included removed from visible matrix rows.";
+        }
+
+        partial void OnBulkDiscountModeChanged(string value)
+        {
+            ApplyBulkDiscountModeToLinesCommand.NotifyCanExecuteChanged();
+            ApplyBulkDiscountValueToLinesCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnBulkDiscountValueChanged(decimal value)
+        {
+            ApplyBulkDiscountValueToLinesCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsEntryEnabled));
+
+            NotifyCommandStates();
+        }
+
+        // =========================================================
+        // SUPPLIER-APPROVED ITEM LOADING
+        // =========================================================
+
+        private async Task LoadSupplierApprovedItemsAsync(int supplierId)
+        {
+            if (supplierId <= 0)
+                return;
+
             IsBusy = true;
 
             try
             {
-                _allMatrixVariants.Clear();
-                ActiveMatrixVariants.Clear();
+                AvailableItems.Clear();
 
-                var variants = await _itemMasterRepository.GetVariantsByParentIdAsync(parentId);
+                var items = await _poRepository.GetSupplierApprovedItemSummariesAsync(supplierId);
 
-                foreach (var variant in variants)
-                {
-                    if (variant.ItemParent == null)
-                        continue;
+                foreach (var item in items)
+                    AvailableItems.Add(item);
 
-                    if (variant.ItemParent.IsPurchaseLocked)
-                        continue;
-
-                    var supplierLink = variant.ItemSuppliers?
-                        .FirstOrDefault(s => s.SupplierId == SelectedSupplier!.Id);
-
-                    if (supplierLink == null)
-                        continue;
-
-                    _allMatrixVariants.Add(new PoMatrixEntryDto
-                    {
-                        ItemVariantId = variant.Id,
-                        ItemCode = variant.ItemParent.ItemCode,
-                        VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
-                            ? "Standard"
-                            : variant.VariantDescription,
-                        Description = variant.ItemParent.ItemName,
-                        Barcode = variant.Barcode,
-                        Uom = string.IsNullOrWhiteSpace(variant.ItemParent.BaseUom)
-                            ? "PCS"
-                            : variant.ItemParent.BaseUom,
-                        TaxCode = string.IsNullOrWhiteSpace(variant.ItemParent.TaxCode)
-                            ? "TAX-FREE"
-                            : variant.ItemParent.TaxCode,
-                        ExpectedCost = supplierLink.LastCostPrice > 0
-                            ? supplierLink.LastCostPrice
-                            : variant.CostPrice,
-                        SupplierItemCode = supplierLink.SupplierItemCode ?? string.Empty,
-                        Moq = supplierLink.MinimumOrderQuantity <= 0
-                            ? 1
-                            : supplierLink.MinimumOrderQuantity,
-                        OrderQty = 0,
-                        CurrentSOH = 0m
-                    });
-                }
-
-                if (!_allMatrixVariants.Any())
-                {
-                    MessageBox.Show(
-                        "None of the variants for this item are approved for the selected supplier.",
-                        "No Supplier-Approved Variants",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                }
-
-                ApplyMatrixFilter();
-
-                StatusMessage = $"{ActiveMatrixVariants.Count} supplier-approved variant(s) loaded.";
+                StatusMessage = $"{AvailableItems.Count} supplier-approved item parent(s) loaded.";
             }
             catch (Exception ex)
             {
-                StatusMessage = "Failed to load item variants.";
+                StatusMessage = "Failed to load supplier-approved items.";
 
-                MessageBox.Show(
-                    $"Failed to load item variants:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                _messageBoxService.ShowError(
+                    $"Failed to load supplier-approved items:\n\n{ex.Message}",
+                    "Database Error");
             }
             finally
             {
@@ -321,9 +587,80 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        partial void OnMatrixFilterTextChanged(string value)
+        private async Task LoadVariantsForGridAsync(int parentId)
         {
-            ApplyMatrixFilter();
+            if (SelectedSupplier == null)
+                return;
+
+            IsBusy = true;
+
+            try
+            {
+                _allMatrixVariants.Clear();
+                ActiveMatrixVariants.Clear();
+                SelectedMatrixVariant = null;
+
+                var variants = await _poRepository.GetSupplierApprovedVariantsByParentAsync(
+                    parentId,
+                    SelectedSupplier.Id);
+
+                foreach (var variant in variants)
+                {
+                    var item = new PoMatrixEntryDto
+                    {
+                        ItemVariantId = variant.ItemVariantId,
+                        ItemParentId = variant.ItemParentId,
+                        ItemCode = variant.ItemCode,
+                        SkuCode = variant.SkuCode,
+                        Barcode = variant.Barcode,
+                        Description = variant.Description,
+                        PrintName = variant.PrintName,
+                        VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
+                            ? "Standard"
+                            : variant.VariantDescription,
+                        Uom = string.IsNullOrWhiteSpace(variant.Uom) ? "PCS" : variant.Uom,
+                        TaxCode = string.IsNullOrWhiteSpace(variant.TaxCode) ? "VAT" : variant.TaxCode,
+                        SupplierItemCode = variant.SupplierItemCode,
+                        Moq = variant.Moq <= 0 ? 1 : variant.Moq,
+                        AllowDecimalQuantity = variant.AllowDecimalQuantity,
+                        CurrentSOH = variant.CurrentSOH,
+                        OrderQty = 0m,
+                        ExpectedCost = variant.LastSupplierCost > 0
+                            ? variant.LastSupplierCost
+                            : variant.CurrentCost,
+                        LineDiscountMode = "Amount",
+                        LineDiscountValue = 0m,
+                        VatRatePercent = variant.VatRatePercent,
+                        IsVatIncluded = BulkMatrixVatIncluded || variant.IsVatIncluded
+                    };
+
+                    item.RecalculateLineAmounts();
+                    _allMatrixVariants.Add(item);
+                }
+
+                ApplyMatrixFilter();
+
+                if (!_allMatrixVariants.Any())
+                {
+                    _messageBoxService.ShowInformation(
+                        "None of the variants for this item are approved for the selected supplier.",
+                        "No Supplier-Approved Variants");
+                }
+
+                StatusMessage = $"{ActiveMatrixVariants.Count} supplier-approved variant(s) loaded.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load item variants.";
+
+                _messageBoxService.ShowError(
+                    $"Failed to load item variants:\n\n{ex.Message}",
+                    "Database Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         private void ApplyMatrixFilter()
@@ -337,22 +674,27 @@ namespace POS.BackOffice.UI.ViewModels
                 string search = MatrixFilterText.Trim().ToLowerInvariant();
 
                 query = query.Where(v =>
-                    v.VariantDescription.ToLowerInvariant().Contains(search) ||
-                    v.Barcode.ToLowerInvariant().Contains(search) ||
-                    v.SupplierItemCode.ToLowerInvariant().Contains(search));
+                    SafeLower(v.DisplayName).Contains(search) ||
+                    SafeLower(v.ItemCode).Contains(search) ||
+                    SafeLower(v.SkuCode).Contains(search) ||
+                    SafeLower(v.Barcode).Contains(search) ||
+                    SafeLower(v.VariantDescription).Contains(search) ||
+                    SafeLower(v.SupplierItemCode).Contains(search));
             }
 
             foreach (var item in query)
-            {
                 ActiveMatrixVariants.Add(item);
-            }
+
+            SelectedMatrixVariant = ActiveMatrixVariants.FirstOrDefault();
+
+            NotifyCommandStates();
         }
 
         // =========================================================
         // ADD ITEM BY BARCODE / SKU
         // =========================================================
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task AddItemAsync()
         {
             string term = (ScanBarcode ?? string.Empty).Trim();
@@ -362,60 +704,35 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (SelectedSupplier == null)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select a supplier first before scanning items.",
-                    "Supplier Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Supplier Required");
 
                 ScanBarcode = string.Empty;
                 return;
             }
 
+            IsBusy = true;
+
             try
             {
-                var variant = await _itemMasterRepository.GetItemByBarcodeAsync(term);
+                var variant = await _poRepository.GetSupplierApprovedVariantByBarcodeOrSkuAsync(
+                    term,
+                    SelectedSupplier.Id);
 
                 if (variant == null)
                 {
-                    MessageBox.Show(
-                        $"Barcode/SKU '{term}' was not found.",
-                        "Item Not Found",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    _messageBoxService.ShowWarning(
+                        $"Barcode/SKU '{term}' was not found or is not approved for supplier '{SelectedSupplier.SupplierName}'.",
+                        "Item Not Found");
 
                     ScanBarcode = string.Empty;
                     return;
                 }
 
-                if (variant.ItemParent?.IsPurchaseLocked == true)
-                {
-                    MessageBox.Show(
-                        "This item is purchase locked.",
-                        "Purchase Locked",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-
-                    ScanBarcode = string.Empty;
-                    return;
-                }
-
-                var supplierLink = variant.ItemSuppliers?
-                    .FirstOrDefault(s => s.SupplierId == SelectedSupplier.Id);
-
-                if (supplierLink == null)
-                {
-                    MessageBox.Show(
-                        $"This item is not approved for supplier '{SelectedSupplier.SupplierName}'.",
-                        "Invalid Supplier",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-
-                    ScanBarcode = string.Empty;
-                    return;
-                }
-
-                var newLine = BuildPoLineFromVariant(variant, supplierLink);
+                var newLine = BuildPoLineFromVariant(
+                    variant,
+                    variant.Moq <= 0 ? 1 : variant.Moq);
 
                 MergeOrAddLine(newLine);
 
@@ -428,98 +745,142 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to add item.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to add item:\n\n{ex.Message}",
-                    "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Error");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
         private static PoLine BuildPoLineFromVariant(
-            ItemVariant variant,
-            ItemSupplier supplierLink)
+            PoVariantLookupDto variant,
+            decimal qty)
         {
-            int moq = supplierLink.MinimumOrderQuantity <= 0
-                ? 1
-                : supplierLink.MinimumOrderQuantity;
+            decimal orderQty = qty <= 0
+                ? variant.Moq <= 0 ? 1m : variant.Moq
+                : qty;
 
-            return new PoLine
+            decimal expectedCost = variant.LastSupplierCost > 0
+                ? variant.LastSupplierCost
+                : variant.CurrentCost;
+
+            var line = new PoLine
             {
-                ItemVariantId = variant.Id,
-                ItemCode = variant.ItemParent?.ItemCode ?? string.Empty,
+                ItemVariantId = variant.ItemVariantId,
+                ItemCode = variant.ItemCode,
+                SkuCode = variant.SkuCode,
                 VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
                     ? "Standard"
                     : variant.VariantDescription,
-                Description = variant.ItemParent?.ItemName ?? string.Empty,
+                Description = variant.Description,
+                PrintName = variant.PrintName,
                 Barcode = variant.Barcode,
-                Uom = string.IsNullOrWhiteSpace(variant.ItemParent?.BaseUom)
-                    ? "PCS"
-                    : variant.ItemParent.BaseUom,
-                TaxCode = string.IsNullOrWhiteSpace(variant.ItemParent?.TaxCode)
-                    ? "TAX-FREE"
-                    : variant.ItemParent.TaxCode,
-                ExpectedCost = supplierLink.LastCostPrice > 0
-                    ? supplierLink.LastCostPrice
-                    : variant.CostPrice,
-                SupplierItemCode = supplierLink.SupplierItemCode ?? string.Empty,
-                Moq = moq,
-                OrderQty = moq
+                Uom = string.IsNullOrWhiteSpace(variant.Uom) ? "PCS" : variant.Uom,
+                TaxCode = string.IsNullOrWhiteSpace(variant.TaxCode) ? "VAT" : variant.TaxCode,
+                SupplierItemCode = variant.SupplierItemCode,
+                Moq = variant.Moq <= 0 ? 1 : variant.Moq,
+                OrderQty = orderQty,
+                ExpectedCost = expectedCost,
+                LineDiscountMode = "Amount",
+                LineDiscountValue = 0m,
+                LineDiscount = 0m,
+                VatRatePercent = variant.VatRatePercent,
+                IsVatIncluded = variant.IsVatIncluded,
+                TaxAmount = 0m,
+                LineTotal = 0m,
+                LineStatus = "Open"
             };
+
+            RecalculateLine(line);
+
+            return line;
+        }
+
+        private static PoLine BuildPoLineFromMatrix(PoMatrixEntryDto item)
+        {
+            item.RecalculateLineAmounts();
+
+            var line = new PoLine
+            {
+                ItemVariantId = item.ItemVariantId,
+                ItemCode = item.ItemCode,
+                SkuCode = item.SkuCode,
+                VariantDescription = string.IsNullOrWhiteSpace(item.VariantDescription)
+                    ? "Standard"
+                    : item.VariantDescription,
+                Description = item.Description,
+                PrintName = item.PrintName,
+                Barcode = item.Barcode,
+                Uom = string.IsNullOrWhiteSpace(item.Uom) ? "PCS" : item.Uom,
+                TaxCode = string.IsNullOrWhiteSpace(item.TaxCode) ? "VAT" : item.TaxCode,
+                SupplierItemCode = item.SupplierItemCode,
+                Moq = item.Moq <= 0 ? 1 : item.Moq,
+                OrderQty = item.OrderQty,
+                ExpectedCost = item.ExpectedCost,
+                LineDiscountMode = NormalizeDiscountMode(item.LineDiscountMode),
+                LineDiscountValue = item.LineDiscountValue,
+                LineDiscount = item.LineDiscount,
+                VatRatePercent = item.VatRatePercent,
+                IsVatIncluded = item.IsVatIncluded,
+                TaxAmount = item.VatAmount,
+                LineTotal = item.LineTotal,
+                LineStatus = "Open"
+            };
+
+            RecalculateLine(line);
+
+            return line;
         }
 
         // =========================================================
         // ADD MATRIX ITEMS
         // =========================================================
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private void AddMatrix()
         {
+            if (SelectedSupplier == null)
+            {
+                _messageBoxService.ShowWarning(
+                    "Please select a supplier first.",
+                    "Supplier Required");
+
+                return;
+            }
+
             var itemsToAdd = _allMatrixVariants
                 .Where(v => v.OrderQty > 0)
                 .ToList();
 
             if (!itemsToAdd.Any())
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please enter an order quantity for at least one matrix variant.",
-                    "No Quantity",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
+                    "No Quantity");
 
-            var belowMoq = itemsToAdd
-                .FirstOrDefault(v => v.Moq > 0 && v.OrderQty < v.Moq);
-
-            if (belowMoq != null)
-            {
-                MessageBox.Show(
-                    $"Variant '{belowMoq.VariantDescription}' has MOQ {belowMoq.Moq}. Order quantity cannot be lower than MOQ.",
-                    "MOQ Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
                 return;
             }
 
             foreach (var item in itemsToAdd)
             {
-                var newLine = new PoLine
-                {
-                    ItemVariantId = item.ItemVariantId,
-                    ItemCode = item.ItemCode,
-                    VariantDescription = item.VariantDescription,
-                    Description = item.Description,
-                    Barcode = item.Barcode,
-                    Uom = item.Uom,
-                    OrderQty = item.OrderQty,
-                    ExpectedCost = item.ExpectedCost,
-                    LineDiscount = item.LineDiscount,
-                    TaxCode = item.TaxCode,
-                    SupplierItemCode = item.SupplierItemCode,
-                    Moq = item.Moq
-                };
+                var validationError = ValidateMatrixLine(item);
 
+                if (!string.IsNullOrWhiteSpace(validationError))
+                {
+                    _messageBoxService.ShowWarning(
+                        validationError,
+                        "Validation Error");
+
+                    return;
+                }
+            }
+
+            foreach (var item in itemsToAdd)
+            {
+                var newLine = BuildPoLineFromMatrix(item);
                 MergeOrAddLine(newLine);
             }
 
@@ -527,6 +888,40 @@ namespace POS.BackOffice.UI.ViewModels
             RecalculateTotals();
 
             StatusMessage = "Matrix items added to Purchase Order.";
+        }
+
+        private static string ValidateMatrixLine(PoMatrixEntryDto item)
+        {
+            if (item.OrderQty <= 0)
+                return $"{item.DisplayName}: order quantity must be greater than zero.";
+
+            if (!item.AllowDecimalQuantity && HasDecimalPart(item.OrderQty))
+                return $"{item.DisplayName}: decimal quantity is not allowed for UOM '{item.Uom}'.";
+
+            if (item.Moq > 0 && item.OrderQty < item.Moq)
+                return $"{item.DisplayName}: minimum order quantity is {item.Moq}.";
+
+            if (item.ExpectedCost <= 0)
+                return $"{item.DisplayName}: expected cost must be greater than zero.";
+
+            if (!IsValidDiscountMode(item.LineDiscountMode))
+                return $"{item.DisplayName}: discount mode must be Amount or Percent.";
+
+            if (item.LineDiscountValue < 0)
+                return $"{item.DisplayName}: discount value cannot be negative.";
+
+            if (IsPercentDiscount(item.LineDiscountMode) && item.LineDiscountValue > 100)
+                return $"{item.DisplayName}: discount percentage cannot be greater than 100.";
+
+            if (item.VatRatePercent < 0 || item.VatRatePercent > 100)
+                return $"{item.DisplayName}: VAT rate must be between 0 and 100.";
+
+            item.RecalculateLineAmounts();
+
+            if (item.LineDiscount > item.GrossAmount)
+                return $"{item.DisplayName}: discount cannot be greater than line value.";
+
+            return string.Empty;
         }
 
         private void MergeOrAddLine(PoLine newLine)
@@ -537,6 +932,7 @@ namespace POS.BackOffice.UI.ViewModels
             if (existing == null)
             {
                 PoLines.Add(newLine);
+                SaveOrderCommand.NotifyCanExecuteChanged();
                 return;
             }
 
@@ -548,7 +944,16 @@ namespace POS.BackOffice.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(newLine.SupplierItemCode))
                 existing.SupplierItemCode = newLine.SupplierItemCode;
 
+            existing.LineDiscountMode = newLine.LineDiscountMode;
+            existing.LineDiscountValue = newLine.LineDiscountValue;
+            existing.VatRatePercent = newLine.VatRatePercent;
+            existing.IsVatIncluded = newLine.IsVatIncluded;
             existing.Moq = newLine.Moq;
+
+            RecalculateLine(existing);
+            RefreshPoLineGrid();
+
+            SaveOrderCommand.NotifyCanExecuteChanged();
         }
 
         [RelayCommand]
@@ -558,9 +963,291 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             PoLines.Remove(line);
+            SelectedLine = null;
             RecalculateTotals();
 
             StatusMessage = "Line removed.";
+
+            SaveOrderCommand.NotifyCanExecuteChanged();
+        }
+
+        // =========================================================
+        // MATRIX BULK APPLY COMMANDS
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkMatrixQuantity()
+        {
+            if (!ActiveMatrixVariants.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "No matrix variants are loaded.",
+                    "No Items");
+
+                return;
+            }
+
+            if (BulkMatrixQuantity < 0)
+            {
+                _messageBoxService.ShowWarning(
+                    "Bulk quantity cannot be negative.",
+                    "Validation Error");
+
+                return;
+            }
+
+            var decimalBlocked = ActiveMatrixVariants
+                .FirstOrDefault(v =>
+                    !v.AllowDecimalQuantity &&
+                    HasDecimalPart(BulkMatrixQuantity));
+
+            if (decimalBlocked != null)
+            {
+                _messageBoxService.ShowWarning(
+                    $"Decimal quantity is not allowed for '{decimalBlocked.DisplayName}' with UOM '{decimalBlocked.Uom}'.",
+                    "Validation Error");
+
+                return;
+            }
+
+            foreach (var item in ActiveMatrixVariants)
+            {
+                item.OrderQty = BulkMatrixQuantity;
+                item.RecalculateLineAmounts();
+            }
+
+            StatusMessage = $"Bulk quantity {FormatQuantity(BulkMatrixQuantity)} applied to visible matrix rows.";
+        }
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkMatrixExpectedCost()
+        {
+            if (!ActiveMatrixVariants.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "No matrix variants are loaded.",
+                    "No Items");
+
+                return;
+            }
+
+            if (BulkMatrixExpectedCost <= 0)
+            {
+                _messageBoxService.ShowWarning(
+                    "Bulk cost must be greater than zero.",
+                    "Validation Error");
+
+                return;
+            }
+
+            foreach (var item in ActiveMatrixVariants)
+            {
+                item.ExpectedCost = BulkMatrixExpectedCost;
+                item.RecalculateLineAmounts();
+            }
+
+            StatusMessage = $"Bulk cost Rs. {BulkMatrixExpectedCost:N2} applied to visible matrix rows.";
+        }
+
+        // Kept for older XAML compatibility.
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkDiscountToMatrix()
+        {
+            ApplyDiscountToMatrixRows(applyMode: true, applyValue: true);
+        }
+
+        // Kept for older XAML compatibility.
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkVatToMatrix()
+        {
+            if (!ValidateBulkVat())
+                return;
+
+            foreach (var item in ActiveMatrixVariants)
+            {
+                item.VatRatePercent = BulkVatRatePercent;
+                item.IsVatIncluded = BulkIsVatIncluded;
+                item.TaxCode = BulkVatRatePercent > 0 ? "VAT" : "TAX-FREE";
+                item.RecalculateLineAmounts();
+            }
+
+            StatusMessage = "Bulk VAT settings applied to visible matrix rows.";
+        }
+
+        private void ApplyDiscountToMatrixRows(bool applyMode, bool applyValue)
+        {
+            if (!ActiveMatrixVariants.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "No matrix variants are loaded.",
+                    "No Items");
+
+                return;
+            }
+
+            if (!ValidateBulkDiscount())
+                return;
+
+            string mode = NormalizeDiscountMode(BulkDiscountMode);
+
+            foreach (var item in ActiveMatrixVariants)
+            {
+                if (applyMode)
+                    item.LineDiscountMode = mode;
+
+                if (applyValue)
+                    item.LineDiscountValue = BulkDiscountValue;
+
+                item.RecalculateLineAmounts();
+            }
+
+            StatusMessage = "Bulk discount applied to visible matrix rows.";
+        }
+
+        // =========================================================
+        // PO LINE BULK APPLY COMMANDS
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkDiscountModeToLines()
+        {
+            if (!PoLines.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "No PO lines are available.",
+                    "No Items");
+
+                return;
+            }
+
+            if (!IsValidDiscountMode(BulkDiscountMode))
+            {
+                _messageBoxService.ShowWarning(
+                    "Discount mode must be Amount or Percent.",
+                    "Validation Error");
+
+                return;
+            }
+
+            string mode = NormalizeDiscountMode(BulkDiscountMode);
+
+            foreach (var line in PoLines)
+            {
+                line.LineDiscountMode = mode;
+                RecalculateLine(line);
+            }
+
+            RecalculateTotals();
+            StatusMessage = $"Discount type '{mode}' applied to PO lines.";
+        }
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkDiscountValueToLines()
+        {
+            if (!PoLines.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "No PO lines are available.",
+                    "No Items");
+
+                return;
+            }
+
+            if (!ValidateBulkDiscount())
+                return;
+
+            string mode = NormalizeDiscountMode(BulkDiscountMode);
+
+            foreach (var line in PoLines)
+            {
+                line.LineDiscountMode = mode;
+                line.LineDiscountValue = BulkDiscountValue;
+                RecalculateLine(line);
+            }
+
+            RecalculateTotals();
+            StatusMessage = $"Discount value {BulkDiscountValue:N2} applied to PO lines.";
+        }
+
+        // Kept for older XAML compatibility.
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkDiscountToLines()
+        {
+            ApplyBulkDiscountValueToLines();
+        }
+
+        // Kept for older XAML compatibility.
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private void ApplyBulkVatToLines()
+        {
+            if (!PoLines.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "No PO lines are available.",
+                    "No Items");
+
+                return;
+            }
+
+            if (!ValidateBulkVat())
+                return;
+
+            foreach (var line in PoLines)
+            {
+                line.VatRatePercent = BulkVatRatePercent;
+                line.IsVatIncluded = BulkIsVatIncluded;
+                line.TaxCode = BulkVatRatePercent > 0 ? "VAT" : "TAX-FREE";
+                RecalculateLine(line);
+            }
+
+            RecalculateTotals();
+            StatusMessage = "Bulk VAT settings applied to PO lines.";
+        }
+
+        private bool ValidateBulkDiscount()
+        {
+            if (!IsValidDiscountMode(BulkDiscountMode))
+            {
+                _messageBoxService.ShowWarning(
+                    "Discount mode must be Amount or Percent.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (BulkDiscountValue < 0)
+            {
+                _messageBoxService.ShowWarning(
+                    "Discount value cannot be negative.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (IsPercentDiscount(BulkDiscountMode) && BulkDiscountValue > 100)
+            {
+                _messageBoxService.ShowWarning(
+                    "Discount percentage cannot be greater than 100.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ValidateBulkVat()
+        {
+            if (BulkVatRatePercent < 0 || BulkVatRatePercent > 100)
+            {
+                _messageBoxService.ShowWarning(
+                    "VAT rate must be between 0 and 100.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            return true;
         }
 
         // =========================================================
@@ -576,40 +1263,85 @@ namespace POS.BackOffice.UI.ViewModels
                 TotalTaxAmount = 0m;
                 NetPayable = 0m;
                 RefreshPoLineGrid();
+                SaveOrderCommand.NotifyCanExecuteChanged();
                 return;
             }
 
             decimal subtotal = 0m;
             decimal lineDiscountTotal = 0m;
-            decimal taxTotal = 0m;
+            decimal vatTotal = 0m;
             decimal lineNetTotal = 0m;
 
             foreach (var line in PoLines)
             {
-                decimal taxRate = GetTaxRate(line.TaxCode);
-                decimal gross = line.OrderQty * line.ExpectedCost;
-                decimal afterLineDiscount = gross - line.LineDiscount;
+                RecalculateLine(line);
 
-                if (afterLineDiscount < 0)
-                    afterLineDiscount = 0;
-
-                line.TaxAmount = Math.Round(afterLineDiscount * taxRate, 2);
-                line.LineTotal = Math.Round(afterLineDiscount + line.TaxAmount, 2);
-
-                subtotal += gross;
+                subtotal += line.OrderQty * line.ExpectedCost;
                 lineDiscountTotal += line.LineDiscount;
-                taxTotal += line.TaxAmount;
+                vatTotal += line.TaxAmount;
                 lineNetTotal += line.LineTotal;
             }
 
+            if (GlobalBillDiscount < 0)
+                GlobalBillDiscount = 0m;
+
+            if (GlobalBillDiscount > lineNetTotal)
+                GlobalBillDiscount = lineNetTotal;
+
             Subtotal = Math.Round(subtotal, 2);
             TotalDiscountAmount = Math.Round(lineDiscountTotal + GlobalBillDiscount, 2);
-            TotalTaxAmount = Math.Round(taxTotal, 2);
+            TotalTaxAmount = Math.Round(vatTotal, 2);
 
             decimal net = lineNetTotal - GlobalBillDiscount;
-            NetPayable = Math.Round(net < 0 ? 0 : net, 2);
+            NetPayable = Math.Round(net < 0 ? 0m : net, 2);
 
             RefreshPoLineGrid();
+            SaveOrderCommand.NotifyCanExecuteChanged();
+        }
+
+        private static void RecalculateLine(PoLine line)
+        {
+            line.LineDiscountMode = NormalizeDiscountMode(line.LineDiscountMode);
+
+            if (line.LineDiscountValue <= 0 &&
+                line.LineDiscount > 0 &&
+                line.LineDiscountMode == "Amount")
+            {
+                line.LineDiscountValue = line.LineDiscount;
+            }
+
+            decimal gross = line.OrderQty * line.ExpectedCost;
+
+            line.LineDiscount = CalculateDiscountAmount(
+                gross,
+                line.LineDiscountMode,
+                line.LineDiscountValue);
+
+            decimal afterDiscount = gross - line.LineDiscount;
+
+            if (afterDiscount < 0)
+                afterDiscount = 0m;
+
+            decimal vatRate = line.VatRatePercent / 100m;
+
+            if (line.VatRatePercent <= 0)
+            {
+                line.TaxAmount = 0m;
+                line.LineTotal = Math.Round(afterDiscount, 2);
+            }
+            else if (line.IsVatIncluded)
+            {
+                line.TaxAmount = Math.Round(
+                    afterDiscount - (afterDiscount / (1 + vatRate)),
+                    2);
+
+                line.LineTotal = Math.Round(afterDiscount, 2);
+            }
+            else
+            {
+                line.TaxAmount = Math.Round(afterDiscount * vatRate, 2);
+                line.LineTotal = Math.Round(afterDiscount + line.TaxAmount, 2);
+            }
         }
 
         private void RefreshPoLineGrid()
@@ -617,36 +1349,23 @@ namespace POS.BackOffice.UI.ViewModels
             CollectionViewSource.GetDefaultView(PoLines)?.Refresh();
         }
 
-        private static decimal GetTaxRate(string taxCode)
-        {
-            string value = (taxCode ?? string.Empty).Trim().ToUpperInvariant();
-
-            if (value.Contains("18"))
-                return 0.18m;
-
-            if (value.Contains("5"))
-                return 0.05m;
-
-            return 0m;
-        }
-
         // =========================================================
         // SAVE
         // =========================================================
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanSaveOrder))]
         private async Task SaveOrderAsync()
         {
+            RecalculateTotals();
+
             if (!ValidateBeforeSave())
                 return;
 
-            var result = MessageBox.Show(
+            bool confirm = _messageBoxService.ShowConfirmation(
                 "Save and approve this Purchase Order?",
-                "Confirm Save",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                "Confirm Save");
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirm)
                 return;
 
             IsBusy = true;
@@ -658,8 +1377,8 @@ namespace POS.BackOffice.UI.ViewModels
                 var header = new PoHeader
                 {
                     SupplierId = SelectedSupplier!.Id,
-                    OrderDate = OrderDate,
-                    ExpectedDate = ExpectedDate,
+                    OrderDate = OrderDate.Date,
+                    ExpectedDate = ExpectedDate.Date,
                     Terms = SelectedTerms,
                     CreditDays = CreditDaysInput ?? 0,
                     Remarks = Remarks.Trim(),
@@ -668,21 +1387,23 @@ namespace POS.BackOffice.UI.ViewModels
                     TotalTaxAmount = TotalTaxAmount,
                     TotalDiscountAmount = TotalDiscountAmount,
                     NetPayable = NetPayable,
-                    CreatedBy = CurrentUser,
-                    ApprovedBy = CurrentUser,
-                    IsTaxInclusive = false
+                    CreatedBy = string.IsNullOrWhiteSpace(CurrentUser) ? "Admin" : CurrentUser.Trim(),
+                    ApprovedBy = string.IsNullOrWhiteSpace(CurrentUser) ? "Admin" : CurrentUser.Trim(),
+                    IsTaxInclusive = false,
+                    Status = "Approved"
                 };
+
+                var linesToSave = PoLines
+                    .Where(l => l.OrderQty > 0)
+                    .ToList();
 
                 await _poRepository.SavePurchaseOrderAsync(
                     header,
-                    PoLines.ToList(),
-                    isDraft: false);
+                    linesToSave);
 
-                var pdfResult = MessageBox.Show(
-                    "Purchase Order saved successfully.\n\nPDF generation can be added after the PO save flow is stable.",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _messageBoxService.ShowInformation(
+                    "Purchase Order saved successfully.",
+                    "Success");
 
                 Clear();
             }
@@ -690,22 +1411,18 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Save blocked.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     ex.Message,
-                    "Save Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Save Blocked");
             }
             catch (Exception ex)
             {
                 string message = ex.InnerException?.Message ?? ex.Message;
                 StatusMessage = "Save failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to save Purchase Order:\n\n{message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -713,98 +1430,155 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
+        private bool CanSaveOrder()
+        {
+            return !IsBusy &&
+                   SelectedSupplier != null &&
+                   PoLines.Any(l => l.OrderQty > 0);
+        }
+
         private bool ValidateBeforeSave()
         {
             if (SelectedSupplier == null)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select a supplier.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
             if (ExpectedDate.Date < OrderDate.Date)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Expected date cannot be before order date.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
             if (CreditDaysInput.HasValue &&
                 (CreditDaysInput.Value < 0 || CreditDaysInput.Value > 365))
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Credit days must be between 0 and 365.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
-            if (!PoLines.Any())
+            var activeLines = PoLines
+                .Where(l => l.OrderQty > 0)
+                .ToList();
+
+            if (!activeLines.Any())
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Cannot save an empty Purchase Order.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
             if (GlobalBillDiscount < 0)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Global bill discount cannot be negative.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
-            foreach (var line in PoLines)
+            var duplicateVariant = activeLines
+                .GroupBy(l => l.ItemVariantId)
+                .FirstOrDefault(g => g.Count() > 1);
+
+            if (duplicateVariant != null)
             {
+                _messageBoxService.ShowWarning(
+                    "The same item variant cannot appear twice in one Purchase Order.",
+                    "Duplicate Item");
+
+                return false;
+            }
+
+            foreach (var line in activeLines)
+            {
+                RecalculateLine(line);
+
+                string name = string.IsNullOrWhiteSpace(line.DisplayName)
+                    ? line.Description
+                    : line.DisplayName;
+
+                if (line.ItemVariantId <= 0)
+                {
+                    _messageBoxService.ShowWarning(
+                        "Invalid item variant found in Purchase Order.",
+                        "Validation Error");
+
+                    return false;
+                }
+
                 if (line.OrderQty <= 0)
                 {
-                    MessageBox.Show(
-                        $"Order quantity must be greater than zero for item '{line.Description}'.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    _messageBoxService.ShowWarning(
+                        $"Order quantity must be greater than zero for item '{name}'.",
+                        "Validation Error");
+
                     return false;
                 }
 
                 if (line.Moq > 0 && line.OrderQty < line.Moq)
                 {
-                    MessageBox.Show(
-                        $"Item '{line.Description} / {line.VariantDescription}' has MOQ {line.Moq}.",
-                        "MOQ Validation",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    _messageBoxService.ShowWarning(
+                        $"Item '{name}' has MOQ {line.Moq}.",
+                        "MOQ Validation");
+
                     return false;
                 }
 
                 if (line.ExpectedCost <= 0)
                 {
-                    MessageBox.Show(
-                        $"Expected cost must be greater than zero for item '{line.Description}'.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    _messageBoxService.ShowWarning(
+                        $"Expected cost must be greater than zero for item '{name}'.",
+                        "Validation Error");
+
+                    return false;
+                }
+
+                if (!IsValidDiscountMode(line.LineDiscountMode))
+                {
+                    _messageBoxService.ShowWarning(
+                        $"Discount mode must be Amount or Percent for item '{name}'.",
+                        "Validation Error");
+
+                    return false;
+                }
+
+                if (line.LineDiscountValue < 0)
+                {
+                    _messageBoxService.ShowWarning(
+                        $"Discount value cannot be negative for item '{name}'.",
+                        "Validation Error");
+
+                    return false;
+                }
+
+                if (IsPercentDiscount(line.LineDiscountMode) && line.LineDiscountValue > 100)
+                {
+                    _messageBoxService.ShowWarning(
+                        $"Discount percentage cannot be greater than 100 for item '{name}'.",
+                        "Validation Error");
+
                     return false;
                 }
 
                 if (line.LineDiscount < 0)
                 {
-                    MessageBox.Show(
-                        $"Line discount cannot be negative for item '{line.Description}'.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    _messageBoxService.ShowWarning(
+                        $"Line discount cannot be negative for item '{name}'.",
+                        "Validation Error");
+
                     return false;
                 }
 
@@ -812,11 +1586,19 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (line.LineDiscount > gross)
                 {
-                    MessageBox.Show(
-                        $"Line discount cannot be greater than line value for item '{line.Description}'.",
-                        "Validation Error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    _messageBoxService.ShowWarning(
+                        $"Line discount cannot be greater than line value for item '{name}'.",
+                        "Validation Error");
+
+                    return false;
+                }
+
+                if (line.VatRatePercent < 0 || line.VatRatePercent > 100)
+                {
+                    _messageBoxService.ShowWarning(
+                        $"VAT rate must be between 0 and 100 for item '{name}'.",
+                        "Validation Error");
+
                     return false;
                 }
             }
@@ -828,30 +1610,56 @@ namespace POS.BackOffice.UI.ViewModels
         // CLEAR
         // =========================================================
 
-        [RelayCommand]
-        private void Clear()
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        public void Clear()
         {
-            SelectedSupplier = null;
-            SupplierCode = string.Empty;
-            SelectedTerms = "Credit";
-            CreditDaysInput = null;
+            _isClearing = true;
 
-            OrderDate = DateTime.Now;
-            ExpectedDate = DateTime.Now.AddDays(7);
+            try
+            {
+                SelectedSupplier = null;
+                SupplierCode = string.Empty;
+                SelectedTerms = "Credit";
+                CreditDaysInput = null;
 
-            Remarks = string.Empty;
-            ScanBarcode = string.Empty;
-            MatrixFilterText = string.Empty;
-            GlobalBillDiscount = 0m;
-            SelectedItem = null;
-            SelectedLine = null;
+                OrderDate = DateTime.Now;
+                ExpectedDate = DateTime.Now.AddDays(7);
 
-            PoLines.Clear();
-            ClearLoadedMatrixOnly();
+                Remarks = string.Empty;
+                ScanBarcode = string.Empty;
+                MatrixFilterText = string.Empty;
 
-            RecalculateTotals();
+                BulkMatrixQuantity = 0m;
+                BulkMatrixExpectedCost = 0m;
+                BulkMatrixVatIncluded = false;
 
-            StatusMessage = "Ready for new Purchase Order.";
+                BulkDiscountMode = "Amount";
+                BulkDiscountValue = 0m;
+                BulkVatRatePercent = 0m;
+                BulkIsVatIncluded = false;
+
+                GlobalBillDiscount = 0m;
+                SelectedItem = null;
+                SelectedLine = null;
+                SelectedMatrixVariant = null;
+
+                PoLines.Clear();
+                AvailableItems.Clear();
+                ClearLoadedMatrixOnly();
+
+                RecalculateTotals();
+
+                StatusMessage = "Ready for new Purchase Order.";
+            }
+            finally
+            {
+                _isClearing = false;
+
+                OnPropertyChanged(nameof(IsSupplierSelected));
+                OnPropertyChanged(nameof(IsEntryEnabled));
+
+                NotifyCommandStates();
+            }
         }
 
         private void ClearLoadedMatrixOnly()
@@ -861,6 +1669,134 @@ namespace POS.BackOffice.UI.ViewModels
             MatrixFilterText = string.Empty;
             SelectedItem = null;
             SelectedMatrixVariant = null;
+
+            NotifyCommandStates();
+        }
+
+        // =========================================================
+        // COMMAND STATE
+        // =========================================================
+
+        private void NotifyCommandStates()
+        {
+            InitializeCommand.NotifyCanExecuteChanged();
+            AddItemCommand.NotifyCanExecuteChanged();
+            AddMatrixCommand.NotifyCanExecuteChanged();
+            SaveOrderCommand.NotifyCanExecuteChanged();
+            ClearCommand.NotifyCanExecuteChanged();
+
+            ApplyBulkMatrixQuantityCommand.NotifyCanExecuteChanged();
+            ApplyBulkMatrixExpectedCostCommand.NotifyCanExecuteChanged();
+
+            ApplyBulkDiscountModeToLinesCommand.NotifyCanExecuteChanged();
+            ApplyBulkDiscountValueToLinesCommand.NotifyCanExecuteChanged();
+
+            ApplyBulkDiscountToMatrixCommand.NotifyCanExecuteChanged();
+            ApplyBulkVatToMatrixCommand.NotifyCanExecuteChanged();
+            ApplyBulkDiscountToLinesCommand.NotifyCanExecuteChanged();
+            ApplyBulkVatToLinesCommand.NotifyCanExecuteChanged();
+        }
+
+        private bool CanRunCommand()
+        {
+            return !IsBusy;
+        }
+
+        // =========================================================
+        // HELPERS
+        // =========================================================
+
+        private static decimal CalculateDiscountAmount(
+            decimal gross,
+            string? discountMode,
+            decimal discountValue)
+        {
+            if (gross <= 0 || discountValue <= 0)
+                return 0m;
+
+            if (IsPercentDiscount(discountMode))
+                return Math.Round(gross * discountValue / 100m, 2);
+
+            return Math.Round(discountValue, 2);
+        }
+
+        private static bool IsValidDiscountMode(string? value)
+        {
+            string mode = NormalizeDiscountMode(value);
+
+            return mode == "Amount" || mode == "Percent";
+        }
+
+        private static bool IsPercentDiscount(string? value)
+        {
+            return NormalizeDiscountMode(value) == "Percent";
+        }
+
+        private static string NormalizeDiscountMode(string? value)
+        {
+            string mode = (value ?? string.Empty).Trim();
+
+            if (mode.Equals("Percent", StringComparison.OrdinalIgnoreCase) ||
+                mode.Equals("%", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Percent";
+            }
+
+            return "Amount";
+        }
+
+        private static bool HasDecimalPart(decimal value)
+        {
+            return value != Math.Truncate(value);
+        }
+
+        private static string SafeLower(string? value)
+        {
+            return (value ?? string.Empty).Trim().ToLowerInvariant();
+        }
+
+        private static string FormatQuantity(decimal value)
+        {
+            return value.ToString("0.###");
+        }
+    }
+
+    internal static class PoVmDisplayNameHelper
+    {
+        public static string BuildDisplayName(
+            string? baseName,
+            string? variantDescription,
+            string? fallback)
+        {
+            string cleanBaseName = NormalizeText(baseName);
+            string cleanVariant = NormalizeText(variantDescription);
+            string cleanFallback = NormalizeText(fallback);
+
+            if (IsStandardVariantDescription(cleanVariant))
+            {
+                if (!string.IsNullOrWhiteSpace(cleanBaseName))
+                    return cleanBaseName;
+
+                return cleanFallback;
+            }
+
+            if (string.IsNullOrWhiteSpace(cleanBaseName))
+                return cleanVariant;
+
+            return $"{cleanBaseName} - {cleanVariant}";
+        }
+
+        public static bool IsStandardVariantDescription(string? value)
+        {
+            string cleanValue = NormalizeText(value);
+
+            return string.IsNullOrWhiteSpace(cleanValue) ||
+                   cleanValue.Equals("Standard", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string NormalizeText(string? value)
+        {
+            return (value ?? string.Empty).Trim();
         }
     }
 }

@@ -22,6 +22,20 @@ namespace POS.BackOffice.UI.ViewModels
         public string VariantDescription { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
 
+        public string DisplayDescription
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(VariantDescription) ||
+                    VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Description;
+                }
+
+                return $"{Description} - {VariantDescription}";
+            }
+        }
+
         public string BatchNo { get; set; } = string.Empty;
         public DateTime? ExpiryDate { get; set; }
 
@@ -33,12 +47,27 @@ namespace POS.BackOffice.UI.ViewModels
 
         public decimal Variance => ActualQty - SystemQty;
 
-        public decimal CostImpact => Variance * UnitCost;
+        public decimal CostImpact => Math.Round(Variance * UnitCost, 2);
+
+        public string VarianceDirection
+        {
+            get
+            {
+                if (Variance > 0)
+                    return "Increase";
+
+                if (Variance < 0)
+                    return "Decrease";
+
+                return "No Change";
+            }
+        }
 
         partial void OnActualQtyChanged(decimal value)
         {
             OnPropertyChanged(nameof(Variance));
             OnPropertyChanged(nameof(CostImpact));
+            OnPropertyChanged(nameof(VarianceDirection));
         }
     }
 
@@ -46,9 +75,15 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly StockAdjustmentRepository _adjustmentRepository;
 
-        // Keep these constructor dependencies for DI compatibility with your current project.
-        private readonly ItemMasterRepository _itemMasterRepository;
-        private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        // Kept in the constructor for DI compatibility with the current project.
+        // This ViewModel does not need to call these directly now.
+        public StockAdjustmentViewModel(
+            StockAdjustmentRepository adjustmentRepository,
+            ItemMasterRepository itemMasterRepository,
+            IDbContextFactory<AppDbContext> contextFactory)
+        {
+            _adjustmentRepository = adjustmentRepository;
+        }
 
         // =========================================================
         // HEADER / STATE
@@ -70,13 +105,18 @@ namespace POS.BackOffice.UI.ViewModels
         private string _remarks = string.Empty;
 
         [ObservableProperty]
-        private string _documentStatus = "DRAFT / PENDING";
+        private string _documentStatus = "UNPOSTED";
 
         [ObservableProperty]
         private bool _isDocumentLocked = false;
 
         [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
         private string _statusMessage = "Ready.";
+
+        public bool IsEntryEnabled => !IsDocumentLocked && !IsBusy;
 
         // =========================================================
         // ENTRY
@@ -130,35 +170,41 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private decimal _totalDecreaseQty = 0m;
 
-        public StockAdjustmentViewModel(
-            StockAdjustmentRepository adjustmentRepository,
-            ItemMasterRepository itemMasterRepository,
-            IDbContextFactory<AppDbContext> contextFactory)
-        {
-            _adjustmentRepository = adjustmentRepository;
-            _itemMasterRepository = itemMasterRepository;
-            _contextFactory = contextFactory;
-        }
+        // =========================================================
+        // STATE CHANGE HOOKS
+        // =========================================================
 
         partial void OnAdjustmentModeChanged(string value)
         {
             StatusMessage = $"Adjustment mode changed to {value}.";
         }
 
+        partial void OnIsDocumentLockedChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsEntryEnabled));
+        }
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsEntryEnabled));
+        }
+
         // =========================================================
-        // BARCODE / BATCH SEARCH
+        // BARCODE / SKU / ITEM CODE SEARCH
         // =========================================================
 
         [RelayCommand]
         private async Task AddItemAsync()
         {
-            if (IsDocumentLocked)
+            if (!CanEditDocument())
                 return;
 
             string term = (ScanBarcode ?? string.Empty).Trim();
 
             if (string.IsNullOrWhiteSpace(term))
                 return;
+
+            IsBusy = true;
 
             try
             {
@@ -173,6 +219,7 @@ namespace POS.BackOffice.UI.ViewModels
                         MessageBoxImage.Information);
 
                     ScanBarcode = string.Empty;
+                    StatusMessage = "No batch found.";
                     return;
                 }
 
@@ -184,11 +231,14 @@ namespace POS.BackOffice.UI.ViewModels
                     {
                         ItemVariantId = batch.ItemVariantId,
                         ItemBatchId = batch.ItemBatchId,
+
                         ItemCode = batch.ItemCode,
                         VariantDescription = batch.VariantDescription,
                         Description = batch.Description,
+
                         BatchNo = batch.BatchNo,
                         ExpiryDate = batch.ExpiryDate,
+
                         SystemQty = batch.SystemQty,
                         ActualQty = batch.SystemQty,
                         UnitCost = batch.UnitCost
@@ -196,7 +246,10 @@ namespace POS.BackOffice.UI.ViewModels
                 }
 
                 ScanBarcode = string.Empty;
-                StatusMessage = $"{ActiveMatrixVariants.Count} active batch(es) loaded.";
+
+                StatusMessage = batches.Count == 1
+                    ? "1 active batch loaded."
+                    : $"{batches.Count} active batches loaded. Check each variant/batch carefully.";
             }
             catch (Exception ex)
             {
@@ -208,6 +261,10 @@ namespace POS.BackOffice.UI.ViewModels
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         // =========================================================
@@ -217,7 +274,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void AddMatrix()
         {
-            if (IsDocumentLocked)
+            if (!CanEditDocument())
                 return;
 
             var changedItems = ActiveMatrixVariants
@@ -231,14 +288,59 @@ namespace POS.BackOffice.UI.ViewModels
                     "No Variance",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
+
                 return;
             }
 
             foreach (var item in changedItems)
             {
-                if (AdjustmentLines.Any(l => l.ItemBatchId == item.ItemBatchId))
-                    continue;
+                if (item.ActualQty < 0)
+                {
+                    MessageBox.Show(
+                        $"Actual quantity cannot be negative for '{item.DisplayDescription} / {item.BatchNo}'.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
 
+                    return;
+                }
+
+                if (AdjustmentMode == "Stock Increase" && item.Variance <= 0)
+                {
+                    MessageBox.Show(
+                        "Stock Increase mode can only queue rows where Actual Qty is greater than System Qty.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return;
+                }
+
+                if (AdjustmentMode == "Stock Decrease" && item.Variance >= 0)
+                {
+                    MessageBox.Show(
+                        "Stock Decrease mode can only queue rows where Actual Qty is less than System Qty.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return;
+                }
+
+                if (AdjustmentLines.Any(l => l.ItemBatchId == item.ItemBatchId))
+                {
+                    MessageBox.Show(
+                        $"Batch '{item.BatchNo}' is already queued. Remove the existing queued row first if you want to change it.",
+                        "Duplicate Batch",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return;
+                }
+            }
+
+            foreach (var item in changedItems)
+            {
                 var line = new StockAdjustmentLine
                 {
                     ItemBatchId = item.ItemBatchId,
@@ -268,13 +370,13 @@ namespace POS.BackOffice.UI.ViewModels
             ActiveMatrixVariants.Clear();
             RecalculateImpact();
 
-            StatusMessage = "Variance line(s) queued.";
+            StatusMessage = $"{changedItems.Count} variance line(s) queued.";
         }
 
         [RelayCommand]
         private void RemoveLine(StockAdjustmentLine? line)
         {
-            if (IsDocumentLocked || line == null)
+            if (!CanEditDocument() || line == null)
                 return;
 
             AdjustmentLines.Remove(line);
@@ -286,7 +388,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void UpdateLine()
         {
-            if (IsDocumentLocked || SelectedLine == null)
+            if (!CanEditDocument() || SelectedLine == null)
                 return;
 
             SelectedLine.VarianceQty = SelectedLine.ActualQty - SelectedLine.SystemQty;
@@ -308,63 +410,58 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             TotalImpact = Math.Round(AdjustmentLines.Sum(l => l.CostImpact), 2);
-            TotalIncreaseQty = AdjustmentLines.Where(l => l.VarianceQty > 0).Sum(l => l.VarianceQty);
-            TotalDecreaseQty = AdjustmentLines.Where(l => l.VarianceQty < 0).Sum(l => Math.Abs(l.VarianceQty));
+
+            TotalIncreaseQty = AdjustmentLines
+                .Where(l => l.VarianceQty > 0)
+                .Sum(l => l.VarianceQty);
+
+            TotalDecreaseQty = AdjustmentLines
+                .Where(l => l.VarianceQty < 0)
+                .Sum(l => Math.Abs(l.VarianceQty));
 
             CollectionViewSource.GetDefaultView(AdjustmentLines)?.Refresh();
         }
 
         // =========================================================
-        // SAVE / POST
+        // POST ADJUSTMENT
         // =========================================================
-
-        [RelayCommand]
-        private async Task SaveDraftAsync()
-        {
-            await SaveAdjustmentExecutionAsync(isDraft: true);
-        }
 
         [RelayCommand]
         private async Task PostAdjustmentAsync()
         {
-            await SaveAdjustmentExecutionAsync(isDraft: false);
-        }
-
-        private async Task SaveAdjustmentExecutionAsync(bool isDraft)
-        {
-            if (IsDocumentLocked)
+            if (!CanEditDocument())
                 return;
 
             RecalculateImpact();
 
-            if (!ValidateBeforeSave(isDraft))
+            if (!ValidateBeforePost())
                 return;
 
-            string actionText = isDraft
-                ? "Save this stock adjustment as a draft?"
-                : "POST STOCK ADJUSTMENT?\n\nThis will permanently update physical batch stock and write an inventory ledger transaction.";
-
             var result = MessageBox.Show(
-                actionText,
-                isDraft ? "Confirm Draft" : "Confirm Posting",
+                "POST STOCK ADJUSTMENT?\n\nThis will permanently update physical batch stock and write inventory ledger transactions.\n\nThis action cannot be edited after posting.",
+                "Confirm Stock Adjustment Posting",
                 MessageBoxButton.YesNo,
-                isDraft ? MessageBoxImage.Question : MessageBoxImage.Warning);
+                MessageBoxImage.Warning);
 
             if (result != MessageBoxResult.Yes)
                 return;
+
+            IsBusy = true;
 
             try
             {
                 var header = new StockAdjustmentHeader
                 {
                     AdjustmentDate = AdjustmentDate,
-                    AdjustmentMode = AdjustmentMode,
+                    AdjustmentMode = AdjustmentMode.Trim(),
                     AuthorizedBy = AuthorizedBy.Trim(),
                     Reference = Reference.Trim(),
                     Remarks = Remarks.Trim(),
+
                     TotalImpact = TotalImpact,
                     TotalIncreaseQty = TotalIncreaseQty,
                     TotalDecreaseQty = TotalDecreaseQty,
+
                     CreatedBy = AuthorizedBy.Trim(),
                     PostedBy = AuthorizedBy.Trim()
                 };
@@ -373,26 +470,20 @@ namespace POS.BackOffice.UI.ViewModels
                     .Select(CloneLineForSave)
                     .ToList();
 
-                var savedHeader = await _adjustmentRepository.SaveAdjustmentAsync(header, lines, isDraft);
+                var savedHeader = await _adjustmentRepository.SaveAdjustmentAsync(
+                    header,
+                    lines,
+                    isDraft: false);
 
                 MessageBox.Show(
-                    isDraft
-                        ? $"Draft saved successfully.\n\nDocument No: {savedHeader.AdjustmentNo}"
-                        : $"Stock adjustment posted successfully.\n\nDocument No: {savedHeader.AdjustmentNo}",
-                    "Success",
+                    $"Stock adjustment posted successfully.\n\nDocument No: {savedHeader.AdjustmentNo}",
+                    "Stock Adjustment Posted",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
 
-                if (isDraft)
-                {
-                    Clear();
-                }
-                else
-                {
-                    DocumentStatus = "POSTED / LOCKED";
-                    IsDocumentLocked = true;
-                    StatusMessage = $"Posted: {savedHeader.AdjustmentNo}";
-                }
+                DocumentStatus = "POSTED / LOCKED";
+                IsDocumentLocked = true;
+                StatusMessage = $"Posted: {savedHeader.AdjustmentNo}";
             }
             catch (InvalidOperationException ex)
             {
@@ -407,7 +498,7 @@ namespace POS.BackOffice.UI.ViewModels
             catch (Exception ex)
             {
                 string message = ex.InnerException?.Message ?? ex.Message;
-                StatusMessage = "Save failed.";
+                StatusMessage = "Posting failed.";
 
                 MessageBox.Show(
                     $"Transaction rolled back.\n\n{message}",
@@ -415,31 +506,110 @@ namespace POS.BackOffice.UI.ViewModels
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
-        private bool ValidateBeforeSave(bool isDraft)
+        private bool ValidateBeforePost()
         {
             if (string.IsNullOrWhiteSpace(AdjustmentMode))
             {
-                MessageBox.Show("Adjustment mode is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Adjustment mode is required.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return false;
+            }
+
+            if (!AdjustmentModes.Contains(AdjustmentMode))
+            {
+                MessageBox.Show(
+                    "Invalid adjustment mode.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return false;
+            }
+
+            if (AdjustmentDate.Date > DateTime.Now.Date.AddDays(1))
+            {
+                MessageBox.Show(
+                    "Adjustment date cannot be in the far future.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(AuthorizedBy))
             {
-                MessageBox.Show("Authorized By is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Authorized By is required.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return false;
             }
 
-            if (!isDraft && string.IsNullOrWhiteSpace(Reference))
+            if (AuthorizedBy.Trim().Length > 50)
             {
-                MessageBox.Show("Reference / reason document is required before posting.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Authorized By cannot be longer than 50 characters.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(Reference))
+            {
+                MessageBox.Show(
+                    "Reference / reason document is required before posting.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return false;
+            }
+
+            if (Reference.Trim().Length > 100)
+            {
+                MessageBox.Show(
+                    "Reference cannot be longer than 100 characters.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return false;
+            }
+
+            if ((Remarks ?? string.Empty).Trim().Length > 500)
+            {
+                MessageBox.Show(
+                    "Final audit notes cannot be longer than 500 characters.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return false;
             }
 
             if (!AdjustmentLines.Any())
             {
-                MessageBox.Show("Cannot save an empty stock adjustment.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Cannot post an empty stock adjustment.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return false;
             }
 
@@ -449,7 +619,12 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (duplicateBatch != null)
             {
-                MessageBox.Show("Same batch cannot be queued twice.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Same batch cannot be queued twice.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return false;
             }
 
@@ -460,23 +635,38 @@ namespace POS.BackOffice.UI.ViewModels
                 line.VarianceQty = line.ActualQty - line.SystemQty;
                 line.CostImpact = Math.Round(line.VarianceQty * line.UnitCost, 2);
 
-                if (line.VarianceQty == 0)
+                string rowName = BuildLineName(line);
+
+                if (line.ItemBatchId <= 0)
                 {
                     MessageBox.Show(
-                        $"Line '{line.Description} / {line.BatchNo}' has no variance.",
+                        "Invalid batch found in adjustment queue.",
                         "Validation",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
+
+                    return false;
+                }
+
+                if (line.VarianceQty == 0)
+                {
+                    MessageBox.Show(
+                        $"Line '{rowName}' has no variance.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
                     return false;
                 }
 
                 if (line.ActualQty < 0)
                 {
                     MessageBox.Show(
-                        $"Actual quantity cannot be negative for '{line.Description} / {line.BatchNo}'.",
+                        $"Actual quantity cannot be negative for '{rowName}'.",
                         "Validation",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
+
                     return false;
                 }
 
@@ -487,6 +677,7 @@ namespace POS.BackOffice.UI.ViewModels
                         "Validation",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
+
                     return false;
                 }
 
@@ -497,16 +688,51 @@ namespace POS.BackOffice.UI.ViewModels
                         "Validation",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
+
                     return false;
                 }
 
-                if (!isDraft && string.IsNullOrWhiteSpace(line.ReasonCode))
+                if (string.IsNullOrWhiteSpace(line.ReasonCode))
                 {
                     MessageBox.Show(
-                        $"Reason code is required for '{line.Description} / {line.BatchNo}'.",
+                        $"Reason code is required for '{rowName}'.",
                         "Validation",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
+
+                    return false;
+                }
+
+                if (!ReasonCodes.Contains(line.ReasonCode))
+                {
+                    MessageBox.Show(
+                        $"Invalid reason code '{line.ReasonCode}' for '{rowName}'.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return false;
+                }
+
+                if (line.ReasonCode.Length > 50)
+                {
+                    MessageBox.Show(
+                        $"Reason code is too long for '{rowName}'.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return false;
+                }
+
+                if (line.LineRemarks.Length > 250)
+                {
+                    MessageBox.Show(
+                        $"Line remarks are too long for '{rowName}'.",
+                        "Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
                     return false;
                 }
             }
@@ -530,17 +756,20 @@ namespace POS.BackOffice.UI.ViewModels
 
                 UnitCost = line.UnitCost,
                 CostImpact = line.CostImpact,
-                LineStatus = line.LineStatus
+                LineStatus = "Posted"
             };
         }
 
         // =========================================================
-        // CLEAR
+        // CLEAR / NEW DOCUMENT
         // =========================================================
 
         [RelayCommand]
         private void Clear()
         {
+            if (IsBusy)
+                return;
+
             AdjustmentDate = DateTime.Now;
             AdjustmentMode = "Physical Count Correction";
             AuthorizedBy = "Admin";
@@ -557,8 +786,35 @@ namespace POS.BackOffice.UI.ViewModels
 
             SelectedLine = null;
             IsDocumentLocked = false;
-            DocumentStatus = "DRAFT / PENDING";
+            DocumentStatus = "UNPOSTED";
             StatusMessage = "Ready.";
+        }
+
+        // =========================================================
+        // HELPERS
+        // =========================================================
+
+        private bool CanEditDocument()
+        {
+            return !IsDocumentLocked && !IsBusy;
+        }
+
+        private static string BuildLineName(StockAdjustmentLine line)
+        {
+            string description = (line.Description ?? string.Empty).Trim();
+            string variant = (line.VariantDescription ?? string.Empty).Trim();
+            string batch = (line.BatchNo ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(variant) &&
+                !variant.Equals("Standard", StringComparison.OrdinalIgnoreCase))
+            {
+                description = $"{description} - {variant}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(batch))
+                return $"{description} / {batch}";
+
+            return description;
         }
     }
 }

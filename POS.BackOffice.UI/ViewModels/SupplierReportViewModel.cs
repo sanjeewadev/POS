@@ -14,103 +14,254 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly SupplierReportRepository _repository;
 
-        // ==========================================
-        // 1. REPORT PARAMETERS
-        // ==========================================
+        // =========================================================
+        // REPORT PARAMETERS
+        // =========================================================
+
         [ObservableProperty]
-        private DateTime _startDate = DateTime.Today.AddDays(-30); // Default to last 30 days
+        private DateTime _startDate = DateTime.Today.AddDays(-30);
 
         [ObservableProperty]
         private DateTime _endDate = DateTime.Today;
 
-        // ==========================================
-        // 2. MACRO KPI CARDS
-        // ==========================================
+        // =========================================================
+        // KPI CARDS
+        // =========================================================
+
         [ObservableProperty]
         private decimal _totalCompanyDebt = 0m;
 
-        // ==========================================
-        // 3. DTO COLLECTIONS (Bound to DataGrids)
-        // ==========================================
-        public ObservableCollection<AgedPayableDto> AgedPayables { get; set; } = new();
-        public ObservableCollection<SupplierVolumeDto> PurchasingVolumes { get; set; } = new();
-        public ObservableCollection<SupplierReturnRateDto> ReturnRates { get; set; } = new();
+        [ObservableProperty]
+        private decimal _totalPurchaseValue = 0m;
+
+        [ObservableProperty]
+        private decimal _totalSupplierReturnValue = 0m;
+
+        [ObservableProperty]
+        private decimal _totalReturnedQty = 0m;
+
+        [ObservableProperty]
+        private int _supplierWithDebtCount = 0;
+
+        [ObservableProperty]
+        private int _supplierWithPurchaseCount = 0;
+
+        [ObservableProperty]
+        private int _supplierWithReturnCount = 0;
+
+        // =========================================================
+        // UI STATE
+        // =========================================================
+
+        [ObservableProperty]
+        private bool _isBusy = false;
+
+        [ObservableProperty]
+        private string _statusMessage = "Ready.";
+
+        [ObservableProperty]
+        private string _reportPeriodText = string.Empty;
+
+        // =========================================================
+        // REPORT COLLECTIONS
+        // =========================================================
+
+        public ObservableCollection<SupplierOutstandingSummaryDto> OutstandingSummaries { get; } = new();
+
+        public ObservableCollection<SupplierPurchaseVolumeDto> PurchasingVolumes { get; } = new();
+
+        public ObservableCollection<SupplierReturnSummaryDto> SupplierReturns { get; } = new();
 
         public SupplierReportViewModel(SupplierReportRepository repository)
         {
             _repository = repository;
 
-            // Auto-fire the report generation the second the manager opens the dashboard
+            UpdateReportPeriodText();
+
             _ = GenerateReportAsync();
         }
 
-        // ==========================================
-        // 4. THE EXECUTION ENGINE
-        // ==========================================
+        // =========================================================
+        // DATE CHANGE EVENTS
+        // =========================================================
+
+        partial void OnStartDateChanged(DateTime value)
+        {
+            UpdateReportPeriodText();
+        }
+
+        partial void OnEndDateChanged(DateTime value)
+        {
+            UpdateReportPeriodText();
+        }
+
+        private void UpdateReportPeriodText()
+        {
+            ReportPeriodText = $"{StartDate:dd-MMM-yyyy} to {EndDate:dd-MMM-yyyy}";
+        }
+
+        // =========================================================
+        // GENERATE REPORT
+        // =========================================================
+
         [RelayCommand]
         private async Task GenerateReportAsync()
         {
-            // Safety validation
-            if (StartDate > EndDate)
+            if (StartDate.Date > EndDate.Date)
             {
-                MessageBox.Show("Start Date cannot be later than End Date.", "Invalid Date Range", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "Start date cannot be later than end date.",
+                    "Supplier Report",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
+
+            IsBusy = true;
+            StatusMessage = "Generating supplier report...";
 
             try
             {
-                // 1. Fetch & Populate Aged Payables
-                // (Notice we don't pass dates here, because aging is always relative to 'Today')
-                var payablesData = await _repository.GetAgedPayablesSummaryAsync();
-                AgedPayables.Clear();
-                foreach (var item in payablesData) AgedPayables.Add(item);
-
-                // Update the Master KPI
-                TotalCompanyDebt = AgedPayables.Sum(p => p.TotalOwed);
-
-                // 2. Fetch & Populate Purchasing Volume
-                var volumeData = await _repository.GetPurchasingVolumeAsync(StartDate, EndDate);
+                OutstandingSummaries.Clear();
                 PurchasingVolumes.Clear();
-                foreach (var item in volumeData) PurchasingVolumes.Add(item);
+                SupplierReturns.Clear();
 
-                // 3. Fetch & Populate Return Rates
-                var returnData = await _repository.GetReturnRatesAsync(StartDate, EndDate);
-                ReturnRates.Clear();
-                foreach (var item in returnData) ReturnRates.Add(item);
+                var outstandingRows = await _repository.GetSupplierOutstandingSummaryAsync();
+
+                foreach (var row in outstandingRows)
+                    OutstandingSummaries.Add(row);
+
+                var purchaseRows = await _repository.GetPurchasingVolumeAsync(
+                    StartDate,
+                    EndDate);
+
+                foreach (var row in purchaseRows)
+                    PurchasingVolumes.Add(row);
+
+                var returnRows = await _repository.GetSupplierReturnSummaryAsync(
+                    StartDate,
+                    EndDate);
+
+                foreach (var row in returnRows)
+                    SupplierReturns.Add(row);
+
+                CalculateKpis();
+
+                StatusMessage =
+                    $"Report generated. Outstanding: {OutstandingSummaries.Count}, Purchases: {PurchasingVolumes.Count}, Returns: {SupplierReturns.Count}.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Report generation failed: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Supplier report generation failed.";
+
+                MessageBox.Show(
+                    $"Supplier report generation failed:\n\n{ex.Message}",
+                    "Supplier Report",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        // ==========================================
-        // 5. EXPORT STUBS
-        // ==========================================
+        [RelayCommand]
+        private async Task RefreshAsync()
+        {
+            await GenerateReportAsync();
+        }
+
+        private void CalculateKpis()
+        {
+            TotalCompanyDebt = Math.Round(
+                OutstandingSummaries
+                    .Where(r => r.NetOutstanding > 0)
+                    .Sum(r => r.NetOutstanding),
+                2);
+
+            SupplierWithDebtCount = OutstandingSummaries
+                .Count(r => r.NetOutstanding > 0);
+
+            TotalPurchaseValue = Math.Round(
+                PurchasingVolumes.Sum(r => r.TotalGrnValue),
+                2);
+
+            SupplierWithPurchaseCount = PurchasingVolumes.Count;
+
+            TotalSupplierReturnValue = Math.Round(
+                SupplierReturns.Sum(r => r.NetSupplierCredit),
+                2);
+
+            TotalReturnedQty = Math.Round(
+                SupplierReturns.Sum(r => r.TotalReturnedQty),
+                3);
+
+            SupplierWithReturnCount = SupplierReturns.Count;
+        }
+
+        // =========================================================
+        // CLEAR / RESET
+        // =========================================================
+
+        [RelayCommand]
+        private async Task ResetPeriodAsync()
+        {
+            StartDate = DateTime.Today.AddDays(-30);
+            EndDate = DateTime.Today;
+
+            await GenerateReportAsync();
+        }
+
+        // =========================================================
+        // EXPORT PLACEHOLDERS
+        // =========================================================
+
         [RelayCommand]
         private void ExportToExcel()
         {
-            if (!AgedPayables.Any() && !PurchasingVolumes.Any())
+            if (!HasReportData())
             {
-                MessageBox.Show("No data available to export. Please generate the report first.", "Export Blocked", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    "No report data available to export. Please generate the report first.",
+                    "Supplier Report",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
-            MessageBox.Show("Excel Export module initializing...\n\n(This will be connected to the ClosedXML or EPPlus library in a future update).",
-                            "Export to Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(
+                "Excel export is not connected yet.\n\nThis report is ready for export later after the report layout is finalized.",
+                "Supplier Report",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         [RelayCommand]
         private void ExportToPdf()
         {
-            if (!AgedPayables.Any() && !PurchasingVolumes.Any())
+            if (!HasReportData())
             {
-                MessageBox.Show("No data available to export. Please generate the report first.", "Export Blocked", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    "No report data available to export. Please generate the report first.",
+                    "Supplier Report",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
                 return;
             }
 
-            MessageBox.Show("PDF Generation module initializing...\n\n(This will be connected to the iTextSharp or PDFsharp library in a future update).",
-                            "Export to PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(
+                "PDF export is not connected yet.\n\nThis report is ready for export later after the report layout is finalized.",
+                "Supplier Report",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        private bool HasReportData()
+        {
+            return OutstandingSummaries.Any() ||
+                   PurchasingVolumes.Any() ||
+                   SupplierReturns.Any();
         }
     }
 }

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -13,17 +15,18 @@ namespace POS.BackOffice.UI.ViewModels
 {
     public partial class SubCategoryViewModel : ViewModelBase
     {
+        private const int MaxSubCategoryCodeLength = 40;
+        private const int MaxDisplayOrder = 999999;
+
         private readonly CategoryRepository _categoryRepository;
         private readonly SubCategoryRepository _subCategoryRepository;
+        private readonly IMessageBoxService _messageBoxService;
 
-        private bool _isApplyingSelection = false;
+        private bool _isInitialized;
+        private bool _isApplyingSelection;
 
         private static readonly Regex SubCategoryCodeRegex =
-            new Regex("^[A-Z0-9_-]+$", RegexOptions.Compiled);
-
-        // =========================================================
-        // FORM FIELDS
-        // =========================================================
+            new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         [ObservableProperty]
         private Category? _selectedParentCategory;
@@ -44,6 +47,9 @@ namespace POS.BackOffice.UI.ViewModels
         private string _subCategoryName = string.Empty;
 
         [ObservableProperty]
+        private string _displayOrderText = "0";
+
+        [ObservableProperty]
         private bool _isDeactivated = false;
 
         [ObservableProperty]
@@ -55,19 +61,14 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private bool _isParentSelectionEnabled = true;
 
-        // =========================================================
-        // FILTER FIELDS
-        // =========================================================
-
         [ObservableProperty]
         private string _searchText = string.Empty;
 
         [ObservableProperty]
         private Category? _selectedFilterCategory;
 
-        // =========================================================
-        // UI STATE
-        // =========================================================
+        [ObservableProperty]
+        private bool _includeDeactivated = true;
 
         [ObservableProperty]
         private bool _isBusy = false;
@@ -75,40 +76,37 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
-        // =========================================================
-        // DATA COLLECTIONS
-        // =========================================================
-
-        // Parent selector should use this.
         public ObservableCollection<Category> ParentCategories { get; } = new();
 
-        // Filter dropdown should use this. It includes "-- ALL CATEGORIES --".
         public ObservableCollection<Category> FilterCategories { get; } = new();
 
-        // Kept for backward compatibility with your current XAML.
-        // The updated XAML can use ParentCategories and FilterCategories separately.
         public ObservableCollection<Category> Categories { get; } = new();
 
         public ObservableCollection<SubCategory> SubCategories { get; } = new();
 
         public SubCategoryViewModel(
             CategoryRepository categoryRepository,
-            SubCategoryRepository subCategoryRepository)
+            SubCategoryRepository subCategoryRepository,
+            IMessageBoxService messageBoxService)
         {
-            _categoryRepository = categoryRepository;
-            _subCategoryRepository = subCategoryRepository;
-
-            _ = InitializeAsync();
+            _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
+            _subCategoryRepository = subCategoryRepository ?? throw new ArgumentNullException(nameof(subCategoryRepository));
+            _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
         }
 
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task InitializeAsync()
         {
+            if (_isInitialized)
+                return;
+
+            _isInitialized = true;
             IsBusy = true;
 
             try
             {
                 await LoadCategoriesAsync();
-                await LoadSubCategoriesAsync();
+                await LoadSubCategoriesInternalAsync();
 
                 StatusMessage = "Sub-category page loaded.";
             }
@@ -116,11 +114,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 StatusMessage = "Failed to initialize sub-category page.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to initialize sub-category page:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
@@ -134,7 +130,8 @@ namespace POS.BackOffice.UI.ViewModels
             FilterCategories.Clear();
             Categories.Clear();
 
-            var allCategories = (await _categoryRepository.GetAllAsync()).ToList();
+            var activeCategories = await _categoryRepository.GetActiveAsync();
+            var allCategories = await _categoryRepository.GetAllAsync(includeDeactivated: true);
 
             FilterCategories.Add(new Category
             {
@@ -145,18 +142,18 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var category in allCategories)
             {
-                // Filter list should show all categories, including deactivated,
-                // because old sub-categories may still belong to deactivated parents.
                 FilterCategories.Add(category);
+            }
 
-                // Parent selector should normally show only active categories for new creation.
-                if (!category.IsDeactivated)
-                {
-                    ParentCategories.Add(category);
+            foreach (var category in activeCategories)
+            {
+                ParentCategories.Add(category);
+                Categories.Add(category);
+            }
 
-                    // Backward compatibility for current XAML.
-                    Categories.Add(category);
-                }
+            if (SelectedFilterCategory == null)
+            {
+                SelectedFilterCategory = FilterCategories.FirstOrDefault();
             }
         }
 
@@ -167,36 +164,42 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                SubCategories.Clear();
-
-                int? parentFilterId =
-                    SelectedFilterCategory != null && SelectedFilterCategory.Id > 0
-                        ? SelectedFilterCategory.Id
-                        : null;
-
-                var data = await _subCategoryRepository.GetAllFilteredAsync(parentFilterId, SearchText);
-
-                foreach (var item in data)
-                {
-                    SubCategories.Add(item);
-                }
-
-                StatusMessage = $"{SubCategories.Count} sub-category record(s) loaded.";
+                await LoadSubCategoriesInternalAsync();
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load sub-categories.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"Failed to load sub-categories:\n\n{ex.Message}",
-                    "Database Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Database Error");
             }
             finally
             {
                 IsBusy = false;
             }
+        }
+
+        private async Task LoadSubCategoriesInternalAsync()
+        {
+            SubCategories.Clear();
+
+            int? parentFilterId =
+                SelectedFilterCategory != null && SelectedFilterCategory.Id > 0
+                    ? SelectedFilterCategory.Id
+                    : null;
+
+            var data = await _subCategoryRepository.GetAllFilteredAsync(
+                parentCategoryId: parentFilterId,
+                searchTerm: SearchText,
+                includeDeactivated: IncludeDeactivated);
+
+            foreach (var item in data)
+            {
+                SubCategories.Add(item);
+            }
+
+            StatusMessage = $"{SubCategories.Count} sub-category record(s) loaded.";
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -222,18 +225,30 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedParentCategory == null || SelectedParentCategory.Id <= 0)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Please select a valid parent category.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return;
             }
 
+            if (SelectedParentCategory.IsDeactivated)
+            {
+                _messageBoxService.ShowWarning(
+                    "Cannot create a sub-category under a deactivated parent category.",
+                    "Validation Error");
+
+                return;
+            }
+
+            string suffix = NormalizeCode(SubCategorySuffix);
             string code = BuildFinalSubCategoryCode();
             string name = NormalizeName(SubCategoryName);
 
-            if (!ValidateInput(code, name))
+            if (!TryParseDisplayOrder(DisplayOrderText, out int displayOrder))
+                return;
+
+            if (!ValidateInput(code, suffix, name, displayOrder))
                 return;
 
             IsBusy = true;
@@ -247,11 +262,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (!isCodeUnique)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         $"The Sub-Category Code '{code}' already exists under this parent category.",
-                        "Duplicate Sub-Category Code",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Duplicate Sub-Category Code");
+
                     return;
                 }
 
@@ -262,11 +276,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (!isNameUnique)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         $"The Sub-Category Name '{name}' already exists under this parent category.",
-                        "Duplicate Sub-Category Name",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Duplicate Sub-Category Name");
+
                     return;
                 }
 
@@ -275,31 +288,26 @@ namespace POS.BackOffice.UI.ViewModels
                     CategoryId = SelectedParentCategory.Id,
                     SubCategoryCode = code,
                     SubCategoryName = name,
+                    DisplayOrder = displayOrder,
                     IsDeactivated = IsDeactivated
                 };
 
                 await _subCategoryRepository.AddAsync(newSubCategory);
 
-                await LoadSubCategoriesAsync();
-                Clear();
+                await LoadSubCategoriesInternalAsync();
+                ResetForm("Sub-category created successfully.");
 
-                StatusMessage = "Sub-category created successfully.";
-
-                MessageBox.Show(
-                    "Sub-category saved successfully.",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _messageBoxService.ShowInformation(
+                    "Sub-category created successfully.",
+                    "Success");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Save failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"An error occurred while saving:\n\n{ex.Message}",
-                    "Save Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Save Error");
             }
             finally
             {
@@ -314,7 +322,10 @@ namespace POS.BackOffice.UI.ViewModels
 
             string name = NormalizeName(SubCategoryName);
 
-            if (!ValidateNameOnly(name))
+            if (!TryParseDisplayOrder(DisplayOrderText, out int displayOrder))
+                return;
+
+            if (!ValidateNameAndDisplayOrder(name, displayOrder))
                 return;
 
             IsBusy = true;
@@ -328,11 +339,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (!isNameUnique)
                 {
-                    MessageBox.Show(
+                    _messageBoxService.ShowWarning(
                         $"The Sub-Category Name '{name}' already exists under this parent category.",
-                        "Duplicate Sub-Category Name",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                        "Duplicate Sub-Category Name");
+
                     return;
                 }
 
@@ -345,31 +355,26 @@ namespace POS.BackOffice.UI.ViewModels
                     SubCategoryCode = SelectedSubCategory.SubCategoryCode,
 
                     SubCategoryName = name,
+                    DisplayOrder = displayOrder,
                     IsDeactivated = IsDeactivated
                 };
 
                 await _subCategoryRepository.UpdateAsync(updatedSubCategory);
 
-                await LoadSubCategoriesAsync();
-                Clear();
+                await LoadSubCategoriesInternalAsync();
+                ResetForm("Sub-category updated successfully.");
 
-                StatusMessage = "Sub-category updated successfully.";
-
-                MessageBox.Show(
-                    "Sub-category saved successfully.",
-                    "Success",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _messageBoxService.ShowInformation(
+                    "Sub-category updated successfully.",
+                    "Success");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Save failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"An error occurred while saving:\n\n{ex.Message}",
-                    "Save Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Save Error");
             }
             finally
             {
@@ -380,25 +385,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void Clear()
         {
-            _isApplyingSelection = true;
-
-            SelectedParentCategory = null;
-            SelectedParentCode = string.Empty;
-            SelectedParentName = string.Empty;
-            ParentPrefix = string.Empty;
-            SubCategorySuffix = string.Empty;
-            SubCategoryName = string.Empty;
-            IsDeactivated = false;
-            SelectedSubCategory = null;
-            IsCodeReadOnly = false;
-            IsParentSelectionEnabled = true;
-
-            _isApplyingSelection = false;
-
-            StatusMessage = "Ready for new sub-category.";
-
-            SaveCommand.NotifyCanExecuteChanged();
-            DeleteCommand.NotifyCanExecuteChanged();
+            ResetForm("Ready for new sub-category.");
         }
 
         [RelayCommand(CanExecute = nameof(CanDelete))]
@@ -407,58 +394,107 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedSubCategory == null)
                 return;
 
-            var result = MessageBox.Show(
-                $"Delete sub-category '{SelectedSubCategory.SubCategoryName}'?\n\n" +
-                "This will only work if the sub-category has no linked item records.\n\n" +
-                "If it is already used, deactivate it instead.",
+            var selected = SelectedSubCategory;
+
+            IsBusy = true;
+
+            try
+            {
+                var linkedData = await _subCategoryRepository.GetLinkedDataSummaryAsync(selected.Id);
+
+                if (linkedData.HasLinkedData)
+                {
+                    StatusMessage = "Delete blocked.";
+
+                    _messageBoxService.ShowWarning(
+                        linkedData.ToUserMessage(selected.SubCategoryName),
+                        "Delete Blocked");
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Linked data check failed.";
+
+                _messageBoxService.ShowError(
+                    $"Could not check linked records:\n\n{ex.Message}",
+                    "Delete Check Error");
+
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Delete sub-category '{selected.SubCategoryName}'?\n\n" +
+                "This is only safe for wrongly-created or unused test sub-categories.\n\n" +
+                "For real business records, deactivate the sub-category instead.",
                 "Confirm Safe Delete",
-                MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
 
             IsBusy = true;
 
             try
             {
-                await _subCategoryRepository.DeleteAsync(SelectedSubCategory.Id);
+                await _subCategoryRepository.DeleteAsync(selected.Id);
 
-                await LoadSubCategoriesAsync();
-                Clear();
+                await LoadSubCategoriesInternalAsync();
+                ResetForm("Sub-category deleted successfully.");
 
-                StatusMessage = "Sub-category deleted successfully.";
-
-                MessageBox.Show(
+                _messageBoxService.ShowInformation(
                     "Sub-category deleted successfully.",
-                    "Deleted",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Deleted");
             }
             catch (InvalidOperationException ex)
             {
                 StatusMessage = "Delete blocked.";
 
-                MessageBox.Show(
-                    $"{ex.Message}\n\nTo hide this sub-category from new item creation, tick 'Deactivate Sub-Category' and click SAVE.",
-                    "Delete Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Delete Blocked");
             }
             catch (Exception ex)
             {
                 StatusMessage = "Delete failed.";
 
-                MessageBox.Show(
+                _messageBoxService.ShowError(
                     $"An error occurred while deleting:\n\n{ex.Message}",
-                    "Delete Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    "Delete Error");
             }
             finally
             {
                 IsBusy = false;
             }
+        }
+
+        private void ResetForm(string statusMessage)
+        {
+            _isApplyingSelection = true;
+
+            SelectedParentCategory = null;
+            SelectedParentCode = string.Empty;
+            SelectedParentName = string.Empty;
+            ParentPrefix = string.Empty;
+            SubCategorySuffix = string.Empty;
+            SubCategoryName = string.Empty;
+            DisplayOrderText = "0";
+            IsDeactivated = false;
+            SelectedSubCategory = null;
+            IsCodeReadOnly = false;
+            IsParentSelectionEnabled = true;
+
+            _isApplyingSelection = false;
+
+            StatusMessage = statusMessage;
+
+            SaveCommand.NotifyCanExecuteChanged();
+            DeleteCommand.NotifyCanExecuteChanged();
         }
 
         partial void OnSelectedParentCategoryChanged(Category? value)
@@ -492,7 +528,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedFilterCategoryChanged(Category? value)
         {
-            if (!IsBusy)
+            if (_isInitialized && !IsBusy)
             {
                 _ = LoadSubCategoriesAsync();
             }
@@ -515,8 +551,13 @@ namespace POS.BackOffice.UI.ViewModels
                     ?? FilterCategories.FirstOrDefault(c => c.Id == value.CategoryId)
                     ?? value.Category;
 
-                SelectedParentCategory = parent;
+                if (parent != null &&
+                    ParentCategories.All(c => c.Id != parent.Id))
+                {
+                    ParentCategories.Add(parent);
+                }
 
+                SelectedParentCategory = parent;
                 SelectedParentCode = parent?.CategoryCode ?? string.Empty;
                 SelectedParentName = parent?.CategoryName ?? string.Empty;
 
@@ -538,6 +579,7 @@ namespace POS.BackOffice.UI.ViewModels
                 }
 
                 SubCategoryName = value.SubCategoryName ?? string.Empty;
+                DisplayOrderText = value.DisplayOrder.ToString(CultureInfo.InvariantCulture);
                 IsDeactivated = value.IsDeactivated;
 
                 StatusMessage = $"Editing sub-category: {value.SubCategoryName}";
@@ -564,8 +606,22 @@ namespace POS.BackOffice.UI.ViewModels
             SaveCommand.NotifyCanExecuteChanged();
         }
 
+        partial void OnDisplayOrderTextChanged(string value)
+        {
+            SaveCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIncludeDeactivatedChanged(bool value)
+        {
+            if (_isInitialized && !IsBusy)
+            {
+                _ = LoadSubCategoriesAsync();
+            }
+        }
+
         partial void OnIsBusyChanged(bool value)
         {
+            InitializeCommand.NotifyCanExecuteChanged();
             LoadSubCategoriesCommand.NotifyCanExecuteChanged();
             SearchCommand.NotifyCanExecuteChanged();
             SaveCommand.NotifyCanExecuteChanged();
@@ -579,7 +635,17 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanSave()
         {
-            return !IsBusy;
+            if (IsBusy)
+                return false;
+
+            if (SelectedSubCategory == null)
+            {
+                return SelectedParentCategory != null &&
+                       !string.IsNullOrWhiteSpace(SubCategorySuffix) &&
+                       !string.IsNullOrWhiteSpace(SubCategoryName);
+            }
+
+            return !string.IsNullOrWhiteSpace(SubCategoryName);
         }
 
         private bool CanDelete()
@@ -605,60 +671,144 @@ namespace POS.BackOffice.UI.ViewModels
             return (name ?? string.Empty).Trim();
         }
 
-        private static bool ValidateInput(string code, string name)
+        private bool TryParseDisplayOrder(string value, out int displayOrder)
         {
-            if (string.IsNullOrWhiteSpace(code))
+            displayOrder = 0;
+
+            string rawValue = (value ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(rawValue))
             {
-                MessageBox.Show(
-                    "Sub-Category Code is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                displayOrder = 0;
+                DisplayOrderText = "0";
+                return true;
+            }
+
+            bool parsed = int.TryParse(
+                rawValue,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out displayOrder);
+
+            if (!parsed)
+            {
+                _messageBoxService.ShowWarning(
+                    "Display Order must be a whole number.",
+                    "Validation Error");
+
                 return false;
             }
 
-            if (code.Length > 20)
+            if (displayOrder < 0)
             {
-                MessageBox.Show(
-                    "Sub-Category Code cannot be longer than 20 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    "Display Order cannot be less than zero.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (displayOrder > MaxDisplayOrder)
+            {
+                _messageBoxService.ShowWarning(
+                    $"Display Order cannot be greater than {MaxDisplayOrder}.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ValidateInput(
+            string code,
+            string suffix,
+            string name,
+            int displayOrder)
+        {
+            if (SelectedParentCategory == null || SelectedParentCategory.Id <= 0)
+            {
+                _messageBoxService.ShowWarning(
+                    "Please select a valid parent category.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(suffix))
+            {
+                _messageBoxService.ShowWarning(
+                    "Sub-Category Code suffix is required.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                _messageBoxService.ShowWarning(
+                    "Sub-Category Code is required.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (code.EndsWith("-", StringComparison.Ordinal))
+            {
+                _messageBoxService.ShowWarning(
+                    "Sub-Category Code is incomplete. Enter the code part after the parent prefix.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (code.Length > MaxSubCategoryCodeLength)
+            {
+                _messageBoxService.ShowWarning(
+                    $"Sub-Category Code cannot be longer than {MaxSubCategoryCodeLength} characters.",
+                    "Validation Error");
+
                 return false;
             }
 
             if (!SubCategoryCodeRegex.IsMatch(code))
             {
-                MessageBox.Show(
-                    "Sub-Category Code can only contain letters, numbers, dash, and underscore.\n\nExample: BEV-SOFT",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _messageBoxService.ShowWarning(
+                    "Sub-Category Code can only contain letters, numbers, dash, and underscore.\n\nExample: 001-01",
+                    "Validation Error");
+
                 return false;
             }
 
-            return ValidateNameOnly(name);
+            return ValidateNameAndDisplayOrder(name, displayOrder);
         }
 
-        private static bool ValidateNameOnly(string name)
+        private bool ValidateNameAndDisplayOrder(string name, int displayOrder)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Sub-Category Name is required.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
                 return false;
             }
 
             if (name.Length > 100)
             {
-                MessageBox.Show(
+                _messageBoxService.ShowWarning(
                     "Sub-Category Name cannot be longer than 100 characters.",
-                    "Validation Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (displayOrder < 0 || displayOrder > MaxDisplayOrder)
+            {
+                _messageBoxService.ShowWarning(
+                    $"Display Order must be between 0 and {MaxDisplayOrder}.",
+                    "Validation Error");
+
                 return false;
             }
 

@@ -44,6 +44,7 @@ namespace POS.Core.Models
         // FINANCIAL TOTALS
         // =========================================================
 
+        // Before VAT and after line discount depends on repository calculation.
         [Column(TypeName = "decimal(18,2)")]
         public decimal Subtotal { get; set; } = 0m;
 
@@ -56,13 +57,18 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalDiscountAmount { get; set; } = 0m;
 
+        // Product VAT only.
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TotalVatAmount { get; set; } = 0m;
+
         // Final amount posted to supplier ledger.
         [Column(TypeName = "decimal(18,2)")]
         public decimal NetPayable { get; set; } = 0m;
 
-        // Draft, Posted, Cancelled.
+        // Posted, Cancelled.
+        // Draft removed from GRN workflow.
         [MaxLength(30)]
-        public string Status { get; set; } = "Draft";
+        public string Status { get; set; } = "Posted";
 
         [MaxLength(50)]
         public string CreatedBy { get; set; } = string.Empty;

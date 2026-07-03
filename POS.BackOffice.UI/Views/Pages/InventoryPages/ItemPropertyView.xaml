@@ -6,6 +6,7 @@
              mc:Ignorable="d"
              d:DesignHeight="700"
              d:DesignWidth="1200"
+             Loaded="UserControl_Loaded"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
@@ -165,9 +166,10 @@
                                    Style="{StaticResource InlineLabel}"/>
 
                         <TextBox Grid.Column="1"
-                                 Text="{Binding GroupDisplayOrder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                 Text="{Binding GroupDisplayOrderText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClassicInput}"
                                  HorizontalContentAlignment="Right"
+                                 MaxLength="4"
                                  ToolTip="Lower numbers show first. Example: Color = 10, Size = 20."/>
 
                         <CheckBox Grid.Column="2"
@@ -358,7 +360,9 @@
                               BorderBrush="{DynamicResource BorderBrush}"
                               BorderThickness="1"
                               SelectionMode="Single"
-                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                         <DataGrid.Resources>
                             <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
@@ -376,9 +380,9 @@
                                                 IsReadOnly="True"
                                                 FontWeight="Bold"/>
 
-                            <DataGridCheckBoxColumn Header="Deactivated"
+                            <DataGridCheckBoxColumn Header="Inactive"
                                                     Binding="{Binding IsDeactivated}"
-                                                    Width="105">
+                                                    Width="85">
                                 <DataGridCheckBoxColumn.ElementStyle>
                                     <Style TargetType="CheckBox">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -459,9 +463,10 @@
                                    Style="{StaticResource InlineLabel}"/>
 
                         <TextBox Grid.Column="1"
-                                 Text="{Binding ValueDisplayOrder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                 Text="{Binding ValueDisplayOrderText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClassicInput}"
                                  HorizontalContentAlignment="Right"
+                                 MaxLength="4"
                                  ToolTip="Lower numbers show first. Example: 10, 20, 30."/>
 
                         <CheckBox Grid.Column="2"
@@ -593,7 +598,9 @@
                               BorderBrush="{DynamicResource BorderBrush}"
                               BorderThickness="1"
                               SelectionMode="Single"
-                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}">
+                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                         <DataGrid.Resources>
                             <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
@@ -608,6 +615,7 @@
                             <DataGridTextColumn Header="Value Name"
                                                 Binding="{Binding ValueName}"
                                                 Width="*"
+                                                MinWidth="170"
                                                 IsReadOnly="True"
                                                 FontWeight="Bold"/>
 
@@ -616,9 +624,9 @@
                                                 Width="140"
                                                 IsReadOnly="True"/>
 
-                            <DataGridCheckBoxColumn Header="Deactivated"
+                            <DataGridCheckBoxColumn Header="Inactive"
                                                     Binding="{Binding IsDeactivated}"
-                                                    Width="105">
+                                                    Width="85">
                                 <DataGridCheckBoxColumn.ElementStyle>
                                     <Style TargetType="CheckBox">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
