@@ -187,7 +187,8 @@ namespace POS.Core.Repositories
                 .AsNoTracking()
                 .Where(b =>
                     parentIds.Contains(b.ItemVariant.ItemParentId) &&
-                    !b.IsDeactivated)
+                    !b.IsDeactivated &&
+                    !b.ItemVariant.IsDeactivated)
                 .Select(b => new
                 {
                     b.ItemVariant.ItemParentId,
@@ -310,6 +311,12 @@ namespace POS.Core.Repositories
 
                 if (parent.Id == 0)
                 {
+                    ApplyParentActivationStateToSubmittedVariants(
+                        parent,
+                        variants,
+                        parentIsBeingReactivated: false,
+                        now);
+
                     parent.CreatedAt = now;
                     parent.UpdatedAt = now;
                     parent.DeactivatedAt = parent.IsDeactivated ? now : null;
@@ -334,6 +341,15 @@ namespace POS.Core.Repositories
 
                     if (existingParent == null)
                         throw new InvalidOperationException("Item record was not found.");
+
+                    bool parentWasDeactivated = existingParent.IsDeactivated;
+                    bool parentIsBeingReactivated = parentWasDeactivated && !parent.IsDeactivated;
+
+                    ApplyParentActivationStateToSubmittedVariants(
+                        parent,
+                        variants,
+                        parentIsBeingReactivated,
+                        now);
 
                     existingParent.ItemName = parent.ItemName;
                     existingParent.PrintName = parent.PrintName;
@@ -463,6 +479,36 @@ namespace POS.Core.Repositories
             {
                 await transaction.RollbackAsync();
                 throw;
+            }
+        }
+
+        private static void ApplyParentActivationStateToSubmittedVariants(
+            ItemParent parent,
+            IEnumerable<ItemVariant> variants,
+            bool parentIsBeingReactivated,
+            DateTime now)
+        {
+            foreach (var variant in variants)
+            {
+                // Parent deactivation must always deactivate all child variants.
+                // Otherwise hidden/inactive parent with active variants can leak into searches later.
+                if (parent.IsDeactivated)
+                {
+                    variant.IsDeactivated = true;
+                    variant.DeactivatedAt ??= now;
+                    continue;
+                }
+
+                // Main bug fix:
+                // If parent was deactivated and user activates the parent again,
+                // reactivate the submitted variants too.
+                // This prevents Item Master Vars = 0, GRN no supplier-approved items,
+                // PO no approved items, and Pricing page empty after reactivation.
+                if (parentIsBeingReactivated)
+                {
+                    variant.IsDeactivated = false;
+                    variant.DeactivatedAt = null;
+                }
             }
         }
 
@@ -783,6 +829,36 @@ namespace POS.Core.Repositories
             await context.SaveChangesAsync();
         }
 
+        public async Task ReactivateMatrixAsync(int parentId)
+        {
+            if (parentId <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var parent = await context.ItemParents
+                .Include(p => p.Variants)
+                .FirstOrDefaultAsync(p => p.Id == parentId);
+
+            if (parent == null)
+                return;
+
+            DateTime now = DateTime.Now;
+
+            parent.IsDeactivated = false;
+            parent.UpdatedAt = now;
+            parent.DeactivatedAt = null;
+
+            foreach (var variant in parent.Variants)
+            {
+                variant.IsDeactivated = false;
+                variant.UpdatedAt = now;
+                variant.DeactivatedAt = null;
+            }
+
+            await context.SaveChangesAsync();
+        }
+
         public async Task<bool> ParentHasHistoryAsync(int parentId)
         {
             if (parentId <= 0)
@@ -864,7 +940,6 @@ namespace POS.Core.Repositories
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            // Supplier-specific filtering for GRN/PO will be added later inside GRN/PO modules.
             return await context.ItemVariants
                 .Include(v => v.ItemParent)
                 .Include(v => v.ItemSuppliers)
@@ -945,7 +1020,7 @@ namespace POS.Core.Repositories
                     ItemCode = p.ItemCode,
                     ItemName = p.ItemName,
                     CategoryName = p.Category.CategoryName,
-                    ActiveVariantsCount = p.Variants.Count(v => !v.IsDeactivated && !p.IsSaleLocked)
+                    ActiveVariantsCount = p.Variants.Count(v => !v.IsDeactivated)
                 })
                 .Take(100)
                 .ToListAsync();

@@ -42,6 +42,7 @@ namespace POS.BackOffice.UI.ViewModels
         private bool _isLoadingItem;
         private bool _isClearing;
         private bool _isUpdatingSupplierSelection;
+        private bool _loadedItemWasDeactivated;
 
         private static readonly Random _random = new();
 
@@ -442,6 +443,7 @@ namespace POS.BackOffice.UI.ViewModels
                 }
 
                 CurrentItem = fullItem;
+                _loadedItemWasDeactivated = fullItem.IsDeactivated;
 
                 IsCodeReadOnly = true;
                 ItemPrefix = fullItem.ItemCode;
@@ -490,9 +492,20 @@ namespace POS.BackOffice.UI.ViewModels
                 RebuildBuilderSelectionFromVariants();
                 UpdateSupplierAssignmentSelectionCount();
 
-                StatusMessage = fullItem.IsDeactivated
-                    ? $"Loaded deactivated item: {fullItem.ItemCode}"
-                    : $"Loaded item: {fullItem.ItemCode}";
+                int activeVariantCount = GeneratedVariants.Count(v => !v.IsDeactivated);
+
+                if (fullItem.IsDeactivated)
+                {
+                    StatusMessage = $"Loaded deactivated item: {fullItem.ItemCode}. Untick Item Deactivated and click SAVE FULL ITEM to reactivate item and variants.";
+                }
+                else if (GeneratedVariants.Any() && activeVariantCount == 0)
+                {
+                    StatusMessage = $"Loaded item: {fullItem.ItemCode}. Warning: all variants are inactive. Click SAVE FULL ITEM to repair/reactivate variants.";
+                }
+                else
+                {
+                    StatusMessage = $"Loaded item: {fullItem.ItemCode}";
+                }
             }
             catch (Exception ex)
             {
@@ -655,7 +668,9 @@ namespace POS.BackOffice.UI.ViewModels
                     ReorderLevel = BulkReorderLevel,
                     ItemSuppliers = new List<ItemSupplier>(),
                     PropertyMappings = new List<ItemPropertyMapping>(),
-                    IsSelectedForSupplierAssignment = false
+                    IsSelectedForSupplierAssignment = false,
+                    IsDeactivated = CurrentItem.IsDeactivated,
+                    DeactivatedAt = CurrentItem.IsDeactivated ? DateTime.Now : null
                 };
 
                 ApplyParentDisplayNames(standardVariant);
@@ -696,7 +711,9 @@ namespace POS.BackOffice.UI.ViewModels
                     ReorderLevel = BulkReorderLevel,
                     ItemSuppliers = new List<ItemSupplier>(),
                     PropertyMappings = new List<ItemPropertyMapping>(),
-                    IsSelectedForSupplierAssignment = false
+                    IsSelectedForSupplierAssignment = false,
+                    IsDeactivated = CurrentItem.IsDeactivated,
+                    DeactivatedAt = CurrentItem.IsDeactivated ? DateTime.Now : null
                 };
 
                 foreach (var selection in combo)
@@ -1505,6 +1522,8 @@ namespace POS.BackOffice.UI.ViewModels
         {
             string itemCode = BuildItemCode();
 
+            ApplyParentActivationStateToGeneratedVariants();
+
             if (!ValidateBeforeSave(itemCode))
                 return;
 
@@ -1635,6 +1654,38 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
+        private void ApplyParentActivationStateToGeneratedVariants()
+        {
+            if (!GeneratedVariants.Any())
+                return;
+
+            DateTime now = DateTime.Now;
+
+            if (CurrentItem.IsDeactivated)
+            {
+                foreach (var variant in GeneratedVariants)
+                {
+                    variant.IsDeactivated = true;
+                    variant.DeactivatedAt ??= now;
+                }
+
+                return;
+            }
+
+            bool allVariantsInactive = GeneratedVariants.All(v => v.IsDeactivated);
+
+            if (_loadedItemWasDeactivated || allVariantsInactive)
+            {
+                foreach (var variant in GeneratedVariants)
+                {
+                    variant.IsDeactivated = false;
+                    variant.DeactivatedAt = null;
+                }
+
+                StatusMessage = "Item is active. Variants were reactivated before saving.";
+            }
+        }
+
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task LoadMasterGridAsync()
         {
@@ -1691,6 +1742,7 @@ namespace POS.BackOffice.UI.ViewModels
         private void Clear()
         {
             _isClearing = true;
+            _loadedItemWasDeactivated = false;
 
             CurrentItem = new ItemParent
             {
@@ -2011,6 +2063,17 @@ namespace POS.BackOffice.UI.ViewModels
             if (!GeneratedVariants.Any())
             {
                 _messageBoxService.ShowWarning("Generate variants before saving.", "Validation Error");
+                return false;
+            }
+
+            int activeVariantCount = GeneratedVariants.Count(v => !v.IsDeactivated);
+
+            if (!CurrentItem.IsDeactivated && activeVariantCount == 0)
+            {
+                _messageBoxService.ShowWarning(
+                    "Active item must have at least one active variant.",
+                    "Validation Error");
+
                 return false;
             }
 
