@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -253,32 +253,114 @@ namespace POS.Core.Repositories
 
         private static void Validate(StoreSettings settings)
         {
-            if (string.IsNullOrWhiteSpace(settings.LegalName))
-                throw new InvalidOperationException("Company legal name is required.");
+            if (string.IsNullOrWhiteSpace(
+                    settings.LegalName))
+            {
+                throw new InvalidOperationException(
+                    "Business / legal name is required.");
+            }
 
-            if (string.IsNullOrWhiteSpace(settings.StoreName))
-                throw new InvalidOperationException("Store name is required.");
+            if (string.IsNullOrWhiteSpace(
+                    settings.StoreName))
+            {
+                throw new InvalidOperationException(
+                    "Store / trading name is required.");
+            }
 
-            if (settings.GlobalVatRate < 0m || settings.GlobalVatRate > 100m)
-                throw new InvalidOperationException("Global VAT rate must be between 0 and 100.");
+            ValidateMaximumLength(
+                settings.LegalName,
+                200,
+                "Business / legal name");
 
-            if (string.IsNullOrWhiteSpace(settings.CurrencyCode))
-                throw new InvalidOperationException("Currency code is required.");
+            ValidateMaximumLength(
+                settings.StoreName,
+                150,
+                "Store / trading name");
 
-            if (string.IsNullOrWhiteSpace(settings.CurrencySymbol))
-                throw new InvalidOperationException("Currency symbol is required.");
+            ValidateMaximumLength(
+                settings.Brn,
+                100,
+                "Business registration number");
 
-            if (string.IsNullOrWhiteSpace(settings.InvoicePrefix))
-                throw new InvalidOperationException("Invoice prefix is required.");
+            ValidateMaximumLength(
+                settings.TaxNo,
+                100,
+                "VAT registration number");
 
-            if (string.IsNullOrWhiteSpace(settings.PurchaseOrderPrefix))
-                throw new InvalidOperationException("Purchase order prefix is required.");
+            ValidateMaximumLength(
+                settings.AddressLine1,
+                250,
+                "Address line 1");
 
-            if (string.IsNullOrWhiteSpace(settings.QuotationPrefix))
-                throw new InvalidOperationException("Quotation prefix is required.");
+            ValidateMaximumLength(
+                settings.AddressLine2,
+                250,
+                "Address line 2");
 
-            if (settings.FinancialYearStartMonth < 1 || settings.FinancialYearStartMonth > 12)
-                throw new InvalidOperationException("Financial year start month must be between 1 and 12.");
+            ValidateMaximumLength(
+                settings.City,
+                100,
+                "City");
+
+            ValidateMaximumLength(
+                settings.PostalCode,
+                50,
+                "Postal code");
+
+            ValidateMaximumLength(
+                settings.Country,
+                100,
+                "Country");
+
+            ValidateMaximumLength(
+                settings.Phone,
+                100,
+                "Telephone");
+
+            ValidateMaximumLength(
+                settings.Email,
+                150,
+                "Email");
+
+            ValidateMaximumLength(
+                settings.ReceiptHeader,
+                1000,
+                "Receipt header");
+
+            ValidateMaximumLength(
+                settings.ReceiptFooter,
+                1000,
+                "Receipt footer");
+
+            // Legacy compatibility fields remain valid even though
+            // they are no longer exposed on the final simple page.
+            if (settings.GlobalVatRate < 0m ||
+                settings.GlobalVatRate > 100m)
+            {
+                throw new InvalidOperationException(
+                    "Stored legacy VAT rate must be between 0 and 100.");
+            }
+
+            if (settings.FinancialYearStartMonth < 1 ||
+                settings.FinancialYearStartMonth > 12)
+            {
+                throw new InvalidOperationException(
+                    "Stored financial year month must be between 1 and 12.");
+            }
+        }
+
+        private static void ValidateMaximumLength(
+            string? value,
+            int maximumLength,
+            string fieldName)
+        {
+            if ((value ?? string.Empty).Length >
+                maximumLength)
+            {
+                throw new InvalidOperationException(
+                    $"{fieldName} cannot exceed " +
+                    $"{maximumLength:N0} characters.");
+            }
         }
 
         private static string NormalizeText(string? value)

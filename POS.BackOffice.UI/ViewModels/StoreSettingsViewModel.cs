@@ -1,223 +1,122 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Linq;
+using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public partial class StoreSettingsViewModel : ObservableObject
+    public partial class StoreSettingsViewModel :
+        ObservableObject
     {
-        private readonly StoreSettingsRepository _repository;
+        private readonly StoreSettingsRepository
+            _storeSettingsRepository;
 
-        private int _settingsId;
-        private DateTime _createdAt;
+        private readonly AuthService
+            _authService;
 
-        public StoreSettingsViewModel(StoreSettingsRepository repository)
+        private StoreSettings?
+            _loadedSettings;
+
+        public StoreSettingsViewModel(
+            StoreSettingsRepository
+                storeSettingsRepository,
+            AuthService authService)
         {
-            _repository = repository;
+            _storeSettingsRepository =
+                storeSettingsRepository;
 
-            DateFormats = new ObservableCollection<string>
-            {
-                "dd/MM/yyyy",
-                "MM/dd/yyyy",
-                "yyyy-MM-dd"
-            };
-
-            FinancialYearStartMonths = new ObservableCollection<int>(
-                Enumerable.Range(1, 12));
-
-            TimeZones = new ObservableCollection<string>
-            {
-                "Sri Lanka Standard Time",
-                "India Standard Time",
-                "UTC",
-                "GMT Standard Time"
-            };
-
-            _ = LoadAsync();
+            _authService = authService;
         }
 
-        public ObservableCollection<string> DateFormats { get; }
-
-        public ObservableCollection<int> FinancialYearStartMonths { get; }
-
-        public ObservableCollection<string> TimeZones { get; }
-
-        // =========================================================
-        // COMPANY / STORE IDENTITY
-        // =========================================================
+        // =====================================================
+        // 1. STORE IDENTITY
+        // =====================================================
 
         [ObservableProperty]
-        private string _legalName = string.Empty;
+        private string _legalName =
+            string.Empty;
 
         [ObservableProperty]
-        private string _storeName = string.Empty;
+        private string _storeName =
+            string.Empty;
+
+        // =====================================================
+        // 2. ADDRESS & CONTACT
+        // =====================================================
 
         [ObservableProperty]
-        private string _brn = string.Empty;
+        private string _addressLine1 =
+            string.Empty;
 
         [ObservableProperty]
-        private string _taxNo = string.Empty;
+        private string _addressLine2 =
+            string.Empty;
 
         [ObservableProperty]
-        private string _addressLine1 = string.Empty;
+        private string _city =
+            string.Empty;
 
         [ObservableProperty]
-        private string _addressLine2 = string.Empty;
+        private string _postalCode =
+            string.Empty;
 
         [ObservableProperty]
-        private string _city = string.Empty;
+        private string _country =
+            "Sri Lanka";
 
         [ObservableProperty]
-        private string _postalCode = string.Empty;
+        private string _phone =
+            string.Empty;
 
         [ObservableProperty]
-        private string _country = "Sri Lanka";
+        private string _email =
+            string.Empty;
+
+        // =====================================================
+        // 3. BUSINESS / VAT DETAILS
+        // =====================================================
 
         [ObservableProperty]
-        private string _phone = string.Empty;
+        private string _brn =
+            string.Empty;
 
         [ObservableProperty]
-        private string _email = string.Empty;
+        private string _taxNo =
+            string.Empty;
 
-        // =========================================================
-        // TAX / CURRENCY
-        // =========================================================
-
-        [ObservableProperty]
-        private decimal _globalVatRate = 0m;
+        // =====================================================
+        // 4. RECEIPT INFORMATION
+        // =====================================================
 
         [ObservableProperty]
-        private string _currencyCode = "LKR";
+        private string _receiptHeader =
+            string.Empty;
 
         [ObservableProperty]
-        private string _currencySymbol = "Rs.";
+        private string _receiptFooter =
+            "Thank You! Come Again.";
 
-        // =========================================================
-        // DOCUMENT PREFIXES
-        // =========================================================
-
-        [ObservableProperty]
-        private string _invoicePrefix = "INV";
+        // =====================================================
+        // 5. PAGE STATUS
+        // =====================================================
 
         [ObservableProperty]
-        private string _purchaseOrderPrefix = "PO";
+        private bool _isBusy;
 
         [ObservableProperty]
-        private string _quotationPrefix = "QT";
-
-        // =========================================================
-        // RECEIPT / INVOICE TEXT
-        // =========================================================
+        private string _statusMessage =
+            "Ready.";
 
         [ObservableProperty]
-        private string _receiptHeader = string.Empty;
+        private string _statusColor =
+            "#666666";
 
         [ObservableProperty]
-        private string _receiptFooter = "Thank You! Come Again.";
-
-        [ObservableProperty]
-        private string _invoiceTerms = string.Empty;
-
-        // =========================================================
-        // REGIONAL / FINANCIAL
-        // =========================================================
-
-        [ObservableProperty]
-        private string _timeZoneId = "Sri Lanka Standard Time";
-
-        [ObservableProperty]
-        private string _dateFormat = "dd/MM/yyyy";
-
-        [ObservableProperty]
-        private int _financialYearStartMonth = 1;
-
-        // =========================================================
-        // STATUS
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _isBusy = false;
-
-        [ObservableProperty]
-        private string _statusMessage = "Ready.";
-
-        [ObservableProperty]
-        private string _statusColor = "#64748B";
-
-        // =========================================================
-        // COMPATIBILITY PROPERTIES FOR OLD DRAFT BINDINGS
-        // These allow old StoreConfigurationView bindings to work
-        // until the new StoreSettingsView.xaml is created.
-        // =========================================================
-
-        public string Address1
-        {
-            get => AddressLine1;
-            set
-            {
-                AddressLine1 = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string InvPrefix
-        {
-            get => InvoicePrefix;
-            set
-            {
-                InvoicePrefix = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string PoPrefix
-        {
-            get => PurchaseOrderPrefix;
-            set
-            {
-                PurchaseOrderPrefix = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string QuotePrefix
-        {
-            get => QuotationPrefix;
-            set
-            {
-                QuotationPrefix = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string TimeZone
-        {
-            get => TimeZoneId;
-            set
-            {
-                TimeZoneId = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public int FinYearStart
-        {
-            get => FinancialYearStartMonth;
-            set
-            {
-                FinancialYearStartMonth = value;
-                OnPropertyChanged();
-            }
-        }
-
-        // =========================================================
-        // COMMANDS
-        // =========================================================
+        private string _lastUpdatedText =
+            "Not saved yet.";
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -228,17 +127,34 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 IsBusy = true;
-                SetStatus("Loading store settings...", "#3B82F6");
 
-                StoreSettings settings = await _repository.GetOrCreateDefaultAsync();
+                SetStatus(
+                    "Loading store settings...",
+                    "#003366");
 
-                ApplySettingsToViewModel(settings);
+                StoreSettings settings =
+                    await _storeSettingsRepository
+                        .GetOrCreateDefaultAsync();
 
-                SetStatus("Store settings loaded.", "#10B981");
+                _loadedSettings = settings;
+
+                ApplySettings(settings);
+
+                SetStatus(
+                    "Store settings loaded.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to load store settings: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Load Store Settings",
+                    ex);
+
+                SetStatus(
+                    "Store settings could not be loaded. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "#B91C1C");
             }
             finally
             {
@@ -252,24 +168,65 @@ namespace POS.BackOffice.UI.ViewModels
             if (IsBusy)
                 return;
 
+            if (_loadedSettings == null)
+            {
+                SetStatus(
+                    "Load the store settings before saving.",
+                    "#B91C1C");
+
+                return;
+            }
+
+            string validationMessage =
+                ValidateInputs();
+
+            if (!string.IsNullOrWhiteSpace(
+                    validationMessage))
+            {
+                SetStatus(
+                    validationMessage,
+                    "#B91C1C");
+
+                return;
+            }
+
             try
             {
                 IsBusy = true;
-                SetStatus("Saving store settings...", "#3B82F6");
 
-                StoreSettings settings = BuildSettingsFromViewModel();
+                SetStatus(
+                    "Saving store settings...",
+                    "#003366");
 
-                StoreSettings savedSettings = await _repository.SaveAsync(
-                    settings,
-                    "BackOffice");
+                ApplyEditableValuesToModel(
+                    _loadedSettings);
 
-                ApplySettingsToViewModel(savedSettings);
+                StoreSettings saved =
+                    await _storeSettingsRepository
+                        .SaveAsync(
+                            _loadedSettings,
+                            GetCurrentUserName());
 
-                SetStatus("Store settings saved successfully.", "#10B981");
+                _loadedSettings = saved;
+
+                ApplySettings(saved);
+
+                SetStatus(
+                    "Store settings saved. " +
+                    "The next receipt will use the updated information.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Save failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Save Store Settings",
+                    ex);
+
+                SetStatus(
+                    $"Store settings were not saved: " +
+                    $"{GetFriendlyMessage(ex)}",
+                    "#B91C1C");
             }
             finally
             {
@@ -280,110 +237,250 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task DiscardChangesAsync()
         {
-            if (IsBusy)
-                return;
-
             await LoadAsync();
         }
 
-        // =========================================================
-        // LOAD / SAVE MAPPING
-        // =========================================================
-
-        private void ApplySettingsToViewModel(StoreSettings settings)
+        private void ApplySettings(
+            StoreSettings settings)
         {
-            if (settings == null)
-                settings = StoreSettingsRepository.CreateDefaultSettings();
+            LegalName =
+                Normalize(settings.LegalName);
 
-            _settingsId = settings.Id;
-            _createdAt = settings.CreatedAt;
+            StoreName =
+                Normalize(settings.StoreName);
 
-            LegalName = settings.LegalName;
-            StoreName = settings.StoreName;
-            Brn = settings.Brn;
-            TaxNo = settings.TaxNo;
+            AddressLine1 =
+                Normalize(settings.AddressLine1);
 
-            AddressLine1 = settings.AddressLine1;
-            AddressLine2 = settings.AddressLine2;
-            City = settings.City;
-            PostalCode = settings.PostalCode;
-            Country = settings.Country;
-            Phone = settings.Phone;
-            Email = settings.Email;
+            AddressLine2 =
+                Normalize(settings.AddressLine2);
 
-            GlobalVatRate = settings.GlobalVatRate;
-            CurrencyCode = settings.CurrencyCode;
-            CurrencySymbol = settings.CurrencySymbol;
+            City =
+                Normalize(settings.City);
 
-            InvoicePrefix = settings.InvoicePrefix;
-            PurchaseOrderPrefix = settings.PurchaseOrderPrefix;
-            QuotationPrefix = settings.QuotationPrefix;
+            PostalCode =
+                Normalize(settings.PostalCode);
 
-            ReceiptHeader = settings.ReceiptHeader;
-            ReceiptFooter = settings.ReceiptFooter;
-            InvoiceTerms = settings.InvoiceTerms;
+            Country =
+                string.IsNullOrWhiteSpace(
+                    settings.Country)
+                    ? "Sri Lanka"
+                    : settings.Country.Trim();
 
-            TimeZoneId = settings.TimeZoneId;
-            DateFormat = settings.DateFormat;
-            FinancialYearStartMonth = settings.FinancialYearStartMonth;
+            Phone =
+                Normalize(settings.Phone);
 
-            RaiseCompatibilityPropertyChanges();
-        }
+            Email =
+                Normalize(settings.Email);
 
-        private StoreSettings BuildSettingsFromViewModel()
-        {
-            return new StoreSettings
+            Brn =
+                Normalize(settings.Brn);
+
+            TaxNo =
+                Normalize(settings.TaxNo);
+
+            ReceiptHeader =
+                NormalizeMultiline(
+                    settings.ReceiptHeader);
+
+            ReceiptFooter =
+                NormalizeMultiline(
+                    settings.ReceiptFooter);
+
+            if (string.IsNullOrWhiteSpace(
+                    ReceiptFooter))
             {
-                Id = _settingsId,
-                CreatedAt = _createdAt == default ? DateTime.Now : _createdAt,
+                ReceiptFooter =
+                    "Thank You! Come Again.";
+            }
 
-                LegalName = LegalName,
-                StoreName = StoreName,
-                Brn = Brn,
-                TaxNo = TaxNo,
-
-                AddressLine1 = AddressLine1,
-                AddressLine2 = AddressLine2,
-                City = City,
-                PostalCode = PostalCode,
-                Country = Country,
-                Phone = Phone,
-                Email = Email,
-
-                GlobalVatRate = GlobalVatRate,
-                CurrencyCode = CurrencyCode,
-                CurrencySymbol = CurrencySymbol,
-
-                InvoicePrefix = InvoicePrefix,
-                PurchaseOrderPrefix = PurchaseOrderPrefix,
-                QuotationPrefix = QuotationPrefix,
-
-                ReceiptHeader = ReceiptHeader,
-                ReceiptFooter = ReceiptFooter,
-                InvoiceTerms = InvoiceTerms,
-
-                TimeZoneId = TimeZoneId,
-                DateFormat = DateFormat,
-                FinancialYearStartMonth = FinancialYearStartMonth,
-
-                IsActive = true
-            };
+            LastUpdatedText =
+                settings.UpdatedAt.HasValue
+                    ? $"{settings.UpdatedAt.Value:yyyy-MM-dd HH:mm} " +
+                      $"by {DisplayOrSystem(settings.UpdatedBy)}"
+                    : $"Created {settings.CreatedAt:yyyy-MM-dd HH:mm}";
         }
 
-        private void RaiseCompatibilityPropertyChanges()
+        private void ApplyEditableValuesToModel(
+            StoreSettings settings)
         {
-            OnPropertyChanged(nameof(Address1));
-            OnPropertyChanged(nameof(InvPrefix));
-            OnPropertyChanged(nameof(PoPrefix));
-            OnPropertyChanged(nameof(QuotePrefix));
-            OnPropertyChanged(nameof(TimeZone));
-            OnPropertyChanged(nameof(FinYearStart));
+            // Only the fields exposed on this final page are changed.
+            // Hidden legacy fields remain untouched for compatibility.
+            settings.LegalName = LegalName;
+            settings.StoreName = StoreName;
+
+            settings.AddressLine1 = AddressLine1;
+            settings.AddressLine2 = AddressLine2;
+            settings.City = City;
+            settings.PostalCode = PostalCode;
+            settings.Country = Country;
+            settings.Phone = Phone;
+            settings.Email = Email;
+
+            settings.Brn = Brn;
+            settings.TaxNo = TaxNo;
+
+            settings.ReceiptHeader = ReceiptHeader;
+            settings.ReceiptFooter = ReceiptFooter;
         }
 
-        private void SetStatus(string message, string color)
+        private string ValidateInputs()
         {
-            StatusMessage = message;
-            StatusColor = color;
+            string legalName =
+                Normalize(LegalName);
+
+            string storeName =
+                Normalize(StoreName);
+
+            if (string.IsNullOrWhiteSpace(
+                    legalName))
+            {
+                return "Business / legal name is required.";
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    storeName))
+            {
+                return "Store / trading name is required.";
+            }
+
+            if (legalName.Length > 200)
+            {
+                return "Business / legal name cannot exceed 200 characters.";
+            }
+
+            if (storeName.Length > 150)
+            {
+                return "Store / trading name cannot exceed 150 characters.";
+            }
+
+            if (Normalize(Brn).Length > 100)
+            {
+                return "Business registration number cannot exceed 100 characters.";
+            }
+
+            if (Normalize(TaxNo).Length > 100)
+            {
+                return "VAT registration number cannot exceed 100 characters.";
+            }
+
+            if (Normalize(AddressLine1).Length > 250 ||
+                Normalize(AddressLine2).Length > 250)
+            {
+                return "Each address line cannot exceed 250 characters.";
+            }
+
+            if (Normalize(City).Length > 100 ||
+                Normalize(Country).Length > 100)
+            {
+                return "City and country cannot exceed 100 characters.";
+            }
+
+            if (Normalize(PostalCode).Length > 50)
+            {
+                return "Postal code cannot exceed 50 characters.";
+            }
+
+            if (Normalize(Phone).Length > 100)
+            {
+                return "Telephone cannot exceed 100 characters.";
+            }
+
+            string email =
+                Normalize(Email);
+
+            if (email.Length > 150)
+            {
+                return "Email cannot exceed 150 characters.";
+            }
+
+            if (!string.IsNullOrWhiteSpace(email) &&
+                (!email.Contains('@') ||
+                 email.StartsWith('@') ||
+                 email.EndsWith('@')))
+            {
+                return "Enter a valid email address or leave it blank.";
+            }
+
+            if (NormalizeMultiline(
+                    ReceiptHeader).Length > 1000)
+            {
+                return "Receipt header cannot exceed 1,000 characters.";
+            }
+
+            if (NormalizeMultiline(
+                    ReceiptFooter).Length > 1000)
+            {
+                return "Receipt footer cannot exceed 1,000 characters.";
+            }
+
+            return string.Empty;
+        }
+
+        private string GetCurrentUserName()
+        {
+            return string.IsNullOrWhiteSpace(
+                _authService
+                    .CurrentUser
+                    ?.Username)
+                ? "Administrator"
+                : _authService
+                    .CurrentUser
+                    .Username;
+        }
+
+        private static string GetFriendlyMessage(
+            Exception exception)
+        {
+            if (exception is
+                InvalidOperationException &&
+                !string.IsNullOrWhiteSpace(
+                    exception.Message))
+            {
+                return exception.Message;
+            }
+
+            return
+                "An unexpected error occurred. " +
+                "Technical details were saved in the local POS Logs folder.";
+        }
+
+        private void SetStatus(
+            string message,
+            string color)
+        {
+            StatusMessage =
+                string.IsNullOrWhiteSpace(message)
+                    ? "Ready."
+                    : message;
+
+            StatusColor =
+                string.IsNullOrWhiteSpace(color)
+                    ? "#666666"
+                    : color;
+        }
+
+        private static string Normalize(
+            string? value)
+        {
+            return (value ?? string.Empty).Trim();
+        }
+
+        private static string NormalizeMultiline(
+            string? value)
+        {
+            return (value ?? string.Empty)
+                .Replace("\r\n", "\n")
+                .Replace("\r", "\n")
+                .Trim();
+        }
+
+        private static string DisplayOrSystem(
+            string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? "System"
+                : value.Trim();
         }
     }
 }

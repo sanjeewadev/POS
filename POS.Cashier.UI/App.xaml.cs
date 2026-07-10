@@ -50,6 +50,7 @@ namespace POS.Cashier.UI
             services.AddTransient<TillRepository>();
             services.AddTransient<CustomerRepository>();
             services.AddTransient<TerminalSettingsRepository>();
+            services.AddTransient<StoreSettingsRepository>();
 
             services.AddSingleton<AuthService>();
             services.AddSingleton<CashierLockService>();

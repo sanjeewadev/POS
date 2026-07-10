@@ -4,12 +4,16 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using POS.Core.Models;
+using POS.Core.Repositories;
 
 namespace POS.Cashier.UI.Services
 {
     public sealed class EscPosReceiptPrintService :
         IReceiptPrintService
     {
+        private readonly StoreSettingsRepository
+            _storeSettingsRepository;
+
         private static readonly byte[] EscInitialize =
         {
             27, 64
@@ -50,7 +54,15 @@ namespace POS.Cashier.UI.Services
             27, 112, 0, 25, 250
         };
 
-        public Task PrintReceiptAsync(
+        public EscPosReceiptPrintService(
+            StoreSettingsRepository
+                storeSettingsRepository)
+        {
+            _storeSettingsRepository =
+                storeSettingsRepository;
+        }
+
+        public async Task PrintReceiptAsync(
             SalesHeader transaction,
             string printerName,
             int paperWidth)
@@ -63,29 +75,26 @@ namespace POS.Cashier.UI.Services
 
             ValidatePrinterName(printerName);
 
+            StoreSettings storeSettings =
+                await _storeSettingsRepository
+                    .GetOrCreateDefaultAsync();
+
             int columns =
                 GetColumns(paperWidth);
 
-            return Task.Run(() =>
+            await Task.Run(() =>
             {
                 var bytes = new List<byte>();
 
                 bytes.AddRange(EscInitialize);
 
-                bytes.AddRange(AlignCenter);
-                bytes.AddRange(BoldOn);
-                AddText(
+                AddStoreHeader(
                     bytes,
-                    "BANDULA TRADE CENTER\n");
-                bytes.AddRange(BoldOff);
-                AddText(
-                    bytes,
-                    "No 123, Main Street\n");
-                AddText(
-                    bytes,
-                    "Tel: 011-1234567\n\n");
+                    storeSettings,
+                    columns);
 
                 bytes.AddRange(AlignLeft);
+
                 AddText(
                     bytes,
                     $"Inv No : " +
@@ -119,11 +128,12 @@ namespace POS.Cashier.UI.Services
 
                         string quantityAndPrice =
                             $"{line.Quantity:0.###} x " +
-                            $"{line.UnitPrice:0.00}";
+                            $"{FormatMoney(line.UnitPrice, storeSettings)}";
 
                         string total =
-                            line.LineTotal
-                                .ToString("0.00");
+                            FormatMoney(
+                                line.LineTotal,
+                                storeSettings);
 
                         AddText(
                             bytes,
@@ -144,14 +154,14 @@ namespace POS.Cashier.UI.Services
                 AddText(
                     bytes,
                     $"Gross Total: " +
-                    $"{transaction.GrossTotal:0.00}\n");
+                    $"{FormatMoney(transaction.GrossTotal, storeSettings)}\n");
 
                 if (transaction.TotalDiscount > 0m)
                 {
                     AddText(
                         bytes,
                         $"Discount   : " +
-                        $"{transaction.TotalDiscount:0.00}\n");
+                        $"{FormatMoney(transaction.TotalDiscount, storeSettings)}\n");
                 }
 
                 bytes.AddRange(BoldOn);
@@ -159,7 +169,7 @@ namespace POS.Cashier.UI.Services
                 AddText(
                     bytes,
                     $"NET TOTAL  : " +
-                    $"{transaction.NetTotal:0.00}\n");
+                    $"{FormatMoney(transaction.NetTotal, storeSettings)}\n");
 
                 bytes.AddRange(BoldOff);
 
@@ -167,18 +177,17 @@ namespace POS.Cashier.UI.Services
                     bytes,
                     $"Tendered (" +
                     $"{SafeText(transaction.PaymentMethod, 10)}): " +
-                    $"{transaction.AmountTendered:0.00}\n");
+                    $"{FormatMoney(transaction.AmountTendered, storeSettings)}\n");
 
                 AddText(
                     bytes,
                     $"Change     : " +
-                    $"{transaction.BalanceReturned:0.00}\n");
+                    $"{FormatMoney(transaction.BalanceReturned, storeSettings)}\n");
 
-                bytes.AddRange(AlignCenter);
-
-                AddText(
+                AddStoreFooter(
                     bytes,
-                    "\nThank You! Come Again.\n\n\n");
+                    storeSettings,
+                    columns);
 
                 bytes.AddRange(PaperCut);
 
@@ -199,7 +208,7 @@ namespace POS.Cashier.UI.Services
             });
         }
 
-        public Task PrintQuotationAsync(
+        public async Task PrintQuotationAsync(
             QuotationPrintRequest request,
             string printerName,
             int paperWidth)
@@ -219,37 +228,37 @@ namespace POS.Cashier.UI.Services
 
             ValidatePrinterName(printerName);
 
+            StoreSettings storeSettings =
+                await _storeSettingsRepository
+                    .GetOrCreateDefaultAsync();
+
             int columns =
                 GetColumns(paperWidth);
 
-            return Task.Run(() =>
+            await Task.Run(() =>
             {
                 var bytes = new List<byte>();
 
                 bytes.AddRange(EscInitialize);
 
+                AddStoreHeader(
+                    bytes,
+                    storeSettings,
+                    columns);
+
                 bytes.AddRange(AlignCenter);
                 bytes.AddRange(BoldOn);
-                AddText(
-                    bytes,
-                    "BANDULA TRADE CENTER\n");
-                bytes.AddRange(BoldOff);
-                AddText(
-                    bytes,
-                    "No 123, Main Street\n");
-                AddText(
-                    bytes,
-                    "Tel: 011-1234567\n\n");
 
-                bytes.AddRange(BoldOn);
                 AddText(
                     bytes,
                     "PRICE QUOTATION\n");
+
                 bytes.AddRange(BoldOff);
 
                 AddText(
                     bytes,
                     "NOT A TAX INVOICE\n");
+
                 AddText(
                     bytes,
                     "NO STOCK RESERVED\n\n");
@@ -305,11 +314,12 @@ namespace POS.Cashier.UI.Services
                     string quantityAndPrice =
                         $"{line.Quantity:0.###} " +
                         $"{SafeText(line.Uom, 6)} x " +
-                        $"{line.UnitPrice:0.00}";
+                        $"{FormatMoney(line.UnitPrice, storeSettings)}";
 
                     string total =
-                        line.LineTotal
-                            .ToString("0.00");
+                        FormatMoney(
+                            line.LineTotal,
+                            storeSettings);
 
                     AddText(
                         bytes,
@@ -325,8 +335,9 @@ namespace POS.Cashier.UI.Services
                             bytes,
                             BuildTwoColumnLine(
                                 "Discount",
-                                line.DiscountAmount
-                                    .ToString("0.00"),
+                                FormatMoney(
+                                    line.DiscountAmount,
+                                    storeSettings),
                                 columns) +
                             "\n");
                     }
@@ -341,14 +352,14 @@ namespace POS.Cashier.UI.Services
                 AddText(
                     bytes,
                     $"Gross Total: " +
-                    $"{request.GrossTotal:0.00}\n");
+                    $"{FormatMoney(request.GrossTotal, storeSettings)}\n");
 
                 if (request.TotalDiscount > 0m)
                 {
                     AddText(
                         bytes,
                         $"Discount   : " +
-                        $"{request.TotalDiscount:0.00}\n");
+                        $"{FormatMoney(request.TotalDiscount, storeSettings)}\n");
                 }
 
                 bytes.AddRange(BoldOn);
@@ -356,7 +367,7 @@ namespace POS.Cashier.UI.Services
                 AddText(
                     bytes,
                     $"NET TOTAL  : " +
-                    $"{request.NetTotal:0.00}\n");
+                    $"{FormatMoney(request.NetTotal, storeSettings)}\n");
 
                 bytes.AddRange(BoldOff);
                 bytes.AddRange(AlignCenter);
@@ -364,12 +375,15 @@ namespace POS.Cashier.UI.Services
                 AddText(
                     bytes,
                     "\nPrices may change.\n");
+
                 AddText(
                     bytes,
                     "Final stock availability must be confirmed at billing time.\n");
-                AddText(
+
+                AddStoreFooter(
                     bytes,
-                    "\nThank You.\n\n\n");
+                    storeSettings,
+                    columns);
 
                 bytes.AddRange(PaperCut);
 
@@ -412,6 +426,223 @@ namespace POS.Cashier.UI.Services
                         $"{printerName}");
                 }
             });
+        }
+
+        private static void AddStoreHeader(
+            List<byte> bytes,
+            StoreSettings settings,
+            int columns)
+        {
+            bytes.AddRange(AlignCenter);
+            bytes.AddRange(BoldOn);
+
+            string storeName =
+                FirstNonEmpty(
+                    settings.StoreName,
+                    settings.LegalName,
+                    "My Store");
+
+            AddText(
+                bytes,
+                SafeText(
+                    storeName,
+                    columns) +
+                "\n");
+
+            bytes.AddRange(BoldOff);
+
+            if (!string.IsNullOrWhiteSpace(
+                    settings.LegalName) &&
+                !string.Equals(
+                    settings.LegalName.Trim(),
+                    storeName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                AddText(
+                    bytes,
+                    SafeText(
+                        settings.LegalName,
+                        columns) +
+                    "\n");
+            }
+
+            AddMultilineCentered(
+                bytes,
+                settings.ReceiptHeader,
+                columns);
+
+            AddOptionalCenteredLine(
+                bytes,
+                settings.AddressLine1,
+                columns);
+
+            AddOptionalCenteredLine(
+                bytes,
+                settings.AddressLine2,
+                columns);
+
+            string cityLine =
+                JoinNonEmpty(
+                    ", ",
+                    settings.City,
+                    settings.PostalCode);
+
+            AddOptionalCenteredLine(
+                bytes,
+                cityLine,
+                columns);
+
+            AddOptionalCenteredLine(
+                bytes,
+                settings.Country,
+                columns);
+
+            if (!string.IsNullOrWhiteSpace(
+                    settings.Phone))
+            {
+                AddOptionalCenteredLine(
+                    bytes,
+                    $"Tel: {settings.Phone.Trim()}",
+                    columns);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    settings.Email))
+            {
+                AddOptionalCenteredLine(
+                    bytes,
+                    $"Email: {settings.Email.Trim()}",
+                    columns);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    settings.Brn))
+            {
+                AddOptionalCenteredLine(
+                    bytes,
+                    $"BRN: {settings.Brn.Trim()}",
+                    columns);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    settings.TaxNo))
+            {
+                AddOptionalCenteredLine(
+                    bytes,
+                    $"VAT No: {settings.TaxNo.Trim()}",
+                    columns);
+            }
+
+            AddText(bytes, "\n");
+        }
+
+        private static void AddStoreFooter(
+            List<byte> bytes,
+            StoreSettings settings,
+            int columns)
+        {
+            bytes.AddRange(AlignCenter);
+            AddText(bytes, "\n");
+
+            string footer =
+                string.IsNullOrWhiteSpace(
+                    settings.ReceiptFooter)
+                    ? "Thank You! Come Again."
+                    : settings.ReceiptFooter;
+
+            AddMultilineCentered(
+                bytes,
+                footer,
+                columns);
+
+            AddText(
+                bytes,
+                "\n\n");
+        }
+
+        private static void AddMultilineCentered(
+            List<byte> bytes,
+            string? value,
+            int columns)
+        {
+            string text =
+                (value ?? string.Empty)
+                    .Replace("\r\n", "\n")
+                    .Replace("\r", "\n")
+                    .Trim();
+
+            if (string.IsNullOrWhiteSpace(text))
+                return;
+
+            foreach (string line in
+                     text.Split('\n'))
+            {
+                AddOptionalCenteredLine(
+                    bytes,
+                    line,
+                    columns);
+            }
+        }
+
+        private static void AddOptionalCenteredLine(
+            List<byte> bytes,
+            string? value,
+            int columns)
+        {
+            string line =
+                SafeText(
+                    value,
+                    columns);
+
+            if (string.IsNullOrWhiteSpace(line))
+                return;
+
+            AddText(
+                bytes,
+                line + "\n");
+        }
+
+        private static string FormatMoney(
+            decimal value,
+            StoreSettings settings)
+        {
+            string symbol =
+                string.IsNullOrWhiteSpace(
+                    settings.CurrencySymbol)
+                    ? "Rs."
+                    : settings.CurrencySymbol.Trim();
+
+            return $"{symbol} {value:0.00}";
+        }
+
+        private static string JoinNonEmpty(
+            string separator,
+            params string?[] values)
+        {
+            var parts =
+                new List<string>();
+
+            foreach (string? value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    parts.Add(value.Trim());
+            }
+
+            return string.Join(
+                separator,
+                parts);
+        }
+
+        private static string FirstNonEmpty(
+            params string?[] values)
+        {
+            foreach (string? value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value.Trim();
+            }
+
+            return string.Empty;
         }
 
         private static int GetColumns(
@@ -522,138 +753,126 @@ namespace POS.Cashier.UI.Services
             CharSet = CharSet.Unicode)]
         private sealed class DocInfo
         {
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string DocumentName =
+            [MarshalAs(
+                UnmanagedType.LPWStr)]
+            public string DocName =
                 string.Empty;
 
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string? OutputFile;
+            [MarshalAs(
+                UnmanagedType.LPWStr)]
+            public string OutputFile =
+                string.Empty;
 
-            [MarshalAs(UnmanagedType.LPWStr)]
+            [MarshalAs(
+                UnmanagedType.LPWStr)]
             public string DataType =
                 "RAW";
         }
 
         [DllImport(
-            "winspool.Drv",
+            "winspool.drv",
             EntryPoint = "OpenPrinterW",
             SetLastError = true,
             CharSet = CharSet.Unicode,
             ExactSpelling = true,
             CallingConvention =
                 CallingConvention.StdCall)]
+        [return: MarshalAs(
+            UnmanagedType.Bool)]
         private static extern bool OpenPrinter(
-            [MarshalAs(UnmanagedType.LPWStr)]
             string printerName,
             out IntPtr printerHandle,
-            IntPtr defaults);
+            IntPtr defaultPrinter);
 
         [DllImport(
-            "winspool.Drv",
-            EntryPoint = "ClosePrinter",
-            SetLastError = true,
-            ExactSpelling = true,
-            CallingConvention =
-                CallingConvention.StdCall)]
-        private static extern bool ClosePrinter(
-            IntPtr printerHandle);
-
-        [DllImport(
-            "winspool.Drv",
-            EntryPoint = "StartDocPrinterW",
+            "winspool.drv",
             SetLastError = true,
             CharSet = CharSet.Unicode,
             ExactSpelling = true,
             CallingConvention =
                 CallingConvention.StdCall)]
-        private static extern bool StartDocPrinter(
+        [return: MarshalAs(
+            UnmanagedType.Bool)]
+        private static extern bool ClosePrinter(
+            IntPtr printerHandle);
+
+        [DllImport(
+            "winspool.drv",
+            SetLastError = true,
+            CharSet = CharSet.Unicode,
+            ExactSpelling = true,
+            CallingConvention =
+                CallingConvention.StdCall)]
+        [return: MarshalAs(
+            UnmanagedType.Bool)]
+        private static extern bool StartDocPrinterW(
             IntPtr printerHandle,
             int level,
-            [In, MarshalAs(
-                UnmanagedType.LPStruct)]
+            [In]
             DocInfo documentInfo);
 
         [DllImport(
-            "winspool.Drv",
-            EntryPoint = "EndDocPrinter",
+            "winspool.drv",
             SetLastError = true,
             ExactSpelling = true,
             CallingConvention =
                 CallingConvention.StdCall)]
+        [return: MarshalAs(
+            UnmanagedType.Bool)]
         private static extern bool EndDocPrinter(
             IntPtr printerHandle);
 
         [DllImport(
-            "winspool.Drv",
-            EntryPoint = "StartPagePrinter",
+            "winspool.drv",
             SetLastError = true,
             ExactSpelling = true,
             CallingConvention =
                 CallingConvention.StdCall)]
+        [return: MarshalAs(
+            UnmanagedType.Bool)]
         private static extern bool StartPagePrinter(
             IntPtr printerHandle);
 
         [DllImport(
-            "winspool.Drv",
-            EntryPoint = "EndPagePrinter",
+            "winspool.drv",
             SetLastError = true,
             ExactSpelling = true,
             CallingConvention =
                 CallingConvention.StdCall)]
+        [return: MarshalAs(
+            UnmanagedType.Bool)]
         private static extern bool EndPagePrinter(
             IntPtr printerHandle);
 
         [DllImport(
-            "winspool.Drv",
-            EntryPoint = "WritePrinter",
+            "winspool.drv",
             SetLastError = true,
             ExactSpelling = true,
             CallingConvention =
                 CallingConvention.StdCall)]
+        [return: MarshalAs(
+            UnmanagedType.Bool)]
         private static extern bool WritePrinter(
             IntPtr printerHandle,
             IntPtr bytes,
-            int byteCount,
-            out int bytesWritten);
+            int count,
+            out int written);
 
         public static bool SendBytesToPrinter(
             string printerName,
-            byte[] data,
-            string documentName =
-                "POS Raw Print")
+            byte[] bytes,
+            string documentName)
         {
-            if (string.IsNullOrWhiteSpace(
-                    printerName))
-            {
-                return false;
-            }
-
-            if (data == null ||
-                data.Length == 0)
-            {
-                return false;
-            }
+            IntPtr printerHandle =
+                IntPtr.Zero;
 
             IntPtr unmanagedBytes =
                 IntPtr.Zero;
 
-            IntPtr printerHandle =
-                IntPtr.Zero;
-
             try
             {
-                unmanagedBytes =
-                    Marshal.AllocCoTaskMem(
-                        data.Length);
-
-                Marshal.Copy(
-                    data,
-                    0,
-                    unmanagedBytes,
-                    data.Length);
-
                 if (!OpenPrinter(
-                        printerName.Trim(),
+                        printerName,
                         out printerHandle,
                         IntPtr.Zero))
                 {
@@ -663,20 +882,23 @@ namespace POS.Cashier.UI.Services
                 var documentInfo =
                     new DocInfo
                     {
-                        DocumentName =
+                        DocName =
                             string.IsNullOrWhiteSpace(
                                 documentName)
-                                ? "POS Raw Print"
-                                : documentName.Trim()
+                                ? "POS Document"
+                                : documentName,
+                        DataType = "RAW"
                     };
 
-                if (!StartDocPrinter(
+                if (!StartDocPrinterW(
                         printerHandle,
                         1,
                         documentInfo))
                 {
                     return false;
                 }
+
+                bool documentStarted = true;
 
                 try
                 {
@@ -686,45 +908,55 @@ namespace POS.Cashier.UI.Services
                         return false;
                     }
 
+                    bool pageStarted = true;
+
                     try
                     {
-                        bool success =
-                            WritePrinter(
-                                printerHandle,
-                                unmanagedBytes,
-                                data.Length,
-                                out int bytesWritten);
+                        unmanagedBytes =
+                            Marshal.AllocCoTaskMem(
+                                bytes.Length);
 
-                        return success &&
-                               bytesWritten ==
-                               data.Length;
+                        Marshal.Copy(
+                            bytes,
+                            0,
+                            unmanagedBytes,
+                            bytes.Length);
+
+                        return WritePrinter(
+                                   printerHandle,
+                                   unmanagedBytes,
+                                   bytes.Length,
+                                   out int written) &&
+                               written == bytes.Length;
                     }
                     finally
                     {
-                        EndPagePrinter(
-                            printerHandle);
+                        if (pageStarted)
+                            EndPagePrinter(
+                                printerHandle);
                     }
                 }
                 finally
                 {
-                    EndDocPrinter(
-                        printerHandle);
+                    if (documentStarted)
+                        EndDocPrinter(
+                            printerHandle);
                 }
             }
             finally
             {
-                if (printerHandle !=
-                    IntPtr.Zero)
-                {
-                    ClosePrinter(
-                        printerHandle);
-                }
-
                 if (unmanagedBytes !=
                     IntPtr.Zero)
                 {
                     Marshal.FreeCoTaskMem(
                         unmanagedBytes);
+                }
+
+                if (printerHandle !=
+                    IntPtr.Zero)
+                {
+                    ClosePrinter(
+                        printerHandle);
                 }
             }
         }
