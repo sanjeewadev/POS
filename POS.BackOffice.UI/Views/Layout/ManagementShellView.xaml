@@ -1,10 +1,12 @@
-﻿<Window x:Class="POS.BackOffice.UI.Views.Layout.ManagementShellView"
+<Window x:Class="POS.BackOffice.UI.Views.Layout.ManagementShellView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="KUMARA ARCADE - KOTTAWA (KT)" Height="768" Width="1024"
+        Title="KUMARA ARCADE - KOTTAWA (KT)"
+        Height="768"
+        Width="1024"
         WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         Background="#E5E5E5">
@@ -16,109 +18,180 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Menu Grid.Row="0" Background="#F0F0F0" BorderBrush="DarkGray" BorderThickness="0,0,0,1" Padding="2,2" VerticalAlignment="Center">
+        <Menu Grid.Row="0"
+              Background="#F0F0F0"
+              BorderBrush="DarkGray"
+              BorderThickness="0,0,0,1"
+              Padding="2,2"
+              VerticalAlignment="Center">
 
             <MenuItem Header="_File">
-                <Button Content="Terminal Settings" Command="{Binding NavigateToTerminalSettingsCommand}" />
+                <MenuItem Header="Terminal Settings"
+                          Command="{Binding NavigateToTerminalSettingsCommand}"/>
 
-                <Separator />
-                <MenuItem Header="Backup" />
-                <MenuItem Header="Exit" />
-            </MenuItem>
-
-            <MenuItem Header="_Dashboard" Command="{Binding NavigateToDashboardCommand}" />
-
-            <MenuItem Header="Inventory _Setup">
-                <MenuItem Header="Categories" Command="{Binding NavigateToCategoryCommand}" />
-                <MenuItem Header="Sub-Categories" Command="{Binding NavigateToSubCategoryCommand}" />
-                <MenuItem Header="Item Properties" Command="{Binding NavigateToItemPropertyCommand}" />
-                <MenuItem Header="Units of Measure" Command="{Binding NavigateToUnitOfMeasureCommand}" />
-                <MenuItem Header="Tax Rate" Command="{Binding NavigateToTaxRateCommand}" />
-                <MenuItem Header="Suppliers" Command="{Binding NavigateToSupplierCommand}" />
-                <MenuItem Header="Item Master" Command="{Binding NavigateToItemMasterCommand}" />
-            </MenuItem>
-
-            <MenuItem Header="Inventory _Operation">
-                <MenuItem Header="Goods Received Note (GRN)" Command="{Binding NavigateToGoodsReceivedNoteCommand}" />
-                <MenuItem Header="GRN History / Dashboard" Command="{Binding NavigateToGrnDashboardCommand}" />
+                <MenuItem Header="Backup / Restore"
+                          Command="{Binding NavigateToBackupRestoreCommand}"/>
 
                 <Separator/>
 
-                <MenuItem Header="Stock Adjustment" Command="{Binding NavigateToStockAdjustmentCommand}" />
-                <MenuItem Header="Stock Balance" Command="{Binding NavigateToStockBalanceCommand}" />
-                <MenuItem Header="Express Items Designer" Command="{Binding NavigateToExpressItemAdminCommand}" />
-                <MenuItem Header="Supplier Return" Command="{Binding NavigateToSupplierReturnCommand}" />
-                <MenuItem Header="Barcode Management" Command="{Binding NavigateToBarcodeManagementCommand}" />
-                <MenuItem Header="Barcode Printer" Command="{Binding NavigateToBarcodePrinterCommand}" />
-                <MenuItem Header="Pricing" Command="{Binding NavigateToPriceManagementCommand}" />
-                <Button Content="Price Change History"
-        Command="{Binding NavigateToPriceChangeHistoryCommand}" />
+                <MenuItem Header="Exit"
+                          Command="{Binding ExitApplicationCommand}"/>
+            </MenuItem>
+
+            <MenuItem Header="_Dashboard"
+                      Command="{Binding NavigateToDashboardCommand}"/>
+
+            <MenuItem Header="Inventory _Setup">
+                <MenuItem Header="Categories"
+                          Command="{Binding NavigateToCategoryCommand}"/>
+                <MenuItem Header="Sub-Categories"
+                          Command="{Binding NavigateToSubCategoryCommand}"/>
+                <MenuItem Header="Item Properties"
+                          Command="{Binding NavigateToItemPropertyCommand}"/>
+                <MenuItem Header="Units of Measure"
+                          Command="{Binding NavigateToUnitOfMeasureCommand}"/>
+                <MenuItem Header="Tax Rate"
+                          Command="{Binding NavigateToTaxRateCommand}"/>
+                <MenuItem Header="Suppliers"
+                          Command="{Binding NavigateToSupplierCommand}"/>
+                <MenuItem Header="Item Master"
+                          Command="{Binding NavigateToItemMasterCommand}"/>
+            </MenuItem>
+
+            <MenuItem Header="Inventory _Operation">
+                <MenuItem Header="Goods Received Note (GRN)"
+                          Command="{Binding NavigateToGoodsReceivedNoteCommand}"/>
+                <MenuItem Header="GRN History / Dashboard"
+                          Command="{Binding NavigateToGrnDashboardCommand}"/>
+
+                <Separator/>
+
+                <MenuItem Header="Stock Adjustment"
+                          Command="{Binding NavigateToStockAdjustmentCommand}"/>
+                <MenuItem Header="Stock Balance"
+                          Command="{Binding NavigateToStockBalanceCommand}"/>
+                <MenuItem Header="Express Items Designer"
+                          Command="{Binding NavigateToExpressItemAdminCommand}"/>
+                <MenuItem Header="Supplier Return"
+                          Command="{Binding NavigateToSupplierReturnCommand}"/>
+                <MenuItem Header="Barcode Management"
+                          Command="{Binding NavigateToBarcodeManagementCommand}"/>
+                <MenuItem Header="Barcode Printer"
+                          Command="{Binding NavigateToBarcodePrinterCommand}"/>
+                <MenuItem Header="Pricing"
+                          Command="{Binding NavigateToPriceManagementCommand}"/>
+                <MenuItem Header="Price Change History"
+                          Command="{Binding NavigateToPriceChangeHistoryCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Purchasing">
-                <MenuItem Header="Purchase Order DB" Command="{Binding NavigateToPurchaseOrderDashboardCommand}" />
-                <MenuItem Header="Purchase Order" Command="{Binding NavigateToPurchaseOrderCommand}" />
+                <MenuItem Header="Purchase Order DB"
+                          Command="{Binding NavigateToPurchaseOrderDashboardCommand}"/>
+                <MenuItem Header="Purchase Order"
+                          Command="{Binding NavigateToPurchaseOrderCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Sales">
-                <MenuItem Header="Customer Return" Command="{Binding NavigateToCustomerReturnsAuditCommand}" />
-                <MenuItem Header="Item Sales Analytics" Command="{Binding NavigateToItemSalesAnalyticsCommand}" />
-                <MenuItem Header="Receipt Ledger" Command="{Binding NavigateToReceiptLedgerCommand}" />
-                <MenuItem Header="Sales Explorer" Command="{Binding NavigateToSalesExplorerCommand}" />
-                <MenuItem Header="Security Audit" Command="{Binding NavigateToSecurityAuditCommand}" />
-
+                <MenuItem Header="Customer Return"
+                          Command="{Binding NavigateToCustomerReturnsAuditCommand}"/>
+                <MenuItem Header="Item Sales Analytics"
+                          Command="{Binding NavigateToItemSalesAnalyticsCommand}"/>
+                <MenuItem Header="Receipt Ledger"
+                          Command="{Binding NavigateToReceiptLedgerCommand}"/>
+                <MenuItem Header="Sales Explorer"
+                          Command="{Binding NavigateToSalesExplorerCommand}"/>
+                <MenuItem Header="Security Audit"
+                          Command="{Binding NavigateToSecurityAuditCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_CRM">
-                <MenuItem Header="Customer Ledger" Command="{Binding NavigateToCustomerLedgerCommand}" />
-                <MenuItem Header="Customer Master" Command="{Binding NavigateToCustomerMasterCommand}" />
-                <MenuItem Header="Gift Voucher" Command="{Binding NavigateToGiftVoucherCommand}" />
+                <MenuItem Header="Customer Ledger"
+                          Command="{Binding NavigateToCustomerLedgerCommand}"/>
+                <MenuItem Header="Customer Master"
+                          Command="{Binding NavigateToCustomerMasterCommand}"/>
+                <MenuItem Header="Gift Voucher"
+                          Command="{Binding NavigateToGiftVoucherCommand}"/>
+                <MenuItem Header="Free Issue Rules"
+                          Command="{Binding NavigateToFreeIssueRuleSetupCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Finance">
-                <MenuItem Header="Supplier Claims" Command="{Binding NavigateToSupplierClaimsCommand}" />
-                <MenuItem Header="Supplier Ledger (A/P)" Command="{Binding NavigateToSupplierLedgerCommand}"/>
-                
+                <MenuItem Header="Supplier Claims"
+                          Command="{Binding NavigateToSupplierClaimsCommand}"/>
+                <MenuItem Header="Supplier Ledger (A/P)"
+                          Command="{Binding NavigateToSupplierLedgerCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Reports">
-                <MenuItem Header="Cash Movement (In / Out)" Command="{Binding NavigateToCashMovementDashboardCommand}"/>
-                <MenuItem Header="Financial Summary" Command="{Binding NavigateToFinancialSummaryCommand}" />
-                <MenuItem Header="Float Cash Log" Command="{Binding NavigateToFloatCashLogCommand}" />
-                <MenuItem Header="Supplier Report" Command="{Binding NavigateToSupplierReportCommand}"/>
-                <MenuItem Header="Suspended Transactions" Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}" />
+                <MenuItem Header="Cash Movement (In / Out)"
+                          Command="{Binding NavigateToCashMovementDashboardCommand}"/>
+                <MenuItem Header="Financial Summary"
+                          Command="{Binding NavigateToFinancialSummaryCommand}"/>
+                <MenuItem Header="Float Cash Log"
+                          Command="{Binding NavigateToFloatCashLogCommand}"/>
+                <MenuItem Header="Supplier Report"
+                          Command="{Binding NavigateToSupplierReportCommand}"/>
+                <MenuItem Header="Suspended Transactions"
+                          Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Admin">
-                <MenuItem Header="Store Settings" Command="{Binding NavigateToStoreSettingsCommand}" />
-                <Button Content="License Management"
-        Command="{Binding NavigateToLicenseManagementCommand}"/>
-                <MenuItem Header="User Management" Command="{Binding NavigateToUserManagementCommand}" />
-                <Button Content="Terminal Management"
-        Command="{Binding NavigateToTerminalManagementCommand}"
-        />
-                <Button Content="Backup/Restore"
-        Command="{Binding NavigateToBackupRestoreCommand}"/>
+                <MenuItem Header="Store Settings"
+                          Command="{Binding NavigateToStoreSettingsCommand}"/>
+                <MenuItem Header="License Management"
+                          Command="{Binding NavigateToLicenseManagementCommand}"/>
+                <MenuItem Header="User Management"
+                          Command="{Binding NavigateToUserManagementCommand}"/>
+                <MenuItem Header="Terminal Management"
+                          Command="{Binding NavigateToTerminalManagementCommand}"/>
             </MenuItem>
 
         </Menu>
+
         <Grid Grid.Row="1">
-            <ContentControl Background="#DED9CD" x:Name="MainContentHost" Content="{Binding CurrentPage}" />
+            <ContentControl Background="#DED9CD"
+                            x:Name="MainContentHost"
+                            Content="{Binding CurrentPage}"/>
         </Grid>
 
-        <StatusBar Grid.Row="2" Background="#E5E5E5" BorderBrush="DarkGray" BorderThickness="0,1,0,0" Padding="0" Height="45">
+        <StatusBar Grid.Row="2"
+                   Background="#E5E5E5"
+                   BorderBrush="DarkGray"
+                   BorderThickness="0,1,0,0"
+                   Padding="0"
+                   Height="45">
 
-            <StatusBarItem Padding="0" HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch">
-                <Border Background="#EAA3C8" Width="220" BorderBrush="DarkGray" BorderThickness="0,0,1,0">
-                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="Admin" FontSize="11" Foreground="#333333" HorizontalAlignment="Center"/>
-                        <TextBlock Text="2026-06-06 11:55:00" FontSize="11" Foreground="#333333" HorizontalAlignment="Center"/>
+            <StatusBarItem Padding="0"
+                           HorizontalAlignment="Stretch"
+                           VerticalContentAlignment="Stretch">
+
+                <Border Background="#EAA3C8"
+                        Width="250"
+                        BorderBrush="DarkGray"
+                        BorderThickness="0,0,1,0">
+
+                    <StackPanel Orientation="Vertical"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+
+                        <TextBlock Text="{Binding SessionUserText}"
+                                   FontSize="11"
+                                   Foreground="#333333"
+                                   HorizontalAlignment="Center"/>
+
+                        <TextBlock Text="{Binding CurrentDateTimeText}"
+                                   FontSize="11"
+                                   Foreground="#333333"
+                                   HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
             </StatusBarItem>
 
-            <StatusBarItem VerticalAlignment="Bottom" Margin="10,0,0,5">
-                <TextBlock Text="Ver: B4:04:24" Foreground="#666666" FontSize="11"/>
+            <StatusBarItem VerticalAlignment="Bottom"
+                           Margin="10,0,0,5">
+                <TextBlock Text="{Binding ApplicationVersionText}"
+                           Foreground="#666666"
+                           FontSize="11"/>
             </StatusBarItem>
 
         </StatusBar>
