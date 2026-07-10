@@ -27,13 +27,8 @@ namespace POS.Cashier.UI
         {
             var services = new ServiceCollection();
 
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string dbFolder = System.IO.Path.Combine(appData, "POS");
-            System.IO.Directory.CreateDirectory(dbFolder);
-            string dbPath = System.IO.Path.Combine(dbFolder, "pos_local.db");
-
             services.AddDbContextFactory<AppDbContext>(options =>
-                options.UseSqlite($"Data Source={dbPath}"));
+                options.UseSqlite(DatabasePathProvider.ConnectionString));
 
 
             services.AddSingleton<FreeItemClaimRepository>();
@@ -95,9 +90,22 @@ namespace POS.Cashier.UI
 
             // 1. Ensure DB exists
             var dbFactory = Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
-            using (var context = dbFactory.CreateDbContext())
+
+            try
             {
-                context.Database.EnsureCreated();
+                using var context = dbFactory.CreateDbContext();
+                context.Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"The POS database could not be initialized.\n\n{ex.Message}",
+                    "Database Startup Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                Shutdown();
+                return;
             }
 
             // 2. CHECK DATABASE FOR OPEN SHIFTS (The Alt+F4 Protection)

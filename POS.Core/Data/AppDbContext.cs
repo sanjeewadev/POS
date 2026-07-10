@@ -104,13 +104,7 @@ namespace POS.Core.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                string dbFolder = System.IO.Path.Combine(appData, "POS");
-
-                System.IO.Directory.CreateDirectory(dbFolder);
-
-                string dbPath = System.IO.Path.Combine(dbFolder, "pos_local.db");
-                optionsBuilder.UseSqlite($"Data Source={dbPath}");
+                optionsBuilder.UseSqlite(DatabasePathProvider.ConnectionString);
             }
         }
 
