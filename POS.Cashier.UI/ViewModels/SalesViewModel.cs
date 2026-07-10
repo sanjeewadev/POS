@@ -15,6 +15,7 @@ using POS.Cashier.UI.Services;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -74,7 +75,18 @@ namespace POS.Cashier.UI.ViewModels
         private int _currentShiftId = 0;
         public int CurrentShiftId => _currentShiftId;
 
-        private readonly string _printerName = "POS-80";
+        private string _receiptPrinterName =
+            string.Empty;
+
+        private int _receiptPaperWidth = 80;
+
+        private bool _autoPrintReceipt;
+
+        private int _receiptCopies = 1;
+
+        private bool _enableCashDrawer;
+
+        private bool _openDrawerAfterCashSale;
 
         public SalesViewModel(
             ItemMasterRepository itemRepository,
@@ -180,10 +192,17 @@ namespace POS.Cashier.UI.ViewModels
 
         public void InitializeShiftContext(
             string terminalNo,
-            ShiftSession activeShift)
+            ShiftSession activeShift,
+            TerminalSettings terminalSettings)
         {
             if (activeShift == null)
                 throw new ArgumentNullException(nameof(activeShift));
+
+            if (terminalSettings == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(terminalSettings));
+            }
 
             string safeTerminalNo =
                 (terminalNo ?? string.Empty).Trim();
@@ -215,6 +234,36 @@ namespace POS.Cashier.UI.ViewModels
             TerminalNo = safeTerminalNo;
             _currentShiftId = activeShift.Id;
             CashierName = activeShift.CashierName;
+
+            _receiptPrinterName =
+                (terminalSettings
+                    .ReceiptPrinterName ??
+                 string.Empty).Trim();
+
+            _receiptPaperWidth =
+                terminalSettings
+                    .ReceiptPaperWidth == 58
+                    ? 58
+                    : 80;
+
+            _autoPrintReceipt =
+                terminalSettings.AutoPrintReceipt;
+
+            _receiptCopies =
+                Math.Clamp(
+                    terminalSettings
+                        .ReceiptCopies,
+                    1,
+                    3);
+
+            _enableCashDrawer =
+                terminalSettings.EnableCashDrawer;
+
+            _openDrawerAfterCashSale =
+                terminalSettings
+                    .EnableCashDrawer &&
+                terminalSettings
+                    .OpenDrawerAfterCashSale;
         }
 
         public async Task LoadActiveShiftAsync()
@@ -1899,13 +1948,51 @@ namespace POS.Cashier.UI.ViewModels
                     GiftVoucherForfeitedAmount = p.IsGiftVoucher ? p.GiftVoucherForfeitedAmount : 0m
                 }).ToList();
 
-                var savedReceipt = await _salesRepository.ProcessCheckoutAsync(header, lines, payments);
+                var savedReceipt =
+                    await _salesRepository
+                        .ProcessCheckoutAsync(
+                            header,
+                            lines,
+                            payments);
 
-                InvoiceNo = savedReceipt.InvoiceNo;
-                await _printService.PrintReceiptAsync(savedReceipt, _printerName);
-                _ = ShowNotificationAsync("Payment successful. Ready for next customer.", "#10B981");
+                InvoiceNo =
+                    savedReceipt.InvoiceNo;
+
+                string completionMessage =
+                    "Payment successful. Ready for next customer.";
+
+                string completionColor =
+                    "#10B981";
+
+                try
+                {
+                    await CompleteReceiptAndDrawerAsync(
+                        savedReceipt,
+                        payments);
+                }
+                catch (Exception hardwareException)
+                {
+                    LocalLogService.WriteException(
+                        "Cashier",
+                        "Receipt or drawer after completed sale",
+                        hardwareException);
+
+                    completionMessage =
+                        "Payment was saved, but the receipt printer " +
+                        "or cash drawer did not complete. " +
+                        "Check Terminal Settings.";
+
+                    completionColor =
+                        "#F59E0B";
+                }
+
                 ClearCart();
                 SetManagerMode(false);
+
+                _ = ShowNotificationAsync(
+                    completionMessage,
+                    completionColor);
+
                 return true;
             }
             catch (Exception ex)
@@ -1957,7 +2044,18 @@ namespace POS.Cashier.UI.ViewModels
                     }).ToList()
                 };
 
-                await _printService.PrintQuotationAsync(request, _printerName);
+                if (string.IsNullOrWhiteSpace(
+                        _receiptPrinterName))
+                {
+                    throw new InvalidOperationException(
+                        "No receipt printer is configured in Terminal Settings.");
+                }
+
+                await _printService
+                    .PrintQuotationAsync(
+                        request,
+                        _receiptPrinterName,
+                        _receiptPaperWidth);
                 _ = ShowNotificationAsync("Quotation printed. No sale saved and no stock deducted.", "#10B981");
                 return true;
             }
@@ -1965,6 +2063,58 @@ namespace POS.Cashier.UI.ViewModels
             {
                 _ = ShowNotificationAsync($"Quotation print failed: {ex.Message}", "#EF4444");
                 return false;
+            }
+        }
+
+        private async Task CompleteReceiptAndDrawerAsync(
+            SalesHeader savedReceipt,
+            IReadOnlyCollection<SalesPayment> payments)
+        {
+            bool cashWasAccepted =
+                payments.Any(
+                    payment =>
+                        payment.Amount > 0m &&
+                        string.Equals(
+                            payment.PaymentType,
+                            "Cash",
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+            bool printerIsNeeded =
+                _autoPrintReceipt ||
+                (_enableCashDrawer &&
+                 _openDrawerAfterCashSale &&
+                 cashWasAccepted);
+
+            if (printerIsNeeded &&
+                string.IsNullOrWhiteSpace(
+                    _receiptPrinterName))
+            {
+                throw new InvalidOperationException(
+                    "Receipt printer is not configured.");
+            }
+
+            if (_autoPrintReceipt)
+            {
+                for (int copy = 0;
+                     copy < _receiptCopies;
+                     copy++)
+                {
+                    await _printService
+                        .PrintReceiptAsync(
+                            savedReceipt,
+                            _receiptPrinterName,
+                            _receiptPaperWidth);
+                }
+            }
+
+            if (_enableCashDrawer &&
+                _openDrawerAfterCashSale &&
+                cashWasAccepted)
+            {
+                await _printService
+                    .OpenCashDrawerAsync(
+                        _receiptPrinterName);
             }
         }
 

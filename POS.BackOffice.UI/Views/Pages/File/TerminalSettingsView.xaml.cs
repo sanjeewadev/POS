@@ -1,22 +1,55 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
+using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.File
 {
-    public partial class TerminalSettingsView : UserControl
+    public partial class TerminalSettingsView :
+        UserControl
     {
+        private bool _loadedOnce;
+
         public TerminalSettingsView()
         {
             InitializeComponent();
 
-            if (DesignerProperties.GetIsInDesignMode(this))
+            if (DesignerProperties
+                    .GetIsInDesignMode(this))
+            {
+                return;
+            }
+
+            if (DataContext == null &&
+                App.Services != null)
+            {
+                DataContext =
+                    App.Services
+                        .GetRequiredService<
+                            TerminalSettingsViewModel>();
+            }
+
+            Loaded +=
+                TerminalSettingsView_Loaded;
+        }
+
+        private async void
+            TerminalSettingsView_Loaded(
+                object sender,
+                RoutedEventArgs e)
+        {
+            if (_loadedOnce)
                 return;
 
-            if (DataContext == null && App.Services != null)
+            _loadedOnce = true;
+
+            if (DataContext is
+                TerminalSettingsViewModel
+                    viewModel)
             {
-                DataContext = App.Services.GetRequiredService<TerminalSettingsViewModel>();
+                await viewModel.LoadCommand
+                    .ExecuteAsync(null);
             }
         }
     }

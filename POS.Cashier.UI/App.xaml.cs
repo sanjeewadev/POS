@@ -24,6 +24,7 @@ namespace POS.Cashier.UI
 
         private string _terminalNo = "01";
         private int _autoLockTimeoutMinutes = 10;
+        private TerminalSettings? _terminalSettings;
         private TillRepository? _tillRepository;
         private bool _fatalErrorShown;
 
@@ -196,6 +197,9 @@ namespace POS.Cashier.UI
                 await terminalSettingsRepository
                     .GetOrCreateForCurrentMachineAsync("01");
 
+            _terminalSettings =
+                terminalSettings;
+
             if (!terminalSettings.IsActive)
             {
                 throw new InvalidOperationException(
@@ -366,9 +370,16 @@ namespace POS.Cashier.UI
             var salesViewModel =
                 Services.GetRequiredService<SalesViewModel>();
 
+            if (_terminalSettings == null)
+            {
+                throw new InvalidOperationException(
+                    "Terminal settings are not loaded.");
+            }
+
             salesViewModel.InitializeShiftContext(
                 _terminalNo,
-                activeShift);
+                activeShift,
+                _terminalSettings);
 
             var lockService =
                 Services.GetRequiredService<

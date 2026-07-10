@@ -7,11 +7,13 @@ using POS.BackOffice.UI.Views.Layout;
 using POS.BackOffice.UI.Views.Pages.Admin;
 using POS.BackOffice.UI.Views.Pages.File;
 using POS.Core.Data;
+using POS.Core.Interfaces;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Backup;
 using POS.Core.Services.Licensing;
+using POS.Hardware.Services;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -95,6 +97,9 @@ namespace POS.BackOffice.UI
             // ==========================================
             services.AddTransient<POS.Core.Services.IBarcodePrintService, WpfBarcodePrintService>();
             services.AddTransient<BackupService>();
+            services.AddSingleton<
+                ITerminalHardwareService,
+                TerminalHardwareService>();
 
             // ==========================================
             // LICENSING SERVICES

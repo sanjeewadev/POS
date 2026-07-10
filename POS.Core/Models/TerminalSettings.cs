@@ -24,11 +24,11 @@ namespace POS.Core.Models
 
         public string PrinterMode { get; set; } = "WindowsSpooler";
 
-        public string ReceiptPrinterName { get; set; } = "POS-80";
+        public string ReceiptPrinterName { get; set; } = string.Empty;
 
         public int ReceiptPaperWidth { get; set; } = 80;
 
-        public bool AutoPrintReceipt { get; set; } = true;
+        public bool AutoPrintReceipt { get; set; } = false;
 
         public int ReceiptCopies { get; set; } = 1;
 
@@ -36,11 +36,11 @@ namespace POS.Core.Models
         // CASH DRAWER
         // =========================================================
 
-        public bool EnableCashDrawer { get; set; } = true;
+        public bool EnableCashDrawer { get; set; } = false;
 
         public string DrawerKickCode { get; set; } = "27,112,0,25,250";
 
-        public bool OpenDrawerAfterCashSale { get; set; } = true;
+        public bool OpenDrawerAfterCashSale { get; set; } = false;
 
         // =========================================================
         // BARCODE SCANNER

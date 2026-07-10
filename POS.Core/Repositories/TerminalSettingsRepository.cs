@@ -9,162 +9,301 @@ namespace POS.Core.Repositories
 {
     public class TerminalSettingsRepository
     {
-        private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly
+            IDbContextFactory<AppDbContext>
+            _contextFactory;
 
-        public TerminalSettingsRepository(IDbContextFactory<AppDbContext> contextFactory)
+        public TerminalSettingsRepository(
+            IDbContextFactory<AppDbContext>
+                contextFactory)
         {
             _contextFactory = contextFactory;
         }
 
-        public async Task<TerminalSettings?> GetByTerminalNoAsync(string terminalNo)
+        public async Task<TerminalSettings?>
+            GetByTerminalNoAsync(
+                string terminalNo)
         {
-            string safeTerminalNo = NormalizeText(terminalNo);
+            string safeTerminalNo =
+                NormalizeText(terminalNo);
 
-            if (string.IsNullOrWhiteSpace(safeTerminalNo))
+            if (string.IsNullOrWhiteSpace(
+                    safeTerminalNo))
+            {
                 return null;
+            }
 
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
             return await context.TerminalSettings
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.TerminalNo == safeTerminalNo);
+                .FirstOrDefaultAsync(
+                    terminal =>
+                        terminal.TerminalNo ==
+                        safeTerminalNo);
         }
 
-        public async Task<TerminalSettings?> GetByMachineNameAsync(string machineName)
+        public async Task<TerminalSettings?>
+            GetByMachineNameAsync(
+                string machineName)
         {
-            string safeMachineName = NormalizeText(machineName);
+            string safeMachineName =
+                NormalizeText(machineName);
 
-            if (string.IsNullOrWhiteSpace(safeMachineName))
+            if (string.IsNullOrWhiteSpace(
+                    safeMachineName))
+            {
                 return null;
+            }
 
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
             return await context.TerminalSettings
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.MachineName == safeMachineName && t.IsActive);
+                .OrderByDescending(
+                    terminal => terminal.Id)
+                .FirstOrDefaultAsync(
+                    terminal =>
+                        terminal.MachineName ==
+                            safeMachineName &&
+                        terminal.IsActive);
         }
 
-        public async Task<TerminalSettings> GetOrCreateDefaultAsync(string terminalNo)
+        public async Task<TerminalSettings>
+            GetOrCreateDefaultAsync(
+                string terminalNo)
         {
-            string safeTerminalNo = NormalizeText(terminalNo);
+            string safeTerminalNo =
+                NormalizeText(terminalNo);
 
-            if (string.IsNullOrWhiteSpace(safeTerminalNo))
+            if (string.IsNullOrWhiteSpace(
+                    safeTerminalNo))
+            {
                 safeTerminalNo = "01";
+            }
 
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
-            var existing = await context.TerminalSettings
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.TerminalNo == safeTerminalNo);
+            TerminalSettings? existing =
+                await context.TerminalSettings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        terminal =>
+                            terminal.TerminalNo ==
+                            safeTerminalNo);
 
             if (existing != null)
                 return existing;
 
-            var settings = CreateDefaultSettings(safeTerminalNo, Environment.MachineName);
+            TerminalSettings settings =
+                CreateDefaultSettings(
+                    safeTerminalNo,
+                    Environment.MachineName);
 
-            await context.TerminalSettings.AddAsync(settings);
+            await context.TerminalSettings
+                .AddAsync(settings);
+
             await context.SaveChangesAsync();
 
             return settings;
         }
 
-        public async Task<TerminalSettings> GetOrCreateForCurrentMachineAsync(string fallbackTerminalNo = "01")
+        public async Task<TerminalSettings>
+            GetOrCreateForCurrentMachineAsync(
+                string fallbackTerminalNo = "01")
         {
-            string machineName = Environment.MachineName;
+            string machineName =
+                Environment.MachineName.Trim();
 
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
-            var existingForMachine = await context.TerminalSettings
-                .AsNoTracking()
-                .OrderByDescending(t => t.Id)
-                .FirstOrDefaultAsync(t => t.MachineName == machineName && t.IsActive);
+            TerminalSettings? existingForMachine =
+                await context.TerminalSettings
+                    .AsNoTracking()
+                    .OrderByDescending(
+                        terminal => terminal.Id)
+                    .FirstOrDefaultAsync(
+                        terminal =>
+                            terminal.MachineName ==
+                                machineName &&
+                            terminal.IsActive);
 
             if (existingForMachine != null)
                 return existingForMachine;
 
-            string safeTerminalNo = NormalizeText(fallbackTerminalNo);
+            string safeTerminalNo =
+                NormalizeText(
+                    fallbackTerminalNo);
 
-            if (string.IsNullOrWhiteSpace(safeTerminalNo))
+            if (string.IsNullOrWhiteSpace(
+                    safeTerminalNo))
+            {
                 safeTerminalNo = "01";
+            }
 
-            var existingByTerminal = await context.TerminalSettings
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.TerminalNo == safeTerminalNo);
+            TerminalSettings? existingByTerminal =
+                await context.TerminalSettings
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        terminal =>
+                            terminal.TerminalNo ==
+                            safeTerminalNo);
 
             if (existingByTerminal != null)
                 return existingByTerminal;
 
-            var settings = CreateDefaultSettings(safeTerminalNo, machineName);
+            TerminalSettings settings =
+                CreateDefaultSettings(
+                    safeTerminalNo,
+                    machineName);
 
-            await context.TerminalSettings.AddAsync(settings);
+            await context.TerminalSettings
+                .AddAsync(settings);
+
             await context.SaveChangesAsync();
 
             return settings;
         }
 
-        public async Task<TerminalSettings> SaveAsync(TerminalSettings settings, string updatedBy)
+        public async Task<TerminalSettings>
+            SaveAsync(
+                TerminalSettings settings,
+                string updatedBy)
         {
             if (settings == null)
-                throw new ArgumentNullException(nameof(settings));
+            {
+                throw new ArgumentNullException(
+                    nameof(settings));
+            }
 
             Normalize(settings);
             Validate(settings);
 
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction =
+                await context.Database
+                    .BeginTransactionAsync();
 
             try
             {
-                DateTime now = DateTime.Now;
-                string safeUpdatedBy = NormalizeText(updatedBy);
-
                 TerminalSettings? entity = null;
 
                 if (settings.Id > 0)
                 {
-                    entity = await context.TerminalSettings
-                        .FirstOrDefaultAsync(t => t.Id == settings.Id);
+                    entity =
+                        await context.TerminalSettings
+                            .FirstOrDefaultAsync(
+                                terminal =>
+                                    terminal.Id ==
+                                    settings.Id);
                 }
 
                 if (entity == null)
                 {
-                    entity = await context.TerminalSettings
-                        .FirstOrDefaultAsync(t => t.TerminalNo == settings.TerminalNo);
+                    entity =
+                        await context.TerminalSettings
+                            .FirstOrDefaultAsync(
+                                terminal =>
+                                    terminal.TerminalNo ==
+                                    settings.TerminalNo);
                 }
 
-                int currentEntityId = entity?.Id ?? 0;
+                int currentId =
+                    entity?.Id ?? 0;
 
-                bool duplicateTerminalNoExists = await context.TerminalSettings.AnyAsync(t =>
-                    t.TerminalNo == settings.TerminalNo &&
-                    t.Id != currentEntityId);
+                bool duplicateTerminalNo =
+                    await context.TerminalSettings
+                        .AnyAsync(
+                            terminal =>
+                                terminal.TerminalNo ==
+                                    settings.TerminalNo &&
+                                terminal.Id != currentId);
 
-                if (duplicateTerminalNoExists)
-                    throw new InvalidOperationException($"Terminal number '{settings.TerminalNo}' is already used by another terminal.");
+                if (duplicateTerminalNo)
+                {
+                    throw new InvalidOperationException(
+                        $"Terminal number '{settings.TerminalNo}' " +
+                        "is already used by another terminal.");
+                }
+
+                DateTime now = DateTime.Now;
 
                 if (entity == null)
                 {
-                    entity = new TerminalSettings
-                    {
-                        CreatedAt = now,
-                        IsActive = true
-                    };
+                    entity =
+                        new TerminalSettings
+                        {
+                            TerminalNo =
+                                settings.TerminalNo,
 
-                    await context.TerminalSettings.AddAsync(entity);
+                            MachineName =
+                                settings.MachineName,
+
+                            IsActive = true,
+                            CreatedAt = now
+                        };
+
+                    await context.TerminalSettings
+                        .AddAsync(entity);
                 }
 
-                CopyToEntity(settings, entity);
+                // Terminal identity and activation are managed
+                // by Terminal Management. This page may rename
+                // the current terminal, but it must not reassign
+                // its number, machine, or active state.
+                string persistedTerminalNo =
+                    entity.TerminalNo;
 
-                entity.IsActive = settings.IsActive;
+                string persistedMachineName =
+                    entity.MachineName;
+
+                bool persistedIsActive =
+                    entity.IsActive;
+
+                CopySettings(
+                    settings,
+                    entity);
+
+                entity.TerminalNo =
+                    string.IsNullOrWhiteSpace(
+                        persistedTerminalNo)
+                        ? settings.TerminalNo
+                        : persistedTerminalNo;
+
+                entity.MachineName =
+                    string.IsNullOrWhiteSpace(
+                        persistedMachineName)
+                        ? settings.MachineName
+                        : persistedMachineName;
+
+                entity.IsActive =
+                    persistedIsActive;
+
                 entity.UpdatedAt = now;
-                entity.UpdatedBy = safeUpdatedBy;
+
+                entity.UpdatedBy =
+                    NormalizeText(updatedBy);
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return await context.TerminalSettings
                     .AsNoTracking()
-                    .FirstAsync(t => t.Id == entity.Id);
+                    .FirstAsync(
+                        terminal =>
+                            terminal.Id ==
+                            entity.Id);
             }
             catch
             {
@@ -173,36 +312,64 @@ namespace POS.Core.Repositories
             }
         }
 
-        public static TerminalSettings CreateDefaultSettings(string terminalNo = "01", string? machineName = null)
+        public static TerminalSettings
+            CreateDefaultSettings(
+                string terminalNo = "01",
+                string? machineName = null)
         {
-            string safeTerminalNo = NormalizeText(terminalNo);
+            string safeTerminalNo =
+                NormalizeText(terminalNo);
 
-            if (string.IsNullOrWhiteSpace(safeTerminalNo))
+            if (string.IsNullOrWhiteSpace(
+                    safeTerminalNo))
+            {
                 safeTerminalNo = "01";
+            }
 
-            string safeMachineName = NormalizeText(machineName);
+            string safeMachineName =
+                NormalizeText(machineName);
 
-            if (string.IsNullOrWhiteSpace(safeMachineName))
-                safeMachineName = Environment.MachineName;
+            if (string.IsNullOrWhiteSpace(
+                    safeMachineName))
+            {
+                safeMachineName =
+                    Environment.MachineName;
+            }
 
             return new TerminalSettings
             {
-                TerminalNo = safeTerminalNo,
-                TerminalName = $"Cashier Terminal {safeTerminalNo}",
-                MachineName = safeMachineName,
+                TerminalNo =
+                    safeTerminalNo,
+
+                TerminalName =
+                    $"Cashier Terminal " +
+                    $"{safeTerminalNo}",
+
+                MachineName =
+                    safeMachineName,
+
                 Location = "Main Store",
 
-                PrinterMode = "WindowsSpooler",
-                ReceiptPrinterName = "POS-80",
+                PrinterMode =
+                    "WindowsSpooler",
+
+                ReceiptPrinterName =
+                    string.Empty,
+
                 ReceiptPaperWidth = 80,
-                AutoPrintReceipt = true,
+                AutoPrintReceipt = false,
                 ReceiptCopies = 1,
 
-                EnableCashDrawer = true,
-                DrawerKickCode = "27,112,0,25,250",
-                OpenDrawerAfterCashSale = true,
+                EnableCashDrawer = false,
 
-                ScannerSuffixAction = "Enter",
+                DrawerKickCode =
+                    "27,112,0,25,250",
+
+                OpenDrawerAfterCashSale =
+                    false,
+
+                ScannerSuffixAction =
+                    "Enter",
 
                 EnableScale = false,
                 ScaleComPort = "COM1",
@@ -210,188 +377,317 @@ namespace POS.Core.Repositories
 
                 EnablePoleDisplay = false,
                 PoleDisplayComPort = "COM2",
-                PoleWelcomeMessage = "WELCOME",
+
+                PoleWelcomeMessage =
+                    "WELCOME",
 
                 EnableEftpos = false,
-                EftposProvider = string.Empty,
-                EftposPortOrIp = string.Empty,
 
-                AutoLockTimeoutMinutes = 10,
+                EftposProvider =
+                    string.Empty,
+
+                EftposPortOrIp =
+                    string.Empty,
+
+                AutoLockTimeoutMinutes =
+                    10,
 
                 IsActive = true,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = null,
-                UpdatedBy = string.Empty
+
+                UpdatedBy =
+                    string.Empty
             };
         }
 
-        private static void CopyToEntity(TerminalSettings source, TerminalSettings target)
+        private static void CopySettings(
+            TerminalSettings source,
+            TerminalSettings target)
         {
-            target.TerminalNo = source.TerminalNo;
-            target.TerminalName = source.TerminalName;
-            target.MachineName = source.MachineName;
-            target.Location = source.Location;
+            target.TerminalName =
+                source.TerminalName;
 
-            target.PrinterMode = source.PrinterMode;
-            target.ReceiptPrinterName = source.ReceiptPrinterName;
-            target.ReceiptPaperWidth = source.ReceiptPaperWidth;
-            target.AutoPrintReceipt = source.AutoPrintReceipt;
-            target.ReceiptCopies = source.ReceiptCopies;
+            target.Location =
+                source.Location;
 
-            target.EnableCashDrawer = source.EnableCashDrawer;
-            target.DrawerKickCode = source.DrawerKickCode;
-            target.OpenDrawerAfterCashSale = source.OpenDrawerAfterCashSale;
+            target.PrinterMode =
+                "WindowsSpooler";
 
-            target.ScannerSuffixAction = source.ScannerSuffixAction;
+            target.ReceiptPrinterName =
+                source.ReceiptPrinterName;
 
-            target.EnableScale = source.EnableScale;
-            target.ScaleComPort = source.ScaleComPort;
-            target.ScaleBaudRate = source.ScaleBaudRate;
+            target.ReceiptPaperWidth =
+                source.ReceiptPaperWidth;
 
-            target.EnablePoleDisplay = source.EnablePoleDisplay;
-            target.PoleDisplayComPort = source.PoleDisplayComPort;
-            target.PoleWelcomeMessage = source.PoleWelcomeMessage;
+            target.AutoPrintReceipt =
+                source.AutoPrintReceipt;
 
-            target.EnableEftpos = source.EnableEftpos;
-            target.EftposProvider = source.EftposProvider;
-            target.EftposPortOrIp = source.EftposPortOrIp;
+            target.ReceiptCopies =
+                source.ReceiptCopies;
+
+            target.EnableCashDrawer =
+                source.EnableCashDrawer;
+
+            target.DrawerKickCode =
+                source.DrawerKickCode;
+
+            target.OpenDrawerAfterCashSale =
+                source.EnableCashDrawer &&
+                source.OpenDrawerAfterCashSale;
+
+            // The following legacy fields stay in the
+            // database for compatibility. They are not
+            // exposed on the final simple page.
+            target.ScannerSuffixAction =
+                source.ScannerSuffixAction;
+
+            target.EnableScale =
+                source.EnableScale;
+
+            target.ScaleComPort =
+                source.ScaleComPort;
+
+            target.ScaleBaudRate =
+                source.ScaleBaudRate;
+
+            target.EnablePoleDisplay =
+                source.EnablePoleDisplay;
+
+            target.PoleDisplayComPort =
+                source.PoleDisplayComPort;
+
+            target.PoleWelcomeMessage =
+                source.PoleWelcomeMessage;
+
+            target.EnableEftpos =
+                source.EnableEftpos;
+
+            target.EftposProvider =
+                source.EftposProvider;
+
+            target.EftposPortOrIp =
+                source.EftposPortOrIp;
 
             target.AutoLockTimeoutMinutes =
                 source.AutoLockTimeoutMinutes;
         }
 
-        private static void Normalize(TerminalSettings settings)
+        private static void Normalize(
+            TerminalSettings settings)
         {
-            settings.TerminalNo = NormalizeText(settings.TerminalNo);
+            settings.TerminalNo =
+                NormalizeText(
+                    settings.TerminalNo);
 
-            if (string.IsNullOrWhiteSpace(settings.TerminalNo))
+            if (string.IsNullOrWhiteSpace(
+                    settings.TerminalNo))
+            {
                 settings.TerminalNo = "01";
+            }
 
-            settings.TerminalName = NormalizeText(settings.TerminalName);
+            settings.TerminalName =
+                NormalizeText(
+                    settings.TerminalName);
 
-            if (string.IsNullOrWhiteSpace(settings.TerminalName))
-                settings.TerminalName = $"Cashier Terminal {settings.TerminalNo}";
+            if (string.IsNullOrWhiteSpace(
+                    settings.TerminalName))
+            {
+                settings.TerminalName =
+                    $"Cashier Terminal " +
+                    $"{settings.TerminalNo}";
+            }
 
-            settings.MachineName = NormalizeText(settings.MachineName);
+            settings.MachineName =
+                NormalizeText(
+                    settings.MachineName);
 
-            if (string.IsNullOrWhiteSpace(settings.MachineName))
-                settings.MachineName = Environment.MachineName;
+            if (string.IsNullOrWhiteSpace(
+                    settings.MachineName))
+            {
+                settings.MachineName =
+                    Environment.MachineName;
+            }
 
-            settings.Location = NormalizeText(settings.Location);
+            settings.Location =
+                NormalizeText(
+                    settings.Location);
 
-            if (string.IsNullOrWhiteSpace(settings.Location))
-                settings.Location = "Main Store";
+            if (string.IsNullOrWhiteSpace(
+                    settings.Location))
+            {
+                settings.Location =
+                    "Main Store";
+            }
 
-            settings.PrinterMode = NormalizeText(settings.PrinterMode);
+            settings.PrinterMode =
+                "WindowsSpooler";
 
-            if (string.IsNullOrWhiteSpace(settings.PrinterMode))
-                settings.PrinterMode = "WindowsSpooler";
+            settings.ReceiptPrinterName =
+                NormalizeText(
+                    settings.ReceiptPrinterName);
 
-            settings.ReceiptPrinterName = NormalizeText(settings.ReceiptPrinterName);
-
-            if (string.IsNullOrWhiteSpace(settings.ReceiptPrinterName))
-                settings.ReceiptPrinterName = "POS-80";
-
-            if (settings.ReceiptPaperWidth <= 0)
-                settings.ReceiptPaperWidth = 80;
+            if (settings.ReceiptPaperWidth != 58 &&
+                settings.ReceiptPaperWidth != 80)
+            {
+                settings.ReceiptPaperWidth =
+                    80;
+            }
 
             if (settings.ReceiptCopies <= 0)
+            {
                 settings.ReceiptCopies = 1;
+            }
 
-            settings.DrawerKickCode = NormalizeText(settings.DrawerKickCode);
+            settings.DrawerKickCode =
+                NormalizeText(
+                    settings.DrawerKickCode);
 
-            if (string.IsNullOrWhiteSpace(settings.DrawerKickCode))
-                settings.DrawerKickCode = "27,112,0,25,250";
+            if (string.IsNullOrWhiteSpace(
+                    settings.DrawerKickCode))
+            {
+                settings.DrawerKickCode =
+                    "27,112,0,25,250";
+            }
 
-            settings.ScannerSuffixAction = NormalizeText(settings.ScannerSuffixAction);
+            if (!settings.EnableCashDrawer)
+            {
+                settings.OpenDrawerAfterCashSale =
+                    false;
+            }
 
-            if (string.IsNullOrWhiteSpace(settings.ScannerSuffixAction))
-                settings.ScannerSuffixAction = "Enter";
+            settings.ScannerSuffixAction =
+                NormalizeText(
+                    settings.ScannerSuffixAction);
 
-            settings.ScaleComPort = NormalizeText(settings.ScaleComPort).ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(
+                    settings.ScannerSuffixAction))
+            {
+                settings.ScannerSuffixAction =
+                    "Enter";
+            }
 
-            if (string.IsNullOrWhiteSpace(settings.ScaleComPort))
-                settings.ScaleComPort = "COM1";
+            settings.ScaleComPort =
+                NormalizeText(
+                    settings.ScaleComPort)
+                    .ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(
+                    settings.ScaleComPort))
+            {
+                settings.ScaleComPort =
+                    "COM1";
+            }
 
             if (settings.ScaleBaudRate <= 0)
-                settings.ScaleBaudRate = 9600;
+            {
+                settings.ScaleBaudRate =
+                    9600;
+            }
 
-            settings.PoleDisplayComPort = NormalizeText(settings.PoleDisplayComPort).ToUpperInvariant();
+            settings.PoleDisplayComPort =
+                NormalizeText(
+                    settings.PoleDisplayComPort)
+                    .ToUpperInvariant();
 
-            if (string.IsNullOrWhiteSpace(settings.PoleDisplayComPort))
-                settings.PoleDisplayComPort = "COM2";
+            if (string.IsNullOrWhiteSpace(
+                    settings.PoleDisplayComPort))
+            {
+                settings.PoleDisplayComPort =
+                    "COM2";
+            }
 
-            settings.PoleWelcomeMessage = NormalizeText(settings.PoleWelcomeMessage);
+            settings.PoleWelcomeMessage =
+                NormalizeText(
+                    settings.PoleWelcomeMessage);
 
-            if (string.IsNullOrWhiteSpace(settings.PoleWelcomeMessage))
-                settings.PoleWelcomeMessage = "WELCOME";
+            if (string.IsNullOrWhiteSpace(
+                    settings.PoleWelcomeMessage))
+            {
+                settings.PoleWelcomeMessage =
+                    "WELCOME";
+            }
 
-            settings.EftposProvider = NormalizeText(settings.EftposProvider);
-            settings.EftposPortOrIp = NormalizeText(settings.EftposPortOrIp);
+            settings.EftposProvider =
+                NormalizeText(
+                    settings.EftposProvider);
+
+            settings.EftposPortOrIp =
+                NormalizeText(
+                    settings.EftposPortOrIp);
         }
 
-        private static void Validate(TerminalSettings settings)
+        private static void Validate(
+            TerminalSettings settings)
         {
-            if (string.IsNullOrWhiteSpace(settings.TerminalNo))
-                throw new InvalidOperationException("Terminal number is required.");
-
-            if (string.IsNullOrWhiteSpace(settings.TerminalName))
-                throw new InvalidOperationException("Terminal name is required.");
-
-            if (string.IsNullOrWhiteSpace(settings.MachineName))
-                throw new InvalidOperationException("Machine name is required.");
-
-            if (string.IsNullOrWhiteSpace(settings.Location))
-                throw new InvalidOperationException("Terminal location is required.");
-
-            if (settings.AutoLockTimeoutMinutes < 0 ||
-                settings.AutoLockTimeoutMinutes > 120)
+            if (string.IsNullOrWhiteSpace(
+                    settings.TerminalNo))
             {
                 throw new InvalidOperationException(
-                    "Auto-lock timeout must be between 0 and 120 minutes. " +
+                    "Terminal number is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    settings.TerminalName))
+            {
+                throw new InvalidOperationException(
+                    "Terminal name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    settings.MachineName))
+            {
+                throw new InvalidOperationException(
+                    "Machine name is required.");
+            }
+
+            if (settings.AutoLockTimeoutMinutes <
+                    0 ||
+                settings.AutoLockTimeoutMinutes >
+                    120)
+            {
+                throw new InvalidOperationException(
+                    "Auto-lock timeout must be " +
+                    "between 0 and 120 minutes. " +
                     "Use 0 to disable automatic locking.");
             }
 
-            if (string.IsNullOrWhiteSpace(settings.PrinterMode))
-                throw new InvalidOperationException("Printer mode is required.");
-
-            if (string.IsNullOrWhiteSpace(settings.ReceiptPrinterName))
-                throw new InvalidOperationException("Receipt printer name is required.");
-
-            if (settings.ReceiptPaperWidth != 58 && settings.ReceiptPaperWidth != 80)
-                throw new InvalidOperationException("Receipt paper width must be 58 or 80.");
-
-            if (settings.ReceiptCopies < 1 || settings.ReceiptCopies > 5)
-                throw new InvalidOperationException("Receipt copies must be between 1 and 5.");
-
-            if (settings.EnableCashDrawer && string.IsNullOrWhiteSpace(settings.DrawerKickCode))
-                throw new InvalidOperationException("Drawer kick code is required when cash drawer is enabled.");
-
-            if (string.IsNullOrWhiteSpace(settings.ScannerSuffixAction))
-                throw new InvalidOperationException("Scanner suffix action is required.");
-
-            if (settings.EnableScale)
+            if (settings.ReceiptPaperWidth != 58 &&
+                settings.ReceiptPaperWidth != 80)
             {
-                if (string.IsNullOrWhiteSpace(settings.ScaleComPort))
-                    throw new InvalidOperationException("Scale COM port is required when scale is enabled.");
-
-                if (settings.ScaleBaudRate <= 0)
-                    throw new InvalidOperationException("Scale baud rate is invalid.");
+                throw new InvalidOperationException(
+                    "Receipt paper width must be " +
+                    "58 mm or 80 mm.");
             }
 
-            if (settings.EnablePoleDisplay)
+            if (settings.ReceiptCopies < 1 ||
+                settings.ReceiptCopies > 3)
             {
-                if (string.IsNullOrWhiteSpace(settings.PoleDisplayComPort))
-                    throw new InvalidOperationException("Pole display COM port is required when pole display is enabled.");
+                throw new InvalidOperationException(
+                    "Receipt copies must be " +
+                    "between 1 and 3.");
+            }
 
-                if (string.IsNullOrWhiteSpace(settings.PoleWelcomeMessage))
-                    throw new InvalidOperationException("Pole display welcome message is required.");
+            bool printerIsRequired =
+                settings.AutoPrintReceipt ||
+                settings.EnableCashDrawer;
+
+            if (printerIsRequired &&
+                string.IsNullOrWhiteSpace(
+                    settings.ReceiptPrinterName))
+            {
+                throw new InvalidOperationException(
+                    "Select a Windows receipt printer " +
+                    "when automatic printing or the " +
+                    "cash drawer is enabled.");
             }
         }
 
-        private static string NormalizeText(string? value)
+        private static string NormalizeText(
+            string? value)
         {
-            return (value ?? string.Empty).Trim();
+            return (value ?? string.Empty)
+                .Trim();
         }
     }
 }

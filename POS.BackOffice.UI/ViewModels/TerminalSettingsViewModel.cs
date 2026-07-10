@@ -4,285 +4,177 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.Core.Interfaces;
 using POS.Core.Models;
+using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
+using POS.Core.Services;
+using POS.Core.Services.Licensing;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public partial class TerminalSettingsViewModel : ObservableObject
+    public partial class TerminalSettingsViewModel :
+        ObservableObject
     {
-        private readonly TerminalSettingsRepository _repository;
+        private readonly
+            TerminalSettingsRepository
+            _terminalSettingsRepository;
 
-        private int _settingsId;
-        private DateTime _createdAt;
+        private readonly
+            ITerminalHardwareService
+            _terminalHardwareService;
 
-        public TerminalSettingsViewModel(TerminalSettingsRepository repository)
+        private readonly
+            MachineFingerprintService
+            _machineFingerprintService;
+
+        private readonly
+            LicenseManagerService
+            _licenseManagerService;
+
+        private readonly AuthService
+            _authService;
+
+        private TerminalSettings?
+            _loadedSettings;
+
+        public TerminalSettingsViewModel(
+            TerminalSettingsRepository
+                terminalSettingsRepository,
+            ITerminalHardwareService
+                terminalHardwareService,
+            MachineFingerprintService
+                machineFingerprintService,
+            LicenseManagerService
+                licenseManagerService,
+            AuthService authService)
         {
-            _repository = repository;
+            _terminalSettingsRepository =
+                terminalSettingsRepository;
 
-            PrinterModes = new ObservableCollection<string>
-            {
-                "WindowsSpooler",
-                "RawComSerial",
-                "NetworkEscPos"
-            };
+            _terminalHardwareService =
+                terminalHardwareService;
 
-            ReceiptPaperWidths = new ObservableCollection<int>
-            {
-                58,
-                80
-            };
+            _machineFingerprintService =
+                machineFingerprintService;
 
-            ScannerSuffixActions = new ObservableCollection<string>
-            {
-                "Enter",
-                "Tab",
-                "None"
-            };
+            _licenseManagerService =
+                licenseManagerService;
 
-            ScaleBaudRates = new ObservableCollection<int>
-            {
-                9600,
-                19200,
-                38400,
-                57600,
-                115200
-            };
+            _authService = authService;
 
-            ComPorts = new ObservableCollection<string>
-            {
-                "COM1",
-                "COM2",
-                "COM3",
-                "COM4",
-                "COM5",
-                "COM6",
-                "COM7",
-                "COM8",
-                "COM9"
-            };
+            AvailablePrinters =
+                new ObservableCollection<string>();
 
-            Locations = new ObservableCollection<string>
-            {
-                "Main Store",
-                "Warehouse",
-                "Front Counter",
-                "Back Office"
-            };
+            ReceiptPaperWidths =
+                new ObservableCollection<int>
+                {
+                    58,
+                    80
+                };
 
-            AvailablePrinters = new ObservableCollection<string>();
-
-            _ = LoadAsync();
+            ReceiptCopyOptions =
+                new ObservableCollection<int>
+                {
+                    1,
+                    2,
+                    3
+                };
         }
 
-        public ObservableCollection<string> PrinterModes { get; }
+        public ObservableCollection<string>
+            AvailablePrinters { get; }
 
-        public ObservableCollection<int> ReceiptPaperWidths { get; }
+        public ObservableCollection<int>
+            ReceiptPaperWidths { get; }
 
-        public ObservableCollection<string> ScannerSuffixActions { get; }
+        public ObservableCollection<int>
+            ReceiptCopyOptions { get; }
 
-        public ObservableCollection<int> ScaleBaudRates { get; }
-
-        public ObservableCollection<string> ComPorts { get; }
-
-        public ObservableCollection<string> Locations { get; }
-
-        public ObservableCollection<string> AvailablePrinters { get; }
-
-        // =========================================================
-        // TERMINAL IDENTITY
-        // =========================================================
+        // =====================================================
+        // CURRENT TERMINAL
+        // =====================================================
 
         [ObservableProperty]
-        private string _terminalNo = "01";
+        private string _terminalNo = "-";
 
         [ObservableProperty]
-        private string _terminalName = "Cashier Terminal 01";
+        private string _terminalName =
+            string.Empty;
 
         [ObservableProperty]
-        private string _machineName = Environment.MachineName;
+        private string _machineName = "-";
 
         [ObservableProperty]
-        private string _location = "Main Store";
+        private string _machineCode = "-";
 
         [ObservableProperty]
-        private bool _isActive = true;
+        private string _terminalStatusText = "-";
 
-        // =========================================================
+        [ObservableProperty]
+        private string _terminalStatusColor =
+            "#666666";
+
+        [ObservableProperty]
+        private string _terminalLicenseStatusText =
+            "-";
+
+        [ObservableProperty]
+        private string _terminalLicenseExpiryText =
+            "-";
+
+        // =====================================================
         // RECEIPT PRINTER
-        // =========================================================
+        // =====================================================
 
         [ObservableProperty]
-        private string _printerMode = "WindowsSpooler";
-
-        [ObservableProperty]
-        private string _receiptPrinterName = "POS-80";
+        private string _receiptPrinterName =
+            string.Empty;
 
         [ObservableProperty]
         private int _receiptPaperWidth = 80;
 
         [ObservableProperty]
-        private bool _autoPrintReceipt = true;
+        private bool _autoPrintReceipt;
 
         [ObservableProperty]
         private int _receiptCopies = 1;
 
-        // =========================================================
+        [ObservableProperty]
+        private string _printerListStatus =
+            "Printer list not loaded.";
+
+        // =====================================================
         // CASH DRAWER
-        // =========================================================
+        // =====================================================
 
         [ObservableProperty]
-        private bool _enableCashDrawer = true;
+        private bool _enableCashDrawer;
 
         [ObservableProperty]
-        private string _drawerKickCode = "27,112,0,25,250";
+        private bool _openDrawerAfterCashSale;
 
-        [ObservableProperty]
-        private bool _openDrawerAfterCashSale = true;
-
-        // =========================================================
-        // SCANNER
-        // =========================================================
-
-        [ObservableProperty]
-        private string _scannerSuffixAction = "Enter";
-
-        // =========================================================
-        // SCALE
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _enableScale = false;
-
-        [ObservableProperty]
-        private string _scaleComPort = "COM1";
-
-        [ObservableProperty]
-        private int _scaleBaudRate = 9600;
-
-        // =========================================================
-        // POLE DISPLAY
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _enablePoleDisplay = false;
-
-        [ObservableProperty]
-        private string _poleDisplayComPort = "COM2";
-
-        [ObservableProperty]
-        private string _poleWelcomeMessage = "WELCOME";
-
-        // =========================================================
-        // EFTPOS
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _enableEftpos = false;
-
-        [ObservableProperty]
-        private string _eftposProvider = string.Empty;
-
-        [ObservableProperty]
-        private string _eftposPortOrIp = string.Empty;
-
-        // =========================================================
+        // =====================================================
         // CASHIER SECURITY
-        // =========================================================
+        // =====================================================
 
         [ObservableProperty]
         private int _autoLockTimeoutMinutes = 10;
 
-        // =========================================================
-        // STATUS
-        // =========================================================
+        // =====================================================
+        // PAGE STATUS
+        // =====================================================
 
         [ObservableProperty]
-        private bool _isBusy = false;
+        private bool _isBusy;
 
         [ObservableProperty]
-        private string _statusMessage = "Ready.";
+        private string _statusMessage =
+            "Ready.";
 
         [ObservableProperty]
-        private string _statusColor = "#64748B";
-
-        // =========================================================
-        // COMPATIBILITY PROPERTIES FOR OLD DRAFT BINDINGS
-        // =========================================================
-
-        public string TargetPrinter
-        {
-            get => ReceiptPrinterName;
-            set
-            {
-                ReceiptPrinterName = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public bool EnableDrawer
-        {
-            get => EnableCashDrawer;
-            set
-            {
-                EnableCashDrawer = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string KickCode
-        {
-            get => DrawerKickCode;
-            set
-            {
-                DrawerKickCode = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string ScanSuffix
-        {
-            get => ScannerSuffixAction;
-            set
-            {
-                ScannerSuffixAction = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string ScalePort
-        {
-            get => ScaleComPort;
-            set
-            {
-                ScaleComPort = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string PoleCom
-        {
-            get => PoleDisplayComPort;
-            set
-            {
-                PoleDisplayComPort = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string PoleWelcome
-        {
-            get => PoleWelcomeMessage;
-            set
-            {
-                PoleWelcomeMessage = value;
-                OnPropertyChanged();
-            }
-        }
-
-        // =========================================================
-        // COMMANDS
-        // =========================================================
+        private string _statusColor =
+            "#666666";
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -293,18 +185,43 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 IsBusy = true;
-                SetStatus("Loading terminal settings...", "#3B82F6");
 
-                TerminalSettings settings = await _repository.GetOrCreateForCurrentMachineAsync("01");
+                SetStatus(
+                    "Loading current terminal settings...",
+                    "#003366");
 
-                ApplySettingsToViewModel(settings);
-                RefreshAvailablePrintersList();
+                TerminalSettings settings =
+                    await _terminalSettingsRepository
+                        .GetOrCreateForCurrentMachineAsync(
+                            "01");
 
-                SetStatus("Terminal settings loaded.", "#10B981");
+                LicenseSummary licenseSummary =
+                    await _licenseManagerService
+                        .GetCurrentLicenseSummaryAsync();
+
+                _loadedSettings = settings;
+
+                ApplySettings(
+                    settings,
+                    licenseSummary);
+
+                RefreshPrinterListCore();
+
+                SetStatus(
+                    "Terminal settings loaded.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to load terminal settings: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Load Terminal Settings",
+                    ex);
+
+                SetStatus(
+                    "Terminal settings could not be loaded. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "#B91C1C");
             }
             finally
             {
@@ -318,25 +235,60 @@ namespace POS.BackOffice.UI.ViewModels
             if (IsBusy)
                 return;
 
+            if (_loadedSettings == null)
+            {
+                SetStatus(
+                    "Load the terminal settings before saving.",
+                    "#B91C1C");
+
+                return;
+            }
+
             try
             {
                 IsBusy = true;
-                SetStatus("Saving terminal settings...", "#3B82F6");
 
-                TerminalSettings settings = BuildSettingsFromViewModel();
+                SetStatus(
+                    "Saving terminal settings...",
+                    "#003366");
 
-                TerminalSettings savedSettings = await _repository.SaveAsync(
-                    settings,
-                    "BackOffice");
+                ApplyEditableValuesToModel(
+                    _loadedSettings);
 
-                ApplySettingsToViewModel(savedSettings);
-                RefreshAvailablePrintersList();
+                TerminalSettings saved =
+                    await _terminalSettingsRepository
+                        .SaveAsync(
+                            _loadedSettings,
+                            GetCurrentUserName());
 
-                SetStatus("Terminal settings saved successfully.", "#10B981");
+                LicenseSummary licenseSummary =
+                    await _licenseManagerService
+                        .GetCurrentLicenseSummaryAsync();
+
+                _loadedSettings = saved;
+
+                ApplySettings(
+                    saved,
+                    licenseSummary);
+
+                RefreshPrinterListCore();
+
+                SetStatus(
+                    "Terminal settings saved. " +
+                    "Restart Cashier to apply the new settings.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Save failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Save Terminal Settings",
+                    ex);
+
+                SetStatus(
+                    $"Settings were not saved: " +
+                    $"{GetFriendlyMessage(ex)}",
+                    "#B91C1C");
             }
             finally
             {
@@ -347,186 +299,361 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task DiscardChangesAsync()
         {
-            if (IsBusy)
-                return;
-
             await LoadAsync();
         }
 
         [RelayCommand]
         private void RefreshPrinters()
         {
-            RefreshAvailablePrintersList();
+            try
+            {
+                RefreshPrinterListCore();
 
-            SetStatus(
-                "Printer list refreshed. Enter the exact Windows printer name if it is not listed.",
-                "#3B82F6");
+                SetStatus(
+                    "Windows printer list refreshed.",
+                    "#008000");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Refresh Windows Printers",
+                    ex);
+
+                SetStatus(
+                    "Windows printers could not be listed. " +
+                    "Check the Windows Print Spooler service.",
+                    "#B91C1C");
+            }
         }
 
         [RelayCommand]
-        private void TestPrint()
+        private async Task TestPrintAsync()
         {
-            if (string.IsNullOrWhiteSpace(ReceiptPrinterName))
+            if (IsBusy)
+                return;
+
+            if (string.IsNullOrWhiteSpace(
+                    ReceiptPrinterName))
             {
-                SetStatus("Select or enter receipt printer name before test print.", "#EF4444");
+                SetStatus(
+                    "Select a Windows receipt printer first.",
+                    "#B91C1C");
+
                 return;
             }
 
-            SetStatus(
-                "Test print command is ready. Hardware print service will be connected after this settings page is saved.",
-                "#F59E0B");
+            try
+            {
+                IsBusy = true;
+
+                SetStatus(
+                    "Sending a test receipt...",
+                    "#003366");
+
+                await _terminalHardwareService
+                    .PrintTestReceiptAsync(
+                        ReceiptPrinterName,
+                        ReceiptPaperWidth);
+
+                SetStatus(
+                    "Test receipt sent to the selected printer.",
+                    "#008000");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Terminal Settings Test Print",
+                    ex);
+
+                SetStatus(
+                    $"Test print failed: " +
+                    $"{GetFriendlyMessage(ex)}",
+                    "#B91C1C");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand]
-        private void KickDrawer()
+        private async Task TestDrawerAsync()
         {
+            if (IsBusy)
+                return;
+
             if (!EnableCashDrawer)
             {
-                SetStatus("Cash drawer is disabled.", "#F59E0B");
+                SetStatus(
+                    "Enable the cash drawer before testing it.",
+                    "#B45309");
+
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(DrawerKickCode))
+            if (string.IsNullOrWhiteSpace(
+                    ReceiptPrinterName))
             {
-                SetStatus("Drawer kick code is required.", "#EF4444");
+                SetStatus(
+                    "Select the receipt printer connected to the drawer.",
+                    "#B91C1C");
+
                 return;
             }
 
-            SetStatus(
-                "Kick drawer command is ready. Hardware drawer service will be connected after this settings page is saved.",
-                "#F59E0B");
+            try
+            {
+                IsBusy = true;
+
+                SetStatus(
+                    "Sending the drawer-open test...",
+                    "#003366");
+
+                await _terminalHardwareService
+                    .OpenCashDrawerAsync(
+                        ReceiptPrinterName);
+
+                SetStatus(
+                    "Drawer-open command sent.",
+                    "#008000");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Terminal Settings Drawer Test",
+                    ex);
+
+                SetStatus(
+                    $"Drawer test failed: " +
+                    $"{GetFriendlyMessage(ex)}",
+                    "#B91C1C");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
-        // =========================================================
-        // MAPPING
-        // =========================================================
-
-        private void ApplySettingsToViewModel(TerminalSettings settings)
+        partial void OnEnableCashDrawerChanged(
+            bool value)
         {
-            if (settings == null)
-                settings = TerminalSettingsRepository.CreateDefaultSettings("01", Environment.MachineName);
+            if (!value)
+                OpenDrawerAfterCashSale = false;
+        }
 
-            _settingsId = settings.Id;
-            _createdAt = settings.CreatedAt;
+        private void ApplySettings(
+            TerminalSettings settings,
+            LicenseSummary licenseSummary)
+        {
+            TerminalNo =
+                DisplayOrDash(
+                    settings.TerminalNo);
 
-            TerminalNo = settings.TerminalNo;
-            TerminalName = settings.TerminalName;
-            MachineName = settings.MachineName;
-            Location = settings.Location;
-            IsActive = settings.IsActive;
+            TerminalName =
+                settings.TerminalName;
 
-            PrinterMode = settings.PrinterMode;
-            ReceiptPrinterName = settings.ReceiptPrinterName;
-            ReceiptPaperWidth = settings.ReceiptPaperWidth;
-            AutoPrintReceipt = settings.AutoPrintReceipt;
-            ReceiptCopies = settings.ReceiptCopies;
+            MachineName =
+                DisplayOrDash(
+                    _machineFingerprintService
+                        .GetMachineName());
 
-            EnableCashDrawer = settings.EnableCashDrawer;
-            DrawerKickCode = settings.DrawerKickCode;
-            OpenDrawerAfterCashSale = settings.OpenDrawerAfterCashSale;
+            MachineCode =
+                DisplayOrDash(
+                    _machineFingerprintService
+                        .GetMachineCode());
 
-            ScannerSuffixAction = settings.ScannerSuffixAction;
+            TerminalStatusText =
+                settings.IsActive
+                    ? "Active"
+                    : "Disabled";
 
-            EnableScale = settings.EnableScale;
-            ScaleComPort = settings.ScaleComPort;
-            ScaleBaudRate = settings.ScaleBaudRate;
+            TerminalStatusColor =
+                settings.IsActive
+                    ? "#008000"
+                    : "#B91C1C";
 
-            EnablePoleDisplay = settings.EnablePoleDisplay;
-            PoleDisplayComPort = settings.PoleDisplayComPort;
-            PoleWelcomeMessage = settings.PoleWelcomeMessage;
+            TerminalLicenseStatusText =
+                licenseSummary
+                    .TerminalLicenseStatusText;
 
-            EnableEftpos = settings.EnableEftpos;
-            EftposProvider = settings.EftposProvider;
-            EftposPortOrIp = settings.EftposPortOrIp;
+            TerminalLicenseExpiryText =
+                FormatLicenseExpiry(
+                    licenseSummary
+                        .TerminalExpiryDate,
+                    licenseSummary
+                        .TerminalDaysRemaining);
+
+            ReceiptPrinterName =
+                settings.ReceiptPrinterName;
+
+            ReceiptPaperWidth =
+                settings.ReceiptPaperWidth == 58
+                    ? 58
+                    : 80;
+
+            AutoPrintReceipt =
+                settings.AutoPrintReceipt;
+
+            ReceiptCopies =
+                Math.Clamp(
+                    settings.ReceiptCopies,
+                    1,
+                    3);
+
+            EnableCashDrawer =
+                settings.EnableCashDrawer;
+
+            OpenDrawerAfterCashSale =
+                settings.EnableCashDrawer &&
+                settings.OpenDrawerAfterCashSale;
 
             AutoLockTimeoutMinutes =
-                settings.AutoLockTimeoutMinutes;
-
-            RaiseCompatibilityPropertyChanges();
+                Math.Clamp(
+                    settings.AutoLockTimeoutMinutes,
+                    0,
+                    120);
         }
 
-        private TerminalSettings BuildSettingsFromViewModel()
+        private void ApplyEditableValuesToModel(
+            TerminalSettings settings)
         {
-            return new TerminalSettings
-            {
-                Id = _settingsId,
-                CreatedAt = _createdAt == default ? DateTime.Now : _createdAt,
+            settings.TerminalName =
+                (TerminalName ??
+                 string.Empty).Trim();
 
-                TerminalNo = TerminalNo,
-                TerminalName = TerminalName,
-                MachineName = MachineName,
-                Location = Location,
-                IsActive = IsActive,
+            settings.PrinterMode =
+                "WindowsSpooler";
 
-                PrinterMode = PrinterMode,
-                ReceiptPrinterName = ReceiptPrinterName,
-                ReceiptPaperWidth = ReceiptPaperWidth,
-                AutoPrintReceipt = AutoPrintReceipt,
-                ReceiptCopies = ReceiptCopies,
+            settings.ReceiptPrinterName =
+                (ReceiptPrinterName ??
+                 string.Empty).Trim();
 
-                EnableCashDrawer = EnableCashDrawer,
-                DrawerKickCode = DrawerKickCode,
-                OpenDrawerAfterCashSale = OpenDrawerAfterCashSale,
+            settings.ReceiptPaperWidth =
+                ReceiptPaperWidth;
 
-                ScannerSuffixAction = ScannerSuffixAction,
+            settings.AutoPrintReceipt =
+                AutoPrintReceipt;
 
-                EnableScale = EnableScale,
-                ScaleComPort = ScaleComPort,
-                ScaleBaudRate = ScaleBaudRate,
+            settings.ReceiptCopies =
+                ReceiptCopies;
 
-                EnablePoleDisplay = EnablePoleDisplay,
-                PoleDisplayComPort = PoleDisplayComPort,
-                PoleWelcomeMessage = PoleWelcomeMessage,
+            settings.EnableCashDrawer =
+                EnableCashDrawer;
 
-                EnableEftpos = EnableEftpos,
-                EftposProvider = EftposProvider,
-                EftposPortOrIp = EftposPortOrIp,
+            settings.OpenDrawerAfterCashSale =
+                EnableCashDrawer &&
+                OpenDrawerAfterCashSale;
 
-                AutoLockTimeoutMinutes =
-                    AutoLockTimeoutMinutes
-            };
+            settings.AutoLockTimeoutMinutes =
+                AutoLockTimeoutMinutes;
         }
 
-        private void RefreshAvailablePrintersList()
+        private void RefreshPrinterListCore()
         {
+            string selectedPrinter =
+                (ReceiptPrinterName ??
+                 string.Empty).Trim();
+
+            var printerNames =
+                _terminalHardwareService
+                    .GetInstalledPrinterNames();
+
             AvailablePrinters.Clear();
 
-            AddPrinterOption(ReceiptPrinterName);
-            AddPrinterOption("POS-80");
-            AddPrinterOption("EPSON TM-T82 Receipt");
-            AddPrinterOption("Xprinter XP-80");
-            AddPrinterOption("Microsoft Print to PDF");
+            foreach (string printerName in
+                     printerNames)
+            {
+                AvailablePrinters.Add(
+                    printerName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    selectedPrinter) &&
+                !AvailablePrinters.Any(
+                    printer =>
+                        string.Equals(
+                            printer,
+                            selectedPrinter,
+                            StringComparison
+                                .OrdinalIgnoreCase)))
+            {
+                AvailablePrinters.Insert(
+                    0,
+                    selectedPrinter);
+            }
+
+            PrinterListStatus =
+                printerNames.Count == 0
+                    ? "No Windows printers were found."
+                    : $"{printerNames.Count} Windows " +
+                      $"printer(s) found.";
         }
 
-        private void AddPrinterOption(string? printerName)
+        private string GetCurrentUserName()
         {
-            string safePrinterName = (printerName ?? string.Empty).Trim();
+            string? username =
+                _authService.CurrentUser
+                    ?.Username;
 
-            if (string.IsNullOrWhiteSpace(safePrinterName))
-                return;
-
-            bool alreadyExists = AvailablePrinters.Any(p =>
-                string.Equals(p, safePrinterName, StringComparison.OrdinalIgnoreCase));
-
-            if (!alreadyExists)
-                AvailablePrinters.Add(safePrinterName);
+            return string.IsNullOrWhiteSpace(
+                username)
+                ? "Administrator"
+                : username.Trim();
         }
 
-        private void RaiseCompatibilityPropertyChanges()
+        private static string FormatLicenseExpiry(
+            DateTime? expiryDate,
+            int daysRemaining)
         {
-            OnPropertyChanged(nameof(TargetPrinter));
-            OnPropertyChanged(nameof(EnableDrawer));
-            OnPropertyChanged(nameof(KickCode));
-            OnPropertyChanged(nameof(ScanSuffix));
-            OnPropertyChanged(nameof(ScalePort));
-            OnPropertyChanged(nameof(PoleCom));
-            OnPropertyChanged(nameof(PoleWelcome));
+            if (!expiryDate.HasValue)
+                return "-";
+
+            return
+                $"{expiryDate.Value:yyyy-MM-dd} " +
+                $"({daysRemaining} day(s) remaining)";
         }
 
-        private void SetStatus(string message, string color)
+        private static string DisplayOrDash(
+            string? value)
         {
-            StatusMessage = message;
-            StatusColor = color;
+            return string.IsNullOrWhiteSpace(
+                value)
+                ? "-"
+                : value.Trim();
+        }
+
+        private static string GetFriendlyMessage(
+            Exception exception)
+        {
+            if (exception is
+                InvalidOperationException)
+            {
+                return exception.Message;
+            }
+
+            return
+                "The operation could not be completed. " +
+                "Technical details were saved in the local POS Logs folder.";
+        }
+
+        private void SetStatus(
+            string message,
+            string color)
+        {
+            StatusMessage =
+                string.IsNullOrWhiteSpace(
+                    message)
+                    ? "Ready."
+                    : message.Trim();
+
+            StatusColor =
+                string.IsNullOrWhiteSpace(
+                    color)
+                    ? "#666666"
+                    : color;
         }
     }
 }
