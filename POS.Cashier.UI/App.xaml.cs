@@ -1,14 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using POS.Cashier.UI.Views;
 using POS.Core.Data;
-using POS.Core.Enums;
 using POS.Core.Interfaces;
-using POS.Core.Models;
+using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Services.Licensing;
 using System;
 using System.Windows;
 
@@ -27,79 +27,93 @@ namespace POS.Cashier.UI
         {
             var services = new ServiceCollection();
 
-            services.AddDbContextFactory<AppDbContext>(options =>
-                options.UseSqlite(DatabasePathProvider.ConnectionString));
+            services.AddDbContextFactory<AppDbContext>(
+                options =>
+                    options.UseSqlite(
+                        DatabasePathProvider
+                            .ConnectionString));
 
-
-            services.AddSingleton<FreeItemClaimRepository>();
-            // Core
+            // Core repositories.
             services.AddTransient<UserRepository>();
             services.AddTransient<ItemMasterRepository>();
             services.AddTransient<SalesRepository>();
             services.AddTransient<TillRepository>();
             services.AddTransient<CustomerRepository>();
+            services.AddTransient<TerminalSettingsRepository>();
 
             services.AddSingleton<AuthService>();
-            services.AddTransient<IReceiptPrintService, EscPosReceiptPrintService>();
 
-            // ViewModels
-            services.AddTransient<POS.Cashier.UI.ViewModels.LoginViewModel>();
-            services.AddTransient<POS.Cashier.UI.ViewModels.SalesViewModel>();
-            services.AddTransient<POS.Cashier.UI.ViewModels.OpenCloseShiftViewModel>();
+            services.AddTransient<
+                IReceiptPrintService,
+                EscPosReceiptPrintService>();
 
-            services.AddTransient<POS.Cashier.UI.ViewModels.CashMovementViewModel>();
-            services.AddTransient<POS.Cashier.UI.ViewModels.B2BCustomerViewModel>();
+            // Offline licensing.
+            services.AddTransient<LicenseRepository>();
+            services.AddTransient<MachineFingerprintService>();
+            services.AddTransient<LicenseSignatureService>();
+            services.AddTransient<LicenseFileService>();
+            services.AddTransient<LicenseManagerService>();
 
+            // ViewModels.
+            services.AddTransient<LoginViewModel>();
+            services.AddTransient<SalesViewModel>();
+            services.AddTransient<OpenCloseShiftViewModel>();
+            services.AddTransient<CashMovementViewModel>();
+            services.AddTransient<B2BCustomerViewModel>();
             services.AddTransient<QuickCustomerCreateViewModel>();
+            services.AddTransient<ManagerAuthViewModel>();
+            services.AddTransient<FloatCashViewModel>();
+            services.AddTransient<ExpressMenuViewModel>();
+            services.AddTransient<FreeItemReasonModalViewModel>();
+            services.AddTransient<PluSearchViewModel>();
 
-            // Dialog ViewModels (Flattened structure)
-            services.AddTransient<POS.Cashier.UI.ViewModels.ManagerAuthViewModel>();
-            services.AddTransient<POS.Cashier.UI.ViewModels.FloatCashViewModel>();
-            services.AddTransient<POS.Cashier.UI.ViewModels.ExpressMenuViewModel>();
-            services.AddTransient<POS.Cashier.UI.ViewModels.FreeItemReasonModalViewModel>();
+            services.AddTransient<ExpressItemRepository>();
 
-            services.AddTransient<POS.Cashier.UI.ViewModels.PluSearchViewModel>();
+            services.AddSingleton<
+                IReceiptPrinterService,
+                POS.Hardware.Services
+                    .ReceiptPrinterService>();
 
-            // Services
-            services.AddTransient<POS.Core.Repositories.ExpressItemRepository>();
-            services.AddSingleton<IReceiptPrinterService, POS.Hardware.Services.ReceiptPrinterService>();
-
-            // =========================================================
-            // GIFT VOUCHER
-            // =========================================================
             services.AddTransient<GiftVoucherRepository>();
             services.AddTransient<SellGiftVoucherDialogViewModel>();
             services.AddTransient<GiftVoucherTenderDialogViewModel>();
-
             services.AddTransient<FreeIssueRuleRepository>();
             services.AddTransient<FreeItemClaimRepository>();
-            services.AddTransient<FreeItemReasonModalViewModel>();
-
             services.AddTransient<DiscountRuleDialogViewModel>();
             services.AddTransient<DiscountRuleRepository>();
 
             return services.BuildServiceProvider();
-
-
         }
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(
+            StartupEventArgs e)
         {
             base.OnStartup(e);
-            if (Services == null) return;
 
-            // 1. Ensure DB exists
-            var dbFactory = Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            if (Services == null)
+            {
+                Shutdown();
+                return;
+            }
+
+            var dbFactory =
+                Services.GetRequiredService<
+                    IDbContextFactory<AppDbContext>>();
 
             try
             {
-                using var context = dbFactory.CreateDbContext();
-                context.Database.Migrate();
+                await using var context =
+                    await dbFactory
+                        .CreateDbContextAsync();
+
+                await context.Database
+                    .MigrateAsync();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"The POS database could not be initialized.\n\n{ex.Message}",
+                    $"The POS database could not be initialized.\n\n" +
+                    ex.Message,
                     "Database Startup Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -108,43 +122,129 @@ namespace POS.Cashier.UI
                 return;
             }
 
-            // 2. CHECK DATABASE FOR OPEN SHIFTS (The Alt+F4 Protection)
-            var tillRepo = Services.GetRequiredService<TillRepository>();
-            var activeShift = tillRepo.GetActiveShiftAsync("01").GetAwaiter().GetResult();
+            string terminalNo;
 
-            // 3. Setup Login ViewModel and pass the lock state
-            var loginViewModel = Services.GetRequiredService<POS.Cashier.UI.ViewModels.LoginViewModel>();
-            loginViewModel.InitializeShiftState(activeShift);
-
-            var loginWindow = new LoginView { DataContext = loginViewModel };
-
-            // 4. The New Seamless Routing Logic
-            loginViewModel.LoginSuccessful += async () =>
+            try
             {
-                if (!loginViewModel.HasOpenShift)
-                {
-                    // Silently create the new shift in the background with Rs. 0
-                    var tillRepository = Services.GetRequiredService<TillRepository>();
-                    var authService = Services.GetRequiredService<AuthService>();
-                    string cashierName = authService.CurrentUser?.Username ?? "Unknown";
+                var terminalSettingsRepository =
+                    Services.GetRequiredService<
+                        TerminalSettingsRepository>();
 
-                    await tillRepository.CreateNewShiftAsync("01", cashierName);
+                var terminalSettings =
+                    await terminalSettingsRepository
+                        .GetOrCreateForCurrentMachineAsync(
+                            "01");
+
+                terminalNo =
+                    string.IsNullOrWhiteSpace(
+                        terminalSettings.TerminalNo)
+                    ? "01"
+                    : terminalSettings.TerminalNo.Trim();
+
+                var licenseManager =
+                    Services.GetRequiredService<
+                        LicenseManagerService>();
+
+                LicenseSummary summary =
+                    await licenseManager
+                        .GetCurrentLicenseSummaryAsync();
+
+                if (!summary.CanRunCashier)
+                {
+                    MessageBox.Show(
+                        summary.StatusMessage,
+                        "Cashier License Required",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    Shutdown();
+                    return;
                 }
 
-                // Route directly to the Sales Screen without bothering the cashier!
-                LaunchMainPos(loginWindow);
-            };
+                if (summary.OverallStatus ==
+                    LicenseStatus.ExpiringSoon)
+                {
+                    MessageBox.Show(
+                        summary.StatusMessage,
+                        "License Expiry Warning",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "The Cashier license could not be verified.\n\n" +
+                    ex.Message,
+                    "License Check Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
 
-            this.MainWindow = loginWindow;
+                Shutdown();
+                return;
+            }
+
+            var tillRepository =
+                Services.GetRequiredService<
+                    TillRepository>();
+
+            var activeShift =
+                await tillRepository
+                    .GetActiveShiftAsync(
+                        terminalNo);
+
+            var loginViewModel =
+                Services.GetRequiredService<
+                    LoginViewModel>();
+
+            loginViewModel
+                .InitializeShiftState(
+                    activeShift);
+
+            var loginWindow =
+                new LoginView
+                {
+                    DataContext = loginViewModel
+                };
+
+            loginViewModel.LoginSuccessful +=
+                async () =>
+                {
+                    if (!loginViewModel
+                            .HasOpenShift)
+                    {
+                        var authService =
+                            Services
+                                .GetRequiredService<
+                                    AuthService>();
+
+                        string cashierName =
+                            authService.CurrentUser
+                                ?.Username ??
+                            "Unknown";
+
+                        await tillRepository
+                            .CreateNewShiftAsync(
+                                terminalNo,
+                                cashierName);
+                    }
+
+                    LaunchMainPos(loginWindow);
+                };
+
+            MainWindow = loginWindow;
             loginWindow.Show();
         }
 
-        private void LaunchMainPos(Window oldLoginWindow)
+        private void LaunchMainPos(
+            Window oldLoginWindow)
         {
-            SalesView salesWindow = new SalesView();
-            this.MainWindow = salesWindow;
+            var salesWindow =
+                new SalesView();
+
+            MainWindow = salesWindow;
             salesWindow.Show();
-            oldLoginWindow.Close(); // Destroy the login window
+            oldLoginWindow.Close();
         }
     }
 }

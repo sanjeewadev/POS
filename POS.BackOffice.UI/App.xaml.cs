@@ -7,11 +7,13 @@ using POS.BackOffice.UI.Views.Layout;
 using POS.BackOffice.UI.Views.Pages.Admin;
 using POS.BackOffice.UI.Views.Pages.File;
 using POS.Core.Data;
+using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Backup;
 using POS.Core.Services.Licensing;
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace POS.BackOffice.UI
@@ -257,6 +259,8 @@ namespace POS.BackOffice.UI
 
             if (loginWindow.ShowDialog() == true)
             {
+                await ShowLicenseNoticeAsync();
+
                 var mainWindow = new ManagementShellView();
                 var mainViewModel = Services.GetRequiredService<MainViewModel>();
 
@@ -270,5 +274,83 @@ namespace POS.BackOffice.UI
                 Application.Current.Shutdown();
             }
         }
+        private static async Task ShowLicenseNoticeAsync()
+        {
+            if (Services == null)
+                return;
+
+            try
+            {
+                var licenseManager =
+                    Services.GetRequiredService<
+                        LicenseManagerService>();
+
+                LicenseSummary summary =
+                    await licenseManager
+                        .GetCurrentLicenseSummaryAsync();
+
+                if (summary.StoreLicenseStatus ==
+                    LicenseStatus.Active)
+                {
+                    return;
+                }
+
+                string message;
+                MessageBoxImage icon;
+
+                switch (summary.StoreLicenseStatus)
+                {
+                    case LicenseStatus.ExpiringSoon:
+                        message =
+                            $"The annual store license expires on " +
+                            $"{summary.StoreExpiryDate:yyyy-MM-dd}. " +
+                            $"Please renew it before expiry.";
+                        icon = MessageBoxImage.Warning;
+                        break;
+
+                    case LicenseStatus.ExpiredReadOnly:
+                        message =
+                            "The annual store license has expired. " +
+                            "Cashier terminals are locked, but BackOffice " +
+                            "remains available for administration, reports, " +
+                            "backup, and license renewal.";
+                        icon = MessageBoxImage.Warning;
+                        break;
+
+                    case LicenseStatus.Missing:
+                        message =
+                            "No active store license is installed. " +
+                            "Cashier terminals are locked, but BackOffice " +
+                            "remains available so that a license can be imported.";
+                        icon = MessageBoxImage.Information;
+                        break;
+
+                    default:
+                        message =
+                            "The installed store license is invalid or inactive. " +
+                            "Cashier terminals are locked, but BackOffice " +
+                            "remains available for license recovery.";
+                        icon = MessageBoxImage.Warning;
+                        break;
+                }
+
+                MessageBox.Show(
+                    message,
+                    "POS License",
+                    MessageBoxButton.OK,
+                    icon);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "License status could not be checked. " +
+                    "BackOffice will remain available.\n\n" +
+                    ex.Message,
+                    "License Check",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
     }
 }

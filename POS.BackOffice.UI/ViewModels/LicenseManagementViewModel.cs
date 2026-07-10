@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -154,7 +154,7 @@ namespace POS.BackOffice.UI.ViewModels
                 var dialog = new OpenFileDialog
                 {
                     Title = "Select License File",
-                    Filter = "License Files (*.dat;*.lic;*.json)|*.dat;*.lic;*.json|All Files (*.*)|*.*",
+                    Filter = "POS License Files (*.poslic)|*.poslic|All Files (*.*)|*.*",
                     Multiselect = false,
                     CheckFileExists = true
                 };
@@ -305,8 +305,8 @@ namespace POS.BackOffice.UI.ViewModels
                 LicensingStatus.Missing => "Missing",
                 LicensingStatus.Active => "Active",
                 LicensingStatus.ExpiringSoon => "Expiring Soon",
-                LicensingStatus.GracePeriod => "Grace Period",
-                LicensingStatus.ExpiredReadOnly => "Expired / Read Only",
+                LicensingStatus.GracePeriod => "Expired",
+                LicensingStatus.ExpiredReadOnly => "Expired / Cashier Locked",
                 LicensingStatus.Invalid => "Invalid",
                 LicensingStatus.Revoked => "Revoked",
                 _ => "Unknown"

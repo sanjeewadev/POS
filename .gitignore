@@ -1,82 +1,76 @@
-﻿-----------------------------------------------------------------------------
+# ============================================================
+# ADVANCED POS - SOURCE CONTROL EXCLUSIONS
+# ============================================================
 
-.NET Core & Visual Studio
-
------------------------------------------------------------------------------
-
-[Bb]in/
-[Oo]bj/
-
-**/bin/
-**/obj/
-
+# Visual Studio
 .vs/
+**/.vs/
 *.user
+*.suo
 *.userosscache
 *.sln.docstates
-*.suo
+*.csproj.user
 
------------------------------------------------------------------------------
+# .NET build output
+[Bb]in/
+[Oo]bj/
+**/[Bb]in/
+**/[Oo]bj/
+[Aa]rtifacts/
+[Pp]ublish/
+[Pp]ublished/
+TestResults/
 
-SQLite Databases (CRITICAL)
+# NuGet output
+packages/
+*.nupkg
+*.snupkg
 
------------------------------------------------------------------------------
-
-We ignore these so your local test data isn't pushed to GitHub.
-
-Your team members will generate their own empty DBs using EF Migrations.
-
+# SQLite databases and working files
 *.db
 *.db-shm
 *.db-wal
 *.sqlite
 *.sqlite3
 
------------------------------------------------------------------------------
+# License files generated for customers
+*.poslic
+*.license
+*.lic
 
-Publish & Deployment
+# Secret or private-key material
+**/[Kk]eys/
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.p12
+**/*.keyblob
+**/*.dpapi
+**/*.poskeybackup
+**/*private*key*
+**/*secret*
 
------------------------------------------------------------------------------
+# Local configuration
+.env
+.env.*
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+*.secrets.json
 
-*.publishproj
-[Pp]ublish/
-[Pp]ublished/
-[Aa]rtifacts/
+# Logs and temporary files
+*.log
+*.err
+*.tmp
+*.temp
+*.bak
+*.old
 
------------------------------------------------------------------------------
-
-Packages
-
------------------------------------------------------------------------------
-
-*.nupkg
-*.snupkg
-/[Pp]ackages/
-!*/[Pp]ackages/build/
-*.nuget.props
-*.nuget.targets
-
------------------------------------------------------------------------------
-
-OS Generated Files
-
------------------------------------------------------------------------------
-
+# Operating-system files
 .DS_Store
-.DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
 Thumbs.db
-
------------------------------------------------------------------------------
-
-Logs & Caches
-
------------------------------------------------------------------------------
-
-.log
-.err
-[Tt]est[Rr]esult/
-[Bb]uild[Ll]og.
+Desktop.ini
