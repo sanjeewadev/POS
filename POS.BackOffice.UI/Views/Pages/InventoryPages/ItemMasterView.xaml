@@ -317,7 +317,7 @@
                                 Margin="0,0,10,0">
                             <TextBlock>
                                 <Run Text="Status: "/>
-                                <Run Text="{Binding ItemStatusText}" FontWeight="Bold"/>
+                                <Run Text="{Binding ItemStatusText, Mode=OneWay}" FontWeight="Bold"/>
                             </TextBlock>
                         </Border>
 
@@ -468,8 +468,8 @@
                             <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="130"/>
                             <ColumnDefinition Width="15"/>
-                            <ColumnDefinition Width="55"/>
-                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="85"/>
+                            <ColumnDefinition Width="170"/>
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0"
@@ -505,15 +505,68 @@
                         </ComboBox>
 
                         <TextBlock Grid.Column="6"
-                                   Text="Tax *"
+                                   Text="Tax Group *"
                                    Style="{StaticResource InlineLabel}"
                                    Foreground="{DynamicResource HeaderTextBrush}"/>
 
                         <ComboBox Grid.Column="7"
                                   ItemsSource="{Binding TaxCodes}"
-                                  SelectedItem="{Binding SelectedTaxCode, Mode=TwoWay}"
-                                  Style="{StaticResource ClassicCombo}"/>
+                                  SelectedItem="{Binding SelectedTaxCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Style="{StaticResource ClassicCombo}"
+                                  ToolTip="Tax group for this item. Final values should be TAX-FREE, VAT-STD, and VAT-RED."/>
                     </Grid>
+
+                    <Border Background="#FFF8D8"
+                            BorderBrush="#C9A227"
+                            BorderThickness="1"
+                            Padding="6"
+                            Margin="0,5,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="115"/>
+                                <ColumnDefinition Width="190"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="230"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="Price Entry Mode:"
+                                       Style="{StaticResource InlineLabel}"
+                                       Foreground="{DynamicResource HeaderTextBrush}"
+                                       FontWeight="Bold"/>
+
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Tax Group: "
+                                           FontSize="11"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding SelectedTaxCode, Mode=OneWay, FallbackValue='TAX-FREE'}"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <CheckBox Grid.Column="3"
+                                      Content="Prices are Tax Inclusive"
+                                      IsChecked="{Binding CurrentItem.IsTaxInclusive, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      IsEnabled="{Binding IsSetupEditable}"
+                                      Margin="0,2,0,0"
+                                      FontWeight="SemiBold"
+                                      ToolTip="Tick for MRP/shelf-price products where entered prices already include VAT. Untick for tax-exclusive pricing."/>
+
+                            <TextBlock Grid.Column="4"
+                                       Text="Unticked = Tax Exclusive. TAX-FREE items always calculate VAT as 0. This setting becomes the default for PO/GRN and future cashier VAT calculations."
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       FontSize="10"
+                                       FontStyle="Italic"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
 
                     <Border Background="{DynamicResource WhiteBackgroundBrush}"
                             BorderBrush="{DynamicResource LightBorderBrush}"
@@ -767,7 +820,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Grid.Column="0"
-                                               Text="Base Cost"
+                                               Text="{Binding BulkCostLabel, Mode=OneWay, FallbackValue='Cost Price'}"
                                                Style="{StaticResource InlineLabel}"/>
 
                                     <TextBox Grid.Column="1"
@@ -796,7 +849,7 @@
                                              HorizontalContentAlignment="Right"/>
 
                                     <TextBlock Grid.Column="3"
-                                               Text="Retail Rs."
+                                               Text="{Binding BulkRetailPriceLabel, Mode=OneWay, FallbackValue='Retail Rs.'}"
                                                Style="{StaticResource InlineLabel}"
                                                Foreground="{DynamicResource SuccessBorderBrush}"/>
 
@@ -827,7 +880,7 @@
                                              HorizontalContentAlignment="Right"/>
 
                                     <TextBlock Grid.Column="3"
-                                               Text="W/S Rs."
+                                               Text="{Binding BulkWholesalePriceLabel, Mode=OneWay, FallbackValue='W/S Rs.'}"
                                                Style="{StaticResource InlineLabel}"/>
 
                                     <TextBox Grid.Column="4"
@@ -846,7 +899,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Grid.Column="0"
-                                               Text="Min Price"
+                                               Text="{Binding BulkMinimumPriceLabel, Mode=OneWay, FallbackValue='Min Price'}"
                                                Style="{StaticResource InlineLabel}"/>
 
                                     <TextBox Grid.Column="1"
@@ -855,7 +908,7 @@
                                              HorizontalContentAlignment="Right"/>
 
                                     <TextBlock Grid.Column="3"
-                                               Text="Max Price"
+                                               Text="{Binding BulkMaximumPriceLabel, Mode=OneWay, FallbackValue='Max Price'}"
                                                Style="{StaticResource InlineLabel}"/>
 
                                     <TextBox Grid.Column="4"

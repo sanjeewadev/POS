@@ -33,6 +33,7 @@
                 <MenuItem Header="Sub-Categories" Command="{Binding NavigateToSubCategoryCommand}" />
                 <MenuItem Header="Item Properties" Command="{Binding NavigateToItemPropertyCommand}" />
                 <MenuItem Header="Units of Measure" Command="{Binding NavigateToUnitOfMeasureCommand}" />
+                <MenuItem Header="Tax Rate" Command="{Binding NavigateToTaxRateCommand}" />
                 <MenuItem Header="Suppliers" Command="{Binding NavigateToSupplierCommand}" />
                 <MenuItem Header="Item Master" Command="{Binding NavigateToItemMasterCommand}" />
             </MenuItem>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,15 +10,15 @@ using POS.Core.Models;
 
 namespace POS.Core.Repositories
 {
-    public sealed class SupplierLinkedDataSummary
+    public class SupplierLinkedDataSummary
     {
-        public int PurchaseOrderCount { get; init; }
-        public int GrnCount { get; init; }
-        public int SupplierReturnCount { get; init; }
-        public int SupplierLedgerCount { get; init; }
-        public int ItemSupplierCount { get; init; }
-        public int FreeIssueRuleCount { get; init; }
-        public int FreeItemClaimCount { get; init; }
+        public int PurchaseOrderCount { get; set; }
+        public int GrnCount { get; set; }
+        public int SupplierReturnCount { get; set; }
+        public int SupplierLedgerCount { get; set; }
+        public int ItemSupplierCount { get; set; }
+        public int FreeIssueRuleCount { get; set; }
+        public int FreeItemClaimCount { get; set; }
 
         public bool HasLinkedData =>
             PurchaseOrderCount > 0 ||
@@ -33,9 +33,8 @@ namespace POS.Core.Repositories
         {
             var builder = new StringBuilder();
 
-            builder.AppendLine($"Supplier '{supplierName}' cannot be deleted because it is already linked to system records.");
+            builder.AppendLine($"Supplier '{supplierName}' cannot be permanently deleted because it has linked records:");
             builder.AppendLine();
-            builder.AppendLine("Linked records:");
 
             if (PurchaseOrderCount > 0)
                 builder.AppendLine($"- Purchase Orders: {PurchaseOrderCount}");
@@ -59,7 +58,7 @@ namespace POS.Core.Repositories
                 builder.AppendLine($"- Free Item Claims: {FreeItemClaimCount}");
 
             builder.AppendLine();
-            builder.AppendLine("Suspend / deactivate this supplier instead of deleting it.");
+            builder.AppendLine("Use Deactivate/Suspend instead of permanent delete.");
 
             return builder.ToString();
         }
@@ -106,8 +105,8 @@ namespace POS.Core.Repositories
                 .ToListAsync();
         }
 
-        // Used by the Supplier Master grid.
-        // This must include deactivated suppliers so old suppliers can be searched and edited.
+        // Used by Supplier Master grid.
+        // Master page can include suspended/deactivated suppliers for old history review.
         public async Task<IReadOnlyList<Supplier>> GetAllFilteredAsync(
             string searchTerm = "",
             bool includeDeactivated = true,
@@ -121,9 +120,7 @@ namespace POS.Core.Repositories
                 .AsNoTracking();
 
             if (!includeDeactivated)
-            {
                 query = query.Where(s => !s.IsDeactivated);
-            }
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -136,7 +133,8 @@ namespace POS.Core.Repositories
                     EF.Functions.Like(s.ContactPerson, $"%{term}%") ||
                     EF.Functions.Like(s.Phone1, $"%{term}%") ||
                     EF.Functions.Like(s.Phone2, $"%{term}%") ||
-                    EF.Functions.Like(s.Email, $"%{term}%"));
+                    EF.Functions.Like(s.Email, $"%{term}%") ||
+                    EF.Functions.Like(s.VatNumber, $"%{term}%"));
             }
 
             return await query
@@ -176,7 +174,6 @@ namespace POS.Core.Repositories
         public async Task<SupplierLinkedDataSummary> GetLinkedDataSummaryAsync(int supplierId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
-
             return await GetLinkedDataSummaryAsync(context, supplierId);
         }
 
@@ -192,7 +189,7 @@ namespace POS.Core.Repositories
                 throw new ArgumentNullException(nameof(supplier));
 
             NormalizeSupplierForSave(supplier, isNew: true);
-            ValidateSupplier(supplier, isNew: true);
+            ValidateSupplierForSave(supplier);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -203,13 +200,9 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException($"Supplier code '{supplier.SupplierCode}' already exists.");
 
             DateTime now = DateTime.Now;
-
             supplier.CreatedAt = now;
             supplier.UpdatedAt = now;
             supplier.DeactivatedAt = supplier.IsDeactivated ? now : null;
-
-            // New supplier balance must always start from zero.
-            // Later GRN/payment/ledger modules should update this.
             supplier.CurrentBalance = 0m;
 
             await context.Suppliers.AddAsync(supplier);
@@ -221,11 +214,8 @@ namespace POS.Core.Repositories
             if (supplier == null)
                 throw new ArgumentNullException(nameof(supplier));
 
-            if (supplier.Id <= 0)
-                throw new InvalidOperationException("Invalid supplier record.");
-
             NormalizeSupplierForSave(supplier, isNew: false);
-            ValidateSupplier(supplier, isNew: false);
+            ValidateSupplierForSave(supplier);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -233,14 +223,16 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(s => s.Id == supplier.Id);
 
             if (existing == null)
-                throw new InvalidOperationException("Supplier record was not found.");
+                throw new InvalidOperationException("Supplier was not found.");
 
-            DateTime now = DateTime.Now;
-            bool wasDeactivated = existing.IsDeactivated;
-            bool isNowDeactivated = supplier.IsDeactivated;
+            string existingCode = NormalizeCode(existing.SupplierCode);
+            string submittedCode = NormalizeCode(supplier.SupplierCode);
 
-            // SupplierCode is intentionally not updated after creation.
-            // CurrentBalance is intentionally not updated by Supplier Master.
+            if (!string.Equals(existingCode, submittedCode, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "Supplier code cannot be changed after creation. Delete the unused supplier and create it again if the code is wrong.");
+            }
 
             existing.SupplierName = supplier.SupplierName;
             existing.CompanyName = supplier.CompanyName;
@@ -254,68 +246,95 @@ namespace POS.Core.Repositories
             existing.VatNumber = supplier.HasVat ? supplier.VatNumber : string.Empty;
             existing.DefaultCreditDays = supplier.DefaultCreditDays;
 
-            existing.IsDeactivated = isNowDeactivated;
-            existing.UpdatedAt = now;
+            // CurrentBalance is ledger-controlled. Do not update it here.
+            existing.IsDeactivated = supplier.IsDeactivated;
+            existing.UpdatedAt = DateTime.Now;
 
-            if (!wasDeactivated && isNowDeactivated)
-            {
-                existing.DeactivatedAt = now;
-            }
-            else if (wasDeactivated && !isNowDeactivated)
-            {
+            if (existing.IsDeactivated)
+                existing.DeactivatedAt ??= existing.UpdatedAt;
+            else
                 existing.DeactivatedAt = null;
-            }
-            else if (isNowDeactivated)
-            {
-                existing.DeactivatedAt ??= now;
-            }
 
             await context.SaveChangesAsync();
         }
 
-        public async Task DeactivateAsync(int id)
+        public async Task HardDeleteAsync(int supplierId)
         {
-            if (id <= 0)
+            if (supplierId <= 0)
+                return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
+
+            try
+            {
+                var supplier = await context.Suppliers
+                    .FirstOrDefaultAsync(s => s.Id == supplierId);
+
+                if (supplier == null)
+                    return;
+
+                var summary = await GetLinkedDataSummaryAsync(context, supplierId);
+
+                if (summary.HasLinkedData || supplier.CurrentBalance != 0m)
+                {
+                    throw new InvalidOperationException(
+                        summary.HasLinkedData
+                            ? summary.ToUserMessage(supplier.SupplierName)
+                            : "Supplier cannot be permanently deleted while current balance is not zero. Use Deactivate instead.");
+                }
+
+                context.Suppliers.Remove(supplier);
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task DeleteAsync(int supplierId)
+        {
+            await HardDeleteAsync(supplierId);
+        }
+
+        public async Task DeactivateAsync(int supplierId)
+        {
+            if (supplierId <= 0)
                 return;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var supplier = await context.Suppliers
-                .FirstOrDefaultAsync(s => s.Id == id);
+                .FirstOrDefaultAsync(s => s.Id == supplierId);
 
             if (supplier == null)
                 return;
 
-            if (supplier.IsDeactivated)
-                return;
-
             DateTime now = DateTime.Now;
-
             supplier.IsDeactivated = true;
             supplier.UpdatedAt = now;
-            supplier.DeactivatedAt = now;
+            supplier.DeactivatedAt ??= now;
 
             await context.SaveChangesAsync();
         }
 
-        public async Task ReactivateAsync(int id)
+        public async Task ReactivateAsync(int supplierId)
         {
-            if (id <= 0)
+            if (supplierId <= 0)
                 return;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var supplier = await context.Suppliers
-                .FirstOrDefaultAsync(s => s.Id == id);
+                .FirstOrDefaultAsync(s => s.Id == supplierId);
 
             if (supplier == null)
                 return;
 
-            if (!supplier.IsDeactivated)
-                return;
-
             DateTime now = DateTime.Now;
-
             supplier.IsDeactivated = false;
             supplier.UpdatedAt = now;
             supplier.DeactivatedAt = null;
@@ -323,67 +342,27 @@ namespace POS.Core.Repositories
             await context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int id)
-        {
-            if (id <= 0)
-                return;
-
-            await using var context = await _contextFactory.CreateDbContextAsync();
-
-            var supplier = await context.Suppliers
-                .FirstOrDefaultAsync(s => s.Id == id);
-
-            if (supplier == null)
-                return;
-
-            var linkedData = await GetLinkedDataSummaryAsync(context, id);
-
-            if (linkedData.HasLinkedData)
-            {
-                throw new InvalidOperationException(
-                    linkedData.ToUserMessage(supplier.SupplierName));
-            }
-
-            try
-            {
-                context.Suppliers.Remove(supplier);
-                await context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                throw new InvalidOperationException(
-                    "This supplier cannot be deleted because it is linked to other records. Suspend/deactivate it instead.");
-            }
-        }
-
         private static async Task<SupplierLinkedDataSummary> GetLinkedDataSummaryAsync(
             AppDbContext context,
             int supplierId)
         {
+            var summary = new SupplierLinkedDataSummary();
+
             if (supplierId <= 0)
-                return new SupplierLinkedDataSummary();
+                return summary;
 
-            int poCount = await CountLinkedEntityAsync(context, context.PoHeaders, supplierId);
-            int grnCount = await CountLinkedEntityAsync(context, context.GrnHeaders, supplierId);
-            int returnCount = await CountLinkedEntityAsync(context, context.SupplierReturnHeaders, supplierId);
-            int ledgerCount = await CountLinkedEntityAsync(context, context.SupplierLedgers, supplierId);
-            int itemSupplierCount = await CountLinkedEntityAsync(context, context.ItemSuppliers, supplierId);
-            int freeIssueRuleCount = await CountLinkedEntityAsync(context, context.FreeIssueRules, supplierId);
-            int freeItemClaimCount = await CountLinkedEntityAsync(context, context.FreeItemClaimLogs, supplierId);
+            summary.PurchaseOrderCount = await CountBySupplierIdAsync(context, context.PoHeaders.AsNoTracking(), supplierId);
+            summary.GrnCount = await CountBySupplierIdAsync(context, context.GrnHeaders.AsNoTracking(), supplierId);
+            summary.SupplierReturnCount = await CountBySupplierIdAsync(context, context.SupplierReturnHeaders.AsNoTracking(), supplierId);
+            summary.SupplierLedgerCount = await CountBySupplierIdAsync(context, context.SupplierLedgers.AsNoTracking(), supplierId);
+            summary.ItemSupplierCount = await CountBySupplierIdAsync(context, context.ItemSuppliers.AsNoTracking(), supplierId);
+            summary.FreeIssueRuleCount = await CountBySupplierIdAsync(context, context.FreeIssueRules.AsNoTracking(), supplierId);
+            summary.FreeItemClaimCount = await CountBySupplierIdAsync(context, context.FreeItemClaimLogs.AsNoTracking(), supplierId);
 
-            return new SupplierLinkedDataSummary
-            {
-                PurchaseOrderCount = poCount,
-                GrnCount = grnCount,
-                SupplierReturnCount = returnCount,
-                SupplierLedgerCount = ledgerCount,
-                ItemSupplierCount = itemSupplierCount,
-                FreeIssueRuleCount = freeIssueRuleCount,
-                FreeItemClaimCount = freeItemClaimCount
-            };
+            return summary;
         }
 
-        private static async Task<int> CountLinkedEntityAsync<TEntity>(
+        private static async Task<int> CountBySupplierIdAsync<TEntity>(
             AppDbContext context,
             IQueryable<TEntity> query,
             int supplierId) where TEntity : class
@@ -403,10 +382,81 @@ namespace POS.Core.Repositories
             if (property.ClrType == typeof(int?))
             {
                 return await query.CountAsync(e =>
-                    EF.Property<int?>(e, "SupplierId") == supplierId);
+                    EF.Property<int?>(e, "SupplierId").HasValue &&
+                    EF.Property<int?>(e, "SupplierId")!.Value == supplierId);
             }
 
             return 0;
+        }
+
+        private static void NormalizeSupplierForSave(Supplier supplier, bool isNew)
+        {
+            supplier.SupplierCode = NormalizeCode(supplier.SupplierCode);
+            supplier.SupplierName = NormalizeText(supplier.SupplierName);
+            supplier.CompanyName = NormalizeText(supplier.CompanyName);
+            supplier.ContactPerson = NormalizeText(supplier.ContactPerson);
+            supplier.Phone1 = NormalizeText(supplier.Phone1);
+            supplier.Phone2 = NormalizeText(supplier.Phone2);
+            supplier.Email = NormalizeText(supplier.Email).ToLowerInvariant();
+            supplier.Address = NormalizeText(supplier.Address);
+            supplier.VatNumber = supplier.HasVat ? NormalizeText(supplier.VatNumber).ToUpperInvariant() : string.Empty;
+
+            if (supplier.DefaultCreditDays < 0)
+                supplier.DefaultCreditDays = 0;
+
+            if (isNew)
+                supplier.CurrentBalance = 0m;
+        }
+
+        private static void ValidateSupplierForSave(Supplier supplier)
+        {
+            if (string.IsNullOrWhiteSpace(supplier.SupplierCode))
+                throw new InvalidOperationException("Supplier code is required.");
+
+            if (supplier.SupplierCode.Length > 20)
+                throw new InvalidOperationException("Supplier code cannot be longer than 20 characters.");
+
+            if (!SupplierCodeRegex.IsMatch(supplier.SupplierCode))
+                throw new InvalidOperationException("Supplier code can only contain letters, numbers, dash, and underscore.");
+
+            if (string.IsNullOrWhiteSpace(supplier.SupplierName))
+                throw new InvalidOperationException("Supplier name is required.");
+
+            if (supplier.SupplierName.Length > 150)
+                throw new InvalidOperationException("Supplier name cannot be longer than 150 characters.");
+
+            if (supplier.CompanyName.Length > 150)
+                throw new InvalidOperationException("Company name cannot be longer than 150 characters.");
+
+            if (supplier.ContactPerson.Length > 50)
+                throw new InvalidOperationException("Contact person cannot be longer than 50 characters.");
+
+            if (string.IsNullOrWhiteSpace(supplier.Phone1))
+                throw new InvalidOperationException("Primary phone number is required.");
+
+            if (!PhoneRegex.IsMatch(supplier.Phone1))
+                throw new InvalidOperationException("Primary phone number is invalid.");
+
+            if (!string.IsNullOrWhiteSpace(supplier.Phone2) && !PhoneRegex.IsMatch(supplier.Phone2))
+                throw new InvalidOperationException("Secondary phone number is invalid.");
+
+            if (supplier.Email.Length > 100)
+                throw new InvalidOperationException("Email cannot be longer than 100 characters.");
+
+            if (supplier.Address.Length > 250)
+                throw new InvalidOperationException("Address cannot be longer than 250 characters.");
+
+            if (supplier.HasVat && string.IsNullOrWhiteSpace(supplier.VatNumber))
+            {
+                throw new InvalidOperationException(
+                    "VAT registration number is required when supplier is VAT registered.");
+            }
+
+            if (supplier.VatNumber.Length > 50)
+                throw new InvalidOperationException("VAT registration number cannot be longer than 50 characters.");
+
+            if (supplier.DefaultCreditDays < 0 || supplier.DefaultCreditDays > 365)
+                throw new InvalidOperationException("Default credit days must be between 0 and 365.");
         }
 
         private static int NormalizeTakeLimit(int take)
@@ -420,24 +470,7 @@ namespace POS.Core.Repositories
             return take;
         }
 
-        private static void NormalizeSupplierForSave(Supplier supplier, bool isNew)
-        {
-            if (isNew)
-            {
-                supplier.SupplierCode = NormalizeCode(supplier.SupplierCode);
-            }
-
-            supplier.SupplierName = NormalizeText(supplier.SupplierName);
-            supplier.CompanyName = NormalizeText(supplier.CompanyName);
-            supplier.ContactPerson = NormalizeText(supplier.ContactPerson);
-            supplier.Phone1 = NormalizeText(supplier.Phone1);
-            supplier.Phone2 = NormalizeText(supplier.Phone2);
-            supplier.Email = NormalizeText(supplier.Email).ToLowerInvariant();
-            supplier.Address = NormalizeText(supplier.Address);
-            supplier.VatNumber = supplier.HasVat ? NormalizeText(supplier.VatNumber) : string.Empty;
-        }
-
-        private static string NormalizeCode(string value)
+        private static string NormalizeCode(string? value)
         {
             return (value ?? string.Empty).Trim().ToUpperInvariant();
         }
@@ -445,96 +478,6 @@ namespace POS.Core.Repositories
         private static string NormalizeText(string? value)
         {
             return (value ?? string.Empty).Trim();
-        }
-
-        private static void ValidateSupplier(Supplier supplier, bool isNew)
-        {
-            if (isNew)
-            {
-                ValidateSupplierCode(supplier.SupplierCode);
-            }
-
-            ValidateRequiredText(supplier.SupplierName, "Supplier name", 150);
-            ValidateOptionalText(supplier.CompanyName, "Company name", 150);
-            ValidateOptionalText(supplier.ContactPerson, "Contact person", 50);
-            ValidateRequiredPhone(supplier.Phone1, "Phone 1");
-            ValidateOptionalPhone(supplier.Phone2, "Phone 2");
-            ValidateOptionalEmail(supplier.Email);
-            ValidateOptionalText(supplier.Address, "Address", 250);
-
-            if (supplier.HasVat)
-            {
-                ValidateRequiredText(supplier.VatNumber, "VAT number", 50);
-            }
-
-            if (supplier.DefaultCreditDays < 0)
-                throw new InvalidOperationException("Default credit days cannot be negative.");
-
-            if (supplier.DefaultCreditDays > 365)
-                throw new InvalidOperationException("Default credit days cannot be greater than 365.");
-        }
-
-        private static void ValidateSupplierCode(string code)
-        {
-            if (string.IsNullOrWhiteSpace(code))
-                throw new InvalidOperationException("Supplier code is required.");
-
-            if (code.Length > 20)
-                throw new InvalidOperationException("Supplier code cannot be longer than 20 characters.");
-
-            if (!SupplierCodeRegex.IsMatch(code))
-            {
-                throw new InvalidOperationException(
-                    "Supplier code can only contain letters, numbers, dash, and underscore.");
-            }
-        }
-
-        private static void ValidateRequiredText(string value, string fieldName, int maxLength)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new InvalidOperationException($"{fieldName} is required.");
-
-            if (value.Length > maxLength)
-                throw new InvalidOperationException($"{fieldName} cannot be longer than {maxLength} characters.");
-        }
-
-        private static void ValidateOptionalText(string value, string fieldName, int maxLength)
-        {
-            if (!string.IsNullOrWhiteSpace(value) && value.Length > maxLength)
-                throw new InvalidOperationException($"{fieldName} cannot be longer than {maxLength} characters.");
-        }
-
-        private static void ValidateRequiredPhone(string value, string fieldName)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                throw new InvalidOperationException($"{fieldName} is required.");
-
-            if (!PhoneRegex.IsMatch(value))
-                throw new InvalidOperationException($"{fieldName} is not valid.");
-        }
-
-        private static void ValidateOptionalPhone(string value, string fieldName)
-        {
-            if (!string.IsNullOrWhiteSpace(value) && !PhoneRegex.IsMatch(value))
-                throw new InvalidOperationException($"{fieldName} is not valid.");
-        }
-
-        private static void ValidateOptionalEmail(string email)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-                return;
-
-            if (email.Length > 100)
-                throw new InvalidOperationException("Email cannot be longer than 100 characters.");
-
-            try
-            {
-                _ = new System.Net.Mail.MailAddress(email);
-            }
-            catch
-            {
-                throw new InvalidOperationException("Email address is not valid.");
-            }
         }
     }
 }

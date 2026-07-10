@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,11 +11,9 @@ namespace POS.Core.Repositories
     public class SupplierLedgerSupplierLookupDto
     {
         public int Id { get; set; }
-
         public string SupplierCode { get; set; } = string.Empty;
         public string SupplierName { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;
-
         public decimal CurrentBalance { get; set; }
 
         public string DisplayText
@@ -49,31 +47,18 @@ namespace POS.Core.Repositories
     public class SupplierLedgerEntryDto
     {
         public int Id { get; set; }
-
         public DateTime EntryDate { get; set; }
-
         public string ReferenceNo { get; set; } = string.Empty;
-
         public string EntryType { get; set; } = string.Empty;
-
         public string Description { get; set; } = string.Empty;
-
         public decimal ChargeAmount { get; set; }
-
         public decimal PaidAmount { get; set; }
-
         public decimal RunningBalance { get; set; }
-
         public string PaymentMethod { get; set; } = string.Empty;
-
         public string BankName { get; set; } = string.Empty;
-
         public string PaymentReferenceNo { get; set; } = string.Empty;
-
         public DateTime? DueDate { get; set; }
-
         public bool IsPaid { get; set; }
-
         public DateTime CreatedAt { get; set; }
 
         public string DisplayType
@@ -84,6 +69,7 @@ namespace POS.Core.Repositories
                 {
                     "GRN" => "GRN",
                     "DEBIT_NOTE" => "Supplier Return",
+                    "CREDIT_NOTE" => "Credit Note",
                     "PAYMENT" => "Payment",
                     "OPENING_BALANCE" => "Opening Balance",
                     _ => EntryType
@@ -108,12 +94,8 @@ namespace POS.Core.Repositories
 
         public SupplierLedgerRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
-
-        // =========================================================
-        // SUPPLIER LOOKUP
-        // =========================================================
 
         public async Task<List<SupplierLedgerSupplierLookupDto>> GetActiveSuppliersAsync()
         {
@@ -134,10 +116,6 @@ namespace POS.Core.Repositories
                 })
                 .ToListAsync();
         }
-
-        // =========================================================
-        // LEDGER STATEMENT
-        // =========================================================
 
         public async Task<List<SupplierLedgerEntryDto>> GetLedgerEntriesAsync(int supplierId)
         {
@@ -175,10 +153,12 @@ namespace POS.Core.Repositories
             foreach (var entry in rawEntries)
             {
                 string transactionType = NormalizeLedgerType(entry.TransactionType);
+                decimal charge = RoundMoney(entry.ChargeAmount);
+                decimal creditOrPayment = RoundMoney(entry.PaymentAmount);
 
-                runningBalance += entry.ChargeAmount;
-                runningBalance -= entry.PaymentAmount;
-                runningBalance = Math.Round(runningBalance, 2);
+                runningBalance += charge;
+                runningBalance -= creditOrPayment;
+                runningBalance = RoundMoney(runningBalance);
 
                 statement.Add(new SupplierLedgerEntryDto
                 {
@@ -186,14 +166,9 @@ namespace POS.Core.Repositories
                     EntryDate = entry.TransactionDate,
                     ReferenceNo = entry.ReferenceDocument,
                     EntryType = transactionType,
-                    Description = BuildDescription(
-                        transactionType,
-                        entry.Remarks,
-                        entry.PaymentMethod,
-                        entry.BankName,
-                        entry.ReferenceNumber),
-                    ChargeAmount = Math.Round(entry.ChargeAmount, 2),
-                    PaidAmount = Math.Round(entry.PaymentAmount, 2),
+                    Description = BuildDescription(transactionType, entry.Remarks, entry.PaymentMethod, entry.BankName, entry.ReferenceNumber),
+                    ChargeAmount = charge,
+                    PaidAmount = creditOrPayment,
                     RunningBalance = runningBalance,
                     PaymentMethod = entry.PaymentMethod,
                     BankName = entry.BankName,
@@ -205,7 +180,6 @@ namespace POS.Core.Repositories
             }
 
             statement.Reverse();
-
             return statement;
         }
 
@@ -215,27 +189,39 @@ namespace POS.Core.Repositories
 
             return new SupplierLedgerSummaryDto
             {
-                TotalBilled = rows
-                    .Where(r => r.EntryType == "GRN")
-                    .Sum(r => r.ChargeAmount),
-
-                TotalCredits = rows
-                    .Where(r => IsCreditType(r.EntryType))
-                    .Sum(r => r.PaidAmount),
-
-                TotalPaid = rows
-                    .Where(r => r.EntryType == "PAYMENT")
-                    .Sum(r => r.PaidAmount),
-
-                NetOutstanding = rows.Any()
-                    ? rows.First().RunningBalance
-                    : 0m
+                TotalBilled = RoundMoney(rows.Where(r => r.EntryType == "GRN").Sum(r => r.ChargeAmount)),
+                TotalCredits = RoundMoney(rows.Where(r => IsCreditType(r.EntryType)).Sum(r => r.PaidAmount)),
+                TotalPaid = RoundMoney(rows.Where(r => r.EntryType == "PAYMENT").Sum(r => r.PaidAmount)),
+                NetOutstanding = rows.Any() ? RoundMoney(rows.First().RunningBalance) : 0m
             };
         }
 
-        // =========================================================
-        // PAYMENT POSTING
-        // =========================================================
+        public async Task<decimal> GetCurrentOutstandingAsync(int supplierId)
+        {
+            if (supplierId <= 0)
+                return 0m;
+
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            var rows = await context.SupplierLedgers
+                .AsNoTracking()
+                .Where(l => l.SupplierId == supplierId)
+                .Select(l => new { l.ChargeAmount, l.PaymentAmount })
+                .ToListAsync();
+
+            if (!rows.Any())
+            {
+                var supplierBalance = await context.Suppliers
+                    .AsNoTracking()
+                    .Where(s => s.Id == supplierId)
+                    .Select(s => (decimal?)s.CurrentBalance)
+                    .FirstOrDefaultAsync();
+
+                return RoundMoney(supplierBalance ?? 0m);
+            }
+
+            return RoundMoney(rows.Sum(l => l.ChargeAmount - l.PaymentAmount));
+        }
 
         public async Task PostPaymentAsync(SupplierLedger paymentEntry)
         {
@@ -251,28 +237,20 @@ namespace POS.Core.Repositories
             try
             {
                 var supplier = await context.Suppliers
-                    .FirstOrDefaultAsync(s =>
-                        s.Id == paymentEntry.SupplierId &&
-                        !s.IsDeactivated)
+                    .FirstOrDefaultAsync(s => s.Id == paymentEntry.SupplierId && !s.IsDeactivated)
                     ?? throw new InvalidOperationException("Selected supplier is inactive or missing.");
 
                 var existingRows = await context.SupplierLedgers
                     .AsNoTracking()
                     .Where(l => l.SupplierId == paymentEntry.SupplierId)
-                    .Select(l => new
-                    {
-                        l.ChargeAmount,
-                        l.PaymentAmount
-                    })
+                    .Select(l => new { l.ChargeAmount, l.PaymentAmount })
                     .ToListAsync();
 
-                decimal ledgerBalance = existingRows.Sum(l => l.ChargeAmount - l.PaymentAmount);
-
                 decimal currentBalance = existingRows.Any()
-                    ? ledgerBalance
+                    ? existingRows.Sum(l => l.ChargeAmount - l.PaymentAmount)
                     : supplier.CurrentBalance;
 
-                currentBalance = Math.Round(currentBalance, 2);
+                currentBalance = RoundMoney(currentBalance);
 
                 if (currentBalance <= 0)
                     throw new InvalidOperationException("This supplier has no outstanding balance to pay.");
@@ -288,7 +266,7 @@ namespace POS.Core.Repositories
                 if (string.IsNullOrWhiteSpace(paymentEntry.ReferenceDocument))
                     paymentEntry.ReferenceDocument = await GenerateDocumentNumberAsync(context, "PAY");
 
-                decimal newBalance = Math.Round(currentBalance - paymentEntry.PaymentAmount, 2);
+                decimal newBalance = RoundMoney(currentBalance - paymentEntry.PaymentAmount);
 
                 paymentEntry.Id = 0;
                 paymentEntry.TransactionType = "PAYMENT";
@@ -302,11 +280,9 @@ namespace POS.Core.Repositories
                     paymentEntry.CreatedBy = "Admin";
 
                 supplier.CurrentBalance = newBalance;
-                supplier.UpdatedAt = now;
 
                 await context.SupplierLedgers.AddAsync(paymentEntry);
                 await context.SaveChangesAsync();
-
                 await transaction.CommitAsync();
             }
             catch
@@ -316,16 +292,9 @@ namespace POS.Core.Repositories
             }
         }
 
-        // =========================================================
-        // HELPERS
-        // =========================================================
-
-        private static async Task<string> GenerateDocumentNumberAsync(
-            AppDbContext context,
-            string documentType)
+        private static async Task<string> GenerateDocumentNumberAsync(AppDbContext context, string documentType)
         {
-            var sequence = await context.DocumentSequences
-                .FirstOrDefaultAsync(s => s.DocumentType == documentType);
+            var sequence = await context.DocumentSequences.FirstOrDefaultAsync(s => s.DocumentType == documentType);
 
             if (sequence == null)
             {
@@ -342,8 +311,7 @@ namespace POS.Core.Repositories
                 await context.SaveChangesAsync();
             }
 
-            string number =
-                $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+            string number = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
 
             sequence.NextSequenceNumber++;
             sequence.UpdatedAt = DateTime.Now;
@@ -365,7 +333,7 @@ namespace POS.Core.Repositories
             paymentEntry.TransactionDate = paymentEntry.TransactionDate.Date;
 
             paymentEntry.ChargeAmount = 0m;
-            paymentEntry.PaymentAmount = Math.Round(paymentEntry.PaymentAmount, 2);
+            paymentEntry.PaymentAmount = RoundMoney(paymentEntry.PaymentAmount);
         }
 
         private static void ValidatePaymentEntry(SupplierLedger paymentEntry)
@@ -378,6 +346,9 @@ namespace POS.Core.Repositories
 
             if (paymentEntry.TransactionDate.Date > DateTime.Now.Date.AddDays(1))
                 throw new InvalidOperationException("Payment date cannot be in the far future.");
+
+            if (paymentEntry.TransactionDate.Date < new DateTime(2000, 1, 1))
+                throw new InvalidOperationException("Payment date is not valid.");
 
             if (string.IsNullOrWhiteSpace(paymentEntry.PaymentMethod))
                 throw new InvalidOperationException("Payment method is required.");
@@ -395,37 +366,22 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Remarks cannot be longer than 250 characters.");
 
             string method = paymentEntry.PaymentMethod.ToUpperInvariant();
-
             bool isCash = method == "CASH";
             bool isCheque = method.Contains("CHEQUE");
             bool isBankTransfer = method.Contains("BANK") || method.Contains("TRANSFER");
             bool isCard = method.Contains("CARD");
 
             if (!isCash && string.IsNullOrWhiteSpace(paymentEntry.ReferenceNumber))
-            {
-                throw new InvalidOperationException(
-                    "Reference number / cheque number is required for the selected payment method.");
-            }
+                throw new InvalidOperationException("Reference number / cheque number is required for the selected payment method.");
 
             if ((isCheque || isBankTransfer) && string.IsNullOrWhiteSpace(paymentEntry.BankName))
-            {
-                throw new InvalidOperationException(
-                    "Bank name is required for cheque and bank transfer payments.");
-            }
+                throw new InvalidOperationException("Bank name is required for cheque and bank transfer payments.");
 
             if (isCard && string.IsNullOrWhiteSpace(paymentEntry.ReferenceNumber))
-            {
-                throw new InvalidOperationException(
-                    "Card payment reference number is required.");
-            }
+                throw new InvalidOperationException("Card payment reference number is required.");
         }
 
-        private static string BuildDescription(
-            string transactionType,
-            string? remarks,
-            string? paymentMethod,
-            string? bankName,
-            string? referenceNumber)
+        private static string BuildDescription(string transactionType, string? remarks, string? paymentMethod, string? bankName, string? referenceNumber)
         {
             string description = NormalizeText(remarks);
 
@@ -435,6 +391,7 @@ namespace POS.Core.Repositories
                 {
                     "GRN" => "Goods received note",
                     "DEBIT_NOTE" => "Supplier return / debit note",
+                    "CREDIT_NOTE" => "Supplier credit note",
                     "PAYMENT" => "Supplier payment",
                     "OPENING_BALANCE" => "Opening balance",
                     _ => transactionType
@@ -483,9 +440,12 @@ namespace POS.Core.Repositories
 
         private static bool IsCreditType(string entryType)
         {
-            return entryType == "DEBIT_NOTE" ||
-                   entryType == "CREDIT_NOTE" ||
-                   entryType == "SUPPLIER_RETURN";
+            return entryType == "DEBIT_NOTE" || entryType == "CREDIT_NOTE" || entryType == "SUPPLIER_RETURN";
+        }
+
+        private static decimal RoundMoney(decimal value)
+        {
+            return Math.Round(value, 2);
         }
 
         private static string NormalizeText(string? value)

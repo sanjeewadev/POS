@@ -233,12 +233,12 @@ namespace POS.Cashier.UI.ViewModels
 
                 if (VariantResults.Count == 0)
                 {
-                    StatusText = "No sellable variants found for this item.";
+                    StatusText = "No sellable stock found for this item.";
                     StatusColorHex = "#D97706";
                     return;
                 }
 
-                StatusText = $"Loaded {VariantResults.Count} variant(s). Select exact item.";
+                StatusText = $"Loaded {VariantResults.Count} sellable variant(s). Select exact item.";
                 StatusColorHex = "#003366";
             }
             catch (Exception ex)

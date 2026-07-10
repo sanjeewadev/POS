@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -26,8 +26,30 @@ namespace POS.BackOffice.UI.ViewModels
         public string Description { get; set; } = string.Empty;
         public string VariantDescription { get; set; } = string.Empty;
 
+        public bool HasBatchTracking { get; set; }
+        public bool HasExpiryTracking { get; set; }
+        public bool IsGeneralStockBucket { get; set; }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
+
         public string BatchNo { get; set; } = string.Empty;
+        public string InternalBatchBarcode { get; set; } = string.Empty;
         public DateTime? ExpiryDate { get; set; }
+
+        public string BatchDisplayText =>
+            IsGeneralStockBucket ? "GENERAL" : BatchNo;
+
+        public string BatchBarcodeDisplayText =>
+            IsGeneralStockBucket ? "-" : InternalBatchBarcode;
 
         public decimal ReceivedQty { get; set; }
         public decimal AlreadyReturnedQty { get; set; }
@@ -84,8 +106,30 @@ namespace POS.BackOffice.UI.ViewModels
         public string Description { get; set; } = string.Empty;
         public string VariantDescription { get; set; } = string.Empty;
 
+        public bool HasBatchTracking { get; set; }
+        public bool HasExpiryTracking { get; set; }
+        public bool IsGeneralStockBucket { get; set; }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
+
         public string BatchNo { get; set; } = string.Empty;
+        public string InternalBatchBarcode { get; set; } = string.Empty;
         public DateTime? ExpiryDate { get; set; }
+
+        public string BatchDisplayText =>
+            IsGeneralStockBucket ? "GENERAL" : BatchNo;
+
+        public string BatchBarcodeDisplayText =>
+            IsGeneralStockBucket ? "-" : InternalBatchBarcode;
 
         public decimal HistoricalCost { get; set; }
 
@@ -194,7 +238,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         public SupplierReturnViewModel(SupplierReturnRepository returnRepository)
         {
-            _returnRepository = returnRepository;
+            _returnRepository = returnRepository ?? throw new ArgumentNullException(nameof(returnRepository));
 
             foreach (var reason in _returnRepository.GetReasonCodes())
                 ReasonCodes.Add(reason);
@@ -311,7 +355,7 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         // =========================================================
-        // LOAD GRN RETURNABLE BATCH LINES
+        // LOAD GRN RETURNABLE STOCK ROWS
         // =========================================================
 
         [RelayCommand]
@@ -364,7 +408,12 @@ namespace POS.BackOffice.UI.ViewModels
                         Description = row.Description,
                         VariantDescription = row.VariantDescription,
 
+                        HasBatchTracking = row.HasBatchTracking,
+                        HasExpiryTracking = row.HasExpiryTracking,
+                        IsGeneralStockBucket = row.IsGeneralStockBucket,
+
                         BatchNo = row.BatchNo,
+                        InternalBatchBarcode = row.InternalBatchBarcode,
                         ExpiryDate = row.ExpiryDate,
 
                         ReceivedQty = row.ReceivedQty,
@@ -379,12 +428,12 @@ namespace POS.BackOffice.UI.ViewModels
                 }
 
                 StatusMessage = ActiveMatrixVariants.Count == 0
-                    ? "Selected GRN has no returnable batch lines."
-                    : $"Loaded {ActiveMatrixVariants.Count} returnable batch line(s).";
+                    ? "Selected GRN has no returnable stock rows."
+                    : $"Loaded {ActiveMatrixVariants.Count} returnable stock row(s).";
             }
             catch (Exception ex)
             {
-                StatusMessage = "Failed to load GRN returnable batches.";
+                StatusMessage = "Failed to load GRN returnable stock rows.";
 
                 MessageBox.Show(
                     $"Failed to load invoice return lines:\n\n{ex.Message}",
@@ -412,7 +461,7 @@ namespace POS.BackOffice.UI.ViewModels
             if (!itemsToAdd.Any())
             {
                 MessageBox.Show(
-                    "Enter a return quantity for at least one batch line.",
+                    "Enter a return quantity for at least one stock row.",
                     "No Quantity",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -463,7 +512,12 @@ namespace POS.BackOffice.UI.ViewModels
                     Description = item.Description,
                     VariantDescription = item.VariantDescription,
 
+                    HasBatchTracking = item.HasBatchTracking,
+                    HasExpiryTracking = item.HasExpiryTracking,
+                    IsGeneralStockBucket = item.IsGeneralStockBucket,
+
                     BatchNo = item.BatchNo,
+                    InternalBatchBarcode = item.InternalBatchBarcode,
                     ExpiryDate = item.ExpiryDate,
 
                     ReturnQty = item.ReturnQty,
@@ -491,61 +545,37 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (item.GrnLineId <= 0)
             {
-                MessageBox.Show(
-                    $"GRN line is missing for item '{item.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"GRN line is missing for item '{item.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (item.ItemBatchId <= 0)
             {
-                MessageBox.Show(
-                    $"Batch is missing for item '{item.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Stock row is missing for item '{item.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (item.ReturnQty <= 0)
             {
-                MessageBox.Show(
-                    $"Return quantity must be greater than zero for '{item.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Return quantity must be greater than zero for '{item.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (item.ReturnQty > item.MaxReturnQty)
             {
-                MessageBox.Show(
-                    $"Cannot return {item.ReturnQty:N3} of '{item.DisplayDescription}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
-                    "Return Quantity Exceeded",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Cannot return {item.ReturnQty:N3} of '{item.DisplayDescription}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.", "Return Quantity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (item.HistoricalCost <= 0)
             {
-                MessageBox.Show(
-                    $"Historical cost is missing for '{item.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Historical cost is missing for '{item.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(item.ReasonCode))
             {
-                MessageBox.Show(
-                    $"Please select a reason for '{item.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Please select a reason for '{item.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
@@ -585,8 +615,6 @@ namespace POS.BackOffice.UI.ViewModels
             StatusMessage = $"Removed line. Return cart contains {ReturnLines.Count} line(s).";
         }
 
-        // Temporary compatibility with the old XAML OK button.
-        // The final XAML will remove the OK button because totals now auto recalculate.
         [RelayCommand]
         private void UpdateLine()
         {
@@ -596,9 +624,7 @@ namespace POS.BackOffice.UI.ViewModels
             if (!ValidateCartLine(SelectedLine))
                 return;
 
-            OnPropertyChanged(nameof(ReturnLines));
             RecalculateTotals();
-
             StatusMessage = "Return line updated.";
         }
 
@@ -626,8 +652,6 @@ namespace POS.BackOffice.UI.ViewModels
         // POST
         // =========================================================
 
-        // Temporary compatibility with old XAML.
-        // Supplier Return draft is intentionally disabled.
         [RelayCommand]
         private void SaveDraft()
         {
@@ -648,41 +672,25 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (SelectedSupplier == null)
             {
-                MessageBox.Show(
-                    "Please select a supplier.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Please select a supplier.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (SelectedInvoice == null)
             {
-                MessageBox.Show(
-                    "Please select a posted GRN / supplier invoice.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Please select a posted GRN / supplier invoice.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (!ReturnLines.Any())
             {
-                MessageBox.Show(
-                    "Cannot post an empty supplier return.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Cannot post an empty supplier return.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(AuthorizedBy))
             {
-                MessageBox.Show(
-                    "Authorized by is required.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Authorized by is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -696,26 +704,18 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (GrossCredit <= 0)
             {
-                MessageBox.Show(
-                    "Gross return value must be greater than zero.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Gross return value must be greater than zero.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (RestockingFee > GrossCredit)
             {
-                MessageBox.Show(
-                    "Restocking fee cannot be greater than gross return value.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Restocking fee cannot be greater than gross return value.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             var result = MessageBox.Show(
-                $"Post supplier return?\n\nThis will deduct exact batch stock and reduce supplier balance by Rs. {NetCredit:N2}.",
+                $"Post supplier return?\n\nThis will deduct exact stock rows and reduce supplier balance by Rs. {NetCredit:N2}.",
                 "Post Supplier Return",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -803,61 +803,37 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (line.GrnLineId <= 0)
             {
-                MessageBox.Show(
-                    $"GRN line is missing for item '{line.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"GRN line is missing for item '{line.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (line.ItemBatchId <= 0)
             {
-                MessageBox.Show(
-                    $"Batch is missing for item '{line.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Stock row is missing for item '{line.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (line.ReturnQty <= 0)
             {
-                MessageBox.Show(
-                    $"Return quantity must be greater than zero for '{line.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Return quantity must be greater than zero for '{line.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (line.ReturnQty > line.MaxReturnQty)
             {
-                MessageBox.Show(
-                    $"Cannot return {line.ReturnQty:N3} for '{line.DisplayDescription}'. Maximum returnable quantity is {line.MaxReturnQty:N3}.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Cannot return {line.ReturnQty:N3} for '{line.DisplayDescription}'. Maximum returnable quantity is {line.MaxReturnQty:N3}.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (line.HistoricalCost <= 0)
             {
-                MessageBox.Show(
-                    $"Historical cost is missing for '{line.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Historical cost is missing for '{line.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(line.ReasonCode))
             {
-                MessageBox.Show(
-                    $"Reason code is required for '{line.DisplayDescription}'.",
-                    "Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Reason code is required for '{line.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 

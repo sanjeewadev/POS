@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -40,10 +40,39 @@ namespace POS.Core.Models
         // FINANCIAL / TAX SETUP
         // =========================================================
 
-        public bool HasVat { get; set; }
+        // Final supplier VAT rule:
+        // If false, PO/GRN must force VAT to zero for this supplier.
+        // Kept as HasVat because existing code and database already use this column.
+        public bool HasVat { get; set; } = false;
 
         [MaxLength(50)]
         public string VatNumber { get; set; } = string.Empty;
+
+        // Alias for clearer business meaning in future code.
+        // Not mapped because HasVat remains the real stored field.
+        [NotMapped]
+        public bool IsVatRegistered
+        {
+            get => HasVat;
+            set => HasVat = value;
+        }
+
+        [NotMapped]
+        public string VatStatusText => HasVat ? "VAT Registered" : "Not VAT Registered";
+
+        [NotMapped]
+        public string VatDisplayText
+        {
+            get
+            {
+                if (!HasVat)
+                    return "No VAT";
+
+                return string.IsNullOrWhiteSpace(VatNumber)
+                    ? "VAT Registered"
+                    : $"VAT Registered - {VatNumber.Trim()}";
+            }
+        }
 
         // Used by PO / GRN payment due date calculation.
         // Example:
@@ -54,6 +83,7 @@ namespace POS.Core.Models
 
         // Driven by accounting/ledger.
         // Supplier Master should display this, but should not directly update it.
+        [Column(TypeName = "decimal(18,2)")]
         public decimal CurrentBalance { get; set; } = 0m;
 
         // Used instead of hard delete when supplier is already linked to documents.
@@ -67,6 +97,24 @@ namespace POS.Core.Models
 
         [NotMapped]
         public string StatusText => IsDeactivated ? "Suspended" : "Active";
+
+        [NotMapped]
+        public string DisplayName
+        {
+            get
+            {
+                string code = (SupplierCode ?? string.Empty).Trim();
+                string name = (SupplierName ?? string.Empty).Trim();
+
+                if (string.IsNullOrWhiteSpace(code))
+                    return name;
+
+                if (string.IsNullOrWhiteSpace(name))
+                    return code;
+
+                return $"{code} - {name}";
+            }
+        }
 
         // Items supplied by this vendor.
         public virtual ICollection<ItemSupplier> ItemSuppliers { get; set; } = new List<ItemSupplier>();

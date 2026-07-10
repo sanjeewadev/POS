@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -17,12 +17,10 @@ namespace POS.Core.Models
 
         public ItemVariant ItemVariant { get; set; } = null!;
 
-        // Optional exact PO line link.
         public int? PoLineId { get; set; }
 
         public PoLine? PoLine { get; set; }
 
-        // Exact batch/hidden stock bucket created or updated by this GRN line.
         public int? ItemBatchId { get; set; }
 
         public ItemBatch? ItemBatch { get; set; }
@@ -33,6 +31,9 @@ namespace POS.Core.Models
 
         [NotMapped]
         public string ItemCode { get; set; } = string.Empty;
+
+        [NotMapped]
+        public string SkuCode { get; set; } = string.Empty;
 
         [NotMapped]
         public string VariantDescription { get; set; } = string.Empty;
@@ -96,6 +97,20 @@ namespace POS.Core.Models
         [NotMapped]
         public decimal GrossAmount => Math.Round(ReceivedQty * UnitCost, 2);
 
+        [NotMapped]
+        public string VatDisplayText
+        {
+            get
+            {
+                if (VatRatePercent <= 0)
+                    return "No VAT";
+
+                return IsVatIncluded
+                    ? $"{VatRatePercent:0.##}% Inc."
+                    : $"{VatRatePercent:0.##}% Ex.";
+            }
+        }
+
         // =========================================================
         // LOGISTICS
         // =========================================================
@@ -125,23 +140,15 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal UnitCost { get; set; } = 0m;
 
-        // Amount / Percent.
         [MaxLength(20)]
         public string LineDiscountMode { get; set; } = "Amount";
 
-        // User-entered value.
-        // Example:
-        // Mode Amount  -> 500
-        // Mode Percent -> 10
         [Column(TypeName = "decimal(18,2)")]
         public decimal LineDiscountValue { get; set; } = 0m;
 
-        // Final calculated discount amount.
-        // Existing repositories already use this name.
         [Column(TypeName = "decimal(18,2)")]
         public decimal LineDiscount { get; set; } = 0m;
 
-        // Product VAT only.
         [Column(TypeName = "decimal(5,2)")]
         public decimal VatRatePercent { get; set; } = 0m;
 
@@ -152,7 +159,8 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal VatAmount { get; set; } = 0m;
 
-        // Landed cost after discount, VAT logic, and allocated freight/global discount.
+        // Landed cost after discount, VAT logic, freight, and global discount allocation.
+        // VAT is never included in stock value when it is claimable.
         [Column(TypeName = "decimal(18,2)")]
         public decimal LandedCost { get; set; } = 0m;
 
@@ -162,8 +170,6 @@ namespace POS.Core.Models
         // =========================================================
         // SELLING PRICE UPDATE SNAPSHOT
         // =========================================================
-        // These allow the GRN page to update selling prices while receiving.
-        // If UpdateSellingPrices = false, repository should not update ItemVariant prices.
 
         public bool UpdateSellingPrices { get; set; } = false;
 
@@ -197,7 +203,6 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal WholesaleMarkupPercent { get; set; } = 0m;
 
-        // Posted, Cancelled.
         [MaxLength(30)]
         public string LineStatus { get; set; } = "Posted";
 

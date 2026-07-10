@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -14,22 +14,13 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class SupplierLedgerViewModel : ObservableObject
     {
         private readonly SupplierLedgerRepository _repository;
-
         private List<SupplierLedgerEntryDto> _allLedgerEntries = new();
-
-        // =========================================================
-        // SUPPLIER SELECTION
-        // =========================================================
 
         [ObservableProperty]
         private SupplierLedgerSupplierLookupDto? _selectedSupplier;
 
         [ObservableProperty]
         private SupplierLedgerEntryDto? _selectedLedgerEntry;
-
-        // =========================================================
-        // KPI CARDS
-        // =========================================================
 
         [ObservableProperty]
         private decimal _totalBilled = 0m;
@@ -42,10 +33,6 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private decimal _netOutstanding = 0m;
-
-        // =========================================================
-        // PAYMENT FORM
-        // =========================================================
 
         [ObservableProperty]
         private DateTime _paymentDate = DateTime.Now;
@@ -65,10 +52,6 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _paymentRemarks = string.Empty;
 
-        // =========================================================
-        // TABS / UI STATE
-        // =========================================================
-
         [ObservableProperty]
         private int _selectedTabIndex = 0;
 
@@ -77,10 +60,6 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private string _statusMessage = "Ready.";
-
-        // =========================================================
-        // COLLECTIONS
-        // =========================================================
 
         public ObservableCollection<SupplierLedgerSupplierLookupDto> Suppliers { get; } = new();
 
@@ -96,7 +75,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         public SupplierLedgerViewModel(SupplierLedgerRepository repository)
         {
-            _repository = repository;
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _ = InitializeAsync();
         }
 
@@ -131,10 +110,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // =========================================================
-        // AUTO EVENTS
-        // =========================================================
-
         partial void OnSelectedSupplierChanged(SupplierLedgerSupplierLookupDto? value)
         {
             ClearLedgerOnly();
@@ -168,10 +143,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // =========================================================
-        // LOAD LEDGER
-        // =========================================================
-
         [RelayCommand]
         private async Task LoadLedgerAsync()
         {
@@ -190,7 +161,6 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 _allLedgerEntries = await _repository.GetLedgerEntriesAsync(SelectedSupplier.Id);
-
                 CalculateKpis();
                 ApplyTabFilter();
 
@@ -217,6 +187,12 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task RefreshAsync()
         {
+            if (SelectedSupplier == null)
+            {
+                StatusMessage = "Select a supplier account first.";
+                return;
+            }
+
             await LoadLedgerAsync();
         }
 
@@ -257,18 +233,15 @@ namespace POS.BackOffice.UI.ViewModels
             switch (SelectedTabIndex)
             {
                 case 1:
-                    filtered = _allLedgerEntries
-                        .Where(e => e.EntryType == "GRN");
+                    filtered = _allLedgerEntries.Where(e => e.EntryType == "GRN");
                     break;
 
                 case 2:
-                    filtered = _allLedgerEntries
-                        .Where(e => IsCreditType(e.EntryType));
+                    filtered = _allLedgerEntries.Where(e => IsCreditType(e.EntryType));
                     break;
 
                 case 3:
-                    filtered = _allLedgerEntries
-                        .Where(e => e.EntryType == "PAYMENT");
+                    filtered = _allLedgerEntries.Where(e => e.EntryType == "PAYMENT");
                     break;
             }
 
@@ -276,20 +249,12 @@ namespace POS.BackOffice.UI.ViewModels
                 LedgerEntries.Add(entry);
         }
 
-        // =========================================================
-        // QUICK FILL
-        // =========================================================
-
         [RelayCommand]
         private void AutoFillHalf()
         {
-            if (NetOutstanding <= 0)
-            {
-                PaymentAmount = 0m;
-                return;
-            }
-
-            PaymentAmount = Math.Round(NetOutstanding / 2m, 2);
+            PaymentAmount = NetOutstanding > 0
+                ? Math.Round(NetOutstanding / 2m, 2)
+                : 0m;
         }
 
         [RelayCommand]
@@ -309,13 +274,8 @@ namespace POS.BackOffice.UI.ViewModels
             BankName = string.Empty;
             ReferenceNumber = string.Empty;
             PaymentRemarks = string.Empty;
-
             StatusMessage = "Payment form cleared.";
         }
-
-        // =========================================================
-        // POST PAYMENT
-        // =========================================================
 
         [RelayCommand]
         private async Task PostPaymentAsync()
@@ -390,7 +350,6 @@ namespace POS.BackOffice.UI.ViewModels
                     MessageBoxImage.Information);
 
                 ClearPayment();
-
                 await LoadLedgerAsync();
             }
             catch (Exception ex)
@@ -451,6 +410,16 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
+            if (PaymentDate.Date < new DateTime(2000, 1, 1))
+            {
+                MessageBox.Show(
+                    "Payment date is not valid.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
             if (string.IsNullOrWhiteSpace(SelectedPaymentMethod))
             {
                 MessageBox.Show(
@@ -462,7 +431,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             string method = SelectedPaymentMethod.Trim();
-
             bool isCash = method.Equals("Cash", StringComparison.OrdinalIgnoreCase);
             bool isCheque = method.Contains("Cheque", StringComparison.OrdinalIgnoreCase);
             bool isBankTransfer = method.Contains("Bank", StringComparison.OrdinalIgnoreCase) ||
@@ -489,7 +457,17 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
-            if (PaymentRemarks.Length > 250)
+            if (isCard && string.IsNullOrWhiteSpace(ReferenceNumber))
+            {
+                MessageBox.Show(
+                    "Card payment reference number is required.",
+                    "Validation",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            if ((PaymentRemarks ?? string.Empty).Length > 250)
             {
                 MessageBox.Show(
                     "Payment remarks cannot be longer than 250 characters.",
@@ -502,17 +480,12 @@ namespace POS.BackOffice.UI.ViewModels
             return true;
         }
 
-        // =========================================================
-        // CLEAR
-        // =========================================================
-
         [RelayCommand]
         private void ClearAll()
         {
             SelectedSupplier = null;
             ClearLedgerOnly();
             ClearPayment();
-
             StatusMessage = "Ready.";
         }
 
@@ -520,9 +493,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             _allLedgerEntries.Clear();
             LedgerEntries.Clear();
-
             SelectedLedgerEntry = null;
-
             TotalBilled = 0m;
             TotalCredits = 0m;
             TotalPaid = 0m;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -80,8 +80,30 @@ namespace POS.Core.Repositories
         public string Description { get; set; } = string.Empty;
         public string VariantDescription { get; set; } = string.Empty;
 
+        public bool HasBatchTracking { get; set; }
+        public bool HasExpiryTracking { get; set; }
+        public bool IsGeneralStockBucket { get; set; }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
+
         public string BatchNo { get; set; } = string.Empty;
+        public string InternalBatchBarcode { get; set; } = string.Empty;
         public DateTime? ExpiryDate { get; set; }
+
+        public string BatchDisplayText =>
+            IsGeneralStockBucket ? "GENERAL" : BatchNo;
+
+        public string BatchBarcodeDisplayText =>
+            IsGeneralStockBucket ? "-" : InternalBatchBarcode;
 
         public decimal ReceivedQty { get; set; }
         public decimal AlreadyReturnedQty { get; set; }
@@ -95,11 +117,13 @@ namespace POS.Core.Repositories
 
     public class SupplierReturnRepository
     {
+        private const string GeneralBatchNo = "GENERAL";
+
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         public SupplierReturnRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
         // =========================================================
@@ -163,12 +187,14 @@ namespace POS.Core.Repositories
                 .AsNoTracking()
                 .Where(l =>
                     grnIds.Contains(l.GrnHeaderId) &&
-                    l.ReceivedQty > 0)
+                    l.ReceivedQty > 0 &&
+                    l.ItemBatchId.HasValue)
                 .Select(l => new
                 {
                     l.Id,
                     l.GrnHeaderId,
-                    l.ItemBatchId,
+                    l.ItemVariantId,
+                    ItemBatchId = l.ItemBatchId!.Value,
                     l.ReceivedQty
                 })
                 .ToListAsync();
@@ -181,8 +207,7 @@ namespace POS.Core.Repositories
                 .ToList();
 
             var batchIds = grnLines
-                .Where(l => l.ItemBatchId.HasValue)
-                .Select(l => l.ItemBatchId!.Value)
+                .Select(l => l.ItemBatchId)
                 .Distinct()
                 .ToList();
 
@@ -207,27 +232,16 @@ namespace POS.Core.Repositories
                     g => g.Key,
                     g => g.Sum(x => x.ReturnQty));
 
-            var batchStockById = new Dictionary<int, decimal>();
-
-            if (batchIds.Any())
-            {
-                var batchRows = await context.ItemBatches
-                    .AsNoTracking()
-                    .Where(b =>
-                        batchIds.Contains(b.Id) &&
-                        !b.IsDeactivated)
-                    .Select(b => new
-                    {
-                        b.Id,
-                        b.CurrentStock
-                    })
-                    .ToListAsync();
-
-                batchStockById = batchRows
-                    .ToDictionary(
-                        b => b.Id,
-                        b => b.CurrentStock);
-            }
+            var batches = await context.ItemBatches
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
+                .AsNoTracking()
+                .Where(b =>
+                    batchIds.Contains(b.Id) &&
+                    !b.IsDeactivated &&
+                    !b.ItemVariant.IsDeactivated &&
+                    !b.ItemVariant.ItemParent.IsDeactivated)
+                .ToDictionaryAsync(b => b.Id);
 
             var result = new List<SupplierInvoiceLookupDto>();
 
@@ -242,7 +256,10 @@ namespace POS.Core.Repositories
 
                 foreach (var line in linesForGrn)
                 {
-                    if (!line.ItemBatchId.HasValue)
+                    if (!batches.TryGetValue(line.ItemBatchId, out var batch))
+                        continue;
+
+                    if (!IsValidStockBucketForItem(batch))
                         continue;
 
                     decimal alreadyReturned = returnedByGrnLine.TryGetValue(line.Id, out decimal returned)
@@ -254,14 +271,10 @@ namespace POS.Core.Repositories
                     if (remainingFromReceipt <= 0)
                         continue;
 
-                    decimal currentBatchStock = batchStockById.TryGetValue(line.ItemBatchId.Value, out decimal stock)
-                        ? stock
-                        : 0m;
-
-                    if (currentBatchStock <= 0)
+                    if (batch.CurrentStock <= 0)
                         continue;
 
-                    decimal returnableQty = Math.Min(remainingFromReceipt, currentBatchStock);
+                    decimal returnableQty = Math.Min(remainingFromReceipt, batch.CurrentStock);
 
                     if (returnableQty <= 0)
                         continue;
@@ -338,9 +351,13 @@ namespace POS.Core.Repositories
                 .ToList();
 
             var batches = await context.ItemBatches
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
                 .Where(b =>
                     !b.IsDeactivated &&
+                    !b.ItemVariant.IsDeactivated &&
+                    !b.ItemVariant.ItemParent.IsDeactivated &&
                     (
                         exactBatchIds.Contains(b.Id) ||
                         (
@@ -398,6 +415,9 @@ namespace POS.Core.Repositories
                 if (batch == null)
                     continue;
 
+                if (!IsValidStockBucketForItem(batch))
+                    continue;
+
                 decimal alreadyReturned = returnedByGrnLine.TryGetValue(line.Id, out decimal returned)
                     ? returned
                     : 0m;
@@ -416,6 +436,17 @@ namespace POS.Core.Repositories
                     ? line.LandedCost
                     : line.UnitCost;
 
+                if (historicalCost <= 0)
+                {
+                    historicalCost = batch.CostPrice > 0
+                        ? batch.CostPrice
+                        : line.ItemVariant?.AverageCost ?? 0m;
+                }
+
+                bool hasBatchTracking = batch.ItemVariant.ItemParent.HasBatchTracking;
+                bool hasExpiryTracking = batch.ItemVariant.ItemParent.HasExpiryTracking || batch.ItemVariant.ItemParent.HasBatchExpiry;
+                bool isGeneral = IsGeneralBatch(batch.BatchNo);
+
                 result.Add(new SupplierReturnSourceDto
                 {
                     GrnHeaderId = grn.Id,
@@ -433,7 +464,12 @@ namespace POS.Core.Repositories
                         ? "Standard"
                         : line.ItemVariant!.VariantDescription,
 
+                    HasBatchTracking = hasBatchTracking,
+                    HasExpiryTracking = hasExpiryTracking,
+                    IsGeneralStockBucket = isGeneral,
+
                     BatchNo = batch.BatchNo,
+                    InternalBatchBarcode = batch.InternalBatchBarcode ?? string.Empty,
                     ExpiryDate = batch.ExpiryDate,
 
                     ReceivedQty = line.ReceivedQty,
@@ -441,13 +477,15 @@ namespace POS.Core.Repositories
                     CurrentBatchStock = batch.CurrentStock,
                     MaxReturnQty = maxReturnQty,
 
-                    HistoricalCost = historicalCost
+                    HistoricalCost = Math.Round(historicalCost, 2)
                 });
             }
 
             return result
                 .OrderBy(r => r.ItemCode)
                 .ThenBy(r => r.VariantDescription)
+                .ThenBy(r => r.IsGeneralStockBucket ? 0 : 1)
+                .ThenBy(r => r.ExpiryDate ?? DateTime.MaxValue)
                 .ThenBy(r => r.BatchNo)
                 .ToList();
         }
@@ -537,7 +575,6 @@ namespace POS.Core.Repositories
         }
 
         // Compatibility method for older callers.
-        // Draft supplier returns are intentionally disabled.
         public async Task SaveSupplierReturnAsync(
             SupplierReturnHeader header,
             List<SupplierReturnLine> lines,
@@ -561,21 +598,29 @@ namespace POS.Core.Repositories
                 .ToList();
 
             var batches = await context.ItemBatches
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
                 .Where(b => batchIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id);
 
             foreach (var line in lines)
             {
                 if (!batches.TryGetValue(line.ItemBatchId, out var batch))
-                    throw new InvalidOperationException($"Batch ID {line.ItemBatchId} was not found.");
+                    throw new InvalidOperationException($"Stock row ID {line.ItemBatchId} was not found.");
 
                 if (batch.IsDeactivated)
-                    throw new InvalidOperationException($"Batch '{batch.BatchNo}' is deactivated.");
+                    throw new InvalidOperationException($"Stock row '{BuildBatchDisplayName(batch)}' is deactivated.");
+
+                if (!IsValidStockBucketForItem(batch))
+                {
+                    throw new InvalidOperationException(
+                        $"Stock row '{BuildBatchDisplayName(batch)}' does not match the item tracking method.");
+                }
 
                 if (batch.CurrentStock < line.ReturnQty)
                 {
                     throw new InvalidOperationException(
-                        $"Insufficient stock in batch '{batch.BatchNo}'. Current stock is {batch.CurrentStock:N3}, return quantity is {line.ReturnQty:N3}.");
+                        $"Insufficient stock in '{BuildBatchDisplayName(batch)}'. Current stock is {batch.CurrentStock:N3}, return quantity is {line.ReturnQty:N3}.");
                 }
 
                 batch.CurrentStock -= line.ReturnQty;
@@ -596,7 +641,9 @@ namespace POS.Core.Repositories
                     UnitCost = line.HistoricalCost,
                     CreatedBy = header.AuthorizedBy,
                     CreatedAt = now,
-                    Remarks = $"Supplier Return | Reason: {line.ReasonCode} | Batch: {batch.BatchNo}"
+                    Remarks = TrimToMax(
+                        $"Supplier Return | Reason: {line.ReasonCode} | Stock Row: {BuildBatchDisplayName(batch)}",
+                        250)
                 };
 
                 await context.InventoryTransactions.AddAsync(inventoryTx);
@@ -622,14 +669,22 @@ namespace POS.Core.Repositories
                 IsPaid = true,
                 CreatedBy = header.AuthorizedBy,
                 CreatedAt = now,
-                Remarks =
-                    $"Supplier Return | Original Invoice: {header.OriginalInvoiceNo} | Gross: {header.GrossCredit:N2} | Restocking Fee: {header.RestockingFee:N2}"
+                Remarks = TrimToMax(
+                    $"Supplier Return | Original Invoice: {header.OriginalInvoiceNo} | Gross: {header.GrossCredit:N2} | Restocking Fee: {header.RestockingFee:N2}",
+                    250)
             };
 
             supplier.CurrentBalance = newBalance;
             supplier.UpdatedAt = now;
 
             await context.SupplierLedgers.AddAsync(ledger);
+
+            var affectedVariantIds = lines
+                .Select(l => l.ItemVariantId)
+                .Distinct()
+                .ToList();
+
+            await RecalculateVariantAverageCostsAsync(context, affectedVariantIds, now);
         }
 
         // =========================================================
@@ -724,6 +779,8 @@ namespace POS.Core.Repositories
                 .ToDictionaryAsync(v => v.Id);
 
             var batches = await context.ItemBatches
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
                 .Where(b => batchIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id);
 
@@ -766,16 +823,22 @@ namespace POS.Core.Repositories
                     throw new InvalidOperationException($"Item '{variant.SkuCode}' is inactive.");
 
                 if (line.ItemBatchId <= 0)
-                    throw new InvalidOperationException($"Batch is required for item '{variant.SkuCode}'.");
+                    throw new InvalidOperationException($"Stock row is required for item '{variant.SkuCode}'.");
 
                 if (!batches.TryGetValue(line.ItemBatchId, out var batch))
-                    throw new InvalidOperationException($"Batch was not found for item '{variant.SkuCode}'.");
+                    throw new InvalidOperationException($"Stock row was not found for item '{variant.SkuCode}'.");
 
                 if (batch.ItemVariantId != line.ItemVariantId)
-                    throw new InvalidOperationException($"Batch does not match item '{variant.SkuCode}'.");
+                    throw new InvalidOperationException($"Stock row does not match item '{variant.SkuCode}'.");
 
                 if (batch.IsDeactivated)
-                    throw new InvalidOperationException($"Batch '{batch.BatchNo}' is deactivated.");
+                    throw new InvalidOperationException($"Stock row '{BuildBatchDisplayName(batch)}' is deactivated.");
+
+                if (!IsValidStockBucketForItem(batch))
+                {
+                    throw new InvalidOperationException(
+                        $"Stock row '{BuildBatchDisplayName(batch)}' does not match the item tracking method.");
+                }
 
                 if (!line.GrnLineId.HasValue || line.GrnLineId.Value <= 0)
                     throw new InvalidOperationException($"GRN line is required for item '{variant.SkuCode}'.");
@@ -795,7 +858,7 @@ namespace POS.Core.Repositories
                 if (grnLine.ItemBatchId.HasValue &&
                     grnLine.ItemBatchId.Value != line.ItemBatchId)
                 {
-                    throw new InvalidOperationException($"Return batch does not match the original GRN batch for item '{variant.SkuCode}'.");
+                    throw new InvalidOperationException($"Return stock row does not match the original GRN stock row for item '{variant.SkuCode}'.");
                 }
 
                 if (line.ReturnQty <= 0)
@@ -804,7 +867,7 @@ namespace POS.Core.Repositories
                 if (line.ReturnQty > batch.CurrentStock)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Batch stock is only {batch.CurrentStock:N3}.");
+                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Stock row has only {batch.CurrentStock:N3}.");
                 }
 
                 decimal alreadyReturned = returnedByGrnLine.TryGetValue(grnLine.Id, out decimal returned)
@@ -825,6 +888,15 @@ namespace POS.Core.Repositories
                 decimal historicalCost = grnLine.LandedCost > 0
                     ? grnLine.LandedCost
                     : grnLine.UnitCost;
+
+                if (historicalCost <= 0)
+                {
+                    historicalCost = batch.CostPrice > 0
+                        ? batch.CostPrice
+                        : variant.AverageCost > 0
+                            ? variant.AverageCost
+                            : variant.CostPrice;
+                }
 
                 if (historicalCost <= 0)
                     throw new InvalidOperationException($"Historical cost must be greater than zero for item '{variant.SkuCode}'.");
@@ -856,7 +928,7 @@ namespace POS.Core.Repositories
                 .FirstOrDefault(g => g.Count() > 1);
 
             if (duplicate != null)
-                throw new InvalidOperationException("Duplicate return line found. The same GRN batch can appear only once in one supplier return.");
+                throw new InvalidOperationException("Duplicate return line found. The same GRN stock row can appear only once in one supplier return.");
         }
 
         // =========================================================
@@ -884,6 +956,41 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Restocking fee cannot be greater than gross return value.");
 
             header.NetCredit = Math.Round(header.GrossCredit - header.RestockingFee, 2);
+        }
+
+        private static async Task RecalculateVariantAverageCostsAsync(
+            AppDbContext context,
+            List<int> variantIds,
+            DateTime now)
+        {
+            if (variantIds == null || !variantIds.Any())
+                return;
+
+            foreach (int variantId in variantIds.Distinct())
+            {
+                var variant = await context.ItemVariants
+                    .FirstOrDefaultAsync(v => v.Id == variantId);
+
+                if (variant == null)
+                    continue;
+
+                var activeBatches = await context.ItemBatches
+                    .Where(b =>
+                        b.ItemVariantId == variantId &&
+                        !b.IsDeactivated &&
+                        b.CurrentStock > 0)
+                    .ToListAsync();
+
+                decimal totalQty = activeBatches.Sum(b => b.CurrentStock);
+
+                if (totalQty > 0)
+                {
+                    decimal totalValue = activeBatches.Sum(b => b.CurrentStock * b.CostPrice);
+                    variant.AverageCost = Math.Round(totalValue / totalQty, 2);
+                }
+
+                variant.UpdatedAt = now;
+            }
         }
 
         // =========================================================
@@ -969,6 +1076,46 @@ namespace POS.Core.Repositories
         private static string NormalizeText(string? value)
         {
             return (value ?? string.Empty).Trim();
+        }
+
+        private static string TrimToMax(string value, int maxLength)
+        {
+            value = NormalizeText(value);
+
+            if (value.Length <= maxLength)
+                return value;
+
+            return value.Substring(0, maxLength);
+        }
+
+        private static bool IsGeneralBatch(string? batchNo)
+        {
+            return string.Equals(
+                NormalizeText(batchNo),
+                GeneralBatchNo,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsValidStockBucketForItem(ItemBatch batch)
+        {
+            bool isBatchTracked = batch.ItemVariant.ItemParent.HasBatchTracking;
+            bool isGeneral = IsGeneralBatch(batch.BatchNo);
+
+            if (isBatchTracked)
+                return !isGeneral;
+
+            return isGeneral;
+        }
+
+        private static string BuildBatchDisplayName(ItemBatch batch)
+        {
+            if (IsGeneralBatch(batch.BatchNo))
+                return "GENERAL";
+
+            if (!string.IsNullOrWhiteSpace(batch.InternalBatchBarcode))
+                return $"{batch.BatchNo} / {batch.InternalBatchBarcode}";
+
+            return batch.BatchNo;
         }
     }
 }

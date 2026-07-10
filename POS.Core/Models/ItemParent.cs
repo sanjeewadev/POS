@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -48,27 +48,31 @@ namespace POS.Core.Models
         // TAX
         // =========================================================
 
+        // Temporary until Tax Master is added.
+        // Current accepted values:
+        // TAX-FREE = 0%
+        // VAT-STD  = standard VAT rate from Tax Master later
+        // VAT-RED  = reduced VAT rate from Tax Master later
         [MaxLength(20)]
-        public string TaxCode { get; set; } = string.Empty;
+        public string TaxCode { get; set; } = "TAX-FREE";
+
+        // Default purchase cost entry mode.
+        // false = supplier cost is normally VAT exclusive.
+        // true  = supplier cost is normally VAT inclusive.
+        // PO/GRN can still store the final transaction flag per line.
+        public bool IsTaxInclusive { get; set; } = false;
 
         // =========================================================
         // STOCK / POS TRACKING RULES
         // =========================================================
 
-        // Correct new rule:
         // true = this item uses stock batches/layers.
-        // Default should be true for your system because cashier sale will select batch.
         public bool HasBatchTracking { get; set; } = true;
 
-        // Correct new rule:
         // true = GRN must require expiry date.
-        // Expiry tracking is separate from batch tracking.
         public bool HasExpiryTracking { get; set; } = false;
 
-        // Legacy field.
-        // Old code used this as "Batch / Expiry".
-        // Keep temporarily until GRN, stock, and reports are fully moved to
-        // HasBatchTracking + HasExpiryTracking.
+        // Legacy field kept for compatibility while old code is migrated.
         public bool HasBatchExpiry { get; set; } = false;
 
         public bool IsScaleItem { get; set; } = false;

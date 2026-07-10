@@ -44,6 +44,9 @@
             <DataTemplate DataType="{x:Type viewmodels:UnitOfMeasureViewModel}">
                 <inventorypages:UnitOfMeasureView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:TaxRateViewModel}">
+                <inventorypages:TaxRateView />
+            </DataTemplate>
 
             <DataTemplate DataType="{x:Type viewmodels:GrnViewModel}">
                 <inventoryoperations:GrnView />

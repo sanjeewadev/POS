@@ -19,6 +19,8 @@ namespace POS.Core.Data
         public DbSet<SubCategory> SubCategories { get; set; } = null!;
         public DbSet<Supplier> Suppliers { get; set; } = null!;
 
+        public DbSet<TaxRate> TaxRates { get; set; } = null!;
+
         // --- MATRIX INVENTORY ---
         public DbSet<AttributeGroup> AttributeGroups { get; set; } = null!;
         public DbSet<AttributeValue> AttributeValues { get; set; } = null!;
@@ -3631,6 +3633,37 @@ namespace POS.Core.Data
                 entity.HasIndex(e => e.Success);
                 entity.HasIndex(e => e.MachineName);
                 entity.HasIndex(e => e.TerminalNo);
+            });
+
+            modelBuilder.Entity<TaxRate>(entity =>
+            {
+                entity.ToTable("TaxRates");
+
+                entity.HasKey(t => t.Id);
+
+                entity.Property(t => t.TaxCode)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.TaxName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(t => t.RatePercent)
+                    .HasColumnType("decimal(5,2)");
+
+                entity.Property(t => t.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(t => t.IsSystemDefault)
+                    .HasDefaultValue(false);
+
+                entity.Property(t => t.DisplayOrder)
+                    .HasDefaultValue(0);
+
+                entity.HasIndex(t => t.TaxCode)
+                    .IsUnique();
             });
         }
 

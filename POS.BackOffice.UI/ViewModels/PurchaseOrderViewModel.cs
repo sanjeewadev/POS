@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -43,6 +43,21 @@ namespace POS.BackOffice.UI.ViewModels
         public int Moq { get; set; } = 1;
 
         public bool AllowDecimalQuantity { get; set; } = false;
+
+        public bool HasBatchTracking { get; set; }
+
+        public bool HasExpiryTracking { get; set; }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
 
         public string FullDisplayName =>
             PoVmDisplayNameHelper.BuildDisplayName(Description, VariantDescription, SkuCode);
@@ -623,6 +638,8 @@ namespace POS.BackOffice.UI.ViewModels
                         SupplierItemCode = variant.SupplierItemCode,
                         Moq = variant.Moq <= 0 ? 1 : variant.Moq,
                         AllowDecimalQuantity = variant.AllowDecimalQuantity,
+                        HasBatchTracking = variant.HasBatchTracking,
+                        HasExpiryTracking = variant.HasExpiryTracking,
                         CurrentSOH = variant.CurrentSOH,
                         OrderQty = 0m,
                         ExpectedCost = variant.LastSupplierCost > 0
@@ -782,6 +799,8 @@ namespace POS.BackOffice.UI.ViewModels
                 TaxCode = string.IsNullOrWhiteSpace(variant.TaxCode) ? "VAT" : variant.TaxCode,
                 SupplierItemCode = variant.SupplierItemCode,
                 Moq = variant.Moq <= 0 ? 1 : variant.Moq,
+                HasBatchTracking = variant.HasBatchTracking,
+                HasExpiryTracking = variant.HasExpiryTracking,
                 OrderQty = orderQty,
                 ExpectedCost = expectedCost,
                 LineDiscountMode = "Amount",
@@ -818,6 +837,8 @@ namespace POS.BackOffice.UI.ViewModels
                 TaxCode = string.IsNullOrWhiteSpace(item.TaxCode) ? "VAT" : item.TaxCode,
                 SupplierItemCode = item.SupplierItemCode,
                 Moq = item.Moq <= 0 ? 1 : item.Moq,
+                HasBatchTracking = item.HasBatchTracking,
+                HasExpiryTracking = item.HasExpiryTracking,
                 OrderQty = item.OrderQty,
                 ExpectedCost = item.ExpectedCost,
                 LineDiscountMode = NormalizeDiscountMode(item.LineDiscountMode),

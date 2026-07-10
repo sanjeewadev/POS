@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -38,6 +38,25 @@ namespace POS.Core.Models
 
         [NotMapped]
         public string Barcode { get; set; } = string.Empty;
+
+        [NotMapped]
+        public bool HasBatchTracking { get; set; }
+
+        [NotMapped]
+        public bool HasExpiryTracking { get; set; }
+
+        [NotMapped]
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
+
 
         [NotMapped]
         public decimal SOH { get; set; } = 0m;

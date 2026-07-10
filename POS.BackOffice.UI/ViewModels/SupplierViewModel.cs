@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -25,8 +26,11 @@ namespace POS.BackOffice.UI.ViewModels
         private static readonly Regex PhoneRegex =
             new("^[0-9+\\-\\s()]{7,20}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+        private static readonly Regex BasicEmailRegex =
+            new("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
         // =========================================================
-        // IDENTITY FIELDS
+        // FORM FIELDS
         // =========================================================
 
         [ObservableProperty]
@@ -42,13 +46,6 @@ namespace POS.BackOffice.UI.ViewModels
         private string _contactPerson = string.Empty;
 
         [ObservableProperty]
-        private bool _isCodeReadOnly = false;
-
-        // =========================================================
-        // CONTACT FIELDS
-        // =========================================================
-
-        [ObservableProperty]
         private string _phone1 = string.Empty;
 
         [ObservableProperty]
@@ -60,10 +57,6 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _address = string.Empty;
 
-        // =========================================================
-        // FINANCIAL / TAX FIELDS
-        // =========================================================
-
         [ObservableProperty]
         private bool _hasVat = false;
 
@@ -73,7 +66,6 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private int _defaultCreditDays = 30;
 
-        // Display-only. Supplier Master should not directly update this.
         [ObservableProperty]
         private decimal _currentBalance = 0m;
 
@@ -81,20 +73,47 @@ namespace POS.BackOffice.UI.ViewModels
         private bool _isDeactivated = false;
 
         // =========================================================
-        // STATE / FILTERS
+        // SEARCH / SELECTION
         // =========================================================
 
         [ObservableProperty]
         private string _searchText = string.Empty;
 
         [ObservableProperty]
+        private bool _includeDeactivated = true;
+
+        [ObservableProperty]
         private Supplier? _selectedSupplier;
+
+        // =========================================================
+        // UI STATE
+        // =========================================================
 
         [ObservableProperty]
         private bool _isBusy = false;
 
         [ObservableProperty]
         private string _statusMessage = "Ready.";
+
+        public bool IsExistingSupplier => SelectedSupplier != null;
+
+        public bool IsSupplierCodeReadOnly => IsExistingSupplier;
+
+        public bool IsVatNumberInputEnabled => HasVat && !IsBusy;
+
+        public string SupplierStatusText
+        {
+            get
+            {
+                if (SelectedSupplier == null)
+                    return "New Supplier";
+
+                return IsDeactivated ? "Suspended" : "Active";
+            }
+        }
+
+        public string DeactivateReactivateButtonText =>
+            IsDeactivated ? "REACTIVATE" : "DEACTIVATE";
 
         // =========================================================
         // COLLECTIONS
@@ -149,14 +168,14 @@ namespace POS.BackOffice.UI.ViewModels
 
             var data = await _supplierRepository.GetAllFilteredAsync(
                 searchTerm: SearchText,
-                includeDeactivated: true);
+                includeDeactivated: IncludeDeactivated);
 
             foreach (var supplier in data)
-            {
                 Suppliers.Add(supplier);
-            }
 
-            StatusMessage = $"{Suppliers.Count} supplier record(s) loaded.";
+            StatusMessage = IncludeDeactivated
+                ? $"{Suppliers.Count} supplier record(s) loaded, including suspended suppliers."
+                : $"{Suppliers.Count} active supplier record(s) loaded.";
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -168,8 +187,58 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task RefreshAsync()
         {
+            await LoadDataAsync();
+        }
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private async Task ClearSearchAsync()
+        {
             SearchText = string.Empty;
             await LoadDataAsync();
+        }
+
+        partial void OnSelectedSupplierChanged(Supplier? value)
+        {
+            if (_isApplyingSelection)
+                return;
+
+            ApplySelectedSupplier(value);
+        }
+
+        private void ApplySelectedSupplier(Supplier? value)
+        {
+            _isApplyingSelection = true;
+
+            try
+            {
+                if (value == null)
+                {
+                    ResetForm("Ready for new supplier.");
+                    return;
+                }
+
+                SupplierCode = value.SupplierCode ?? string.Empty;
+                SupplierName = value.SupplierName ?? string.Empty;
+                CompanyName = value.CompanyName ?? string.Empty;
+                ContactPerson = value.ContactPerson ?? string.Empty;
+                Phone1 = value.Phone1 ?? string.Empty;
+                Phone2 = value.Phone2 ?? string.Empty;
+                Email = value.Email ?? string.Empty;
+                Address = value.Address ?? string.Empty;
+                HasVat = value.HasVat;
+                VatNumber = value.HasVat ? value.VatNumber ?? string.Empty : string.Empty;
+                DefaultCreditDays = value.DefaultCreditDays;
+                CurrentBalance = value.CurrentBalance;
+                IsDeactivated = value.IsDeactivated;
+
+                StatusMessage = $"Editing supplier: {value.SupplierName}";
+            }
+            finally
+            {
+                _isApplyingSelection = false;
+                RaiseFormStateProperties();
+                NotifyCommandStates();
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanSave))]
@@ -186,7 +255,7 @@ namespace POS.BackOffice.UI.ViewModels
             string phone2 = NormalizeText(Phone2);
             string email = NormalizeText(Email).ToLowerInvariant();
             string address = NormalizeText(Address);
-            string vatNumber = HasVat ? NormalizeText(VatNumber) : string.Empty;
+            string vatNumber = HasVat ? NormalizeText(VatNumber).ToUpperInvariant() : string.Empty;
 
             if (!ValidateInput(
                     supplierCode,
@@ -256,10 +325,7 @@ namespace POS.BackOffice.UI.ViewModels
                     var updatedSupplier = new Supplier
                     {
                         Id = SelectedSupplier.Id,
-
-                        // Supplier code is intentionally kept stable after creation.
                         SupplierCode = SelectedSupplier.SupplierCode,
-
                         SupplierName = supplierName,
                         CompanyName = companyName,
                         ContactPerson = contactPerson,
@@ -270,10 +336,7 @@ namespace POS.BackOffice.UI.ViewModels
                         HasVat = HasVat,
                         VatNumber = vatNumber,
                         DefaultCreditDays = DefaultCreditDays,
-
-                        // Repository intentionally does not update CurrentBalance from Supplier Master.
                         CurrentBalance = SelectedSupplier.CurrentBalance,
-
                         IsDeactivated = IsDeactivated
                     };
 
@@ -319,36 +382,36 @@ namespace POS.BackOffice.UI.ViewModels
         {
             _isApplyingSelection = true;
 
-            SelectedSupplier = null;
+            try
+            {
+                SelectedSupplier = null;
 
-            SupplierCode = string.Empty;
-            SupplierName = string.Empty;
-            CompanyName = string.Empty;
-            ContactPerson = string.Empty;
+                SupplierCode = string.Empty;
+                SupplierName = string.Empty;
+                CompanyName = string.Empty;
+                ContactPerson = string.Empty;
+                Phone1 = string.Empty;
+                Phone2 = string.Empty;
+                Email = string.Empty;
+                Address = string.Empty;
+                HasVat = false;
+                VatNumber = string.Empty;
+                DefaultCreditDays = 30;
+                CurrentBalance = 0m;
+                IsDeactivated = false;
 
-            Phone1 = string.Empty;
-            Phone2 = string.Empty;
-            Email = string.Empty;
-            Address = string.Empty;
-
-            HasVat = false;
-            VatNumber = string.Empty;
-            DefaultCreditDays = 30;
-            CurrentBalance = 0m;
-            IsDeactivated = false;
-
-            IsCodeReadOnly = false;
-
-            _isApplyingSelection = false;
-
-            StatusMessage = statusMessage;
-
-            SaveCommand.NotifyCanExecuteChanged();
-            DeleteCommand.NotifyCanExecuteChanged();
+                StatusMessage = statusMessage;
+            }
+            finally
+            {
+                _isApplyingSelection = false;
+                RaiseFormStateProperties();
+                NotifyCommandStates();
+            }
         }
 
-        [RelayCommand(CanExecute = nameof(CanDelete))]
-        private async Task DeleteAsync()
+        [RelayCommand(CanExecute = nameof(CanDeleteSupplier))]
+        private async Task DeleteSupplierAsync()
         {
             if (SelectedSupplier == null)
                 return;
@@ -361,12 +424,16 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 var linkedData = await _supplierRepository.GetLinkedDataSummaryAsync(selected.Id);
 
-                if (linkedData.HasLinkedData)
+                if (linkedData.HasLinkedData || selected.CurrentBalance != 0m)
                 {
-                    StatusMessage = "Delete blocked.";
+                    StatusMessage = "Delete blocked. Supplier has links or balance.";
+
+                    string message = linkedData.HasLinkedData
+                        ? linkedData.ToUserMessage(selected.SupplierName)
+                        : "Supplier cannot be permanently deleted while current balance is not zero. Use Deactivate instead.";
 
                     _messageBoxService.ShowWarning(
-                        linkedData.ToUserMessage(selected.SupplierName),
+                        message,
                         "Delete Blocked");
 
                     return;
@@ -374,7 +441,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                StatusMessage = "Linked data check failed.";
+                StatusMessage = "Delete check failed.";
 
                 _messageBoxService.ShowError(
                     $"Could not check linked records:\n\n{ex.Message}",
@@ -388,10 +455,9 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Delete supplier '{selected.SupplierName}'?\n\n" +
-                "This is only safe for wrongly-created or unused test suppliers.\n\n" +
-                "For real business records, suspend/deactivate the supplier instead.",
-                "Confirm Safe Delete",
+                $"Permanently delete unused supplier '{selected.SupplierName}'?\n\n" +
+                "This is only safe for wrongly-created suppliers with no documents, no ledger, no item links, and zero balance.",
+                "Confirm Permanent Delete",
                 MessageBoxImage.Warning);
 
             if (!confirmed)
@@ -401,8 +467,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                await _supplierRepository.DeleteAsync(selected.Id);
-
+                await _supplierRepository.HardDeleteAsync(selected.Id);
                 await LoadDataInternalAsync();
                 ResetForm("Supplier deleted successfully.");
 
@@ -410,20 +475,12 @@ namespace POS.BackOffice.UI.ViewModels
                     "Supplier deleted successfully.",
                     "Deleted");
             }
-            catch (InvalidOperationException ex)
-            {
-                StatusMessage = "Delete blocked.";
-
-                _messageBoxService.ShowWarning(
-                    $"{ex.Message}\n\nTo hide this supplier from new PO/GRN screens, tick 'Suspend / Deactivate Supplier' and click SAVE.",
-                    "Delete Blocked");
-            }
             catch (Exception ex)
             {
                 StatusMessage = "Delete failed.";
 
                 _messageBoxService.ShowError(
-                    $"An error occurred while deleting:\n\n{ex.Message}",
+                    $"Failed to delete supplier:\n\n{ex.Message}",
                     "Delete Error");
             }
             finally
@@ -432,88 +489,152 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // =========================================================
-        // PROPERTY CHANGE HANDLERS
-        // =========================================================
-
-        partial void OnSearchTextChanged(string value)
+        [RelayCommand(CanExecute = nameof(CanDeactivateSupplier))]
+        private async Task DeactivateSupplierAsync()
         {
-            if (_isInitialized)
+            if (SelectedSupplier == null)
+                return;
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Deactivate / suspend supplier '{SelectedSupplier.SupplierName}'?\n\n" +
+                "This keeps all old PO, GRN, ledger, supplier return, and report history safe. " +
+                "The supplier will be hidden from new purchasing selections.",
+                "Confirm Supplier Deactivation",
+                MessageBoxImage.Warning);
+
+            if (!confirmed)
+                return;
+
+            IsBusy = true;
+
+            try
             {
-                StatusMessage = "Type search text and click SEARCH.";
+                await _supplierRepository.DeactivateAsync(SelectedSupplier.Id);
+                await LoadDataInternalAsync();
+                ResetForm("Supplier deactivated successfully.");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Deactivate failed.";
+
+                _messageBoxService.ShowError(
+                    $"Failed to deactivate supplier:\n\n{ex.Message}",
+                    "Deactivate Error");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
-        partial void OnSelectedSupplierChanged(Supplier? value)
+        [RelayCommand(CanExecute = nameof(CanReactivateSupplier))]
+        private async Task ReactivateSupplierAsync()
         {
-            if (_isApplyingSelection)
+            if (SelectedSupplier == null)
                 return;
 
-            if (value != null)
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                $"Reactivate supplier '{SelectedSupplier.SupplierName}'?",
+                "Confirm Supplier Reactivation",
+                MessageBoxImage.Question);
+
+            if (!confirmed)
+                return;
+
+            IsBusy = true;
+
+            try
             {
-                SupplierCode = value.SupplierCode ?? string.Empty;
-                SupplierName = value.SupplierName ?? string.Empty;
-                CompanyName = value.CompanyName ?? string.Empty;
-                ContactPerson = value.ContactPerson ?? string.Empty;
-
-                Phone1 = value.Phone1 ?? string.Empty;
-                Phone2 = value.Phone2 ?? string.Empty;
-                Email = value.Email ?? string.Empty;
-                Address = value.Address ?? string.Empty;
-
-                HasVat = value.HasVat;
-                VatNumber = value.VatNumber ?? string.Empty;
-                DefaultCreditDays = value.DefaultCreditDays;
-                CurrentBalance = value.CurrentBalance;
-                IsDeactivated = value.IsDeactivated;
-
-                IsCodeReadOnly = true;
-
-                StatusMessage = $"Editing supplier: {value.SupplierName}";
+                await _supplierRepository.ReactivateAsync(SelectedSupplier.Id);
+                await LoadDataInternalAsync();
+                ResetForm("Supplier reactivated successfully.");
             }
-            else
+            catch (Exception ex)
             {
-                IsCodeReadOnly = false;
-            }
+                StatusMessage = "Reactivate failed.";
 
+                _messageBoxService.ShowError(
+                    $"Failed to reactivate supplier:\n\n{ex.Message}",
+                    "Reactivate Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        // =========================================================
+        // PROPERTY CHANGED / COMMAND STATE
+        // =========================================================
+
+        partial void OnSupplierCodeChanged(string value)
+        {
             SaveCommand.NotifyCanExecuteChanged();
-            DeleteCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnSupplierNameChanged(string value)
+        {
+            SaveCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnPhone1Changed(string value)
+        {
+            SaveCommand.NotifyCanExecuteChanged();
         }
 
         partial void OnHasVatChanged(bool value)
         {
             if (!value)
-            {
                 VatNumber = string.Empty;
-            }
 
+            OnPropertyChanged(nameof(IsVatNumberInputEnabled));
             SaveCommand.NotifyCanExecuteChanged();
         }
 
-        partial void OnSupplierCodeChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnSupplierNameChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnCompanyNameChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnContactPersonChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnPhone1Changed(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnPhone2Changed(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnEmailChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnAddressChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnVatNumberChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
-        partial void OnDefaultCreditDaysChanged(int value) => SaveCommand.NotifyCanExecuteChanged();
+        partial void OnVatNumberChanged(string value)
+        {
+            SaveCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnDefaultCreditDaysChanged(int value)
+        {
+            SaveCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIncludeDeactivatedChanged(bool value)
+        {
+            if (_isInitialized && !IsBusy)
+                _ = LoadDataAsync();
+        }
 
         partial void OnIsBusyChanged(bool value)
+        {
+            OnPropertyChanged(nameof(IsVatNumberInputEnabled));
+            RaiseFormStateProperties();
+            NotifyCommandStates();
+        }
+
+        private void RaiseFormStateProperties()
+        {
+            OnPropertyChanged(nameof(IsExistingSupplier));
+            OnPropertyChanged(nameof(IsSupplierCodeReadOnly));
+            OnPropertyChanged(nameof(IsVatNumberInputEnabled));
+            OnPropertyChanged(nameof(SupplierStatusText));
+            OnPropertyChanged(nameof(DeactivateReactivateButtonText));
+        }
+
+        private void NotifyCommandStates()
         {
             InitializeCommand.NotifyCanExecuteChanged();
             LoadDataCommand.NotifyCanExecuteChanged();
             SearchCommand.NotifyCanExecuteChanged();
             RefreshCommand.NotifyCanExecuteChanged();
+            ClearSearchCommand.NotifyCanExecuteChanged();
             SaveCommand.NotifyCanExecuteChanged();
-            DeleteCommand.NotifyCanExecuteChanged();
+            DeleteSupplierCommand.NotifyCanExecuteChanged();
+            DeactivateSupplierCommand.NotifyCanExecuteChanged();
+            ReactivateSupplierCommand.NotifyCanExecuteChanged();
         }
-
-        // =========================================================
-        // COMMAND STATE
-        // =========================================================
 
         private bool CanInitialize()
         {
@@ -530,27 +651,28 @@ namespace POS.BackOffice.UI.ViewModels
             return !IsBusy &&
                    !string.IsNullOrWhiteSpace(SupplierCode) &&
                    !string.IsNullOrWhiteSpace(SupplierName) &&
-                   !string.IsNullOrWhiteSpace(Phone1);
+                   !string.IsNullOrWhiteSpace(Phone1) &&
+                   (!HasVat || !string.IsNullOrWhiteSpace(VatNumber));
         }
 
-        private bool CanDelete()
+        private bool CanDeleteSupplier()
         {
             return !IsBusy && SelectedSupplier != null;
+        }
+
+        private bool CanDeactivateSupplier()
+        {
+            return !IsBusy && SelectedSupplier != null && !IsDeactivated;
+        }
+
+        private bool CanReactivateSupplier()
+        {
+            return !IsBusy && SelectedSupplier != null && IsDeactivated;
         }
 
         // =========================================================
         // VALIDATION HELPERS
         // =========================================================
-
-        private static string NormalizeCode(string value)
-        {
-            return (value ?? string.Empty).Trim().ToUpperInvariant();
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            return (value ?? string.Empty).Trim();
-        }
 
         private bool ValidateInput(
             string supplierCode,
@@ -579,10 +701,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (!SupplierCodeRegex.IsMatch(supplierCode))
             {
-                _messageBoxService.ShowWarning(
-                    "Supplier Code can only contain letters, numbers, dash, and underscore.",
-                    "Validation Error");
-
+                _messageBoxService.ShowWarning("Supplier Code can only contain letters, numbers, dash, and underscore.", "Validation Error");
                 return false;
             }
 
@@ -592,15 +711,9 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
-            if (supplierName.Length > 150)
+            if (supplierName.Length > 150 || companyName.Length > 150)
             {
-                _messageBoxService.ShowWarning("Supplier Name cannot be longer than 150 characters.", "Validation Error");
-                return false;
-            }
-
-            if (companyName.Length > 150)
-            {
-                _messageBoxService.ShowWarning("Company Name cannot be longer than 150 characters.", "Validation Error");
+                _messageBoxService.ShowWarning("Supplier Name and Company Name cannot be longer than 150 characters.", "Validation Error");
                 return false;
             }
 
@@ -612,75 +725,66 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (string.IsNullOrWhiteSpace(phone1))
             {
-                _messageBoxService.ShowWarning("Phone 1 is required.", "Validation Error");
+                _messageBoxService.ShowWarning("Primary Phone is required.", "Validation Error");
                 return false;
             }
 
             if (!PhoneRegex.IsMatch(phone1))
             {
-                _messageBoxService.ShowWarning("Phone 1 is not valid.", "Validation Error");
+                _messageBoxService.ShowWarning("Primary Phone number is invalid.", "Validation Error");
                 return false;
             }
 
             if (!string.IsNullOrWhiteSpace(phone2) && !PhoneRegex.IsMatch(phone2))
             {
-                _messageBoxService.ShowWarning("Phone 2 is not valid.", "Validation Error");
+                _messageBoxService.ShowWarning("Secondary Phone number is invalid.", "Validation Error");
                 return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(email))
+            if (!string.IsNullOrWhiteSpace(email) && !BasicEmailRegex.IsMatch(email))
             {
-                if (email.Length > 100)
-                {
-                    _messageBoxService.ShowWarning("Email cannot be longer than 100 characters.", "Validation Error");
-                    return false;
-                }
-
-                try
-                {
-                    _ = new System.Net.Mail.MailAddress(email);
-                }
-                catch
-                {
-                    _messageBoxService.ShowWarning("Email address is not valid.", "Validation Error");
-                    return false;
-                }
+                _messageBoxService.ShowWarning("Email address is invalid.", "Validation Error");
+                return false;
             }
 
-            if (address.Length > 250)
+            if (email.Length > 100 || address.Length > 250)
             {
-                _messageBoxService.ShowWarning("Address cannot be longer than 250 characters.", "Validation Error");
+                _messageBoxService.ShowWarning("Email or Address is too long.", "Validation Error");
                 return false;
             }
 
             if (hasVat && string.IsNullOrWhiteSpace(vatNumber))
             {
                 _messageBoxService.ShowWarning(
-                    "VAT number is required when 'Has VAT Number' is checked.",
-                    "Validation Error");
+                    "VAT Registration Number is required when VAT Registered Supplier is ticked.",
+                    "VAT Validation");
 
                 return false;
             }
 
             if (vatNumber.Length > 50)
             {
-                _messageBoxService.ShowWarning("VAT Number cannot be longer than 50 characters.", "Validation Error");
+                _messageBoxService.ShowWarning("VAT Registration Number cannot be longer than 50 characters.", "Validation Error");
                 return false;
             }
 
-            if (defaultCreditDays < 0)
+            if (defaultCreditDays < 0 || defaultCreditDays > 365)
             {
-                _messageBoxService.ShowWarning("Default Credit Days cannot be negative.", "Validation Error");
-                return false;
-            }
-
-            if (defaultCreditDays > 365)
-            {
-                _messageBoxService.ShowWarning("Default Credit Days cannot be greater than 365.", "Validation Error");
+                _messageBoxService.ShowWarning("Default Credit Days must be between 0 and 365.", "Validation Error");
                 return false;
             }
 
             return true;
+        }
+
+        private static string NormalizeCode(string? value)
+        {
+            return (value ?? string.Empty).Trim().ToUpperInvariant();
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            return (value ?? string.Empty).Trim();
         }
     }
 }

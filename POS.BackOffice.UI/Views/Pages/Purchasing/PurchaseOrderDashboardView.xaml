@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Purchasing.PurchaseOrderDashboardView"
+<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Purchasing.PurchaseOrderDashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -329,6 +329,10 @@
                                         Binding="{Binding SupplierName}"
                                         Width="*"/>
 
+                    <DataGridTextColumn Header="Tracking"
+                                        Binding="{Binding TrackingSummary}"
+                                        Width="150"/>
+
                     <DataGridTextColumn Header="Order Date"
                                         Binding="{Binding OrderDate, StringFormat=d}"
                                         Width="105"/>
@@ -639,6 +643,10 @@
                                         FontWeight="SemiBold"
                                         CellStyle="{StaticResource FrozenCell}"/>
 
+                    <DataGridTextColumn Header="Tracking"
+                                        Binding="{Binding TrackingText}"
+                                        Width="120"/>
+
                     <DataGridTextColumn Header="Barcode"
                                         Binding="{Binding Barcode}"
                                         Width="120"/>
@@ -752,7 +760,7 @@
                         <TextBlock Text="PO TOTALS"
                                    Style="{StaticResource SectionLabel}"/>
 
-                        <TextBlock Text="POs are read-only after GRN receiving. Cancel is allowed only before any quantity is received."
+                        <TextBlock Text="POs are read-only after GRN receiving. Tracking shown here flows to GRN; batch barcode is created only in GRN."
                                    Foreground="#666666"
                                    FontStyle="Italic"/>
                     </StackPanel>

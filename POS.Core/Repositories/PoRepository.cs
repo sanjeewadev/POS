@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -37,6 +37,31 @@ namespace POS.Core.Repositories
         public decimal TotalOrderedQty { get; set; }
 
         public decimal TotalReceivedQty { get; set; }
+
+        public int AverageCostLineCount { get; set; }
+
+        public int BatchTrackedLineCount { get; set; }
+
+        public int BatchExpiryLineCount { get; set; }
+
+        public string TrackingSummary
+        {
+            get
+            {
+                var parts = new List<string>();
+
+                if (AverageCostLineCount > 0)
+                    parts.Add($"Avg: {AverageCostLineCount}");
+
+                if (BatchTrackedLineCount > 0)
+                    parts.Add($"Batch: {BatchTrackedLineCount}");
+
+                if (BatchExpiryLineCount > 0)
+                    parts.Add($"Expiry: {BatchExpiryLineCount}");
+
+                return parts.Count == 0 ? "-" : string.Join(" | ", parts);
+            }
+        }
 
         public string DisplayText =>
             $"{PoNumber} | {SupplierName} | {Status} | Rs. {NetPayable:N2}";
@@ -77,6 +102,21 @@ namespace POS.Core.Repositories
         public int Moq { get; set; } = 1;
 
         public bool AllowDecimalQuantity { get; set; } = false;
+
+        public bool HasBatchTracking { get; set; }
+
+        public bool HasExpiryTracking { get; set; }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
 
         public decimal CurrentSOH { get; set; } = 0m;
 
@@ -256,7 +296,9 @@ namespace POS.Core.Repositories
                         .Where(s => s.SupplierId == supplierId)
                         .Select(s => s.MinimumOrderQuantity)
                         .FirstOrDefault(),
-                    AllowDecimalQuantity = v.ItemParent.UnitOfMeasure.AllowDecimals
+                    AllowDecimalQuantity = v.ItemParent.UnitOfMeasure.AllowDecimals,
+                    HasBatchTracking = v.ItemParent.HasBatchTracking,
+                    HasExpiryTracking = v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry
                 })
                 .ToListAsync();
 
@@ -280,6 +322,8 @@ namespace POS.Core.Repositories
                     SupplierItemCode = r.SupplierItemCode ?? string.Empty,
                     Moq = r.Moq <= 0 ? 1 : r.Moq,
                     AllowDecimalQuantity = r.AllowDecimalQuantity,
+                    HasBatchTracking = r.HasBatchTracking,
+                    HasExpiryTracking = r.HasExpiryTracking,
                     CurrentSOH = 0m
                 })
                 .OrderBy(r => r.FullDisplayName)
@@ -344,7 +388,9 @@ namespace POS.Core.Repositories
                         .Where(s => s.SupplierId == supplierId)
                         .Select(s => s.MinimumOrderQuantity)
                         .FirstOrDefault(),
-                    AllowDecimalQuantity = v.ItemParent.UnitOfMeasure.AllowDecimals
+                    AllowDecimalQuantity = v.ItemParent.UnitOfMeasure.AllowDecimals,
+                    HasBatchTracking = v.ItemParent.HasBatchTracking,
+                    HasExpiryTracking = v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry
                 })
                 .FirstOrDefaultAsync();
 
@@ -370,6 +416,8 @@ namespace POS.Core.Repositories
                 SupplierItemCode = row.SupplierItemCode ?? string.Empty,
                 Moq = row.Moq <= 0 ? 1 : row.Moq,
                 AllowDecimalQuantity = row.AllowDecimalQuantity,
+                HasBatchTracking = row.HasBatchTracking,
+                HasExpiryTracking = row.HasExpiryTracking,
                 CurrentSOH = 0m
             };
         }
@@ -690,7 +738,9 @@ namespace POS.Core.Repositories
                         .Select(l => new
                         {
                             l.OrderQty,
-                            l.ReceivedQty
+                            l.ReceivedQty,
+                            HasBatchTracking = l.ItemVariant.ItemParent.HasBatchTracking,
+                            HasExpiryTracking = l.ItemVariant.ItemParent.HasExpiryTracking || l.ItemVariant.ItemParent.HasBatchExpiry
                         })
                         .ToList()
                 })
@@ -713,7 +763,10 @@ namespace POS.Core.Repositories
                     Status = p.Status,
                     CreatedBy = p.CreatedBy,
                     TotalOrderedQty = p.Lines.Sum(l => l.OrderQty),
-                    TotalReceivedQty = p.Lines.Sum(l => l.ReceivedQty)
+                    TotalReceivedQty = p.Lines.Sum(l => l.ReceivedQty),
+                    AverageCostLineCount = p.Lines.Count(l => !l.HasBatchTracking),
+                    BatchTrackedLineCount = p.Lines.Count(l => l.HasBatchTracking && !l.HasExpiryTracking),
+                    BatchExpiryLineCount = p.Lines.Count(l => l.HasBatchTracking && l.HasExpiryTracking)
                 })
                 .ToList();
         }
@@ -748,6 +801,8 @@ namespace POS.Core.Repositories
                     ? "Standard"
                     : line.ItemVariant.VariantDescription;
                 line.Barcode = line.ItemVariant.Barcode ?? string.Empty;
+                line.HasBatchTracking = line.ItemVariant.ItemParent.HasBatchTracking;
+                line.HasExpiryTracking = line.ItemVariant.ItemParent.HasExpiryTracking || line.ItemVariant.ItemParent.HasBatchExpiry;
                 line.SOH = 0m;
 
                 if (line.VatRatePercent <= 0)

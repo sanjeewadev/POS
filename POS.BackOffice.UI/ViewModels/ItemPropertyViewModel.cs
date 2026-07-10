@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -12,29 +12,6 @@ using POS.Core.Repositories;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    // Wrapper for ListBox category checkboxes.
-    public partial class CategorySelectionWrapper : ObservableObject
-    {
-        public int CategoryId { get; set; }
-
-        public string CategoryCode { get; set; } = string.Empty;
-
-        public string CategoryName { get; set; } = string.Empty;
-
-        public bool IsDeactivated { get; set; }
-
-        public string DisplayName =>
-            IsDeactivated
-                ? $"{CategoryCode} - {CategoryName} (Deactivated)"
-                : $"{CategoryCode} - {CategoryName}";
-
-        [ObservableProperty]
-        private bool _isSelected;
-
-        [ObservableProperty]
-        private bool _isVisible = true;
-    }
-
     public partial class ItemPropertyViewModel : ViewModelBase
     {
         private const int MaxDisplayOrder = 9999;
@@ -61,9 +38,6 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private string _groupSearchText = string.Empty;
-
-        [ObservableProperty]
-        private string _categorySearchText = string.Empty;
 
         [ObservableProperty]
         private AttributeGroup? _selectedAttributeGroup;
@@ -111,8 +85,6 @@ namespace POS.BackOffice.UI.ViewModels
 
         public ObservableCollection<AttributeValue> AttributeValues { get; } = new();
 
-        public ObservableCollection<CategorySelectionWrapper> Categories { get; } = new();
-
         public ItemPropertyViewModel(
             AttributeRepository attributeRepository,
             CategoryRepository categoryRepository,
@@ -134,10 +106,8 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                await LoadCategoriesInternalAsync();
                 await LoadGroupsInternalAsync();
-
-                StatusMessage = "Item property page loaded.";
+                StatusMessage = "Global item property page loaded.";
             }
             catch (Exception ex)
             {
@@ -154,46 +124,6 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         // =========================================================
-        // CATEGORY CHECKBOX LOGIC
-        // =========================================================
-
-        private async Task LoadCategoriesInternalAsync()
-        {
-            Categories.Clear();
-
-            var categories = await _categoryRepository.GetAllAsync(
-                searchTerm: string.Empty,
-                includeDeactivated: true);
-
-            foreach (var cat in categories.OrderBy(c => c.CategoryName))
-            {
-                Categories.Add(new CategorySelectionWrapper
-                {
-                    CategoryId = cat.Id,
-                    CategoryCode = cat.CategoryCode ?? string.Empty,
-                    CategoryName = cat.CategoryName ?? string.Empty,
-                    IsDeactivated = cat.IsDeactivated,
-                    IsSelected = false,
-                    IsVisible = true
-                });
-            }
-        }
-
-        partial void OnCategorySearchTextChanged(string value)
-        {
-            string search = (value ?? string.Empty).Trim().ToLowerInvariant();
-
-            foreach (var cat in Categories)
-            {
-                cat.IsVisible =
-                    string.IsNullOrWhiteSpace(search) ||
-                    cat.CategoryCode.ToLowerInvariant().Contains(search) ||
-                    cat.CategoryName.ToLowerInvariant().Contains(search) ||
-                    cat.DisplayName.ToLowerInvariant().Contains(search);
-            }
-        }
-
-        // =========================================================
         // GROUP MANAGEMENT
         // =========================================================
 
@@ -205,7 +135,7 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 await LoadGroupsInternalAsync();
-                StatusMessage = $"{AttributeGroups.Count} group record(s) loaded.";
+                StatusMessage = $"{AttributeGroups.Count} global group record(s) loaded.";
             }
             catch (Exception ex)
             {
@@ -230,11 +160,10 @@ namespace POS.BackOffice.UI.ViewModels
                 includeDeactivated: true);
 
             foreach (var group in groups)
-            {
                 AttributeGroups.Add(group);
-            }
         }
 
+        // Kept for compatibility with old bindings. New XAML uses LoadGroupsCommand.
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task SearchGroupsAsync()
         {
@@ -244,9 +173,7 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnGroupSearchTextChanged(string value)
         {
             if (_isInitialized)
-            {
-                StatusMessage = "Type search text and click SEARCH.";
-            }
+                StatusMessage = "Type group search text and click SEARCH / REFRESH.";
         }
 
         partial void OnSelectedAttributeGroupChanged(AttributeGroup? value)
@@ -263,42 +190,28 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
+                _isApplyingSelection = true;
+
                 if (value != null)
                 {
-                    _isApplyingSelection = true;
-
                     GroupNameInput = value.GroupName ?? string.Empty;
                     GroupDisplayOrderText = value.DisplayOrder.ToString(CultureInfo.InvariantCulture);
                     IsGroupDeactivated = value.IsDeactivated;
 
                     IsValueManagerEnabled = true;
-                    ValueManagerHeader = $"Adding values to: {value.GroupName}";
+                    ValueManagerHeader = $"Adding values to global group: {value.GroupName}";
 
                     SelectedAttributeValue = null;
                     ValueNameInput = string.Empty;
                     ValueDisplayOrderText = "0";
                     IsValueDeactivated = false;
 
-                    foreach (var cat in Categories)
-                    {
-                        cat.IsSelected = false;
-                    }
-
-                    var assignedIds = await _attributeRepository.GetAssignedCategoryIdsForGroupAsync(value.Id);
-
-                    foreach (var cat in Categories)
-                    {
-                        cat.IsSelected = assignedIds.Contains(cat.CategoryId);
-                    }
-
                     await LoadValuesInternalAsync();
 
-                    StatusMessage = $"Editing group: {value.GroupName}";
+                    StatusMessage = $"Editing global group: {value.GroupName}";
                 }
                 else
                 {
-                    _isApplyingSelection = true;
-
                     AttributeValues.Clear();
                     SelectedAttributeValue = null;
                     ValueNameInput = string.Empty;
@@ -308,12 +221,7 @@ namespace POS.BackOffice.UI.ViewModels
                     IsValueManagerEnabled = false;
                     ValueManagerHeader = "Please select a group from the left to add values.";
 
-                    foreach (var cat in Categories)
-                    {
-                        cat.IsSelected = false;
-                    }
-
-                    StatusMessage = "Ready for new group.";
+                    StatusMessage = "Ready for new global group.";
                 }
             }
             catch (Exception ex)
@@ -329,10 +237,7 @@ namespace POS.BackOffice.UI.ViewModels
                 _isApplyingSelection = false;
                 IsBusy = false;
 
-                SaveGroupCommand.NotifyCanExecuteChanged();
-                DeleteGroupCommand.NotifyCanExecuteChanged();
-                SaveValueCommand.NotifyCanExecuteChanged();
-                DeleteValueCommand.NotifyCanExecuteChanged();
+                NotifyCommandStates();
             }
         }
 
@@ -364,22 +269,20 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
-                AttributeGroup savedGroup;
-
                 if (SelectedAttributeGroup == null)
                 {
-                    savedGroup = new AttributeGroup
+                    var newGroup = new AttributeGroup
                     {
                         GroupName = groupName,
                         DisplayOrder = displayOrder,
                         IsDeactivated = IsGroupDeactivated
                     };
 
-                    savedGroup = await _attributeRepository.AddGroupAsync(savedGroup);
+                    await _attributeRepository.AddGroupAsync(newGroup);
                 }
                 else
                 {
-                    savedGroup = new AttributeGroup
+                    var updatedGroup = new AttributeGroup
                     {
                         Id = SelectedAttributeGroup.Id,
                         GroupName = groupName,
@@ -387,21 +290,14 @@ namespace POS.BackOffice.UI.ViewModels
                         IsDeactivated = IsGroupDeactivated
                     };
 
-                    await _attributeRepository.UpdateGroupAsync(savedGroup);
+                    await _attributeRepository.UpdateGroupAsync(updatedGroup);
                 }
 
-                var checkedCategoryIds = Categories
-                    .Where(c => c.IsSelected)
-                    .Select(c => c.CategoryId)
-                    .ToList();
-
-                await _attributeRepository.SyncGroupToCategoriesAsync(savedGroup.Id, checkedCategoryIds);
-
                 await LoadGroupsInternalAsync();
-                ResetGroupForm("Group saved successfully.");
+                ResetGroupForm("Global group saved successfully.");
 
                 _messageBoxService.ShowInformation(
-                    "Group saved successfully.",
+                    "Global group saved successfully.",
                     "Success");
             }
             catch (InvalidOperationException ex)
@@ -429,7 +325,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void ClearGroup()
         {
-            ResetGroupForm("Ready for new group.");
+            ResetGroupForm("Ready for new global group.");
         }
 
         private void ResetGroupForm(string statusMessage)
@@ -440,13 +336,6 @@ namespace POS.BackOffice.UI.ViewModels
             GroupNameInput = string.Empty;
             GroupDisplayOrderText = "0";
             IsGroupDeactivated = false;
-            CategorySearchText = string.Empty;
-
-            foreach (var cat in Categories)
-            {
-                cat.IsSelected = false;
-                cat.IsVisible = true;
-            }
 
             SelectedAttributeValue = null;
             ValueNameInput = string.Empty;
@@ -460,11 +349,7 @@ namespace POS.BackOffice.UI.ViewModels
             _isApplyingSelection = false;
 
             StatusMessage = statusMessage;
-
-            SaveGroupCommand.NotifyCanExecuteChanged();
-            DeleteGroupCommand.NotifyCanExecuteChanged();
-            SaveValueCommand.NotifyCanExecuteChanged();
-            DeleteValueCommand.NotifyCanExecuteChanged();
+            NotifyCommandStates();
         }
 
         [RelayCommand(CanExecute = nameof(CanDeleteGroup))]
@@ -508,8 +393,8 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Delete group '{selected.GroupName}'?\n\n" +
-                "This is only safe for wrongly-created or unused test groups.\n\n" +
+                $"Delete unused group '{selected.GroupName}'?\n\n" +
+                "This is only safe for wrongly-created groups with no values and no item usage.\n\n" +
                 "For real business records, deactivate the group instead.",
                 "Confirm Safe Delete",
                 MessageBoxImage.Warning);
@@ -524,10 +409,10 @@ namespace POS.BackOffice.UI.ViewModels
                 await _attributeRepository.DeleteGroupAsync(selected.Id);
 
                 await LoadGroupsInternalAsync();
-                ResetGroupForm("Group deleted successfully.");
+                ResetGroupForm("Unused group deleted successfully.");
 
                 _messageBoxService.ShowInformation(
-                    "Group deleted successfully.",
+                    "Unused group deleted successfully.",
                     "Deleted");
             }
             catch (InvalidOperationException ex)
@@ -593,11 +478,10 @@ namespace POS.BackOffice.UI.ViewModels
                 includeDeactivated: true);
 
             foreach (var value in values)
-            {
                 AttributeValues.Add(value);
-            }
         }
 
+        // Kept for compatibility with old bindings. New XAML uses LoadValuesCommand.
         [RelayCommand(CanExecute = nameof(CanRunValueCommand))]
         private async Task SearchValuesAsync()
         {
@@ -607,9 +491,7 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnValueSearchTextChanged(string value)
         {
             if (_isInitialized && SelectedAttributeGroup != null)
-            {
-                StatusMessage = "Type value search text and click SEARCH.";
-            }
+                StatusMessage = "Type value search text and click SEARCH / REFRESH.";
         }
 
         partial void OnSelectedAttributeValueChanged(AttributeValue? value)
@@ -694,10 +576,7 @@ namespace POS.BackOffice.UI.ViewModels
                     var updatedValue = new AttributeValue
                     {
                         Id = SelectedAttributeValue.Id,
-
-                        // AttributeGroupId is kept stable by the repository.
                         AttributeGroupId = SelectedAttributeValue.AttributeGroupId,
-
                         ValueName = valueName,
                         DisplayOrder = displayOrder,
                         IsDeactivated = IsValueDeactivated
@@ -795,8 +674,8 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Delete value '{selected.ValueName}'?\n\n" +
-                "This is only safe for wrongly-created or unused test values.\n\n" +
+                $"Delete unused value '{selected.ValueName}'?\n\n" +
+                "This is only safe for wrongly-created values that are not used by any item variant.\n\n" +
                 "For real business records, deactivate the value instead.",
                 "Confirm Safe Delete",
                 MessageBoxImage.Warning);
@@ -811,10 +690,10 @@ namespace POS.BackOffice.UI.ViewModels
                 await _attributeRepository.DeleteValueAsync(selected.Id);
 
                 await LoadValuesInternalAsync();
-                ResetValueForm("Value deleted successfully.");
+                ResetValueForm("Unused value deleted successfully.");
 
                 _messageBoxService.ShowInformation(
-                    "Value deleted successfully.",
+                    "Unused value deleted successfully.",
                     "Deleted");
             }
             catch (InvalidOperationException ex)
@@ -866,7 +745,11 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnIsBusyChanged(bool value)
         {
             InitializeCommand.NotifyCanExecuteChanged();
+            NotifyCommandStates();
+        }
 
+        private void NotifyCommandStates()
+        {
             LoadGroupsCommand.NotifyCanExecuteChanged();
             SearchGroupsCommand.NotifyCanExecuteChanged();
             SaveGroupCommand.NotifyCanExecuteChanged();
@@ -920,10 +803,7 @@ namespace POS.BackOffice.UI.ViewModels
             return (value ?? string.Empty).Trim();
         }
 
-        private bool TryParseDisplayOrder(
-            string value,
-            string fieldName,
-            out int displayOrder)
+        private bool TryParseDisplayOrder(string value, string fieldName, out int displayOrder)
         {
             displayOrder = 0;
 
@@ -975,28 +855,19 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (string.IsNullOrWhiteSpace(groupName))
             {
-                _messageBoxService.ShowWarning(
-                    "Group Name is required.",
-                    "Validation Error");
-
+                _messageBoxService.ShowWarning("Group Name is required.", "Validation Error");
                 return false;
             }
 
             if (groupName.Length > 50)
             {
-                _messageBoxService.ShowWarning(
-                    "Group Name cannot be longer than 50 characters.",
-                    "Validation Error");
-
+                _messageBoxService.ShowWarning("Group Name cannot be longer than 50 characters.", "Validation Error");
                 return false;
             }
 
             if (displayOrder < 0 || displayOrder > MaxDisplayOrder)
             {
-                _messageBoxService.ShowWarning(
-                    $"Group Display Order must be between 0 and {MaxDisplayOrder}.",
-                    "Validation Error");
-
+                _messageBoxService.ShowWarning($"Group Display Order must be between 0 and {MaxDisplayOrder}.", "Validation Error");
                 return false;
             }
 
@@ -1007,28 +878,19 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (string.IsNullOrWhiteSpace(valueName))
             {
-                _messageBoxService.ShowWarning(
-                    "Value Name is required.",
-                    "Validation Error");
-
+                _messageBoxService.ShowWarning("Value Name is required.", "Validation Error");
                 return false;
             }
 
             if (valueName.Length > 50)
             {
-                _messageBoxService.ShowWarning(
-                    "Value Name cannot be longer than 50 characters.",
-                    "Validation Error");
-
+                _messageBoxService.ShowWarning("Value Name cannot be longer than 50 characters.", "Validation Error");
                 return false;
             }
 
             if (displayOrder < 0 || displayOrder > MaxDisplayOrder)
             {
-                _messageBoxService.ShowWarning(
-                    $"Value Display Order must be between 0 and {MaxDisplayOrder}.",
-                    "Validation Error");
-
+                _messageBoxService.ShowWarning($"Value Display Order must be between 0 and {MaxDisplayOrder}.", "Validation Error");
                 return false;
             }
 

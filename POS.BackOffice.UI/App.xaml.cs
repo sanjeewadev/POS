@@ -86,6 +86,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<TerminalManagementRepository>();
             services.AddTransient<BackupRepository>();
             services.AddTransient<LicenseRepository>();
+            services.AddTransient<TaxRateRepository>();
 
             // ==========================================
             // CORE SERVICES
@@ -123,6 +124,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<SupplierViewModel>();
             services.AddTransient<ItemMasterViewModel>();
             services.AddTransient<UnitOfMeasureViewModel>();
+            services.AddTransient<TaxRateViewModel>();
 
             // ==========================================
             // INVENTORY OPERATION VIEWMODELS

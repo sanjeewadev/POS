@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -508,6 +508,8 @@ namespace POS.BackOffice.UI.ViewModels
                         LineTotal = line.LineTotal,
                         SupplierItemCode = line.SupplierItemCode,
                         Moq = line.Moq <= 0 ? 1 : line.Moq,
+                        HasBatchTracking = line.HasBatchTracking,
+                        HasExpiryTracking = line.HasExpiryTracking,
                         LineStatus = "Open"
                     };
 

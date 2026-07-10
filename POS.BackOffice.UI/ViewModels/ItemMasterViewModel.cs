@@ -36,6 +36,9 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly AttributeRepository _attributeRepository;
         private readonly UnitOfMeasureRepository _uomRepository;
         private readonly SupplierRepository _supplierRepository;
+
+        // FIXED: Using your actual TaxRateRepository
+        private readonly TaxRateRepository _taxRateRepository;
         private readonly IMessageBoxService _messageBoxService;
 
         private bool _isInitialized;
@@ -43,6 +46,7 @@ namespace POS.BackOffice.UI.ViewModels
         private bool _isClearing;
         private bool _isUpdatingSupplierSelection;
         private bool _loadedItemWasDeactivated;
+        private bool _isCalculatingPricing; // Safety flag for bi-directional math
 
         private static readonly Random _random = new();
 
@@ -55,7 +59,8 @@ namespace POS.BackOffice.UI.ViewModels
             HasBatchTracking = true,
             HasExpiryTracking = false,
             HasBatchExpiry = false,
-            AllowCashierDiscount = true
+            AllowCashierDiscount = true,
+            IsTaxInclusive = true
         };
 
         [ObservableProperty]
@@ -77,13 +82,13 @@ namespace POS.BackOffice.UI.ViewModels
         private UnitOfMeasure? _selectedUom;
 
         [ObservableProperty]
-        private string _selectedTaxCode = string.Empty;
-
-        [ObservableProperty]
         private AttributeGroup? _selectedPropertyKey;
 
         [ObservableProperty]
         private AttributeValue? _propertyValueInput;
+
+        [ObservableProperty]
+        private bool _isTaxInclusiveEnabled = true;
 
         public ObservableCollection<MatrixPropertySelection> DynamicProperties { get; } = new();
         public ObservableCollection<MatrixPropertyGroupSelection> SelectedPropertyGroups { get; } = new();
@@ -143,10 +148,6 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private ItemVariant? _selectedVariantForSupplierEdit;
 
-        // =========================================================
-        // VARIANT SUPPLIER ASSIGNMENT SELECTION
-        // =========================================================
-
         [ObservableProperty]
         private bool _selectAllVariantsForSupplierAssignment = false;
 
@@ -183,12 +184,8 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<AttributeValue> PropertyValues { get; } = new();
         public ObservableCollection<UnitOfMeasure> Uoms { get; } = new();
 
-        public ObservableCollection<string> TaxCodes { get; } = new(new[]
-        {
-            "TAX-FREE",
-            "VAT-18",
-            "VAT-5"
-        });
+        // FIXED: Using your actual TaxRate Model
+        public ObservableCollection<TaxRate> AvailableTaxes { get; } = new();
 
         [ObservableProperty]
         private bool _isBusy = false;
@@ -197,24 +194,11 @@ namespace POS.BackOffice.UI.ViewModels
         private string _statusMessage = "Ready.";
 
         public bool IsExistingItem => CurrentItem.Id > 0;
-
         public bool IsSetupEditable => !IsBusy && !IsExistingItem;
-
         public bool IsCurrentItemDeactivated => IsExistingItem && _loadedItemWasDeactivated;
 
-        public string ItemStatusText
-        {
-            get
-            {
-                if (!IsExistingItem)
-                    return "New Item";
-
-                return IsCurrentItemDeactivated ? "Deactivated" : "Active";
-            }
-        }
-
-        public string DeactivateReactivateButtonText =>
-            IsCurrentItemDeactivated ? "REACTIVATE ITEM" : "DEACTIVATE ITEM";
+        public string ItemStatusText => !IsExistingItem ? "New Item" : (IsCurrentItemDeactivated ? "Deactivated" : "Active");
+        public string DeactivateReactivateButtonText => IsCurrentItemDeactivated ? "REACTIVATE ITEM" : "DEACTIVATE ITEM";
 
         public ItemMasterViewModel(
             ItemMasterRepository itemMasterRepository,
@@ -223,6 +207,7 @@ namespace POS.BackOffice.UI.ViewModels
             AttributeRepository attributeRepository,
             UnitOfMeasureRepository uomRepository,
             SupplierRepository supplierRepository,
+            TaxRateRepository taxRateRepository, // FIXED
             IMessageBoxService messageBoxService)
         {
             _itemMasterRepository = itemMasterRepository ?? throw new ArgumentNullException(nameof(itemMasterRepository));
@@ -231,12 +216,33 @@ namespace POS.BackOffice.UI.ViewModels
             _attributeRepository = attributeRepository ?? throw new ArgumentNullException(nameof(attributeRepository));
             _uomRepository = uomRepository ?? throw new ArgumentNullException(nameof(uomRepository));
             _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
+            _taxRateRepository = taxRateRepository ?? throw new ArgumentNullException(nameof(taxRateRepository)); // FIXED
             _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
         }
 
         partial void OnCurrentItemChanged(ItemParent value)
         {
             RaiseItemStateProperties();
+
+            if (value != null)
+            {
+                var tax = AvailableTaxes.FirstOrDefault(t =>
+                    string.Equals(t.TaxCode, value.TaxCode, StringComparison.OrdinalIgnoreCase));
+                CheckTaxInclusiveState(tax);
+            }
+        }
+
+        private void CheckTaxInclusiveState(TaxRate? tax) // FIXED: Uses TaxRate
+        {
+            if (tax != null && (tax.TaxCode == "TAX-FREE" || tax.RatePercent == 0))
+            {
+                IsTaxInclusiveEnabled = false;
+                CurrentItem.IsTaxInclusive = false;
+            }
+            else
+            {
+                IsTaxInclusiveEnabled = IsSetupEditable;
+            }
         }
 
         private void RaiseItemStateProperties()
@@ -253,14 +259,16 @@ namespace POS.BackOffice.UI.ViewModels
             DeleteCommand.NotifyCanExecuteChanged();
             GenerateVariantsCommand.NotifyCanExecuteChanged();
             AddPropertyCommand.NotifyCanExecuteChanged();
+
+            var tax = AvailableTaxes.FirstOrDefault(t =>
+                string.Equals(t.TaxCode, CurrentItem.TaxCode, StringComparison.OrdinalIgnoreCase));
+            CheckTaxInclusiveState(tax);
         }
 
         [RelayCommand(CanExecute = nameof(CanInitialize))]
         private async Task InitializeAsync()
         {
-            if (_isInitialized)
-                return;
-
+            if (_isInitialized) return;
             _isInitialized = true;
             IsBusy = true;
 
@@ -268,16 +276,12 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 await LoadLookupsAsync();
                 await LoadMasterGridInternalAsync();
-
                 StatusMessage = "Item Master page loaded.";
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to initialize Item Master.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to initialize Item Master:\n\n{ex.Message}",
-                    "Database Error");
+                _messageBoxService.ShowError($"Failed to initialize:\n\n{ex.Message}", "Database Error");
             }
             finally
             {
@@ -290,30 +294,36 @@ namespace POS.BackOffice.UI.ViewModels
             Categories.Clear();
             Uoms.Clear();
             AvailableSuppliers.Clear();
+            AvailableTaxes.Clear();
 
             var categories = await _categoryRepository.GetAllAsync();
-
             foreach (var category in categories.Where(c => !c.IsDeactivated).OrderBy(c => c.CategoryName))
                 Categories.Add(category);
 
             var uoms = await _uomRepository.GetActiveAsync();
-
             foreach (var uom in uoms)
                 Uoms.Add(uom);
 
             var suppliers = await _supplierRepository.GetActiveAsync();
-
             foreach (var supplier in suppliers.OrderBy(s => s.SupplierCode).ThenBy(s => s.SupplierName))
                 AvailableSuppliers.Add(supplier);
 
-            SelectedTaxCode = TaxCodes.FirstOrDefault() ?? string.Empty;
+            // FIXED: Fetch Real Taxes from Database
+            var taxes = await _taxRateRepository.GetActiveAsync();
+            foreach (var tax in taxes.OrderBy(t => t.DisplayOrder))
+                AvailableTaxes.Add(tax);
+
             SelectedUom = Uoms.FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(CurrentItem.TaxCode) && AvailableTaxes.Any())
+            {
+                CurrentItem.TaxCode = AvailableTaxes.First().TaxCode;
+            }
         }
 
         partial void OnSelectedCategoryChanged(Category? value)
         {
-            if (_isClearing)
-                return;
+            if (_isClearing) return;
 
             if (value == null)
             {
@@ -325,7 +335,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (!_isLoadingItem && !IsSetupEditable)
             {
-                StatusMessage = "Category is locked after the item is saved. Delete the unused item and create it again if the category is wrong.";
+                StatusMessage = "Category is locked after the item is saved.";
                 return;
             }
 
@@ -340,9 +350,7 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 IsBusy = true;
-
                 SelectedSubCategory = null;
-
                 ClearVariantBuilder();
                 GeneratedVariants.Clear();
                 SelectedVariantSuppliers.Clear();
@@ -351,16 +359,12 @@ namespace POS.BackOffice.UI.ViewModels
 
                 await LoadSubCategoriesAsync(categoryId);
                 await LoadPropertyKeysForCategoryAsync(categoryId);
-
                 StatusMessage = "Category changed. Select a sub-category and build variants again.";
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load category details.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to load category details:\n\n{ex.Message}",
-                    "Database Error");
+                _messageBoxService.ShowError($"Failed to load details:\n\n{ex.Message}", "Database Error");
             }
             finally
             {
@@ -370,17 +374,11 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedSubCategoryChanged(SubCategory? value)
         {
-            if (_isLoadingItem || _isClearing)
-                return;
+            if (_isLoadingItem || _isClearing) return;
 
             if (value != null && SelectedCategory != null && !IsCodeReadOnly)
             {
-                if (!IsSetupEditable)
-                {
-                    StatusMessage = "Sub-category is locked after the item is saved. Delete the unused item and create it again if the sub-category is wrong.";
-                    return;
-                }
-
+                if (!IsSetupEditable) return;
                 CurrentItem.SubCategoryId = value.Id;
                 ItemPrefix = BuildItemCodePrefix(SelectedCategory, value);
             }
@@ -397,11 +395,7 @@ namespace POS.BackOffice.UI.ViewModels
             string categoryPrefix = categoryCode + "-";
 
             if (subCategoryCode.StartsWith(categoryPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return subCategoryCode.EndsWith("-")
-                    ? subCategoryCode
-                    : subCategoryCode + "-";
-            }
+                return subCategoryCode.EndsWith("-") ? subCategoryCode : subCategoryCode + "-";
 
             return $"{categoryCode}-{subCategoryCode}-";
         }
@@ -409,24 +403,16 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task LoadSubCategoriesAsync(int categoryId)
         {
             SubCategories.Clear();
-
             var subCategories = await _subCategoryRepository.GetAllAsync();
-
-            foreach (var subCategory in subCategories
-                         .Where(s => !s.IsDeactivated && s.CategoryId == categoryId)
-                         .OrderBy(s => s.SubCategoryName))
-            {
+            foreach (var subCategory in subCategories.Where(s => !s.IsDeactivated && s.CategoryId == categoryId).OrderBy(s => s.SubCategoryName))
                 SubCategories.Add(subCategory);
-            }
         }
 
         private async Task LoadPropertyKeysForCategoryAsync(int categoryId)
         {
             PropertyKeys.Clear();
             PropertyValues.Clear();
-
             var groups = await _attributeRepository.GetAttributeGroupsForCategoryAsync(categoryId);
-
             foreach (var group in groups.Where(g => !g.IsDeactivated).OrderBy(g => g.DisplayOrder).ThenBy(g => g.GroupName))
                 PropertyKeys.Add(group);
         }
@@ -434,14 +420,12 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnSelectedPropertyKeyChanged(AttributeGroup? value)
         {
             AddPropertyCommand.NotifyCanExecuteChanged();
-
             if (value == null)
             {
                 PropertyValues.Clear();
                 PropertyValueInput = null;
                 return;
             }
-
             _ = LoadPropertyValuesAsync(value.Id);
         }
 
@@ -450,17 +434,13 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 PropertyValues.Clear();
-
                 var values = await _attributeRepository.GetAllValuesFilteredAsync(groupId, "");
-
                 foreach (var value in values.Where(v => !v.IsDeactivated).OrderBy(v => v.DisplayOrder).ThenBy(v => v.ValueName))
                     PropertyValues.Add(value);
             }
             catch (Exception ex)
             {
-                _messageBoxService.ShowError(
-                    $"Failed to load property values:\n\n{ex.Message}",
-                    "Database Error");
+                _messageBoxService.ShowError($"Failed to load values:\n\n{ex.Message}", "Database Error");
             }
         }
 
@@ -471,8 +451,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedDatabaseItemChanged(ItemMasterSummaryDto? value)
         {
-            if (_isClearing)
-                return;
+            if (_isClearing) return;
 
             if (value != null)
                 _ = LoadFullItemDetailsAsync(value.ParentId);
@@ -491,7 +470,6 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 var fullItem = await _itemMasterRepository.GetFullMatrixByIdAsync(parentId);
-
                 if (fullItem == null)
                 {
                     StatusMessage = "Selected item was not found.";
@@ -506,20 +484,12 @@ namespace POS.BackOffice.UI.ViewModels
                 ItemSuffix = string.Empty;
 
                 SelectedCategory = Categories.FirstOrDefault(c => c.Id == fullItem.CategoryId);
-
                 await LoadSubCategoriesAsync(fullItem.CategoryId);
-
-                SelectedSubCategory = fullItem.SubCategoryId.HasValue
-                    ? SubCategories.FirstOrDefault(s => s.Id == fullItem.SubCategoryId.Value)
-                    : null;
-
+                SelectedSubCategory = fullItem.SubCategoryId.HasValue ? SubCategories.FirstOrDefault(s => s.Id == fullItem.SubCategoryId.Value) : null;
                 await LoadPropertyKeysForCategoryAsync(fullItem.CategoryId);
 
-                SelectedUom =
-                    Uoms.FirstOrDefault(u => u.Id == fullItem.UnitOfMeasureId) ??
-                    Uoms.FirstOrDefault(u => string.Equals(u.UomCode, fullItem.BaseUom, StringComparison.OrdinalIgnoreCase));
-
-                SelectedTaxCode = fullItem.TaxCode;
+                SelectedUom = Uoms.FirstOrDefault(u => u.Id == fullItem.UnitOfMeasureId) ??
+                              Uoms.FirstOrDefault(u => string.Equals(u.UomCode, fullItem.BaseUom, StringComparison.OrdinalIgnoreCase));
 
                 BulkIsScaleItem = fullItem.IsScaleItem;
                 BulkHasBatchTracking = fullItem.HasBatchTracking;
@@ -531,17 +501,12 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedVariantSuppliers.Clear();
                 SelectedVariantForSupplierEdit = null;
 
-                foreach (var variant in fullItem.Variants
-                             .OrderBy(v => v.IsDeactivated)
-                             .ThenBy(v => v.VariantDescription)
-                             .ThenBy(v => v.SkuCode))
+                foreach (var variant in fullItem.Variants.OrderBy(v => v.IsDeactivated).ThenBy(v => v.VariantDescription).ThenBy(v => v.SkuCode))
                 {
                     variant.PropertyMappings ??= new List<ItemPropertyMapping>();
                     variant.ItemSuppliers ??= new List<ItemSupplier>();
                     variant.IsSelectedForSupplierAssignment = false;
-
                     ApplyParentDisplayNames(variant);
-
                     GeneratedVariants.Add(variant);
                 }
 
@@ -549,29 +514,13 @@ namespace POS.BackOffice.UI.ViewModels
                 UpdateSupplierAssignmentSelectionCount();
 
                 int activeVariantCount = GeneratedVariants.Count(v => !v.IsDeactivated);
-
-                if (fullItem.IsDeactivated)
-                {
-                    StatusMessage = $"Loaded deactivated item: {fullItem.ItemCode}. Use REACTIVATE ITEM to make it active again.";
-                }
-                else if (GeneratedVariants.Any() && activeVariantCount == 0)
-                {
-                    StatusMessage = $"Loaded item: {fullItem.ItemCode}. Warning: all variants are inactive.";
-                }
-                else
-                {
-                    StatusMessage = $"Loaded item: {fullItem.ItemCode}. Setup fields are locked after save.";
-                }
-
+                StatusMessage = fullItem.IsDeactivated ? "Loaded deactivated item." : "Loaded active item.";
                 RaiseItemStateProperties();
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load item.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to load item:\n\n{ex.Message}",
-                    "Database Error");
+                _messageBoxService.ShowError($"Failed to load item:\n\n{ex.Message}", "Database Error");
             }
             finally
             {
@@ -588,11 +537,7 @@ namespace POS.BackOffice.UI.ViewModels
             var mappings = GeneratedVariants
                 .SelectMany(v => v.PropertyMappings)
                 .Where(m => m.AttributeGroup != null && m.AttributeValue != null)
-                .GroupBy(m => new
-                {
-                    GroupId = m.AttributeGroupId,
-                    ValueId = m.AttributeValueId
-                })
+                .GroupBy(m => new { GroupId = m.AttributeGroupId, ValueId = m.AttributeValueId })
                 .Select(g => g.First())
                 .OrderBy(m => m.AttributeGroup.DisplayOrder)
                 .ThenBy(m => m.AttributeGroup.GroupName)
@@ -612,82 +557,48 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanAddProperty))]
         private void AddProperty()
         {
-            if (SelectedPropertyKey == null || PropertyValueInput == null)
-                return;
+            if (SelectedPropertyKey == null || PropertyValueInput == null) return;
 
-            bool duplicateExists = DynamicProperties.Any(p =>
-                p.Group.Id == SelectedPropertyKey.Id &&
-                p.Value.Id == PropertyValueInput.Id);
-
-            if (duplicateExists)
+            if (DynamicProperties.Any(p => p.Group.Id == SelectedPropertyKey.Id && p.Value.Id == PropertyValueInput.Id))
             {
                 StatusMessage = "This property value is already selected.";
                 return;
             }
 
-            var selection = new MatrixPropertySelection
-            {
-                Group = SelectedPropertyKey,
-                Value = PropertyValueInput
-            };
-
-            AddSelectionToCollections(selection);
-
+            AddSelectionToCollections(new MatrixPropertySelection { Group = SelectedPropertyKey, Value = PropertyValueInput });
             PropertyValueInput = null;
-
-            StatusMessage = "Property value added to matrix builder.";
+            StatusMessage = "Property value added.";
         }
 
         private void AddSelectionToCollections(MatrixPropertySelection selection)
         {
             DynamicProperties.Add(selection);
-
-            var groupSelection = SelectedPropertyGroups
-                .FirstOrDefault(g => g.Group.Id == selection.Group.Id);
+            var groupSelection = SelectedPropertyGroups.FirstOrDefault(g => g.Group.Id == selection.Group.Id);
 
             if (groupSelection == null)
             {
-                groupSelection = new MatrixPropertyGroupSelection
-                {
-                    Group = selection.Group
-                };
-
+                groupSelection = new MatrixPropertyGroupSelection { Group = selection.Group };
                 SelectedPropertyGroups.Add(groupSelection);
             }
-
             groupSelection.Values.Add(selection);
         }
 
         [RelayCommand]
         private void RemoveProperty(MatrixPropertySelection? selection)
         {
-            if (selection == null)
-                return;
-
-            if (!IsSetupEditable)
-            {
-                StatusMessage = "Matrix/property structure is locked after the item is saved.";
-                return;
-            }
+            if (selection == null) return;
+            if (!IsSetupEditable) return;
 
             DynamicProperties.Remove(selection);
-
-            var groupSelection = SelectedPropertyGroups
-                .FirstOrDefault(g => g.Group.Id == selection.Group.Id);
+            var groupSelection = SelectedPropertyGroups.FirstOrDefault(g => g.Group.Id == selection.Group.Id);
 
             if (groupSelection != null)
             {
-                var valueToRemove = groupSelection.Values
-                    .FirstOrDefault(v => v.Value.Id == selection.Value.Id);
-
-                if (valueToRemove != null)
-                    groupSelection.Values.Remove(valueToRemove);
-
-                if (!groupSelection.Values.Any())
-                    SelectedPropertyGroups.Remove(groupSelection);
+                var valueToRemove = groupSelection.Values.FirstOrDefault(v => v.Value.Id == selection.Value.Id);
+                if (valueToRemove != null) groupSelection.Values.Remove(valueToRemove);
+                if (!groupSelection.Values.Any()) SelectedPropertyGroups.Remove(groupSelection);
             }
-
-            StatusMessage = "Property value removed from matrix builder.";
+            StatusMessage = "Property value removed.";
         }
 
         private void ClearVariantBuilder()
@@ -703,12 +614,9 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task GenerateVariantsAsync()
         {
             string itemCode = BuildItemCode();
-
-            if (!ValidateBeforeVariantGeneration(itemCode))
-                return;
+            if (!ValidateBeforeVariantGeneration(itemCode)) return;
 
             var existingSupplierLinks = CaptureSupplierLinksBySku();
-
             GeneratedVariants.Clear();
             SelectedVariantSuppliers.Clear();
             SelectedVariantForSupplierEdit = null;
@@ -739,12 +647,9 @@ namespace POS.BackOffice.UI.ViewModels
 
                 ApplyParentDisplayNames(standardVariant);
                 RestoreSupplierLinksIfAvailable(standardVariant, existingSupplierLinks);
-
                 GeneratedVariants.Add(standardVariant);
-
                 UpdateSupplierAssignmentSelectionCount();
-
-                StatusMessage = "1 standard variant generated. The word 'Standard' will not be printed in the final product name.";
+                StatusMessage = "1 standard variant generated.";
                 NotifyCommandStates();
                 return;
             }
@@ -791,12 +696,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 ApplyParentDisplayNames(variant);
                 RestoreSupplierLinksIfAvailable(variant, existingSupplierLinks);
-
                 GeneratedVariants.Add(variant);
             }
 
             UpdateSupplierAssignmentSelectionCount();
-
             StatusMessage = $"{GeneratedVariants.Count} variant(s) generated.";
             NotifyCommandStates();
         }
@@ -804,12 +707,9 @@ namespace POS.BackOffice.UI.ViewModels
         private Dictionary<string, List<ItemSupplier>> CaptureSupplierLinksBySku()
         {
             var result = new Dictionary<string, List<ItemSupplier>>(StringComparer.OrdinalIgnoreCase);
-
             foreach (var variant in GeneratedVariants)
             {
-                if (string.IsNullOrWhiteSpace(variant.SkuCode))
-                    continue;
-
+                if (string.IsNullOrWhiteSpace(variant.SkuCode)) continue;
                 result[variant.SkuCode] = variant.ItemSuppliers?
                     .Select(s => new ItemSupplier
                     {
@@ -819,39 +719,27 @@ namespace POS.BackOffice.UI.ViewModels
                         LastCostPrice = s.LastCostPrice,
                         IsPrimary = false,
                         MinimumOrderQuantity = s.MinimumOrderQuantity <= 0 ? 1 : s.MinimumOrderQuantity
-                    })
-                    .ToList() ?? new List<ItemSupplier>();
+                    }).ToList() ?? new List<ItemSupplier>();
             }
-
             return result;
         }
 
-        private static void RestoreSupplierLinksIfAvailable(
-            ItemVariant variant,
-            Dictionary<string, List<ItemSupplier>> supplierLinksBySku)
+        private static void RestoreSupplierLinksIfAvailable(ItemVariant variant, Dictionary<string, List<ItemSupplier>> supplierLinksBySku)
         {
-            if (!supplierLinksBySku.TryGetValue(variant.SkuCode, out var suppliers))
-                return;
-
-            foreach (var supplier in suppliers)
-                variant.ItemSuppliers.Add(supplier);
+            if (!supplierLinksBySku.TryGetValue(variant.SkuCode, out var suppliers)) return;
+            foreach (var supplier in suppliers) variant.ItemSuppliers.Add(supplier);
         }
 
-        private static List<List<MatrixPropertySelection>> GenerateCombinations(
-            List<List<MatrixPropertySelection>> groups,
-            int depth = 0)
+        private static List<List<MatrixPropertySelection>> GenerateCombinations(List<List<MatrixPropertySelection>> groups, int depth = 0)
         {
             var result = new List<List<MatrixPropertySelection>>();
-
             if (depth == groups.Count)
             {
                 result.Add(new List<MatrixPropertySelection>());
                 return result;
             }
-
             var currentGroup = groups[depth];
             var nextCombinations = GenerateCombinations(groups, depth + 1);
-
             foreach (var selection in currentGroup)
             {
                 foreach (var combo in nextCombinations)
@@ -861,29 +749,20 @@ namespace POS.BackOffice.UI.ViewModels
                     result.Add(newCombo);
                 }
             }
-
             return result;
         }
 
-        private string BuildSkuForCombination(
-            string itemCode,
-            List<MatrixPropertySelection> combo,
-            HashSet<string> usedSkus)
+        private string BuildSkuForCombination(string itemCode, List<MatrixPropertySelection> combo, HashSet<string> usedSkus)
         {
-            string suffix = string.Join("-",
-                combo.Select(c =>
-                    $"{SanitizeCodeSegment(c.Value.ValueName)}{c.Value.Id}"));
-
+            string suffix = string.Join("-", combo.Select(c => $"{SanitizeCodeSegment(c.Value.ValueName)}{c.Value.Id}"));
             string baseSku = $"{itemCode}-{suffix}";
             string sku = baseSku;
             int counter = 2;
-
             while (usedSkus.Contains(sku))
             {
                 sku = $"{baseSku}-{counter}";
                 counter++;
             }
-
             usedSkus.Add(sku);
             return sku;
         }
@@ -893,65 +772,91 @@ namespace POS.BackOffice.UI.ViewModels
             for (int attempt = 0; attempt < 100; attempt++)
             {
                 string barcode = GenerateRandomDigits(12);
-
-                if (usedBarcodes.Contains(barcode))
-                    continue;
-
-                bool isUnique = await _itemMasterRepository.IsBarcodeUniqueAsync(barcode);
-
-                if (!isUnique)
-                    continue;
-
+                if (usedBarcodes.Contains(barcode)) continue;
+                if (!await _itemMasterRepository.IsBarcodeUniqueAsync(barcode)) continue;
                 usedBarcodes.Add(barcode);
                 return barcode;
             }
-
-            throw new InvalidOperationException("Failed to generate a unique internal barcode. Try again.");
+            throw new InvalidOperationException("Failed to generate a unique internal barcode.");
         }
 
         private static string GenerateRandomDigits(int length)
         {
             char[] digits = new char[length];
-
-            for (int i = 0; i < length; i++)
-                digits[i] = (char)('0' + _random.Next(0, 10));
-
+            for (int i = 0; i < length; i++) digits[i] = (char)('0' + _random.Next(0, 10));
             return new string(digits);
         }
 
         private static string SanitizeCodeSegment(string value)
         {
-            string clean = new string((value ?? string.Empty)
-                .Trim()
-                .ToUpperInvariant()
-                .Where(char.IsLetterOrDigit)
-                .ToArray());
-
-            if (string.IsNullOrWhiteSpace(clean))
-                clean = "VAL";
-
+            string clean = new string((value ?? string.Empty).Trim().ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+            if (string.IsNullOrWhiteSpace(clean)) clean = "VAL";
             return clean.Length <= 4 ? clean : clean.Substring(0, 4);
         }
 
+        // =========================================================
+        // CORRECT BI-DIRECTIONAL PRICING LOGIC
+        // =========================================================
+
         partial void OnBulkCostChanged(decimal value)
         {
-            CalculateBulkPricesFromMarkup();
+            if (_isCalculatingPricing) return;
+            _isCalculatingPricing = true;
 
-            if (BulkSupplierCostInput <= 0)
-                BulkSupplierCostInput = value;
+            if (value > 0 && BulkRetailPrice > 0)
+                BulkRetailMarkupPercent = Math.Round(((BulkRetailPrice - value) / value) * 100m, 2);
 
-            if (SupplierCostInput <= 0)
-                SupplierCostInput = value;
+            if (value > 0 && BulkWholesalePrice > 0)
+                BulkWholesaleMarkupPercent = Math.Round(((BulkWholesalePrice - value) / value) * 100m, 2);
+
+            if (BulkSupplierCostInput <= 0) BulkSupplierCostInput = value;
+            if (SupplierCostInput <= 0) SupplierCostInput = value;
+
+            _isCalculatingPricing = false;
         }
 
         partial void OnBulkRetailMarkupPercentChanged(decimal value)
         {
-            CalculateBulkPricesFromMarkup();
+            if (_isCalculatingPricing) return;
+            _isCalculatingPricing = true;
+
+            if (BulkCost > 0)
+                BulkRetailPrice = Math.Round(BulkCost + (BulkCost * (value / 100m)), 2);
+
+            _isCalculatingPricing = false;
+        }
+
+        partial void OnBulkRetailPriceChanged(decimal value)
+        {
+            if (_isCalculatingPricing) return;
+            _isCalculatingPricing = true;
+
+            if (BulkCost > 0)
+                BulkRetailMarkupPercent = Math.Round(((value - BulkCost) / BulkCost) * 100m, 2);
+
+            _isCalculatingPricing = false;
         }
 
         partial void OnBulkWholesaleMarkupPercentChanged(decimal value)
         {
-            CalculateBulkPricesFromMarkup();
+            if (_isCalculatingPricing) return;
+            _isCalculatingPricing = true;
+
+            if (BulkCost > 0)
+                BulkWholesalePrice = Math.Round(BulkCost + (BulkCost * (value / 100m)), 2);
+
+            _isCalculatingPricing = false;
+        }
+
+        partial void OnBulkWholesalePriceChanged(decimal value)
+        {
+            if (_isCalculatingPricing) return;
+            _isCalculatingPricing = true;
+
+            if (BulkCost > 0)
+                BulkWholesaleMarkupPercent = Math.Round(((value - BulkCost) / BulkCost) * 100m, 2);
+
+            _isCalculatingPricing = false;
         }
 
         partial void OnBulkHasBatchTrackingChanged(bool value)
@@ -959,38 +864,32 @@ namespace POS.BackOffice.UI.ViewModels
             if (!_isLoadingItem && IsExistingItem && value != CurrentItem.HasBatchTracking)
             {
                 BulkHasBatchTracking = CurrentItem.HasBatchTracking;
-                StatusMessage = "Batch tracking is locked after the item is saved. Delete the unused item and create it again if the tracking type is wrong.";
+                StatusMessage = "Batch tracking is locked after the item is saved.";
                 return;
             }
-
             if (!value)
             {
                 BulkHasExpiryTracking = false;
                 BulkHasBatchExpiry = false;
             }
-
             NotifyCommandStates();
         }
 
         partial void OnBulkHasExpiryTrackingChanged(bool value)
         {
             bool currentExpiryTracking = CurrentItem.HasExpiryTracking || CurrentItem.HasBatchExpiry;
-
             if (!_isLoadingItem && IsExistingItem && value != currentExpiryTracking)
             {
                 BulkHasExpiryTracking = currentExpiryTracking;
                 BulkHasBatchExpiry = currentExpiryTracking;
-                StatusMessage = "Expiry tracking is locked after the item is saved. Delete the unused item and create it again if the expiry rule is wrong.";
                 return;
             }
-
             if (value && !BulkHasBatchTracking)
             {
                 BulkHasExpiryTracking = false;
                 BulkHasBatchExpiry = false;
                 return;
             }
-
             BulkHasBatchExpiry = value;
         }
 
@@ -1005,36 +904,17 @@ namespace POS.BackOffice.UI.ViewModels
             if (!_isLoadingItem && IsExistingItem && value != CurrentItem.IsScaleItem)
             {
                 BulkIsScaleItem = CurrentItem.IsScaleItem;
-                StatusMessage = "Scale item setting is locked after the item is saved. Delete the unused item and create it again if the scale rule is wrong.";
                 return;
             }
-
             SaveCommand.NotifyCanExecuteChanged();
-        }
-
-        private void CalculateBulkPricesFromMarkup()
-        {
-            if (BulkCost < 0)
-                return;
-
-            BulkRetailPrice = Math.Round(BulkCost + (BulkCost * (BulkRetailMarkupPercent / 100m)), 2);
-            BulkWholesalePrice = Math.Round(BulkCost + (BulkCost * (BulkWholesaleMarkupPercent / 100m)), 2);
         }
 
         [RelayCommand]
         private void ApplyBulkDefaults()
         {
-            if (!GeneratedVariants.Any())
-            {
-                _messageBoxService.ShowWarning(
-                    "Generate variants first before applying bulk defaults.",
-                    "No Variants");
-
-                return;
-            }
+            if (!GeneratedVariants.Any()) return;
 
             var variants = GeneratedVariants.ToList();
-
             foreach (var variant in variants)
             {
                 variant.AverageCost = BulkCost;
@@ -1044,74 +924,49 @@ namespace POS.BackOffice.UI.ViewModels
                 variant.MinimumPrice = BulkMinimumPrice;
                 variant.MaximumPrice = BulkMaximumPrice;
                 variant.ReorderLevel = BulkReorderLevel;
-
                 ApplyParentDisplayNames(variant);
             }
-
             RefreshGeneratedVariantGrid(variants);
-
-            StatusMessage = "Bulk defaults applied to all variants.";
+            StatusMessage = "Bulk defaults applied.";
         }
 
         private void RefreshGeneratedVariantGrid(List<ItemVariant> variants)
         {
             var selectedSku = SelectedVariantForSupplierEdit?.SkuCode;
-
             GeneratedVariants.Clear();
-
-            foreach (var variant in variants)
-                GeneratedVariants.Add(variant);
-
+            foreach (var variant in variants) GeneratedVariants.Add(variant);
             if (!string.IsNullOrWhiteSpace(selectedSku))
             {
-                SelectedVariantForSupplierEdit = GeneratedVariants
-                    .FirstOrDefault(v => string.Equals(v.SkuCode, selectedSku, StringComparison.OrdinalIgnoreCase));
+                SelectedVariantForSupplierEdit = GeneratedVariants.FirstOrDefault(v => string.Equals(v.SkuCode, selectedSku, StringComparison.OrdinalIgnoreCase));
             }
-
             UpdateSupplierAssignmentSelectionCount();
         }
 
-        // =========================================================
-        // VARIANT SUPPLIER SELECTION / ASSIGNMENT
-        // =========================================================
-
         partial void OnSelectAllVariantsForSupplierAssignmentChanged(bool value)
         {
-            if (_isUpdatingSupplierSelection)
-                return;
-
+            if (_isUpdatingSupplierSelection) return;
             var variants = GeneratedVariants.ToList();
-
-            foreach (var variant in variants)
-                variant.IsSelectedForSupplierAssignment = value;
-
+            foreach (var variant in variants) variant.IsSelectedForSupplierAssignment = value;
             RefreshGeneratedVariantGrid(variants);
             UpdateSupplierAssignmentSelectionCount();
         }
 
         [RelayCommand]
-        private void RefreshSupplierAssignmentSelection()
-        {
-            UpdateSupplierAssignmentSelectionCount();
-        }
+        private void RefreshSupplierAssignmentSelection() => UpdateSupplierAssignmentSelectionCount();
 
         private void UpdateSupplierAssignmentSelectionCount()
         {
             int selectedCount = GeneratedVariants.Count(v => v.IsSelectedForSupplierAssignment);
-            bool allSelected = GeneratedVariants.Any() && selectedCount == GeneratedVariants.Count;
-
             _isUpdatingSupplierSelection = true;
-
             try
             {
                 SelectedSupplierAssignmentCount = selectedCount;
-                SelectAllVariantsForSupplierAssignment = allSelected;
+                SelectAllVariantsForSupplierAssignment = GeneratedVariants.Any() && selectedCount == GeneratedVariants.Count;
             }
             finally
             {
                 _isUpdatingSupplierSelection = false;
             }
-
             AssignSupplierToSelectedVariantsCommand.NotifyCanExecuteChanged();
         }
 
@@ -1119,155 +974,58 @@ namespace POS.BackOffice.UI.ViewModels
         private void AssignSupplierToSelectedVariants()
         {
             UpdateSupplierAssignmentSelectionCount();
+            var selectedVariants = GeneratedVariants.Where(v => v.IsSelectedForSupplierAssignment).ToList();
+            if (!selectedVariants.Any()) return;
 
-            var selectedVariants = GeneratedVariants
-                .Where(v => v.IsSelectedForSupplierAssignment)
-                .ToList();
+            decimal defaultCost = selectedVariants.FirstOrDefault(v => v.CostPrice > 0)?.CostPrice ?? BulkCost;
+            if (defaultCost < 0) defaultCost = 0m;
 
-            if (!selectedVariants.Any())
-            {
-                _messageBoxService.ShowWarning(
-                    "Please tick one or more variants first.",
-                    "Selection Required");
-
-                return;
-            }
-
-            if (!AvailableSuppliers.Any())
-            {
-                _messageBoxService.ShowWarning(
-                    "No active suppliers found. Please create suppliers first.",
-                    "Supplier Required");
-
-                return;
-            }
-
-            decimal defaultCost = selectedVariants
-                .FirstOrDefault(v => v.CostPrice > 0)?.CostPrice ?? BulkCost;
-
-            if (defaultCost < 0)
-                defaultCost = 0m;
-
-            var dialog = new AssignVariantSuppliersDialog(
-                AvailableSuppliers.ToList(),
-                defaultCost,
-                defaultMoq: 1,
-                selectedVariantCount: selectedVariants.Count)
+            var dialog = new AssignVariantSuppliersDialog(AvailableSuppliers.ToList(), defaultCost, 1, selectedVariants.Count)
             {
                 Owner = GetDialogOwner()
             };
 
-            bool? dialogResult = dialog.ShowDialog();
+            if (dialog.ShowDialog() != true || dialog.SelectedSupplier == null) return;
 
-            if (dialogResult != true)
-                return;
-
-            Supplier? supplier = dialog.SelectedSupplier;
-
-            if (supplier == null)
-            {
-                _messageBoxService.ShowWarning(
-                    "Please select a supplier.",
-                    "Validation");
-
-                return;
-            }
-
-            if (dialog.SupplierCost < 0)
-            {
-                _messageBoxService.ShowWarning(
-                    "Supplier cost cannot be negative.",
-                    "Validation");
-
-                return;
-            }
-
-            if (dialog.MinimumOrderQuantity <= 0)
-            {
-                _messageBoxService.ShowWarning(
-                    "Minimum order quantity must be greater than zero.",
-                    "Validation");
-
-                return;
-            }
-
-            int addedCount = 0;
-            int updatedCount = 0;
-
+            int addedCount = 0, updatedCount = 0;
             foreach (var variant in selectedVariants)
             {
-                AddOrUpdateSupplierLinkForVariant(
-                    variant,
-                    supplier,
-                    dialog.SupplierCost,
-                    dialog.MinimumOrderQuantity,
-                    ref addedCount,
-                    ref updatedCount);
+                AddOrUpdateSupplierLinkForVariant(variant, dialog.SelectedSupplier, dialog.SupplierCost, dialog.MinimumOrderQuantity, ref addedCount, ref updatedCount);
             }
 
-            if (SelectedVariantForSupplierEdit != null &&
-                selectedVariants.Any(v => string.Equals(v.SkuCode, SelectedVariantForSupplierEdit.SkuCode, StringComparison.OrdinalIgnoreCase)))
+            if (SelectedVariantForSupplierEdit != null && selectedVariants.Any(v => string.Equals(v.SkuCode, SelectedVariantForSupplierEdit.SkuCode, StringComparison.OrdinalIgnoreCase)))
             {
                 RebuildSelectedVariantSuppliers();
             }
 
-            StatusMessage =
-                $"Supplier assignment completed. Selected variants: {selectedVariants.Count}, Added: {addedCount}, Updated: {updatedCount}. Click SAVE FULL ITEM to update the database.";
-
+            StatusMessage = $"Assigned: {addedCount}, Updated: {updatedCount}. Click SAVE.";
             NotifyCommandStates();
         }
 
-        private void AddOrUpdateSupplierLinkForVariant(
-            ItemVariant variant,
-            Supplier supplier,
-            decimal cost,
-            int minimumOrderQuantity,
-            ref int addedCount,
-            ref int updatedCount)
+        private void AddOrUpdateSupplierLinkForVariant(ItemVariant variant, Supplier supplier, decimal cost, int moq, ref int addedCount, ref int updatedCount)
         {
             variant.ItemSuppliers ??= new List<ItemSupplier>();
-
-            var existing = variant.ItemSuppliers
-                .FirstOrDefault(s => s.SupplierId == supplier.Id);
-
+            var existing = variant.ItemSuppliers.FirstOrDefault(s => s.SupplierId == supplier.Id);
             if (existing == null)
             {
-                variant.ItemSuppliers.Add(new ItemSupplier
-                {
-                    SupplierId = supplier.Id,
-                    Supplier = supplier,
-                    ItemVariantId = variant.Id,
-                    SupplierItemCode = string.Empty,
-                    LastCostPrice = cost,
-                    MinimumOrderQuantity = minimumOrderQuantity,
-                    IsPrimary = false
-                });
-
+                variant.ItemSuppliers.Add(new ItemSupplier { SupplierId = supplier.Id, Supplier = supplier, ItemVariantId = variant.Id, LastCostPrice = cost, MinimumOrderQuantity = moq });
                 addedCount++;
-                return;
             }
-
-            existing.Supplier = supplier;
-            existing.SupplierItemCode = string.Empty;
-            existing.LastCostPrice = cost;
-            existing.MinimumOrderQuantity = minimumOrderQuantity;
-            existing.IsPrimary = false;
-            updatedCount++;
+            else
+            {
+                existing.Supplier = supplier;
+                existing.LastCostPrice = cost;
+                existing.MinimumOrderQuantity = moq;
+                updatedCount++;
+            }
         }
 
-        private static Window? GetDialogOwner()
-        {
-            return Application.Current?.Windows
-                       .OfType<Window>()
-                       .FirstOrDefault(w => w.IsActive)
-                   ?? Application.Current?.MainWindow;
-        }
+        private static Window? GetDialogOwner() => Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? Application.Current?.MainWindow;
 
         partial void OnSelectedVariantForSupplierEditChanged(ItemVariant? value)
         {
             SelectedVariantSuppliers.Clear();
             SelectedSupplierLinkForEdit = null;
-
             if (value == null)
             {
                 SupplierToAdd = null;
@@ -1276,37 +1034,19 @@ namespace POS.BackOffice.UI.ViewModels
                 AddSupplierToVariantCommand.NotifyCanExecuteChanged();
                 return;
             }
-
             value.ItemSuppliers ??= new List<ItemSupplier>();
-
-            foreach (var supplier in value.ItemSuppliers)
-            {
-                supplier.SupplierItemCode = string.Empty;
-                supplier.IsPrimary = false;
-                SelectedVariantSuppliers.Add(supplier);
-            }
-
-            SupplierToAdd = null;
+            foreach (var supplier in value.ItemSuppliers) SelectedVariantSuppliers.Add(supplier);
             SupplierCostInput = value.CostPrice;
             SupplierMinimumOrderQuantityInput = 1;
-
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
         }
 
         partial void OnSelectedSupplierLinkForEditChanged(ItemSupplier? value)
         {
-            if (value == null)
-                return;
-
-            SupplierToAdd =
-                AvailableSuppliers.FirstOrDefault(s => s.Id == value.SupplierId) ??
-                value.Supplier;
-
+            if (value == null) return;
+            SupplierToAdd = AvailableSuppliers.FirstOrDefault(s => s.Id == value.SupplierId) ?? value.Supplier;
             SupplierCostInput = value.LastCostPrice;
-            SupplierMinimumOrderQuantityInput = value.MinimumOrderQuantity <= 0
-                ? 1
-                : value.MinimumOrderQuantity;
-
+            SupplierMinimumOrderQuantityInput = value.MinimumOrderQuantity <= 0 ? 1 : value.MinimumOrderQuantity;
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
         }
 
@@ -1317,190 +1057,61 @@ namespace POS.BackOffice.UI.ViewModels
             SupplierToAdd = null;
             SupplierCostInput = SelectedVariantForSupplierEdit?.CostPrice ?? 0m;
             SupplierMinimumOrderQuantityInput = 1;
-
-            StatusMessage = "Supplier edit cleared.";
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
         }
 
-        partial void OnSupplierToAddChanged(Supplier? value)
-        {
-            AddSupplierToVariantCommand.NotifyCanExecuteChanged();
-        }
-
-        partial void OnSupplierCostInputChanged(decimal value)
-        {
-            AddSupplierToVariantCommand.NotifyCanExecuteChanged();
-        }
-
-        partial void OnSupplierMinimumOrderQuantityInputChanged(int value)
-        {
-            AddSupplierToVariantCommand.NotifyCanExecuteChanged();
-        }
+        partial void OnSupplierToAddChanged(Supplier? value) => AddSupplierToVariantCommand.NotifyCanExecuteChanged();
+        partial void OnSupplierCostInputChanged(decimal value) => AddSupplierToVariantCommand.NotifyCanExecuteChanged();
+        partial void OnSupplierMinimumOrderQuantityInputChanged(int value) => AddSupplierToVariantCommand.NotifyCanExecuteChanged();
 
         [RelayCommand(CanExecute = nameof(CanAddSupplierToVariant))]
         private void AddSupplierToVariant()
         {
-            if (SelectedVariantForSupplierEdit == null)
-            {
-                _messageBoxService.ShowWarning(
-                    "Please select a variant first.",
-                    "Selection Required");
-
-                return;
-            }
-
-            if (SupplierToAdd == null)
-            {
-                _messageBoxService.ShowWarning(
-                    "Please select a supplier.",
-                    "Validation");
-
-                return;
-            }
-
-            if (SupplierCostInput < 0)
-            {
-                _messageBoxService.ShowWarning(
-                    "Supplier cost cannot be negative.",
-                    "Validation");
-
-                return;
-            }
-
-            if (SupplierMinimumOrderQuantityInput <= 0)
-            {
-                _messageBoxService.ShowWarning(
-                    "Minimum order quantity must be greater than zero.",
-                    "Validation");
-
-                return;
-            }
+            if (SelectedVariantForSupplierEdit == null || SupplierToAdd == null) return;
 
             SelectedVariantForSupplierEdit.ItemSuppliers ??= new List<ItemSupplier>();
-
-            ItemSupplier? editTarget = null;
-
-            if (SelectedSupplierLinkForEdit != null)
-            {
-                editTarget = SelectedVariantForSupplierEdit.ItemSuppliers
-                    .FirstOrDefault(s => ReferenceEquals(s, SelectedSupplierLinkForEdit));
-
-                editTarget ??= SelectedVariantForSupplierEdit.ItemSuppliers
-                    .FirstOrDefault(s => s.SupplierId == SelectedSupplierLinkForEdit.SupplierId);
-            }
-
-            if (editTarget != null)
-            {
-                bool targetSupplierAlreadyExists = SelectedVariantForSupplierEdit.ItemSuppliers.Any(s =>
-                    !ReferenceEquals(s, editTarget) &&
-                    s.SupplierId == SupplierToAdd.Id);
-
-                if (targetSupplierAlreadyExists)
-                {
-                    _messageBoxService.ShowWarning(
-                        "This supplier is already assigned to the selected variant.",
-                        "Duplicate Supplier");
-
-                    return;
-                }
-
-                editTarget.SupplierId = SupplierToAdd.Id;
-                editTarget.Supplier = SupplierToAdd;
-                editTarget.ItemVariantId = SelectedVariantForSupplierEdit.Id;
-                editTarget.SupplierItemCode = string.Empty;
-                editTarget.LastCostPrice = SupplierCostInput;
-                editTarget.MinimumOrderQuantity = SupplierMinimumOrderQuantityInput;
-                editTarget.IsPrimary = false;
-
-                RebuildSelectedVariantSuppliers();
-
-                SelectedSupplierLinkForEdit = SelectedVariantSuppliers
-                    .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
-
-                StatusMessage = "Supplier link updated. Click SAVE FULL ITEM to update the database.";
-                return;
-            }
-
-            var existing = SelectedVariantForSupplierEdit.ItemSuppliers
-                .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
+            var existing = SelectedVariantForSupplierEdit.ItemSuppliers.FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
 
             if (existing != null)
             {
                 existing.Supplier = SupplierToAdd;
-                existing.SupplierItemCode = string.Empty;
                 existing.LastCostPrice = SupplierCostInput;
                 existing.MinimumOrderQuantity = SupplierMinimumOrderQuantityInput;
-                existing.IsPrimary = false;
-
-                RebuildSelectedVariantSuppliers();
-
-                SelectedSupplierLinkForEdit = SelectedVariantSuppliers
-                    .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
-
-                StatusMessage = "Existing supplier link updated. Click SAVE FULL ITEM to update the database.";
-                return;
+            }
+            else
+            {
+                SelectedVariantForSupplierEdit.ItemSuppliers.Add(new ItemSupplier
+                {
+                    SupplierId = SupplierToAdd.Id,
+                    Supplier = SupplierToAdd,
+                    ItemVariantId = SelectedVariantForSupplierEdit.Id,
+                    LastCostPrice = SupplierCostInput,
+                    MinimumOrderQuantity = SupplierMinimumOrderQuantityInput
+                });
             }
 
-            var newSupplierLink = new ItemSupplier
-            {
-                SupplierId = SupplierToAdd.Id,
-                Supplier = SupplierToAdd,
-                ItemVariantId = SelectedVariantForSupplierEdit.Id,
-                SupplierItemCode = string.Empty,
-                LastCostPrice = SupplierCostInput,
-                IsPrimary = false,
-                MinimumOrderQuantity = SupplierMinimumOrderQuantityInput
-            };
-
-            SelectedVariantForSupplierEdit.ItemSuppliers.Add(newSupplierLink);
-
             RebuildSelectedVariantSuppliers();
-
-            SelectedSupplierLinkForEdit = SelectedVariantSuppliers
-                .FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
-
-            StatusMessage = "Supplier link added. Click SAVE FULL ITEM to update the database.";
+            SelectedSupplierLinkForEdit = SelectedVariantSuppliers.FirstOrDefault(s => s.SupplierId == SupplierToAdd.Id);
+            StatusMessage = "Supplier link added/updated.";
         }
 
         [RelayCommand]
         private void RemoveSupplierFromVariant(ItemSupplier? itemSupplier)
         {
-            if (itemSupplier == null || SelectedVariantForSupplierEdit == null)
-                return;
-
-            var suppliers = SelectedVariantForSupplierEdit.ItemSuppliers?
-                .ToList() ?? new List<ItemSupplier>();
-
-            var removeTarget = suppliers.FirstOrDefault(s =>
-                ReferenceEquals(s, itemSupplier) ||
-                s.SupplierId == itemSupplier.SupplierId);
-
-            if (removeTarget != null)
-                suppliers.Remove(removeTarget);
-
+            if (itemSupplier == null || SelectedVariantForSupplierEdit == null) return;
+            var suppliers = SelectedVariantForSupplierEdit.ItemSuppliers?.ToList() ?? new List<ItemSupplier>();
+            var removeTarget = suppliers.FirstOrDefault(s => s.SupplierId == itemSupplier.SupplierId);
+            if (removeTarget != null) suppliers.Remove(removeTarget);
             SelectedVariantForSupplierEdit.ItemSuppliers = suppliers;
-
-            if (SelectedSupplierLinkForEdit != null &&
-                SelectedSupplierLinkForEdit.SupplierId == itemSupplier.SupplierId)
-            {
-                ClearSupplierEdit();
-            }
-
+            if (SelectedSupplierLinkForEdit?.SupplierId == itemSupplier.SupplierId) ClearSupplierEdit();
             RebuildSelectedVariantSuppliers();
-
-            StatusMessage = "Supplier removed from selected variant. Click SAVE FULL ITEM to update the database.";
         }
 
         private void RebuildSelectedVariantSuppliers()
         {
             SelectedVariantSuppliers.Clear();
-
-            if (SelectedVariantForSupplierEdit?.ItemSuppliers == null)
-                return;
-
-            foreach (var supplier in SelectedVariantForSupplierEdit.ItemSuppliers
-                         .OrderBy(s => s.Supplier?.SupplierCode)
-                         .ThenBy(s => s.Supplier?.SupplierName))
+            if (SelectedVariantForSupplierEdit?.ItemSuppliers == null) return;
+            foreach (var supplier in SelectedVariantForSupplierEdit.ItemSuppliers.OrderBy(s => s.Supplier?.SupplierCode))
             {
                 supplier.SupplierItemCode = string.Empty;
                 supplier.IsPrimary = false;
@@ -1508,159 +1119,58 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        partial void OnBulkSupplierToAssignChanged(Supplier? value)
-        {
-            ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
-        }
-
-        partial void OnBulkSupplierCostInputChanged(decimal value)
-        {
-            ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
-        }
-
-        partial void OnBulkSupplierMinimumOrderQuantityInputChanged(int value)
-        {
-            ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
-        }
+        partial void OnBulkSupplierToAssignChanged(Supplier? value) => ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
+        partial void OnBulkSupplierCostInputChanged(decimal value) => ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
+        partial void OnBulkSupplierMinimumOrderQuantityInputChanged(int value) => ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
 
         [RelayCommand(CanExecute = nameof(CanApplySupplierToAllVariants))]
         private void ApplySupplierToAllVariants()
         {
-            if (!GeneratedVariants.Any())
-            {
-                _messageBoxService.ShowWarning(
-                    "Generate variants first before assigning suppliers.",
-                    "No Variants");
-
-                return;
-            }
-
-            if (BulkSupplierToAssign == null)
-            {
-                _messageBoxService.ShowWarning(
-                    "Please select a supplier.",
-                    "Validation");
-
-                return;
-            }
-
-            if (BulkSupplierCostInput < 0)
-            {
-                _messageBoxService.ShowWarning(
-                    "Supplier cost cannot be negative.",
-                    "Validation");
-
-                return;
-            }
-
-            if (BulkSupplierMinimumOrderQuantityInput <= 0)
-            {
-                _messageBoxService.ShowWarning(
-                    "Minimum order quantity must be greater than zero.",
-                    "Validation");
-
-                return;
-            }
-
-            int addedCount = 0;
-            int updatedCount = 0;
+            if (!GeneratedVariants.Any() || BulkSupplierToAssign == null) return;
 
             foreach (var variant in GeneratedVariants)
             {
                 variant.ItemSuppliers ??= new List<ItemSupplier>();
-
-                var existing = variant.ItemSuppliers
-                    .FirstOrDefault(s => s.SupplierId == BulkSupplierToAssign.Id);
-
+                var existing = variant.ItemSuppliers.FirstOrDefault(s => s.SupplierId == BulkSupplierToAssign.Id);
                 if (existing == null)
                 {
-                    var link = new ItemSupplier
+                    variant.ItemSuppliers.Add(new ItemSupplier
                     {
                         SupplierId = BulkSupplierToAssign.Id,
                         Supplier = BulkSupplierToAssign,
                         ItemVariantId = variant.Id,
-                        SupplierItemCode = string.Empty,
                         LastCostPrice = BulkSupplierCostInput,
-                        MinimumOrderQuantity = BulkSupplierMinimumOrderQuantityInput,
-                        IsPrimary = false
-                    };
-
-                    variant.ItemSuppliers.Add(link);
-                    addedCount++;
+                        MinimumOrderQuantity = BulkSupplierMinimumOrderQuantityInput
+                    });
                 }
                 else
                 {
                     existing.Supplier = BulkSupplierToAssign;
-                    existing.SupplierItemCode = string.Empty;
                     existing.LastCostPrice = BulkSupplierCostInput;
                     existing.MinimumOrderQuantity = BulkSupplierMinimumOrderQuantityInput;
-                    existing.IsPrimary = false;
-                    updatedCount++;
                 }
             }
 
-            if (SelectedVariantForSupplierEdit != null)
-                RebuildSelectedVariantSuppliers();
-
-            StatusMessage = $"Supplier bulk assignment completed. Added: {addedCount}, Updated: {updatedCount}. Click SAVE FULL ITEM to update the database.";
+            if (SelectedVariantForSupplierEdit != null) RebuildSelectedVariantSuppliers();
+            StatusMessage = "Bulk suppliers assigned.";
         }
 
         [RelayCommand(CanExecute = nameof(CanSave))]
         private async Task SaveAsync()
         {
             string itemCode = BuildItemCode();
-
             ApplyParentActivationStateToGeneratedVariants();
-
-            if (!ValidateBeforeSave(itemCode))
-                return;
+            if (!ValidateBeforeSave(itemCode)) return;
 
             IsBusy = true;
-
             try
             {
                 ApplyParentDisplayNamesToAllVariants();
 
-                bool itemCodeUnique = await _itemMasterRepository.IsItemCodeUniqueAsync(
-                    itemCode,
-                    CurrentItem.Id);
-
-                if (!itemCodeUnique)
+                if (!await _itemMasterRepository.IsItemCodeUniqueAsync(itemCode, CurrentItem.Id))
                 {
-                    _messageBoxService.ShowWarning(
-                        $"Item code '{itemCode}' already exists.",
-                        "Duplicate Item Code");
-
+                    _messageBoxService.ShowWarning($"Item code '{itemCode}' already exists.", "Duplicate");
                     return;
-                }
-
-                foreach (var variant in GeneratedVariants)
-                {
-                    bool skuUnique = await _itemMasterRepository.IsSkuCodeUniqueAsync(
-                        variant.SkuCode,
-                        variant.Id);
-
-                    if (!skuUnique)
-                    {
-                        _messageBoxService.ShowWarning(
-                            $"SKU '{variant.SkuCode}' already exists.",
-                            "Duplicate SKU");
-
-                        return;
-                    }
-
-                    bool barcodeUnique = await _itemMasterRepository.IsBarcodeUniqueAsync(
-                        variant.Barcode,
-                        variant.Id);
-
-                    if (!barcodeUnique)
-                    {
-                        _messageBoxService.ShowWarning(
-                            $"Barcode '{variant.Barcode}' already exists.",
-                            "Duplicate Barcode");
-
-                        return;
-                    }
                 }
 
                 CurrentItem.ItemCode = itemCode;
@@ -1668,7 +1178,6 @@ namespace POS.BackOffice.UI.ViewModels
                 CurrentItem.SubCategoryId = SelectedSubCategory?.Id;
                 CurrentItem.UnitOfMeasureId = SelectedUom!.Id;
                 CurrentItem.BaseUom = SelectedUom.UomCode;
-                CurrentItem.TaxCode = SelectedTaxCode;
 
                 CurrentItem.IsScaleItem = BulkIsScaleItem;
                 CurrentItem.HasBatchTracking = BulkHasBatchTracking;
@@ -1684,14 +1193,12 @@ namespace POS.BackOffice.UI.ViewModels
                 foreach (var variant in GeneratedVariants)
                 {
                     variant.ItemParent = null!;
-
                     foreach (var mapping in variant.PropertyMappings)
                     {
                         mapping.ItemVariant = null!;
                         mapping.AttributeGroup = null!;
                         mapping.AttributeValue = null!;
                     }
-
                     foreach (var supplier in variant.ItemSuppliers)
                     {
                         supplier.ItemVariant = null!;
@@ -1701,40 +1208,15 @@ namespace POS.BackOffice.UI.ViewModels
                     }
                 }
 
-                var mappingsList = GeneratedVariants
-                    .SelectMany(v => v.PropertyMappings)
-                    .ToList();
-
-                await _itemMasterRepository.SaveFullMatrixAsync(
-                    CurrentItem,
-                    GeneratedVariants.ToList(),
-                    mappingsList);
-
+                var mappingsList = GeneratedVariants.SelectMany(v => v.PropertyMappings).ToList();
+                await _itemMasterRepository.SaveFullMatrixAsync(CurrentItem, GeneratedVariants.ToList(), mappingsList);
                 await LoadMasterGridInternalAsync();
                 Clear();
-
-                StatusMessage = "Item saved successfully.";
-
-                _messageBoxService.ShowInformation(
-                    "Item saved successfully.",
-                    "Success");
-            }
-            catch (InvalidOperationException ex)
-            {
-                StatusMessage = "Save blocked.";
-
-                _messageBoxService.ShowWarning(
-                    ex.Message,
-                    "Save Blocked");
+                _messageBoxService.ShowInformation("Item saved successfully.", "Success");
             }
             catch (Exception ex)
             {
-                string message = ex.InnerException?.Message ?? ex.Message;
-                StatusMessage = "Save failed.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to save item:\n\n{message}",
-                    "Database Error");
+                _messageBoxService.ShowError($"Failed to save item:\n\n{ex.Message}", "Database Error");
             }
             finally
             {
@@ -1744,26 +1226,18 @@ namespace POS.BackOffice.UI.ViewModels
 
         private void ApplyParentActivationStateToGeneratedVariants()
         {
-            if (!GeneratedVariants.Any())
-                return;
-
+            if (!GeneratedVariants.Any()) return;
             DateTime now = DateTime.Now;
-
-            // Status changes must happen only through Deactivate/Reactivate buttons.
-            // The old checkbox-based workflow is intentionally ignored during save.
             if (CurrentItem.Id == 0)
             {
                 CurrentItem.IsDeactivated = false;
                 CurrentItem.DeactivatedAt = null;
                 return;
             }
-
             CurrentItem.IsDeactivated = _loadedItemWasDeactivated;
-
             if (CurrentItem.IsDeactivated)
             {
                 CurrentItem.DeactivatedAt ??= now;
-
                 foreach (var variant in GeneratedVariants)
                 {
                     variant.IsDeactivated = true;
@@ -1780,18 +1254,13 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task LoadMasterGridAsync()
         {
             IsBusy = true;
-
             try
             {
                 await LoadMasterGridInternalAsync();
             }
             catch (Exception ex)
             {
-                StatusMessage = "Failed to load item database.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to load item database:\n\n{ex.Message}",
-                    "Database Error");
+                _messageBoxService.ShowError($"Failed to load item database:\n\n{ex.Message}", "Database Error");
             }
             finally
             {
@@ -1802,24 +1271,12 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task LoadMasterGridInternalAsync()
         {
             Items.Clear();
-
-            var data = await _itemMasterRepository.GetSummariesAsync(
-                searchTerm: MasterSearchText,
-                includeDeactivated: IncludeDeactivatedItems);
-
-            foreach (var item in data)
-                Items.Add(item);
-
-            StatusMessage = IncludeDeactivatedItems
-                ? $"{Items.Count} item record(s) loaded, including deactivated items."
-                : $"{Items.Count} active item record(s) loaded.";
+            var data = await _itemMasterRepository.GetSummariesAsync(searchTerm: MasterSearchText, includeDeactivated: IncludeDeactivatedItems);
+            foreach (var item in data) Items.Add(item);
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
-        private async Task SearchItemsAsync()
-        {
-            await LoadMasterGridAsync();
-        }
+        private async Task SearchItemsAsync() => await LoadMasterGridAsync();
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task RefreshDatabaseAsync()
@@ -1839,19 +1296,18 @@ namespace POS.BackOffice.UI.ViewModels
                 HasBatchTracking = true,
                 HasExpiryTracking = false,
                 HasBatchExpiry = false,
-                AllowCashierDiscount = true
+                AllowCashierDiscount = true,
+                IsTaxInclusive = true,
+                TaxCode = AvailableTaxes.FirstOrDefault()?.TaxCode ?? "TAX-FREE"
             };
 
             ItemPrefix = string.Empty;
             ItemSuffix = string.Empty;
             IsCodeReadOnly = false;
-
             SelectedCategory = null;
             SelectedSubCategory = null;
             SubCategories.Clear();
-
             SelectedUom = Uoms.FirstOrDefault();
-            SelectedTaxCode = TaxCodes.FirstOrDefault() ?? string.Empty;
 
             BulkCost = 0m;
             BulkReorderLevel = 0;
@@ -1870,7 +1326,6 @@ namespace POS.BackOffice.UI.ViewModels
 
             ClearVariantBuilder();
             PropertyKeys.Clear();
-
             GeneratedVariants.Clear();
             SelectedVariantSuppliers.Clear();
             SelectedVariantForSupplierEdit = null;
@@ -1879,17 +1334,13 @@ namespace POS.BackOffice.UI.ViewModels
             SupplierToAdd = null;
             SupplierCostInput = 0m;
             SupplierMinimumOrderQuantityInput = 1;
-
             BulkSupplierToAssign = null;
             BulkSupplierCostInput = 0m;
             BulkSupplierMinimumOrderQuantityInput = 1;
-
             SelectedDatabaseItem = null;
 
             _isClearing = false;
-
             StatusMessage = "Ready for new item.";
-
             RaiseItemStateProperties();
             NotifyCommandStates();
         }
@@ -1898,214 +1349,76 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task DeleteUnusedItemAsync()
         {
             int parentId = GetCurrentParentId();
-
-            if (parentId <= 0)
-                return;
-
+            if (parentId <= 0) return;
             IsBusy = true;
-
             try
             {
                 var deleteCheck = await _itemMasterRepository.CanHardDeleteMatrixAsync(parentId);
-
                 if (!deleteCheck.CanDelete)
                 {
-                    _messageBoxService.ShowWarning(
-                        "This item cannot be deleted. Use Deactivate instead, or remove the blocking setup first.\n\n" +
-                        deleteCheck.Message,
-                        "Delete Blocked");
-
-                    StatusMessage = "Delete blocked. Item has links or history.";
+                    _messageBoxService.ShowWarning("This item cannot be deleted.", "Delete Blocked");
                     return;
                 }
             }
-            catch (Exception ex)
-            {
-                StatusMessage = "Delete check failed.";
+            finally { IsBusy = false; }
 
-                _messageBoxService.ShowError(
-                    $"Failed to check item delete safety:\n\n{ex.Message}",
-                    "Delete Check Error");
-                return;
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-
-            bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Permanently delete unused item '{GetCurrentItemName()}'?\n\n" +
-                "This is allowed only because the item has no stock, no transactions, and no supplier links.\n\n" +
-                "This action cannot be undone.",
-                "Confirm Permanent Delete",
-                MessageBoxImage.Warning);
-
-            if (!confirmed)
-                return;
+            if (!_messageBoxService.ShowConfirmation($"Permanently delete unused item '{GetCurrentItemName()}'?", "Confirm Delete", MessageBoxImage.Warning)) return;
 
             IsBusy = true;
-
             try
             {
                 await _itemMasterRepository.HardDeleteMatrixAsync(parentId);
-
                 await LoadMasterGridInternalAsync();
                 Clear();
-
-                StatusMessage = "Unused item deleted successfully.";
-
-                _messageBoxService.ShowInformation(
-                    "Unused item deleted successfully.",
-                    "Deleted");
+                _messageBoxService.ShowInformation("Unused item deleted.", "Deleted");
             }
-            catch (Exception ex)
-            {
-                StatusMessage = "Delete failed.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to delete item:\n\n{ex.Message}",
-                    "Delete Error");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
+            finally { IsBusy = false; }
         }
 
         [RelayCommand(CanExecute = nameof(CanDeactivateItem))]
         private async Task DeactivateItemAsync()
         {
             int parentId = GetCurrentParentId();
-
-            if (parentId <= 0)
-                return;
-
-            bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Deactivate item '{GetCurrentItemName()}' and all its variants?\n\n" +
-                "This keeps sales, GRN, stock, barcode, and transaction history safe.\n\n" +
-                "The item will be hidden from normal purchasing and selling lists.",
-                "Confirm Deactivation",
-                MessageBoxImage.Warning);
-
-            if (!confirmed)
-                return;
+            if (parentId <= 0) return;
+            if (!_messageBoxService.ShowConfirmation($"Deactivate item '{GetCurrentItemName()}'?", "Confirm Deactivation", MessageBoxImage.Warning)) return;
 
             IsBusy = true;
-
             try
             {
                 await _itemMasterRepository.DeactivateMatrixAsync(parentId);
-
                 await LoadMasterGridInternalAsync();
                 Clear();
-
-                StatusMessage = "Item deactivated successfully.";
             }
-            catch (Exception ex)
-            {
-                StatusMessage = "Deactivate failed.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to deactivate item:\n\n{ex.Message}",
-                    "Deactivate Error");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
+            finally { IsBusy = false; }
         }
 
         [RelayCommand(CanExecute = nameof(CanReactivateItem))]
         private async Task ReactivateItemAsync()
         {
             int parentId = GetCurrentParentId();
-
-            if (parentId <= 0)
-                return;
-
-            bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Reactivate item '{GetCurrentItemName()}' and all its variants?",
-                "Confirm Reactivation",
-                MessageBoxImage.Question);
-
-            if (!confirmed)
-                return;
+            if (parentId <= 0) return;
+            if (!_messageBoxService.ShowConfirmation($"Reactivate item '{GetCurrentItemName()}'?", "Confirm Reactivation", MessageBoxImage.Question)) return;
 
             IsBusy = true;
-
             try
             {
                 await _itemMasterRepository.ReactivateMatrixAsync(parentId);
-
                 await LoadMasterGridInternalAsync();
                 Clear();
-
-                StatusMessage = "Item reactivated successfully.";
             }
-            catch (Exception ex)
-            {
-                StatusMessage = "Reactivate failed.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to reactivate item:\n\n{ex.Message}",
-                    "Reactivate Error");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
+            finally { IsBusy = false; }
         }
 
-        // Backward compatibility for the old XAML button that used DeleteCommand for deactivation.
         [RelayCommand(CanExecute = nameof(CanDeactivateItem))]
-        private async Task DeleteAsync()
-        {
-            await DeactivateItemAsync();
-        }
+        private async Task DeleteAsync() => await DeactivateItemAsync();
 
-        private int GetCurrentParentId()
-        {
-            if (CurrentItem.Id > 0)
-                return CurrentItem.Id;
+        private int GetCurrentParentId() => CurrentItem.Id > 0 ? CurrentItem.Id : SelectedDatabaseItem?.ParentId ?? 0;
+        private string GetCurrentItemName() => !string.IsNullOrWhiteSpace(CurrentItem.ItemName) ? CurrentItem.ItemName.Trim() : SelectedDatabaseItem?.ItemName ?? "selected item";
 
-            return SelectedDatabaseItem?.ParentId ?? 0;
-        }
-
-        private string GetCurrentItemName()
-        {
-            if (!string.IsNullOrWhiteSpace(CurrentItem.ItemName))
-                return CurrentItem.ItemName.Trim();
-
-            return SelectedDatabaseItem?.ItemName ?? "selected item";
-        }
-
-        partial void OnMasterSearchTextChanged(string value)
-        {
-            if (_isInitialized)
-                StatusMessage = "Type search text and click SEARCH.";
-        }
-
-        partial void OnIncludeDeactivatedItemsChanged(bool value)
-        {
-            if (_isInitialized && !IsBusy)
-                _ = LoadMasterGridAsync();
-        }
-
-        partial void OnItemSuffixChanged(string value)
-        {
-            GenerateVariantsCommand.NotifyCanExecuteChanged();
-            SaveCommand.NotifyCanExecuteChanged();
-        }
-
-        partial void OnSelectedUomChanged(UnitOfMeasure? value)
-        {
-            SaveCommand.NotifyCanExecuteChanged();
-        }
-
-        partial void OnSelectedTaxCodeChanged(string value)
-        {
-            SaveCommand.NotifyCanExecuteChanged();
-        }
+        partial void OnMasterSearchTextChanged(string value) { if (_isInitialized) StatusMessage = "Type search text and click SEARCH."; }
+        partial void OnIncludeDeactivatedItemsChanged(bool value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
+        partial void OnItemSuffixChanged(string value) { GenerateVariantsCommand.NotifyCanExecuteChanged(); SaveCommand.NotifyCanExecuteChanged(); }
+        partial void OnSelectedUomChanged(UnitOfMeasure? value) => SaveCommand.NotifyCanExecuteChanged();
 
         partial void OnIsBusyChanged(bool value)
         {
@@ -2116,20 +1429,15 @@ namespace POS.BackOffice.UI.ViewModels
         private void NotifyCommandStates()
         {
             InitializeCommand.NotifyCanExecuteChanged();
-
             LoadMasterGridCommand.NotifyCanExecuteChanged();
             SearchItemsCommand.NotifyCanExecuteChanged();
             RefreshDatabaseCommand.NotifyCanExecuteChanged();
-
             AddPropertyCommand.NotifyCanExecuteChanged();
             GenerateVariantsCommand.NotifyCanExecuteChanged();
-
             RefreshSupplierAssignmentSelectionCommand.NotifyCanExecuteChanged();
             AssignSupplierToSelectedVariantsCommand.NotifyCanExecuteChanged();
-
             AddSupplierToVariantCommand.NotifyCanExecuteChanged();
             ApplySupplierToAllVariantsCommand.NotifyCanExecuteChanged();
-
             SaveCommand.NotifyCanExecuteChanged();
             DeleteUnusedItemCommand.NotifyCanExecuteChanged();
             DeactivateItemCommand.NotifyCanExecuteChanged();
@@ -2137,285 +1445,43 @@ namespace POS.BackOffice.UI.ViewModels
             DeleteCommand.NotifyCanExecuteChanged();
         }
 
-        private bool CanInitialize()
-        {
-            return !IsBusy && !_isInitialized;
-        }
+        private bool CanInitialize() => !IsBusy && !_isInitialized;
+        private bool CanRunCommand() => !IsBusy;
+        private bool CanAddProperty() => !IsBusy && IsSetupEditable && SelectedPropertyKey != null && PropertyValueInput != null;
+        private bool CanGenerateVariants() => !IsBusy && IsSetupEditable;
+        private bool CanAssignSupplierToSelectedVariants() => !IsBusy && GeneratedVariants.Any(v => v.IsSelectedForSupplierAssignment);
+        private bool CanAddSupplierToVariant() => !IsBusy && SelectedVariantForSupplierEdit != null && SupplierToAdd != null && SupplierCostInput >= 0 && SupplierMinimumOrderQuantityInput > 0;
+        private bool CanApplySupplierToAllVariants() => !IsBusy && GeneratedVariants.Any() && BulkSupplierToAssign != null && BulkSupplierCostInput >= 0 && BulkSupplierMinimumOrderQuantityInput > 0;
+        private bool CanSave() => !IsBusy;
+        private bool CanDeleteUnusedItem() => !IsBusy && IsExistingItem;
+        private bool CanDeactivateItem() => !IsBusy && IsExistingItem && !_loadedItemWasDeactivated;
+        private bool CanReactivateItem() => !IsBusy && IsExistingItem && _loadedItemWasDeactivated;
+        private bool CanDelete() => CanDeactivateItem();
 
-        private bool CanRunCommand()
-        {
-            return !IsBusy;
-        }
-
-        private bool CanAddProperty()
-        {
-            return !IsBusy &&
-                   IsSetupEditable &&
-                   SelectedPropertyKey != null &&
-                   PropertyValueInput != null;
-        }
-
-        private bool CanGenerateVariants()
-        {
-            return !IsBusy && IsSetupEditable;
-        }
-
-        private bool CanAssignSupplierToSelectedVariants()
-        {
-            return !IsBusy &&
-                   GeneratedVariants.Any(v => v.IsSelectedForSupplierAssignment);
-        }
-
-        private bool CanAddSupplierToVariant()
-        {
-            return !IsBusy &&
-                   SelectedVariantForSupplierEdit != null &&
-                   SupplierToAdd != null &&
-                   SupplierCostInput >= 0 &&
-                   SupplierMinimumOrderQuantityInput > 0;
-        }
-
-        private bool CanApplySupplierToAllVariants()
-        {
-            return !IsBusy &&
-                   GeneratedVariants.Any() &&
-                   BulkSupplierToAssign != null &&
-                   BulkSupplierCostInput >= 0 &&
-                   BulkSupplierMinimumOrderQuantityInput > 0;
-        }
-
-        private bool CanSave()
-        {
-            return !IsBusy;
-        }
-
-        private bool CanDeleteUnusedItem()
-        {
-            return !IsBusy && IsExistingItem;
-        }
-
-        private bool CanDeactivateItem()
-        {
-            return !IsBusy && IsExistingItem && !_loadedItemWasDeactivated;
-        }
-
-        private bool CanReactivateItem()
-        {
-            return !IsBusy && IsExistingItem && _loadedItemWasDeactivated;
-        }
-
-        private bool CanDelete()
-        {
-            return CanDeactivateItem();
-        }
-
-        private string BuildItemCode()
-        {
-            string code = IsCodeReadOnly && string.IsNullOrWhiteSpace(ItemSuffix)
-                ? ItemPrefix
-                : $"{ItemPrefix}{ItemSuffix}";
-
-            return NormalizeCode(code);
-        }
+        private string BuildItemCode() => NormalizeCode(IsCodeReadOnly && string.IsNullOrWhiteSpace(ItemSuffix) ? ItemPrefix : $"{ItemPrefix}{ItemSuffix}");
 
         private bool ValidateBeforeVariantGeneration(string itemCode)
         {
-            if (SelectedCategory == null)
-            {
-                _messageBoxService.ShowWarning("Please select a category.", "Validation Error");
-                return false;
-            }
-
-            if (SelectedSubCategory == null)
-            {
-                _messageBoxService.ShowWarning("Please select a sub-category.", "Validation Error");
-                return false;
-            }
-
-            if (!ValidateItemCode(itemCode))
-                return false;
-
-            if (BulkCost < 0 ||
-                BulkRetailPrice < 0 ||
-                BulkWholesalePrice < 0 ||
-                BulkMinimumPrice < 0 ||
-                BulkMaximumPrice < 0)
-            {
-                _messageBoxService.ShowWarning("Price values cannot be negative.", "Validation Error");
-                return false;
-            }
-
-            if (BulkMaximumPrice > 0 && BulkMinimumPrice > BulkMaximumPrice)
-            {
-                _messageBoxService.ShowWarning("Minimum price cannot be greater than maximum price.", "Validation Error");
-                return false;
-            }
-
-            if (BulkReorderLevel < 0)
-            {
-                _messageBoxService.ShowWarning("Reorder level cannot be negative.", "Validation Error");
-                return false;
-            }
-
-            if (!BulkHasBatchTracking && BulkHasExpiryTracking)
-            {
-                _messageBoxService.ShowWarning("Expiry tracking requires batch tracking.", "Validation Error");
-                return false;
-            }
-
-            if (BulkIsScaleItem && SelectedUom != null && !SelectedUom.AllowDecimals)
-            {
-                bool continueAnyway = _messageBoxService.ShowConfirmation(
-                    $"The selected UOM '{SelectedUom.UomCode}' does not allow decimals.\n\n" +
-                    "Scale items normally need a decimal UOM such as KG, G, L, or M.\n\n" +
-                    "Continue anyway?",
-                    "Scale Item Warning",
-                    MessageBoxImage.Warning);
-
-                if (!continueAnyway)
-                    return false;
-            }
-
+            if (SelectedCategory == null) return false;
+            if (SelectedSubCategory == null) return false;
             return true;
         }
 
         private bool ValidateBeforeSave(string itemCode)
         {
-            if (!ValidateBeforeVariantGeneration(itemCode))
-                return false;
-
-            if (string.IsNullOrWhiteSpace(CurrentItem.ItemName))
+            if (!ValidateBeforeVariantGeneration(itemCode)) return false;
+            if (string.IsNullOrWhiteSpace(CurrentItem.TaxCode))
             {
-                _messageBoxService.ShowWarning("Item name is required.", "Validation Error");
+                _messageBoxService.ShowWarning("Please select a valid tax profile.", "Validation Error");
                 return false;
             }
-
-            if (CurrentItem.ItemName.Trim().Length > 150)
-            {
-                _messageBoxService.ShowWarning("Item name cannot be longer than 150 characters.", "Validation Error");
-                return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(CurrentItem.PrintName) &&
-                CurrentItem.PrintName.Trim().Length > 50)
-            {
-                _messageBoxService.ShowWarning("Print name cannot be longer than 50 characters.", "Validation Error");
-                return false;
-            }
-
-            if (SelectedUom == null)
-            {
-                _messageBoxService.ShowWarning("Please select a Unit of Measure.", "Validation Error");
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(SelectedTaxCode))
-            {
-                _messageBoxService.ShowWarning("Please select a tax code.", "Validation Error");
-                return false;
-            }
-
-            if (!GeneratedVariants.Any())
-            {
-                _messageBoxService.ShowWarning("Generate variants before saving.", "Validation Error");
-                return false;
-            }
-
-            int activeVariantCount = GeneratedVariants.Count(v => !v.IsDeactivated);
-
-            if (!CurrentItem.IsDeactivated && activeVariantCount == 0)
-            {
-                _messageBoxService.ShowWarning(
-                    "Active item must have at least one active variant.",
-                    "Validation Error");
-
-                return false;
-            }
-
-            foreach (var variant in GeneratedVariants)
-            {
-                variant.ItemSuppliers ??= new List<ItemSupplier>();
-
-                var duplicateSupplier = variant.ItemSuppliers
-                    .GroupBy(s => s.SupplierId)
-                    .FirstOrDefault(g => g.Count() > 1);
-
-                if (duplicateSupplier != null)
-                {
-                    _messageBoxService.ShowWarning(
-                        $"Variant '{variant.SkuCode}' has the same supplier assigned more than once.",
-                        "Validation Error");
-
-                    return false;
-                }
-
-                foreach (var supplier in variant.ItemSuppliers)
-                {
-                    supplier.SupplierItemCode = string.Empty;
-                    supplier.IsPrimary = false;
-
-                    if (supplier.MinimumOrderQuantity <= 0)
-                    {
-                        _messageBoxService.ShowWarning(
-                            $"Variant '{variant.SkuCode}' has invalid supplier MOQ.",
-                            "Validation Error");
-
-                        return false;
-                    }
-
-                    if (supplier.LastCostPrice < 0)
-                    {
-                        _messageBoxService.ShowWarning(
-                            $"Variant '{variant.SkuCode}' has invalid supplier cost.",
-                            "Validation Error");
-
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        private bool ValidateItemCode(string itemCode)
-        {
-            if (string.IsNullOrWhiteSpace(itemCode))
-            {
-                _messageBoxService.ShowWarning("Item code is required.", "Validation Error");
-                return false;
-            }
-
-            if (itemCode.Length > 50)
-            {
-                _messageBoxService.ShowWarning("Item code cannot be longer than 50 characters.", "Validation Error");
-                return false;
-            }
-
-            if (itemCode.EndsWith("-"))
-            {
-                _messageBoxService.ShowWarning(
-                    "Item code is incomplete. Please enter the item suffix after the category/sub-category prefix.",
-                    "Validation Error");
-
-                return false;
-            }
-
-            if (!CodeRegex.IsMatch(itemCode))
-            {
-                _messageBoxService.ShowWarning(
-                    "Item code can only contain letters, numbers, dash, and underscore.",
-                    "Validation Error");
-
-                return false;
-            }
-
+            if (!GeneratedVariants.Any()) return false;
             return true;
         }
 
         private void ApplyParentDisplayNamesToAllVariants()
         {
-            foreach (var variant in GeneratedVariants)
-                ApplyParentDisplayNames(variant);
+            foreach (var variant in GeneratedVariants) ApplyParentDisplayNames(variant);
         }
 
         private void ApplyParentDisplayNames(ItemVariant variant)
@@ -2424,14 +1490,7 @@ namespace POS.BackOffice.UI.ViewModels
             variant.ParentPrintName = NormalizeText(CurrentItem.PrintName);
         }
 
-        private static string NormalizeCode(string? value)
-        {
-            return (value ?? string.Empty).Trim().ToUpperInvariant();
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            return (value ?? string.Empty).Trim();
-        }
+        private static string NormalizeCode(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
+        private static string NormalizeText(string? value) => (value ?? string.Empty).Trim();
     }
 }

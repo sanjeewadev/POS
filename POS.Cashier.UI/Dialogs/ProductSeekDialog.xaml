@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Product Look-Up"
         Height="790"
-        Width="1080"
+        Width="1220"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="#ECE9D8"
@@ -101,8 +101,6 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="190"/>
-                <RowDefinition Height="210"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -173,216 +171,226 @@
                 </Grid>
             </Border>
 
-            <!-- PARENT ITEMS -->
-            <Border Grid.Row="2"
-                    Style="{StaticResource PanelBorder}"
-                    Margin="10,10,10,5">
+            <!-- BODY: TOP TWO TABLES + BOTTOM BATCH TABLE -->
+            <Grid Grid.Row="2" Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1.05*"/>
+                    <RowDefinition Height="10"/>
+                    <RowDefinition Height="1.20*"/>
+                </Grid.RowDefinitions>
 
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="430"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Row="0"
-                               Text="1. Select Master Item"
-                               FontWeight="Bold"
-                               Foreground="#003366"
-                               Margin="0,0,0,6"/>
+                    <!-- PARENT ITEMS -->
+                    <Border Grid.Column="0"
+                            Style="{StaticResource PanelBorder}">
 
-                    <DataGrid x:Name="ParentDataGrid"
-                              Grid.Row="1"
-                              ItemsSource="{Binding ParentResults}"
-                              SelectedItem="{Binding SelectedParent, Mode=TwoWay}"
-                              PreviewMouseLeftButtonUp="ParentDataGrid_PreviewMouseLeftButtonUp"
-                              TouchUp="ParentDataGrid_TouchUp">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
 
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Item Code"
-                                                Binding="{Binding ItemCode}"
-                                                Width="120"
-                                                ElementStyle="{StaticResource BoldText}"/>
+                            <TextBlock Grid.Row="0"
+                                       Text="1. Master Items"
+                                       FontWeight="Bold"
+                                       Foreground="#003366"
+                                       Margin="0,0,0,6"/>
 
-                            <DataGridTextColumn Header="Master Item Name"
-                                                Binding="{Binding ItemName}"
-                                                Width="*"/>
+                            <DataGrid x:Name="ParentDataGrid"
+                                      Grid.Row="1"
+                                      ItemsSource="{Binding ParentResults}"
+                                      SelectedItem="{Binding SelectedParent, Mode=TwoWay}"
+                                      PreviewMouseLeftButtonUp="ParentDataGrid_PreviewMouseLeftButtonUp"
+                                      TouchUp="ParentDataGrid_TouchUp">
 
-                            <DataGridTextColumn Header="Category"
-                                                Binding="{Binding CategoryName}"
-                                                Width="170"/>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Item Code"
+                                                        Binding="{Binding ItemCode}"
+                                                        Width="95"
+                                                        ElementStyle="{StaticResource BoldText}"/>
 
-                            <DataGridTextColumn Header="Tracking"
-                                                Binding="{Binding TrackingText}"
-                                                Width="125"
-                                                ElementStyle="{StaticResource CenterText}"/>
+                                    <DataGridTextColumn Header="Master Item"
+                                                        Binding="{Binding ItemName}"
+                                                        Width="*"/>
 
-                            <DataGridTextColumn Header="Variants"
-                                                Binding="{Binding ActiveVariantsCount}"
-                                                Width="80"
-                                                ElementStyle="{StaticResource CenterText}"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                                    <DataGridTextColumn Header="Tracking"
+                                                        Binding="{Binding TrackingText}"
+                                                        Width="115"
+                                                        ElementStyle="{StaticResource CenterText}"/>
+
+                                    <DataGridTextColumn Header="Sellable"
+                                                        Binding="{Binding ActiveVariantsCount}"
+                                                        Width="70"
+                                                        ElementStyle="{StaticResource CenterText}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+
+                    <!-- VARIANTS -->
+                    <Border Grid.Column="2"
+                            Style="{StaticResource PanelBorder}">
+
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                                           Text="2. Sellable Variants"
+                                           FontWeight="Bold"
+                                           Foreground="#003366"
+                                           VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="Zero-stock variants are hidden. Average-cost item adds from GENERAL."
+                                           Foreground="#555555"
+                                           FontStyle="Italic"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <DataGrid x:Name="VariantDataGrid"
+                                      Grid.Row="1"
+                                      ItemsSource="{Binding VariantResults}"
+                                      SelectedItem="{Binding SelectedVariant, Mode=TwoWay}"
+                                      PreviewMouseLeftButtonUp="VariantDataGrid_PreviewMouseLeftButtonUp"
+                                      TouchUp="VariantDataGrid_TouchUp">
+
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="SKU"
+                                                        Binding="{Binding SkuCode}"
+                                                        Width="145"
+                                                        ElementStyle="{StaticResource BoldText}"/>
+
+                                    <DataGridTextColumn Header="Item Barcode"
+                                                        Binding="{Binding Barcode}"
+                                                        Width="150"/>
+
+                                    <DataGridTextColumn Header="Variant"
+                                                        Binding="{Binding VariantDescription}"
+                                                        Width="*"/>
+
+                                    <DataGridTextColumn Header="Tracking"
+                                                        Binding="{Binding TrackingText}"
+                                                        Width="125"
+                                                        ElementStyle="{StaticResource CenterText}"/>
+
+                                    <DataGridTextColumn Header="Retail"
+                                                        Binding="{Binding RetailPrice, StringFormat={}{0:N2}}"
+                                                        Width="100"
+                                                        ElementStyle="{StaticResource RightText}"/>
+
+                                    <DataGridTextColumn Header="Stock"
+                                                        Binding="{Binding StockOnHand, StringFormat={}{0:0.###}}"
+                                                        Width="90"
+                                                        ElementStyle="{StaticResource CenterText}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
                 </Grid>
-            </Border>
 
-            <!-- VARIANTS -->
-            <Border Grid.Row="3"
-                    Style="{StaticResource PanelBorder}"
-                    Margin="10,5,10,5">
+                <!-- GRN BATCHES -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource PanelBorder}">
 
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="2. Select Variant"
-                                   FontWeight="Bold"
-                                   Foreground="#003366"
-                                   VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0"
+                                       Text="3. Available GRN Batches"
+                                       FontWeight="Bold"
+                                       Foreground="#003366"
+                                       VerticalAlignment="Center"/>
 
-                        <TextBlock Grid.Column="1"
-                                   Text="Average-cost item: tap variant to add. Batch item: tap variant, then tap GRN batch below."
-                                   Foreground="#555555"
-                                   FontStyle="Italic"
-                                   VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Batch-tracked item: tap exact GRN batch to add. Expired and zero-stock batches are hidden."
+                                       Foreground="#555555"
+                                       FontStyle="Italic"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <DataGrid x:Name="BatchDataGrid"
+                                  Grid.Row="1"
+                                  ItemsSource="{Binding BatchResults}"
+                                  SelectedItem="{Binding SelectedBatch, Mode=TwoWay}"
+                                  PreviewMouseLeftButtonUp="BatchDataGrid_PreviewMouseLeftButtonUp"
+                                  TouchUp="BatchDataGrid_TouchUp">
+
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="GRN Barcode"
+                                                    Binding="{Binding BarcodeDisplayText}"
+                                                    Width="160"
+                                                    ElementStyle="{StaticResource BoldText}"/>
+
+                                <DataGridTextColumn Header="Batch No"
+                                                    Binding="{Binding BatchDisplayText}"
+                                                    Width="150"/>
+
+                                <DataGridTextColumn Header="Expiry"
+                                                    Binding="{Binding ExpiryDisplayText}"
+                                                    Width="105"
+                                                    ElementStyle="{StaticResource CenterText}"/>
+
+                                <DataGridTextColumn Header="Available"
+                                                    Binding="{Binding AvailableQty, StringFormat={}{0:0.###}}"
+                                                    Width="100"
+                                                    ElementStyle="{StaticResource CenterText}"/>
+
+                                <DataGridTextColumn Header="Cost"
+                                                    Binding="{Binding CostPrice, StringFormat={}{0:N2}}"
+                                                    Width="90"
+                                                    ElementStyle="{StaticResource RightText}"/>
+
+                                <DataGridTextColumn Header="Retail"
+                                                    Binding="{Binding RetailPrice, StringFormat={}{0:N2}}"
+                                                    Width="90"
+                                                    ElementStyle="{StaticResource RightText}"/>
+
+                                <DataGridTextColumn Header="Wholesale"
+                                                    Binding="{Binding WholesalePrice, StringFormat={}{0:N2}}"
+                                                    Width="100"
+                                                    ElementStyle="{StaticResource RightText}"/>
+
+                                <DataGridTextColumn Header="Received"
+                                                    Binding="{Binding ReceivedDate, StringFormat={}{0:yyyy-MM-dd}}"
+                                                    Width="110"
+                                                    ElementStyle="{StaticResource CenterText}"/>
+
+                                <DataGridTextColumn Header="Warning"
+                                                    Binding="{Binding WarningText}"
+                                                    Width="*"
+                                                    ElementStyle="{StaticResource BoldText}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </Grid>
-
-                    <DataGrid x:Name="VariantDataGrid"
-                              Grid.Row="1"
-                              ItemsSource="{Binding VariantResults}"
-                              SelectedItem="{Binding SelectedVariant, Mode=TwoWay}"
-                              PreviewMouseLeftButtonUp="VariantDataGrid_PreviewMouseLeftButtonUp"
-                              TouchUp="VariantDataGrid_TouchUp">
-
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="SKU"
-                                                Binding="{Binding SkuCode}"
-                                                Width="145"
-                                                ElementStyle="{StaticResource BoldText}"/>
-
-                            <DataGridTextColumn Header="Item Barcode"
-                                                Binding="{Binding Barcode}"
-                                                Width="150"/>
-
-                            <DataGridTextColumn Header="Variant"
-                                                Binding="{Binding VariantDescription}"
-                                                Width="*"/>
-
-                            <DataGridTextColumn Header="Tracking"
-                                                Binding="{Binding TrackingText}"
-                                                Width="125"
-                                                ElementStyle="{StaticResource CenterText}"/>
-
-                            <DataGridTextColumn Header="Retail"
-                                                Binding="{Binding RetailPrice, StringFormat={}{0:N2}}"
-                                                Width="100"
-                                                ElementStyle="{StaticResource RightText}"/>
-
-                            <DataGridTextColumn Header="Stock"
-                                                Binding="{Binding StockOnHand, StringFormat={}{0:0.###}}"
-                                                Width="90"
-                                                ElementStyle="{StaticResource CenterText}"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
-
-            <!-- GRN BATCHES -->
-            <Border Grid.Row="4"
-                    Style="{StaticResource PanelBorder}"
-                    Margin="10,5,10,10">
-
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0" Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="3. Available GRN Batches"
-                                   FontWeight="Bold"
-                                   Foreground="#003366"
-                                   VerticalAlignment="Center"/>
-
-                        <TextBlock Grid.Column="1"
-                                   Text="Tap exact batch to add"
-                                   Foreground="#555555"
-                                   FontStyle="Italic"
-                                   VerticalAlignment="Center"/>
-                    </Grid>
-
-                    <DataGrid x:Name="BatchDataGrid"
-                              Grid.Row="1"
-                              ItemsSource="{Binding BatchResults}"
-                              SelectedItem="{Binding SelectedBatch, Mode=TwoWay}"
-                              PreviewMouseLeftButtonUp="BatchDataGrid_PreviewMouseLeftButtonUp"
-                              TouchUp="BatchDataGrid_TouchUp">
-
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="GRN Barcode"
-                                                Binding="{Binding BarcodeDisplayText}"
-                                                Width="150"
-                                                ElementStyle="{StaticResource BoldText}"/>
-
-                            <DataGridTextColumn Header="Batch No"
-                                                Binding="{Binding BatchDisplayText}"
-                                                Width="130"/>
-
-                            <DataGridTextColumn Header="Expiry"
-                                                Binding="{Binding ExpiryDisplayText}"
-                                                Width="100"
-                                                ElementStyle="{StaticResource CenterText}"/>
-
-                            <DataGridTextColumn Header="Available"
-                                                Binding="{Binding AvailableQty, StringFormat={}{0:0.###}}"
-                                                Width="95"
-                                                ElementStyle="{StaticResource CenterText}"/>
-
-                            <DataGridTextColumn Header="Cost"
-                                                Binding="{Binding CostPrice, StringFormat={}{0:N2}}"
-                                                Width="85"
-                                                ElementStyle="{StaticResource RightText}"/>
-
-                            <DataGridTextColumn Header="Retail"
-                                                Binding="{Binding RetailPrice, StringFormat={}{0:N2}}"
-                                                Width="85"
-                                                ElementStyle="{StaticResource RightText}"/>
-
-                            <DataGridTextColumn Header="Wholesale"
-                                                Binding="{Binding WholesalePrice, StringFormat={}{0:N2}}"
-                                                Width="90"
-                                                ElementStyle="{StaticResource RightText}"/>
-
-                            <DataGridTextColumn Header="Received"
-                                                Binding="{Binding ReceivedDate, StringFormat={}{0:yyyy-MM-dd}}"
-                                                Width="105"
-                                                ElementStyle="{StaticResource CenterText}"/>
-
-                            <DataGridTextColumn Header="Warning"
-                                                Binding="{Binding WarningText}"
-                                                Width="*"
-                                                ElementStyle="{StaticResource BoldText}"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
+                </Border>
+            </Grid>
 
             <!-- FOOTER -->
-            <Border Grid.Row="5"
+            <Border Grid.Row="3"
                     Background="#D4D0C8"
                     BorderBrush="#828790"
                     BorderThickness="0,1,0,0"

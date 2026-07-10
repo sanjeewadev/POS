@@ -100,6 +100,9 @@ namespace POS.BackOffice.UI.ViewModels
         private void NavigateToUnitOfMeasure() => CurrentPage = _serviceProvider.GetRequiredService<UnitOfMeasureViewModel>();
 
         [RelayCommand]
+        private void NavigateToTaxRate() => CurrentPage = _serviceProvider.GetRequiredService<TaxRateViewModel>();
+
+        [RelayCommand]
         private void NavigateToSupplier() => CurrentPage = _serviceProvider.GetRequiredService<SupplierViewModel>();
 
         [RelayCommand]

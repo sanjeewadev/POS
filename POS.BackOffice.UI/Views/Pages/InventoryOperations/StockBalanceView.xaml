@@ -354,7 +354,7 @@
                                             CellStyle="{StaticResource FrozenCell}">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding ItemCode}"
+                                <TextBox Text="{Binding ItemCode, Mode=OneWay}"
                                          Style="{StaticResource CopyableGridTextBox}"
                                          Foreground="#666"/>
                             </DataTemplate>
@@ -365,7 +365,7 @@
                                             Width="135">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding SkuCode}"
+                                <TextBox Text="{Binding SkuCode, Mode=OneWay}"
                                          Style="{StaticResource CopyableGridTextBox}"
                                          Foreground="#444"/>
                             </DataTemplate>
@@ -376,7 +376,7 @@
                                             Width="130">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding Barcode}"
+                                <TextBox Text="{Binding Barcode, Mode=OneWay}"
                                          Style="{StaticResource CopyableGridTextBox}"
                                          Foreground="#444"/>
                             </DataTemplate>
@@ -557,7 +557,7 @@
                                                                 Width="135">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <TextBox Text="{Binding BatchDisplayText}"
+                                                    <TextBox Text="{Binding BatchDisplayText, Mode=OneWay}"
                                                              Style="{StaticResource CopyableGridTextBox}"
                                                              Foreground="#003366"
                                                              FontWeight="Bold"/>
@@ -569,7 +569,7 @@
                                                                 Width="145">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <TextBox Text="{Binding BarcodeDisplayText}"
+                                                    <TextBox Text="{Binding BarcodeDisplayText, Mode=OneWay}"
                                                              Style="{StaticResource CopyableGridTextBox}"
                                                              Foreground="#111827"
                                                              FontWeight="SemiBold"/>

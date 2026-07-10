@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -17,7 +17,6 @@ namespace POS.Core.Models
 
         public ItemBatch ItemBatch { get; set; } = null!;
 
-        // Saved snapshot for easier reporting.
         [Required]
         public int ItemVariantId { get; set; }
 
@@ -37,10 +36,31 @@ namespace POS.Core.Models
         public string Description { get; set; } = string.Empty;
 
         [NotMapped]
+        public bool HasBatchTracking { get; set; }
+
+        [NotMapped]
+        public bool HasExpiryTracking { get; set; }
+
+        [NotMapped]
+        public bool IsGeneralStockBucket { get; set; }
+
+        [NotMapped]
+        public string TrackingText => !HasBatchTracking ? "Average Cost" : HasExpiryTracking ? "Batch + Expiry" : "Batch";
+
+        [NotMapped]
         public string BatchNo { get; set; } = string.Empty;
 
         [NotMapped]
+        public string InternalBatchBarcode { get; set; } = string.Empty;
+
+        [NotMapped]
         public DateTime? ExpiryDate { get; set; }
+
+        [NotMapped]
+        public string BatchDisplayText => IsGeneralStockBucket ? "GENERAL" : BatchNo;
+
+        [NotMapped]
+        public string BatchBarcodeDisplayText => IsGeneralStockBucket ? "-" : InternalBatchBarcode;
 
         // =========================================================
         // QUANTITY SNAPSHOT
@@ -52,9 +72,6 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,3)")]
         public decimal ActualQty { get; set; } = 0m;
 
-        // ActualQty - SystemQty.
-        // Positive = stock increase.
-        // Negative = stock decrease.
         [Column(TypeName = "decimal(18,3)")]
         public decimal VarianceQty { get; set; } = 0m;
 
@@ -62,8 +79,6 @@ namespace POS.Core.Models
         // REASON / ACCOUNTING
         // =========================================================
 
-        // Damage / Broken, Expired / Spoiled, Theft / Missing,
-        // Found Stock, Data Entry Error, Opening Balance, Audit Correction, etc.
         [MaxLength(50)]
         public string ReasonCode { get; set; } = string.Empty;
 
@@ -80,7 +95,6 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal CostImpact { get; set; } = 0m;
 
-        // Open, Posted, Cancelled.
         [MaxLength(30)]
         public string LineStatus { get; set; } = "Open";
 

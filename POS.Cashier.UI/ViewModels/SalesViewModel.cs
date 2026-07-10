@@ -1183,6 +1183,15 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
+            // Exact batch requests must win before variant requests.
+            // Product Seek batch row sends both ItemVariantId and ItemBatchId.
+            // If we process ItemVariantId first, batch-tracked items are blocked as normal barcode/SKU flow.
+            if (request.ItemBatchId > 0)
+            {
+                await AddBatchToCartAsync(request.ItemBatchId, request.Quantity);
+                return;
+            }
+
             if (request.ItemVariantId > 0)
             {
                 await AddVariantToCartAsync(request.ItemVariantId, request.Quantity);
