@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace POS.Core.Models.Backup
 {
@@ -8,9 +8,11 @@ namespace POS.Core.Models.Backup
 
         public string Message { get; set; } = string.Empty;
 
-        public string BackupFilePath { get; set; } = string.Empty;
+        public string BackupFilePath { get; set; } =
+            string.Empty;
 
-        public string BackupFileName { get; set; } = string.Empty;
+        public string BackupFileName { get; set; } =
+            string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
@@ -18,11 +20,19 @@ namespace POS.Core.Models.Backup
 
         public string Checksum { get; set; } = string.Empty;
 
-        public string DisplayFileSize => FormatFileSize(FileSizeBytes);
+        public string SafetyCopyPath { get; set; } =
+            string.Empty;
 
-        public string CreatedAtText => CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+        public BackupMetadata? Metadata { get; set; }
 
-        public string StatusText => Success ? "Success" : "Failed";
+        public string DisplayFileSize =>
+            FormatFileSize(FileSizeBytes);
+
+        public string CreatedAtText =>
+            CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+
+        public string StatusText =>
+            Success ? "Success" : "Failed";
 
         private static string FormatFileSize(long bytes)
         {
@@ -36,18 +46,20 @@ namespace POS.Core.Models.Backup
                 "B",
                 "KB",
                 "MB",
-                "GB"
+                "GB",
+                "TB"
             };
 
-            int unitIndex = 0;
+            int index = 0;
 
-            while (size >= 1024 && unitIndex < units.Length - 1)
+            while (size >= 1024 &&
+                   index < units.Length - 1)
             {
                 size /= 1024;
-                unitIndex++;
+                index++;
             }
 
-            return $"{size:N2} {units[unitIndex]}";
+            return $"{size:N2} {units[index]}";
         }
     }
 }

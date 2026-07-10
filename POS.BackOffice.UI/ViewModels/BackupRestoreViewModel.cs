@@ -1,68 +1,116 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
+using POS.Core.Data;
 using POS.Core.Models.Backup;
 using POS.Core.Repositories;
+using POS.Core.Services;
 using POS.Core.Services.Backup;
 using POS.Core.Services.Licensing;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public partial class BackupRestoreViewModel : ObservableObject
+    public partial class BackupRestoreViewModel :
+        ObservableObject
     {
         private readonly BackupService _backupService;
         private readonly BackupRepository _backupRepository;
-        private readonly TerminalSettingsRepository _terminalSettingsRepository;
-        private readonly MachineFingerprintService _machineFingerprintService;
+        private readonly TerminalSettingsRepository
+            _terminalSettingsRepository;
+        private readonly MachineFingerprintService
+            _machineFingerprintService;
+        private readonly AuthService _authService;
 
         public BackupRestoreViewModel(
             BackupService backupService,
             BackupRepository backupRepository,
-            TerminalSettingsRepository terminalSettingsRepository,
-            MachineFingerprintService machineFingerprintService)
+            TerminalSettingsRepository
+                terminalSettingsRepository,
+            MachineFingerprintService
+                machineFingerprintService,
+            AuthService authService)
         {
             _backupService = backupService;
             _backupRepository = backupRepository;
-            _terminalSettingsRepository = terminalSettingsRepository;
-            _machineFingerprintService = machineFingerprintService;
+            _terminalSettingsRepository =
+                terminalSettingsRepository;
+            _machineFingerprintService =
+                machineFingerprintService;
+            _authService = authService;
 
-            RecentHistory = new ObservableCollection<BackupHistory>();
+            RecentHistory =
+                new ObservableCollection<BackupHistory>();
 
-            BackupFolder = _backupService.GetDefaultBackupFolder();
+            BackupFolder =
+                _backupService.GetDefaultBackupFolder();
 
-            _ = LoadAsync();
+            CurrentDatabasePath =
+                DatabasePathProvider.DatabaseFilePath;
+
+            IsAdministrator =
+                _authService.IsAdmin;
         }
 
-        public ObservableCollection<BackupHistory> RecentHistory { get; }
+        public ObservableCollection<BackupHistory>
+            RecentHistory { get; }
 
         [ObservableProperty]
         private BackupHistory? _selectedHistory;
 
         [ObservableProperty]
+        private bool _isAdministrator;
+
+        [ObservableProperty]
         private string _backupFolder = string.Empty;
 
         [ObservableProperty]
-        private string _lastBackupText = "No backup created yet.";
+        private string _currentDatabasePath = string.Empty;
 
         [ObservableProperty]
-        private string _lastRestoreText = "No restore recorded yet.";
+        private string _currentStoreText = "-";
+
+        [ObservableProperty]
+        private string _currentDatabaseSizeText = "-";
+
+        [ObservableProperty]
+        private string _currentMigrationText = "-";
+
+        [ObservableProperty]
+        private string _lastBackupText =
+            "No successful manual backup recorded.";
+
+        [ObservableProperty]
+        private string _lastRestoreText =
+            "No successful restore recorded.";
 
         [ObservableProperty]
         private string _selectedBackupFile = string.Empty;
 
         [ObservableProperty]
-        private string _verifyResultText = "No backup file verified yet.";
+        private string _selectedBackupStore = "-";
 
         [ObservableProperty]
-        private string _lastCreatedBackupFile = string.Empty;
+        private string _selectedBackupCreatedAt = "-";
 
         [ObservableProperty]
-        private string _lastCreatedBackupChecksum = string.Empty;
+        private string _selectedBackupVersion = "-";
+
+        [ObservableProperty]
+        private string _selectedBackupMigration = "-";
+
+        [ObservableProperty]
+        private string _selectedBackupSize = "-";
+
+        [ObservableProperty]
+        private string _verifyResultText =
+            "No backup file verified.";
 
         [ObservableProperty]
         private bool _isBusy;
@@ -71,11 +119,7 @@ namespace POS.BackOffice.UI.ViewModels
         private string _statusMessage = "Ready.";
 
         [ObservableProperty]
-        private string _statusColor = "#64748B";
-
-        // =========================================================
-        // COMMANDS
-        // =========================================================
+        private string _statusColor = "#666666";
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -86,15 +130,34 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 IsBusy = true;
-                SetStatus("Loading backup information...", "#3B82F6");
+                IsAdministrator =
+                    _authService.IsAdmin;
+
+                SetStatus(
+                    "Loading manual backup information...",
+                    "#2B5B84");
 
                 await LoadDataCoreAsync();
 
-                SetStatus("Backup information loaded.", "#10B981");
+                if (!IsAdministrator)
+                {
+                    SetStatus(
+                        "Only an Administrator can create or restore backups.",
+                        "#B91C1C");
+                }
+                else
+                {
+                    SetStatus(
+                        "Manual backup and restore are ready.",
+                        "#008000");
+                }
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to load backup information: {ex.Message}", "#EF4444");
+                SetStatus(
+                    $"Failed to load backup information: " +
+                    $"{ex.Message}",
+                    "#B91C1C");
             }
             finally
             {
@@ -111,41 +174,118 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task CreateBackupAsync()
         {
-            if (IsBusy)
+            if (IsBusy ||
+                !EnsureAdministrator())
+            {
+                return;
+            }
+
+            string userName = GetCurrentUserName();
+
+            BackupMetadata currentInfo;
+
+            try
+            {
+                currentInfo =
+                    await _backupService
+                        .GetCurrentDatabaseInfoAsync();
+            }
+            catch (Exception ex)
+            {
+                SetStatus(
+                    $"Current database could not be read: " +
+                    $"{ex.Message}",
+                    "#B91C1C");
+                return;
+            }
+
+            Directory.CreateDirectory(
+                _backupService.GetDefaultBackupFolder());
+
+            SaveFileDialog dialog =
+                new()
+                {
+                    Title = "Save Manual POS Backup",
+                    InitialDirectory =
+                        _backupService
+                            .GetDefaultBackupFolder(),
+                    FileName =
+                        _backupService
+                            .GetSuggestedBackupFileName(
+                                currentInfo.StoreDisplayName),
+                    Filter =
+                        "POS Backup Files (*.posbackup)|*.posbackup",
+                    DefaultExt =
+                        BackupService.BackupExtension,
+                    AddExtension = true,
+                    OverwritePrompt = true
+                };
+
+            if (dialog.ShowDialog() != true)
                 return;
 
             try
             {
                 IsBusy = true;
-                SetStatus("Creating backup. Please wait...", "#3B82F6");
+                SetStatus(
+                    "Creating and verifying manual backup...",
+                    "#2B5B84");
 
-                BackupResult result = await _backupService.CreateBackupAsync("BackOffice");
+                BackupResult result =
+                    await _backupService
+                        .CreateBackupAsync(
+                            dialog.FileName,
+                            userName);
 
                 await SaveHistorySafeAsync(
                     BackupActionTypes.BackupCreated,
                     result,
-                    "BackOffice");
+                    userName);
 
                 if (result.Success)
                 {
-                    LastCreatedBackupFile = result.BackupFilePath;
-                    LastCreatedBackupChecksum = result.Checksum;
-                    SelectedBackupFile = result.BackupFilePath;
+                    SelectedBackupFile =
+                        result.BackupFilePath;
+
+                    ApplyVerifiedMetadata(
+                        result.Metadata);
+
+                    VerifyResultText =
+                        "Valid POS backup. Integrity and checksum passed.";
 
                     SetStatus(
-                        $"Backup created successfully: {result.BackupFileName}",
-                        "#10B981");
+                        $"Backup created successfully: " +
+                        $"{result.BackupFileName}",
+                        "#008000");
+
+                    MessageBox.Show(
+                        "Manual backup created and verified successfully.\n\n" +
+                        result.BackupFilePath +
+                        "\n\nKeep this file in a secure external location.",
+                        "Backup Complete",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
                 else
                 {
-                    SetStatus(result.Message, "#EF4444");
+                    SetStatus(
+                        result.Message,
+                        "#B91C1C");
+
+                    MessageBox.Show(
+                        result.Message,
+                        "Backup Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                 }
 
-                await LoadDataCoreAsync();
+                await LoadDataCoreSafeAsync();
             }
             catch (Exception ex)
             {
-                SetStatus($"Create backup failed: {ex.Message}", "#EF4444");
+                SetStatus(
+                    $"Create backup failed: {ex.Message}",
+                    "#B91C1C");
             }
             finally
             {
@@ -154,78 +294,18 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task RestoreBackupAsync()
+        private async Task SelectBackupFileAsync()
         {
-            if (IsBusy)
+            string filePath =
+                SelectBackupFile();
+
+            if (string.IsNullOrWhiteSpace(filePath))
                 return;
 
-            string filePath = SelectedBackupFile;
+            SelectedBackupFile = filePath;
 
-            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
-            {
-                filePath = SelectBackupFile();
-
-                if (string.IsNullOrWhiteSpace(filePath))
-                    return;
-
-                SelectedBackupFile = filePath;
-            }
-
-            MessageBoxResult confirm = MessageBox.Show(
-                "Restoring a backup will replace the current database.\n\n" +
-                "Make sure all POS windows are closed and no cashier is using the system.\n\n" +
-                "Continue restore?",
-                "Confirm Restore",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (confirm != MessageBoxResult.Yes)
-                return;
-
-            try
-            {
-                IsBusy = true;
-                SetStatus("Restoring backup. Please wait...", "#F59E0B");
-
-                BackupResult result = await _backupService.RestoreBackupAsync(
-                    filePath,
-                    "BackOffice");
-
-                await SaveHistorySafeAsync(
-                    BackupActionTypes.BackupRestored,
-                    result,
-                    "BackOffice");
-
-                if (result.Success)
-                {
-                    LastRestoreText =
-                        $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {result.BackupFileName}";
-
-                    SetStatus(
-                        "Backup restored successfully. Restart the application before continuing work.",
-                        "#10B981");
-
-                    MessageBox.Show(
-                        "Backup restored successfully.\n\nPlease close and restart the application before continuing work.",
-                        "Restore Completed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                }
-                else
-                {
-                    SetStatus(result.Message, "#EF4444");
-                }
-
-                await LoadDataCoreSafeAsync();
-            }
-            catch (Exception ex)
-            {
-                SetStatus($"Restore failed: {ex.Message}", "#EF4444");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
+            await VerifySelectedBackupCoreAsync(
+                recordHistory: false);
         }
 
         [RelayCommand]
@@ -234,65 +314,141 @@ namespace POS.BackOffice.UI.ViewModels
             if (IsBusy)
                 return;
 
-            string filePath = SelectedBackupFile;
+            if (!EnsureSelectedBackupFile())
+                return;
 
-            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            await VerifySelectedBackupCoreAsync(
+                recordHistory: true);
+        }
+
+        [RelayCommand]
+        private async Task RestoreBackupAsync()
+        {
+            if (IsBusy ||
+                !EnsureAdministrator() ||
+                !EnsureSelectedBackupFile())
             {
-                filePath = SelectBackupFile();
-
-                if (string.IsNullOrWhiteSpace(filePath))
-                    return;
-
-                SelectedBackupFile = filePath;
+                return;
             }
+
+            BackupResult verification =
+                await _backupService
+                    .VerifyBackupAsync(
+                        SelectedBackupFile);
+
+            if (!verification.Success)
+            {
+                ApplyVerificationFailure(
+                    verification.Message);
+
+                MessageBox.Show(
+                    verification.Message,
+                    "Invalid Backup",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                return;
+            }
+
+            ApplyVerifiedMetadata(
+                verification.Metadata);
+
+            if (IsCashierRunning())
+            {
+                const string message =
+                    "Cashier is currently running. " +
+                    "Close Cashier before restoring a database.";
+
+                SetStatus(message, "#B91C1C");
+
+                MessageBox.Show(
+                    message,
+                    "Restore Blocked",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            MessageBoxResult confirmation =
+                MessageBox.Show(
+                    "Restore this verified backup?\n\n" +
+                    "The current database will be replaced. " +
+                    "A restore-safety copy will be created first.\n\n" +
+                    "BackOffice will restart automatically after a successful restore.",
+                    "Confirm Database Restore",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            string userName = GetCurrentUserName();
 
             try
             {
                 IsBusy = true;
-                SetStatus("Verifying backup file...", "#3B82F6");
+                SetStatus(
+                    "Restoring verified backup. Do not close the computer...",
+                    "#C05A00");
 
-                BackupResult result = await _backupService.VerifyBackupAsync(filePath);
-
-                VerifyResultText = result.Message;
+                BackupResult result =
+                    await _backupService
+                        .RestoreBackupAsync(
+                            SelectedBackupFile,
+                            userName);
 
                 await SaveHistorySafeAsync(
-                    BackupActionTypes.BackupVerified,
+                    BackupActionTypes.BackupRestored,
                     result,
-                    "BackOffice");
+                    userName);
 
-                if (result.Success)
+                if (!result.Success)
                 {
-                    SetStatus("Backup file verified successfully.", "#10B981");
-                }
-                else
-                {
-                    SetStatus(result.Message, "#EF4444");
+                    SetStatus(
+                        result.Message,
+                        "#B91C1C");
+
+                    MessageBox.Show(
+                        result.Message,
+                        "Restore Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+
+                    await LoadDataCoreSafeAsync();
+                    return;
                 }
 
-                await LoadDataCoreAsync();
+                SetStatus(
+                    "Restore completed. Restarting BackOffice...",
+                    "#008000");
+
+                MessageBox.Show(
+                    "Backup restored successfully.\n\n" +
+                    "BackOffice will now restart. " +
+                    "Sign in again after it opens.",
+                    "Restore Complete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                RestartApplication();
             }
             catch (Exception ex)
             {
-                VerifyResultText = $"Verification failed: {ex.Message}";
-                SetStatus(VerifyResultText, "#EF4444");
+                SetStatus(
+                    $"Restore failed: {ex.Message}",
+                    "#B91C1C");
+
+                MessageBox.Show(
+                    $"Restore failed: {ex.Message}",
+                    "Restore Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
             finally
             {
                 IsBusy = false;
             }
-        }
-
-        [RelayCommand]
-        private void SelectBackupFileForAction()
-        {
-            string filePath = SelectBackupFile();
-
-            if (string.IsNullOrWhiteSpace(filePath))
-                return;
-
-            SelectedBackupFile = filePath;
-
-            SetStatus("Backup file selected.", "#3B82F6");
         }
 
         [RelayCommand]
@@ -302,34 +458,20 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 _backupService.OpenBackupFolder();
 
-                BackupFolder = _backupService.GetDefaultBackupFolder();
+                BackupFolder =
+                    _backupService
+                        .GetDefaultBackupFolder();
 
-                SetStatus("Backup folder opened.", "#10B981");
+                SetStatus(
+                    "Backup folder opened.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to open backup folder: {ex.Message}", "#EF4444");
-            }
-        }
-
-        [RelayCommand]
-        private void CopyBackupFolder()
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(BackupFolder))
-                {
-                    SetStatus("Backup folder path is empty.", "#EF4444");
-                    return;
-                }
-
-                Clipboard.SetText(BackupFolder);
-
-                SetStatus("Backup folder path copied to clipboard.", "#10B981");
-            }
-            catch (Exception ex)
-            {
-                SetStatus($"Failed to copy backup folder path: {ex.Message}", "#EF4444");
+                SetStatus(
+                    $"Failed to open backup folder: " +
+                    $"{ex.Message}",
+                    "#B91C1C");
             }
         }
 
@@ -337,35 +479,136 @@ namespace POS.BackOffice.UI.ViewModels
         private void ClearSelectedBackupFile()
         {
             SelectedBackupFile = string.Empty;
-            VerifyResultText = "No backup file verified yet.";
+            SelectedBackupStore = "-";
+            SelectedBackupCreatedAt = "-";
+            SelectedBackupVersion = "-";
+            SelectedBackupMigration = "-";
+            SelectedBackupSize = "-";
+            VerifyResultText =
+                "No backup file verified.";
 
-            SetStatus("Selected backup file cleared.", "#64748B");
+            SetStatus(
+                "Backup selection cleared.",
+                "#666666");
         }
 
-        // =========================================================
-        // PRIVATE METHODS
-        // =========================================================
+        private async Task VerifySelectedBackupCoreAsync(
+            bool recordHistory)
+        {
+            if (IsBusy ||
+                !EnsureSelectedBackupFile())
+            {
+                return;
+            }
+
+            string userName = GetCurrentUserName();
+
+            try
+            {
+                IsBusy = true;
+                SetStatus(
+                    "Verifying backup checksum, database integrity, and schema...",
+                    "#2B5B84");
+
+                BackupResult result =
+                    await _backupService
+                        .VerifyBackupAsync(
+                            SelectedBackupFile);
+
+                if (recordHistory)
+                {
+                    await SaveHistorySafeAsync(
+                        BackupActionTypes.BackupVerified,
+                        result,
+                        userName);
+                }
+
+                if (result.Success)
+                {
+                    ApplyVerifiedMetadata(
+                        result.Metadata);
+
+                    VerifyResultText =
+                        "Valid POS backup. Integrity, checksum, and required tables passed.";
+
+                    SetStatus(
+                        "Backup file verified successfully.",
+                        "#008000");
+                }
+                else
+                {
+                    ApplyVerificationFailure(
+                        result.Message);
+                }
+
+                await LoadHistorySafeAsync();
+            }
+            catch (Exception ex)
+            {
+                ApplyVerificationFailure(
+                    $"Verification failed: {ex.Message}");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
 
         private async Task LoadDataCoreAsync()
         {
-            BackupFolder = _backupService.GetDefaultBackupFolder();
+            BackupFolder =
+                _backupService
+                    .GetDefaultBackupFolder();
 
-            BackupHistory? latestBackup = await _backupRepository.GetLatestBackupAsync();
-            BackupHistory? latestRestore = await _backupRepository.GetLatestRestoreAsync();
+            CurrentDatabasePath =
+                DatabasePathProvider.DatabaseFilePath;
 
-            LastBackupText = latestBackup == null
-                ? "No backup created yet."
-                : $"{latestBackup.CreatedAtText} - {latestBackup.BackupFileNameDisplay}";
+            BackupMetadata currentInfo =
+                await _backupService
+                    .GetCurrentDatabaseInfoAsync();
 
-            LastRestoreText = latestRestore == null
-                ? "No restore recorded yet."
-                : $"{latestRestore.CreatedAtText} - {latestRestore.BackupFileNameDisplay}";
+            CurrentStoreText =
+                $"{currentInfo.StoreDisplayName} " +
+                $"({DisplayOrDash(currentInfo.StoreId)})";
 
-            var history = await _backupRepository.GetRecentHistoryAsync(50);
+            CurrentDatabaseSizeText =
+                currentInfo.DisplayDatabaseSize;
+
+            CurrentMigrationText =
+                currentInfo.MigrationDisplay;
+
+            BackupHistory? latestBackup =
+                await _backupRepository
+                    .GetLatestBackupAsync();
+
+            BackupHistory? latestRestore =
+                await _backupRepository
+                    .GetLatestRestoreAsync();
+
+            LastBackupText =
+                latestBackup == null
+                    ? "No successful manual backup recorded."
+                    : $"{latestBackup.CreatedAtText} - " +
+                      $"{latestBackup.BackupFileNameDisplay}";
+
+            LastRestoreText =
+                latestRestore == null
+                    ? "No successful restore recorded."
+                    : $"{latestRestore.CreatedAtText} - " +
+                      $"{latestRestore.BackupFileNameDisplay}";
+
+            await LoadHistoryAsync();
+        }
+
+        private async Task LoadHistoryAsync()
+        {
+            var history =
+                await _backupRepository
+                    .GetRecentHistoryAsync(30);
 
             RecentHistory.Clear();
 
-            foreach (var row in history)
+            foreach (BackupHistory row in history)
                 RecentHistory.Add(row);
         }
 
@@ -377,8 +620,19 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch
             {
-                // After restore, the user should restart the app.
-                // Do not hide the successful restore message because of a history reload issue.
+                // Preserve the operation result on screen.
+            }
+        }
+
+        private async Task LoadHistorySafeAsync()
+        {
+            try
+            {
+                await LoadHistoryAsync();
+            }
+            catch
+            {
+                // Verification result is more important.
             }
         }
 
@@ -389,54 +643,201 @@ namespace POS.BackOffice.UI.ViewModels
         {
             try
             {
-                var terminalSettings = await _terminalSettingsRepository
-                    .GetOrCreateForCurrentMachineAsync("01");
+                var terminalSettings =
+                    await _terminalSettingsRepository
+                        .GetOrCreateForCurrentMachineAsync("01");
 
-                string machineName = _machineFingerprintService.GetMachineName();
-                string terminalNo = terminalSettings.TerminalNo;
+                BackupHistory history =
+                    BackupRepository
+                        .CreateHistoryFromResult(
+                            actionType,
+                            result,
+                            createdBy,
+                            _machineFingerprintService
+                                .GetMachineName(),
+                            terminalSettings.TerminalNo);
 
-                BackupHistory history = BackupRepository.CreateHistoryFromResult(
-                    actionType,
-                    result,
-                    createdBy,
-                    machineName,
-                    terminalNo);
-
-                await _backupRepository.AddHistoryAsync(history);
+                await _backupRepository
+                    .AddHistoryAsync(history);
             }
             catch
             {
-                // Backup/restore/verify operation result should not fail only because history logging failed.
+                // The main operation must not fail only
+                // because history writing failed.
             }
+        }
+
+        private void ApplyVerifiedMetadata(
+            BackupMetadata? metadata)
+        {
+            if (metadata == null)
+            {
+                SelectedBackupStore = "-";
+                SelectedBackupCreatedAt = "-";
+                SelectedBackupVersion = "-";
+                SelectedBackupMigration = "-";
+                SelectedBackupSize = "-";
+                return;
+            }
+
+            SelectedBackupStore =
+                $"{metadata.StoreDisplayName} " +
+                $"({DisplayOrDash(metadata.StoreId)})";
+
+            SelectedBackupCreatedAt =
+                metadata.CreatedAtText;
+
+            SelectedBackupVersion =
+                DisplayOrDash(metadata.AppVersion);
+
+            SelectedBackupMigration =
+                metadata.MigrationDisplay;
+
+            SelectedBackupSize =
+                metadata.DisplayDatabaseSize;
+        }
+
+        private void ApplyVerificationFailure(
+            string message)
+        {
+            SelectedBackupStore = "-";
+            SelectedBackupCreatedAt = "-";
+            SelectedBackupVersion = "-";
+            SelectedBackupMigration = "-";
+            SelectedBackupSize = "-";
+            VerifyResultText = message;
+
+            SetStatus(message, "#B91C1C");
+        }
+
+        private bool EnsureAdministrator()
+        {
+            if (_authService.IsAdmin)
+                return true;
+
+            const string message =
+                "Only an Administrator can create or restore backups.";
+
+            SetStatus(message, "#B91C1C");
+
+            MessageBox.Show(
+                message,
+                "Administrator Required",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return false;
+        }
+
+        private bool EnsureSelectedBackupFile()
+        {
+            if (!string.IsNullOrWhiteSpace(
+                    SelectedBackupFile) &&
+                File.Exists(SelectedBackupFile))
+            {
+                return true;
+            }
+
+            string selectedFile =
+                SelectBackupFile();
+
+            if (string.IsNullOrWhiteSpace(selectedFile))
+                return false;
+
+            SelectedBackupFile = selectedFile;
+            return true;
+        }
+
+        private string GetCurrentUserName()
+        {
+            return string.IsNullOrWhiteSpace(
+                _authService.CurrentUser?.Username)
+                ? "Administrator"
+                : _authService.CurrentUser.Username;
         }
 
         private static string SelectBackupFile()
         {
-            var dialog = new OpenFileDialog
-            {
-                Title = "Select Backup File",
-                Filter = "POS Backup Files (*.posbak)|*.posbak|All Files (*.*)|*.*",
-                Multiselect = false,
-                CheckFileExists = true
-            };
+            OpenFileDialog dialog =
+                new()
+                {
+                    Title = "Select POS Backup",
+                    Filter =
+                        "POS Backup Files (*.posbackup;*.posbak)|*.posbackup;*.posbak",
+                    Multiselect = false,
+                    CheckFileExists = true
+                };
 
-            bool? result = dialog.ShowDialog();
-
-            if (result != true)
-                return string.Empty;
-
-            return dialog.FileName;
+            return dialog.ShowDialog() == true
+                ? dialog.FileName
+                : string.Empty;
         }
 
-        private void SetStatus(string message, string color)
+        private static bool IsCashierRunning()
         {
-            StatusMessage = string.IsNullOrWhiteSpace(message)
-                ? "Ready."
-                : message;
+            try
+            {
+                return Process.GetProcessesByName(
+                        "POS.Cashier.UI")
+                    .Any();
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
-            StatusColor = string.IsNullOrWhiteSpace(color)
-                ? "#64748B"
-                : color;
+        private static void RestartApplication()
+        {
+            string? executablePath =
+                Environment.ProcessPath;
+
+            if (string.IsNullOrWhiteSpace(
+                    executablePath) ||
+                !File.Exists(executablePath))
+            {
+                MessageBox.Show(
+                    "BackOffice could not restart automatically. " +
+                    "Close it now and open it again manually.",
+                    "Restart Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                Application.Current.Shutdown();
+                return;
+            }
+
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = executablePath,
+                    UseShellExecute = true
+                });
+
+            Application.Current.Shutdown();
+        }
+
+        private static string DisplayOrDash(
+            string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? "-"
+                : value.Trim();
+        }
+
+        private void SetStatus(
+            string message,
+            string color)
+        {
+            StatusMessage =
+                string.IsNullOrWhiteSpace(message)
+                    ? "Ready."
+                    : message;
+
+            StatusColor =
+                string.IsNullOrWhiteSpace(color)
+                    ? "#666666"
+                    : color;
         }
     }
 }
