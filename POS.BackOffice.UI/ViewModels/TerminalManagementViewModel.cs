@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,107 +7,131 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models.Terminals;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
-    public partial class TerminalManagementViewModel : ObservableObject
+    public partial class TerminalManagementViewModel :
+        ObservableObject
     {
-        private readonly TerminalManagementRepository _repository;
+        private readonly TerminalManagementRepository
+            _repository;
 
-        private int _terminalId;
+        private readonly AuthService
+            _authService;
 
-        public TerminalManagementViewModel(TerminalManagementRepository repository)
+        public TerminalManagementViewModel(
+            TerminalManagementRepository
+                repository,
+            AuthService authService)
         {
             _repository = repository;
+            _authService = authService;
 
-            Terminals = new ObservableCollection<RegisteredTerminalSummary>();
+            Terminals =
+                new ObservableCollection<
+                    RegisteredTerminalSummary>();
 
-            Locations = new ObservableCollection<string>
-            {
-                "Main Store",
-                "Front Counter",
-                "Back Office",
-                "Warehouse"
-            };
-
-            _ = LoadAsync();
+            IsAdministrator =
+                _authService.IsAdmin;
         }
 
-        public ObservableCollection<RegisteredTerminalSummary> Terminals { get; }
-
-        public ObservableCollection<string> Locations { get; }
-
-        [ObservableProperty]
-        private RegisteredTerminalSummary? _selectedTerminal;
-
-        partial void OnSelectedTerminalChanged(RegisteredTerminalSummary? value)
-        {
-            if (value != null)
-                ApplySelectedTerminal(value);
-        }
-
-        // =========================================================
-        // EDIT FIELDS
-        // =========================================================
+        public ObservableCollection<
+            RegisteredTerminalSummary>
+            Terminals { get; }
 
         [ObservableProperty]
-        private string _terminalNo = string.Empty;
+        private RegisteredTerminalSummary?
+            _selectedTerminal;
 
         [ObservableProperty]
-        private string _terminalName = string.Empty;
-
-        [ObservableProperty]
-        private string _machineName = string.Empty;
-
-        [ObservableProperty]
-        private string _machineCode = string.Empty;
-
-        [ObservableProperty]
-        private string _location = "Main Store";
-
-        [ObservableProperty]
-        private bool _isCashierTerminal = true;
-
-        [ObservableProperty]
-        private bool _isBackOfficeAllowed = true;
-
-        [ObservableProperty]
-        private bool _isActive = true;
-
-        [ObservableProperty]
-        private string _licenseId = "-";
-
-        [ObservableProperty]
-        private string _licenseStatusText = "-";
-
-        [ObservableProperty]
-        private string _licenseExpiryDateText = "-";
-
-        [ObservableProperty]
-        private string _lastLoginText = "-";
-
-        [ObservableProperty]
-        private string _lastSaleText = "-";
-
-        [ObservableProperty]
-        private string _remarks = string.Empty;
-
-        // =========================================================
-        // STATUS
-        // =========================================================
+        private bool _isAdministrator;
 
         [ObservableProperty]
         private bool _isBusy;
 
         [ObservableProperty]
+        private string _terminalNo = "-";
+
+        [ObservableProperty]
+        private string _terminalName =
+            string.Empty;
+
+        [ObservableProperty]
+        private string _machineName = "-";
+
+        [ObservableProperty]
+        private string _machineCode = "-";
+
+        [ObservableProperty]
+        private string _currentMachineText = "-";
+
+        [ObservableProperty]
+        private string _terminalStatusText = "-";
+
+        [ObservableProperty]
+        private string _licenseStatusText = "-";
+
+        [ObservableProperty]
+        private string _licenseExpiryText = "-";
+
+        [ObservableProperty]
+        private string _registeredAtText = "-";
+
+        [ObservableProperty]
+        private string _updatedAtText = "-";
+
+        [ObservableProperty]
+        private string _updatedByText = "-";
+
+        [ObservableProperty]
         private string _statusMessage = "Ready.";
 
         [ObservableProperty]
-        private string _statusColor = "#64748B";
+        private string _statusColor = "#666666";
 
-        // =========================================================
-        // COMMANDS
-        // =========================================================
+        public bool HasSelectedTerminal =>
+            SelectedTerminal != null;
+
+        public bool CanManage =>
+            IsAdministrator &&
+            !IsBusy;
+
+        public bool CanManageSelected =>
+            CanManage &&
+            HasSelectedTerminal;
+
+        partial void OnSelectedTerminalChanged(
+            RegisteredTerminalSummary? value)
+        {
+            ApplySelectedTerminal(value);
+
+            OnPropertyChanged(
+                nameof(HasSelectedTerminal));
+
+            OnPropertyChanged(
+                nameof(CanManageSelected));
+        }
+
+        partial void OnIsAdministratorChanged(
+            bool value)
+        {
+            OnPropertyChanged(
+                nameof(CanManage));
+
+            OnPropertyChanged(
+                nameof(CanManageSelected));
+        }
+
+        partial void OnIsBusyChanged(
+            bool value)
+        {
+            OnPropertyChanged(
+                nameof(CanManage));
+
+            OnPropertyChanged(
+                nameof(CanManageSelected));
+        }
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -115,23 +139,72 @@ namespace POS.BackOffice.UI.ViewModels
             if (IsBusy)
                 return;
 
+            int selectedId =
+                SelectedTerminal?.Id ?? 0;
+
             try
             {
                 IsBusy = true;
-                SetStatus("Loading terminals...", "#3B82F6");
 
-                var rows = await _repository.GetAllAsync();
+                IsAdministrator =
+                    _authService.IsAdmin;
+
+                SetStatus(
+                    "Loading registered terminals...",
+                    "#2B5B84");
+
+                var rows =
+                    await _repository
+                        .GetAllAsync();
 
                 Terminals.Clear();
 
-                foreach (var row in rows)
+                foreach (RegisteredTerminalSummary
+                         row in rows)
+                {
                     Terminals.Add(row);
+                }
 
-                SetStatus("Terminal list loaded.", "#10B981");
+                SelectedTerminal =
+                    Terminals.FirstOrDefault(
+                        terminal =>
+                            terminal.Id ==
+                                selectedId)
+                    ?? Terminals.FirstOrDefault(
+                        terminal =>
+                            terminal.IsCurrentMachine)
+                    ?? Terminals.FirstOrDefault();
+
+                if (!IsAdministrator)
+                {
+                    SetStatus(
+                        "Only an Administrator can change terminal records.",
+                        "#B91C1C");
+                }
+                else if (Terminals.Count == 0)
+                {
+                    SetStatus(
+                        "No terminals are registered. Register this machine to begin.",
+                        "#C05A00");
+                }
+                else
+                {
+                    SetStatus(
+                        $"{Terminals.Count} terminal record(s) loaded.",
+                        "#008000");
+                }
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to load terminals: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Terminal Management load",
+                    ex);
+
+                SetStatus(
+                    "Terminal records could not be loaded. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "#B91C1C");
             }
             finally
             {
@@ -146,54 +219,48 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
-        private void NewTerminal()
-        {
-            SelectedTerminal = null;
-            _terminalId = 0;
-
-            TerminalNo = GenerateNextTerminalNo();
-            TerminalName = $"Terminal {TerminalNo}";
-            MachineName = string.Empty;
-            MachineCode = string.Empty;
-            Location = "Main Store";
-            IsCashierTerminal = true;
-            IsBackOfficeAllowed = true;
-            IsActive = true;
-
-            LicenseId = "-";
-            LicenseStatusText = "Missing";
-            LicenseExpiryDateText = "-";
-            LastLoginText = "-";
-            LastSaleText = "-";
-            Remarks = string.Empty;
-
-            SetStatus("Ready to create a new terminal.", "#3B82F6");
-        }
-
-        [RelayCommand]
         private async Task RegisterCurrentMachineAsync()
         {
-            if (IsBusy)
+            if (!EnsureAdministrator() ||
+                IsBusy)
+            {
                 return;
+            }
 
             try
             {
                 IsBusy = true;
-                SetStatus("Registering current machine...", "#3B82F6");
 
-                var savedTerminal = await _repository.RegisterOrUpdateCurrentMachineAsync(
-                    isCashierTerminal: true,
-                    updatedBy: "BackOffice");
+                SetStatus(
+                    "Registering the current machine...",
+                    "#2B5B84");
 
-                await LoadAsync();
+                string userName =
+                    GetCurrentUserName();
 
-                SelectedTerminal = Terminals.FirstOrDefault(t => t.Id == savedTerminal.Id);
+                var saved =
+                    await _repository
+                        .RegisterOrUpdateCurrentMachineAsync(
+                            userName);
 
-                SetStatus("Current machine registered successfully.", "#10B981");
+                await ReloadAndSelectAsync(
+                    saved.Id);
+
+                SetStatus(
+                    "Current machine registered successfully.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Register current machine failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Register current terminal",
+                    ex);
+
+                SetStatus(
+                    $"Current machine registration failed: " +
+                    $"{ex.Message}",
+                    "#B91C1C");
             }
             finally
             {
@@ -202,31 +269,58 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task SaveTerminalAsync()
+        private async Task SaveTerminalNameAsync()
         {
-            if (IsBusy)
+            if (!EnsureSelectedTerminal() ||
+                !EnsureAdministrator() ||
+                IsBusy)
+            {
                 return;
+            }
+
+            string safeName =
+                (TerminalName ??
+                 string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(
+                    safeName))
+            {
+                SetStatus(
+                    "Terminal name is required.",
+                    "#B91C1C");
+                return;
+            }
 
             try
             {
                 IsBusy = true;
-                SetStatus("Saving terminal...", "#3B82F6");
 
-                var terminal = BuildTerminalFromInputs();
+                int terminalId =
+                    SelectedTerminal!.Id;
 
-                var savedTerminal = await _repository.SaveAsync(
-                    terminal,
-                    "BackOffice");
+                await _repository.RenameAsync(
+                    terminalId,
+                    safeName,
+                    GetCurrentUserName());
 
-                await LoadAsync();
+                await ReloadAndSelectAsync(
+                    terminalId);
 
-                SelectedTerminal = Terminals.FirstOrDefault(t => t.Id == savedTerminal.Id);
-
-                SetStatus("Terminal saved successfully.", "#10B981");
+                SetStatus(
+                    "Terminal name saved.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Save failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Rename terminal",
+                    ex);
+
+                SetStatus(
+                    $"Terminal name could not be saved: " +
+                    $"{ex.Message}",
+                    "#B91C1C");
             }
             finally
             {
@@ -237,76 +331,136 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task ActivateTerminalAsync()
         {
-            if (_terminalId <= 0)
+            if (!EnsureSelectedTerminal() ||
+                !EnsureAdministrator())
             {
-                SetStatus("Select a terminal first.", "#EF4444");
                 return;
             }
 
-            await SetActiveStatusAsync(true);
+            await ChangeActiveStatusAsync(
+                true);
         }
 
         [RelayCommand]
-        private async Task DeactivateTerminalAsync()
+        private async Task DisableTerminalAsync()
         {
-            if (_terminalId <= 0)
+            if (!EnsureSelectedTerminal() ||
+                !EnsureAdministrator())
             {
-                SetStatus("Select a terminal first.", "#EF4444");
                 return;
             }
 
-            await SetActiveStatusAsync(false);
+            string warning =
+                SelectedTerminal!.IsCurrentMachine
+                    ? "Disable this terminal?\n\n" +
+                      "This is the current computer. " +
+                      "Cashier will be blocked the next time it starts."
+                    : "Disable this terminal?\n\n" +
+                      "Cashier will be blocked on that terminal " +
+                      "the next time it starts.";
+
+            MessageBoxResult confirmation =
+                MessageBox.Show(
+                    warning,
+                    "Disable Terminal",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+            if (confirmation !=
+                MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            await ChangeActiveStatusAsync(
+                false);
         }
 
         [RelayCommand]
         private void CopyMachineCode()
         {
+            if (!EnsureSelectedTerminal())
+                return;
+
             try
             {
-                if (string.IsNullOrWhiteSpace(MachineCode) || MachineCode == "-")
+                if (string.IsNullOrWhiteSpace(
+                        SelectedTerminal!
+                            .MachineCode) ||
+                    SelectedTerminal
+                        .MachineCode == "-")
                 {
-                    SetStatus("Machine code is empty.", "#EF4444");
+                    SetStatus(
+                        "The selected terminal has no machine code.",
+                        "#B91C1C");
                     return;
                 }
 
-                Clipboard.SetText(MachineCode);
-                SetStatus("Machine code copied to clipboard.", "#10B981");
+                Clipboard.SetText(
+                    SelectedTerminal
+                        .MachineCode);
+
+                SetStatus(
+                    "Machine code copied.",
+                    "#008000");
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to copy machine code: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Copy terminal machine code",
+                    ex);
+
+                SetStatus(
+                    "The machine code could not be copied.",
+                    "#B91C1C");
             }
         }
 
-        // =========================================================
-        // PRIVATE METHODS
-        // =========================================================
-
-        private async Task SetActiveStatusAsync(bool active)
+        private async Task ChangeActiveStatusAsync(
+            bool isActive)
         {
-            if (IsBusy)
+            if (IsBusy ||
+                SelectedTerminal == null)
+            {
                 return;
+            }
 
             try
             {
                 IsBusy = true;
 
-                await _repository.SetActiveStatusAsync(
-                    _terminalId,
-                    active,
-                    "BackOffice");
+                int terminalId =
+                    SelectedTerminal.Id;
 
-                await LoadAsync();
+                await _repository
+                    .SetActiveStatusAsync(
+                        terminalId,
+                        isActive,
+                        GetCurrentUserName());
 
-                SelectedTerminal = Terminals.FirstOrDefault(t => t.Id == _terminalId);
+                await ReloadAndSelectAsync(
+                    terminalId);
 
                 SetStatus(
-                    active ? "Terminal activated." : "Terminal deactivated.",
-                    active ? "#10B981" : "#F59E0B");
+                    isActive
+                        ? "Terminal activated."
+                        : "Terminal disabled.",
+                    isActive
+                        ? "#008000"
+                        : "#C05A00");
             }
             catch (Exception ex)
             {
-                SetStatus($"Status update failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Change terminal status",
+                    ex);
+
+                SetStatus(
+                    $"Terminal status could not be changed: " +
+                    $"{ex.Message}",
+                    "#B91C1C");
             }
             finally
             {
@@ -314,71 +468,135 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private void ApplySelectedTerminal(RegisteredTerminalSummary terminal)
+        private async Task ReloadAndSelectAsync(
+            int terminalId)
         {
-            _terminalId = terminal.Id;
+            var rows =
+                await _repository
+                    .GetAllAsync();
 
-            TerminalNo = terminal.TerminalNo;
-            TerminalName = terminal.TerminalName;
-            MachineName = terminal.MachineName;
-            MachineCode = terminal.MachineCode;
-            Location = terminal.Location;
-            IsCashierTerminal = terminal.IsCashierTerminal;
-            IsBackOfficeAllowed = terminal.IsBackOfficeAllowed;
-            IsActive = terminal.IsActive;
+            Terminals.Clear();
 
-            LicenseId = terminal.LicenseIdDisplay;
-            LicenseStatusText = terminal.LicenseStatusText;
-            LicenseExpiryDateText = terminal.LicenseExpiryDateText;
-            LastLoginText = terminal.LastLoginText;
-            LastSaleText = terminal.LastSaleText;
-            Remarks = string.Empty;
-        }
-
-        private RegisteredTerminal BuildTerminalFromInputs()
-        {
-            return new RegisteredTerminal
+            foreach (RegisteredTerminalSummary
+                     row in rows)
             {
-                Id = _terminalId,
-                TerminalNo = TerminalNo,
-                TerminalName = TerminalName,
-                MachineName = MachineName,
-                MachineCode = MachineCode,
-                Location = Location,
-                IsCashierTerminal = IsCashierTerminal,
-                IsBackOfficeAllowed = IsBackOfficeAllowed,
-                IsActive = IsActive,
-                Remarks = Remarks
-            };
-        }
-
-        private string GenerateNextTerminalNo()
-        {
-            int maxNo = 0;
-
-            foreach (var terminal in Terminals)
-            {
-                if (int.TryParse(terminal.TerminalNo, out int number))
-                    maxNo = Math.Max(maxNo, number);
+                Terminals.Add(row);
             }
 
-            int nextNo = maxNo + 1;
-
-            if (nextNo <= 0)
-                nextNo = 1;
-
-            return nextNo.ToString("00");
+            SelectedTerminal =
+                Terminals.FirstOrDefault(
+                    terminal =>
+                        terminal.Id ==
+                            terminalId)
+                ?? Terminals.FirstOrDefault();
         }
 
-        private void SetStatus(string message, string color)
+        private void ApplySelectedTerminal(
+            RegisteredTerminalSummary?
+                terminal)
         {
-            StatusMessage = string.IsNullOrWhiteSpace(message)
-                ? "Ready."
-                : message;
+            if (terminal == null)
+            {
+                TerminalNo = "-";
+                TerminalName = string.Empty;
+                MachineName = "-";
+                MachineCode = "-";
+                CurrentMachineText = "-";
+                TerminalStatusText = "-";
+                LicenseStatusText = "-";
+                LicenseExpiryText = "-";
+                RegisteredAtText = "-";
+                UpdatedAtText = "-";
+                UpdatedByText = "-";
+                return;
+            }
 
-            StatusColor = string.IsNullOrWhiteSpace(color)
-                ? "#64748B"
-                : color;
+            TerminalNo =
+                terminal.TerminalNo;
+
+            TerminalName =
+                terminal.TerminalName;
+
+            MachineName =
+                terminal.MachineNameDisplay;
+
+            MachineCode =
+                terminal.MachineCodeDisplay;
+
+            CurrentMachineText =
+                terminal.CurrentMachineText;
+
+            TerminalStatusText =
+                terminal.ActiveStatusText;
+
+            LicenseStatusText =
+                terminal.LicenseStatusText;
+
+            LicenseExpiryText =
+                terminal.LicenseExpiryDateText;
+
+            RegisteredAtText =
+                terminal.RegisteredAtText;
+
+            UpdatedAtText =
+                terminal.UpdatedAtText;
+
+            UpdatedByText =
+                string.IsNullOrWhiteSpace(
+                    terminal.UpdatedBy)
+                    ? "-"
+                    : terminal.UpdatedBy;
+        }
+
+        private bool EnsureAdministrator()
+        {
+            if (_authService.IsAdmin)
+                return true;
+
+            SetStatus(
+                "Only an Administrator can change terminal records.",
+                "#B91C1C");
+
+            return false;
+        }
+
+        private bool EnsureSelectedTerminal()
+        {
+            if (SelectedTerminal != null)
+                return true;
+
+            SetStatus(
+                "Select a terminal first.",
+                "#B91C1C");
+
+            return false;
+        }
+
+        private string GetCurrentUserName()
+        {
+            return string.IsNullOrWhiteSpace(
+                _authService.CurrentUser
+                    ?.Username)
+                ? "Administrator"
+                : _authService.CurrentUser
+                    .Username;
+        }
+
+        private void SetStatus(
+            string message,
+            string color)
+        {
+            StatusMessage =
+                string.IsNullOrWhiteSpace(
+                    message)
+                    ? "Ready."
+                    : message;
+
+            StatusColor =
+                string.IsNullOrWhiteSpace(
+                    color)
+                    ? "#666666"
+                    : color;
         }
     }
 }

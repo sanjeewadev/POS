@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
+using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Models.Terminals;
 using POS.Core.Services.Licensing;
@@ -12,170 +13,414 @@ namespace POS.Core.Repositories
 {
     public class TerminalManagementRepository
     {
-        private readonly IDbContextFactory<AppDbContext> _contextFactory;
-        private readonly MachineFingerprintService _machineFingerprintService;
-        private readonly TerminalSettingsRepository _terminalSettingsRepository;
+        private readonly
+            IDbContextFactory<AppDbContext>
+            _contextFactory;
+
+        private readonly MachineFingerprintService
+            _machineFingerprintService;
+
+        private readonly TerminalSettingsRepository
+            _terminalSettingsRepository;
 
         public TerminalManagementRepository(
-            IDbContextFactory<AppDbContext> contextFactory,
-            MachineFingerprintService machineFingerprintService,
-            TerminalSettingsRepository terminalSettingsRepository)
+            IDbContextFactory<AppDbContext>
+                contextFactory,
+            MachineFingerprintService
+                machineFingerprintService,
+            TerminalSettingsRepository
+                terminalSettingsRepository)
         {
             _contextFactory = contextFactory;
-            _machineFingerprintService = machineFingerprintService;
-            _terminalSettingsRepository = terminalSettingsRepository;
+
+            _machineFingerprintService =
+                machineFingerprintService;
+
+            _terminalSettingsRepository =
+                terminalSettingsRepository;
         }
 
-        public async Task<List<RegisteredTerminalSummary>> GetAllAsync()
+        public async Task<
+            List<RegisteredTerminalSummary>>
+            GetAllAsync()
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
-            var terminals = await context.RegisteredTerminals
-                .AsNoTracking()
-                .OrderBy(t => t.TerminalNo)
-                .ThenBy(t => t.TerminalName)
-                .ToListAsync();
+            List<RegisteredTerminal> terminals =
+                await context.RegisteredTerminals
+                    .AsNoTracking()
+                    .OrderBy(
+                        terminal =>
+                            terminal.TerminalNo)
+                    .ThenBy(
+                        terminal =>
+                            terminal.TerminalName)
+                    .ToListAsync();
 
-            var terminalLicenses = await context.InstalledLicenses
-                .AsNoTracking()
-                .Where(l => l.IsActive && l.LicenseType == LicenseType.TerminalLicense)
-                .OrderByDescending(l => l.ExpiresOn)
-                .ThenByDescending(l => l.ImportedAt)
-                .ToListAsync();
+            List<InstalledLicense> licenses =
+                await context.InstalledLicenses
+                    .AsNoTracking()
+                    .Where(
+                        license =>
+                            license.IsActive &&
+                            license.LicenseType ==
+                                LicenseType
+                                    .TerminalLicense)
+                    .OrderByDescending(
+                        license =>
+                            license.ExpiresOn)
+                    .ThenByDescending(
+                        license =>
+                            license.ImportedAt)
+                    .ToListAsync();
+
+            string currentMachineCode =
+                NormalizeMachineCode(
+                    _machineFingerprintService
+                        .GetMachineCode());
 
             return terminals
-                .Select(t => BuildSummary(t, terminalLicenses))
+                .Select(
+                    terminal =>
+                        BuildSummary(
+                            terminal,
+                            licenses,
+                            currentMachineCode))
                 .ToList();
         }
 
-        public async Task<RegisteredTerminal?> GetByTerminalNoAsync(string terminalNo)
+        public async Task<RegisteredTerminal?>
+            GetByTerminalNoAsync(
+                string terminalNo)
         {
-            string safeTerminalNo = NormalizeText(terminalNo);
+            string safeTerminalNo =
+                NormalizeText(terminalNo);
 
-            if (string.IsNullOrWhiteSpace(safeTerminalNo))
-                return null;
-
-            await using var context = await _contextFactory.CreateDbContextAsync();
-
-            return await context.RegisteredTerminals
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.TerminalNo == safeTerminalNo);
-        }
-
-        public async Task<RegisteredTerminal?> GetByMachineCodeAsync(string machineCode)
-        {
-            string safeMachineCode = NormalizeMachineCode(machineCode);
-
-            if (string.IsNullOrWhiteSpace(safeMachineCode))
-                return null;
-
-            await using var context = await _contextFactory.CreateDbContextAsync();
-
-            return await context.RegisteredTerminals
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.MachineCode == safeMachineCode);
-        }
-
-        public async Task<RegisteredTerminal> RegisterOrUpdateCurrentMachineAsync(
-            bool isCashierTerminal,
-            string updatedBy)
-        {
-            string machineCode = _machineFingerprintService.GetMachineCode();
-            string machineName = _machineFingerprintService.GetMachineName();
-
-            var terminalSettings = await _terminalSettingsRepository
-                .GetOrCreateForCurrentMachineAsync("01");
-
-            var terminal = new RegisteredTerminal
+            if (string.IsNullOrWhiteSpace(
+                    safeTerminalNo))
             {
-                TerminalNo = terminalSettings.TerminalNo,
-                TerminalName = terminalSettings.TerminalName,
-                MachineName = machineName,
-                MachineCode = machineCode,
-                Location = terminalSettings.Location,
-                IsCashierTerminal = isCashierTerminal,
-                IsBackOfficeAllowed = true,
-                IsActive = true,
-                Remarks = "Registered from current machine."
-            };
+                return null;
+            }
 
-            return await SaveAsync(terminal, updatedBy);
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
+
+            return await context
+                .RegisteredTerminals
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    terminal =>
+                        terminal.TerminalNo ==
+                            safeTerminalNo);
         }
 
-        public async Task<RegisteredTerminal> SaveAsync(
-            RegisteredTerminal terminal,
-            string updatedBy)
+        public async Task<RegisteredTerminal?>
+            GetByMachineCodeAsync(
+                string machineCode)
         {
-            if (terminal == null)
-                throw new ArgumentNullException(nameof(terminal));
+            string safeMachineCode =
+                NormalizeMachineCode(
+                    machineCode);
 
-            Normalize(terminal);
-            Validate(terminal);
+            if (string.IsNullOrWhiteSpace(
+                    safeMachineCode))
+            {
+                return null;
+            }
 
-            await using var context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
+
+            return await context
+                .RegisteredTerminals
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    terminal =>
+                        terminal.MachineCode ==
+                            safeMachineCode);
+        }
+
+        public async Task<RegisteredTerminal>
+            RegisterOrUpdateCurrentMachineAsync(
+                string updatedBy)
+        {
+            string machineCode =
+                NormalizeMachineCode(
+                    _machineFingerprintService
+                        .GetMachineCode());
+
+            string machineName =
+                NormalizeText(
+                    _machineFingerprintService
+                        .GetMachineName());
+
+            if (string.IsNullOrWhiteSpace(
+                    machineCode))
+            {
+                throw new InvalidOperationException(
+                    "The current machine code is unavailable.");
+            }
+
+            TerminalSettings settings =
+                await _terminalSettingsRepository
+                    .GetOrCreateForCurrentMachineAsync(
+                        "01");
+
+            string terminalNo =
+                NormalizeText(
+                    settings.TerminalNo);
+
+            if (string.IsNullOrWhiteSpace(
+                    terminalNo))
+            {
+                throw new InvalidOperationException(
+                    "The current terminal number is unavailable.");
+            }
+
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
+
+            await using var transaction =
+                await context.Database
+                    .BeginTransactionAsync();
 
             try
             {
+                RegisteredTerminal? entity =
+                    await context.RegisteredTerminals
+                        .FirstOrDefaultAsync(
+                            terminal =>
+                                terminal.MachineCode ==
+                                    machineCode);
+
+                entity ??=
+                    await context.RegisteredTerminals
+                        .FirstOrDefaultAsync(
+                            terminal =>
+                                terminal.TerminalNo ==
+                                    terminalNo);
+
+                int currentId =
+                    entity?.Id ?? 0;
+
+                bool terminalNumberConflict =
+                    await context.RegisteredTerminals
+                        .AnyAsync(
+                            terminal =>
+                                terminal.TerminalNo ==
+                                    terminalNo &&
+                                terminal.Id !=
+                                    currentId);
+
+                if (terminalNumberConflict)
+                {
+                    throw new InvalidOperationException(
+                        $"Terminal number '{terminalNo}' " +
+                        "is already registered to another machine.");
+                }
+
+                bool machineCodeConflict =
+                    await context.RegisteredTerminals
+                        .AnyAsync(
+                            terminal =>
+                                terminal.MachineCode ==
+                                    machineCode &&
+                                terminal.Id !=
+                                    currentId);
+
+                if (machineCodeConflict)
+                {
+                    throw new InvalidOperationException(
+                        "This machine code is already registered " +
+                        "to another terminal.");
+                }
+
                 DateTime now = DateTime.Now;
-                string safeUpdatedBy = NormalizeText(updatedBy);
-
-                RegisteredTerminal? entity = null;
-
-                if (terminal.Id > 0)
-                {
-                    entity = await context.RegisteredTerminals
-                        .FirstOrDefaultAsync(t => t.Id == terminal.Id);
-                }
 
                 if (entity == null)
                 {
-                    entity = await context.RegisteredTerminals
-                        .FirstOrDefaultAsync(t => t.TerminalNo == terminal.TerminalNo);
+                    entity =
+                        new RegisteredTerminal
+                        {
+                            CreatedAt = now
+                        };
+
+                    await context.RegisteredTerminals
+                        .AddAsync(entity);
                 }
 
-                int currentId = entity?.Id ?? 0;
+                entity.TerminalNo =
+                    terminalNo;
 
-                bool duplicateTerminalNoExists = await context.RegisteredTerminals.AnyAsync(t =>
-                    t.TerminalNo == terminal.TerminalNo &&
-                    t.Id != currentId);
+                entity.TerminalName =
+                    NormalizeTerminalName(
+                        settings.TerminalName,
+                        terminalNo);
 
-                if (duplicateTerminalNoExists)
-                    throw new InvalidOperationException($"Terminal number '{terminal.TerminalNo}' is already registered.");
+                entity.MachineName =
+                    machineName;
 
-                if (!string.IsNullOrWhiteSpace(terminal.MachineCode))
+                entity.MachineCode =
+                    machineCode;
+
+                entity.Location =
+                    NormalizeText(
+                        settings.Location);
+
+                if (string.IsNullOrWhiteSpace(
+                        entity.Location))
                 {
-                    bool duplicateMachineCodeExists = await context.RegisteredTerminals.AnyAsync(t =>
-                        t.MachineCode == terminal.MachineCode &&
-                        t.Id != currentId);
-
-                    if (duplicateMachineCodeExists)
-                        throw new InvalidOperationException("This machine code is already registered to another terminal.");
+                    entity.Location =
+                        "Main Store";
                 }
 
-                if (entity == null)
-                {
-                    entity = new RegisteredTerminal
-                    {
-                        CreatedAt = now
-                    };
-
-                    await context.RegisteredTerminals.AddAsync(entity);
-                }
-
-                CopyToEntity(terminal, entity);
+                entity.IsCashierTerminal = true;
+                entity.IsBackOfficeAllowed = true;
+                entity.IsActive =
+                    settings.IsActive;
 
                 entity.UpdatedAt = now;
-                entity.UpdatedBy = safeUpdatedBy;
 
-                await ApplyLicenseSnapshotAsync(context, entity, now);
+                entity.UpdatedBy =
+                    NormalizeText(updatedBy);
+
+                entity.Remarks =
+                    AppendRemark(
+                        entity.Remarks,
+                        "Current machine registration refreshed.");
+
+                TerminalSettings? settingsEntity =
+                    await context.TerminalSettings
+                        .FirstOrDefaultAsync(
+                            terminal =>
+                                terminal.Id ==
+                                    settings.Id);
+
+                if (settingsEntity != null)
+                {
+                    settingsEntity.MachineName =
+                        machineName;
+
+                    settingsEntity.TerminalName =
+                        entity.TerminalName;
+
+                    settingsEntity.UpdatedAt = now;
+
+                    settingsEntity.UpdatedBy =
+                        NormalizeText(updatedBy);
+                }
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return await context.RegisteredTerminals
+                return await context
+                    .RegisteredTerminals
                     .AsNoTracking()
-                    .FirstAsync(t => t.Id == entity.Id);
+                    .FirstAsync(
+                        terminal =>
+                            terminal.Id ==
+                                entity.Id);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        // Compatibility overload retained for older callers.
+        public Task<RegisteredTerminal>
+            RegisterOrUpdateCurrentMachineAsync(
+                bool isCashierTerminal,
+                string updatedBy)
+        {
+            return RegisterOrUpdateCurrentMachineAsync(
+                updatedBy);
+        }
+
+        public async Task RenameAsync(
+            int terminalId,
+            string terminalName,
+            string updatedBy)
+        {
+            string safeTerminalName =
+                NormalizeText(
+                    terminalName);
+
+            if (string.IsNullOrWhiteSpace(
+                    safeTerminalName))
+            {
+                throw new InvalidOperationException(
+                    "Terminal name is required.");
+            }
+
+            if (safeTerminalName.Length > 120)
+            {
+                throw new InvalidOperationException(
+                    "Terminal name cannot exceed 120 characters.");
+            }
+
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
+
+            await using var transaction =
+                await context.Database
+                    .BeginTransactionAsync();
+
+            try
+            {
+                RegisteredTerminal? terminal =
+                    await context.RegisteredTerminals
+                        .FirstOrDefaultAsync(
+                            item =>
+                                item.Id ==
+                                    terminalId);
+
+                if (terminal == null)
+                {
+                    throw new InvalidOperationException(
+                        "The selected terminal no longer exists.");
+                }
+
+                terminal.TerminalName =
+                    safeTerminalName;
+
+                terminal.UpdatedAt =
+                    DateTime.Now;
+
+                terminal.UpdatedBy =
+                    NormalizeText(updatedBy);
+
+                List<TerminalSettings>
+                    linkedSettings =
+                        await context.TerminalSettings
+                            .Where(
+                                settings =>
+                                    settings.TerminalNo ==
+                                        terminal.TerminalNo)
+                            .ToListAsync();
+
+                foreach (TerminalSettings settings
+                         in linkedSettings)
+                {
+                    settings.TerminalName =
+                        safeTerminalName;
+
+                    settings.UpdatedAt =
+                        terminal.UpdatedAt;
+
+                    settings.UpdatedBy =
+                        terminal.UpdatedBy;
+                }
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
             catch
             {
@@ -189,22 +434,75 @@ namespace POS.Core.Repositories
             bool isActive,
             string updatedBy)
         {
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
-            var terminal = await context.RegisteredTerminals
-                .FirstOrDefaultAsync(t => t.Id == terminalId);
+            await using var transaction =
+                await context.Database
+                    .BeginTransactionAsync();
 
-            if (terminal == null)
-                return;
+            try
+            {
+                RegisteredTerminal? terminal =
+                    await context.RegisteredTerminals
+                        .FirstOrDefaultAsync(
+                            item =>
+                                item.Id ==
+                                    terminalId);
 
-            terminal.IsActive = isActive;
-            terminal.UpdatedAt = DateTime.Now;
-            terminal.UpdatedBy = NormalizeText(updatedBy);
-            terminal.Remarks = AppendRemark(
-                terminal.Remarks,
-                isActive ? "Terminal activated." : "Terminal deactivated.");
+                if (terminal == null)
+                {
+                    throw new InvalidOperationException(
+                        "The selected terminal no longer exists.");
+                }
 
-            await context.SaveChangesAsync();
+                terminal.IsActive =
+                    isActive;
+
+                terminal.UpdatedAt =
+                    DateTime.Now;
+
+                terminal.UpdatedBy =
+                    NormalizeText(updatedBy);
+
+                terminal.Remarks =
+                    AppendRemark(
+                        terminal.Remarks,
+                        isActive
+                            ? "Terminal activated."
+                            : "Terminal disabled.");
+
+                List<TerminalSettings>
+                    linkedSettings =
+                        await context.TerminalSettings
+                            .Where(
+                                settings =>
+                                    settings.TerminalNo ==
+                                        terminal.TerminalNo)
+                            .ToListAsync();
+
+                foreach (TerminalSettings settings
+                         in linkedSettings)
+                {
+                    settings.IsActive =
+                        isActive;
+
+                    settings.UpdatedAt =
+                        terminal.UpdatedAt;
+
+                    settings.UpdatedBy =
+                        terminal.UpdatedBy;
+                }
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task UpdateLastLoginAsync(
@@ -235,21 +533,37 @@ namespace POS.Core.Repositories
             bool updateLogin,
             bool updateSale)
         {
-            string safeTerminalNo = NormalizeText(terminalNo);
-            string safeMachineCode = NormalizeMachineCode(machineCode);
+            string safeTerminalNo =
+                NormalizeText(terminalNo);
 
-            if (string.IsNullOrWhiteSpace(safeTerminalNo) &&
-                string.IsNullOrWhiteSpace(safeMachineCode))
+            string safeMachineCode =
+                NormalizeMachineCode(
+                    machineCode);
+
+            if (string.IsNullOrWhiteSpace(
+                    safeTerminalNo) &&
+                string.IsNullOrWhiteSpace(
+                    safeMachineCode))
             {
                 return;
             }
 
-            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
 
-            var terminal = await context.RegisteredTerminals
-                .FirstOrDefaultAsync(t =>
-                    (!string.IsNullOrWhiteSpace(safeMachineCode) && t.MachineCode == safeMachineCode) ||
-                    (!string.IsNullOrWhiteSpace(safeTerminalNo) && t.TerminalNo == safeTerminalNo));
+            RegisteredTerminal? terminal =
+                await context.RegisteredTerminals
+                    .FirstOrDefaultAsync(
+                        item =>
+                            (!string.IsNullOrWhiteSpace(
+                                safeMachineCode) &&
+                             item.MachineCode ==
+                                safeMachineCode) ||
+                            (!string.IsNullOrWhiteSpace(
+                                safeTerminalNo) &&
+                             item.TerminalNo ==
+                                safeTerminalNo));
 
             if (terminal == null)
                 return;
@@ -267,169 +581,155 @@ namespace POS.Core.Repositories
             await context.SaveChangesAsync();
         }
 
-        private static RegisteredTerminalSummary BuildSummary(
-            RegisteredTerminal terminal,
-            List<InstalledLicense> terminalLicenses)
+        private static RegisteredTerminalSummary
+            BuildSummary(
+                RegisteredTerminal terminal,
+                List<InstalledLicense> licenses,
+                string currentMachineCode)
         {
             InstalledLicense? license = null;
 
             if (terminal.IsCashierTerminal)
             {
-                license = terminalLicenses
-                    .Where(l =>
-                        l.TerminalNo == terminal.TerminalNo &&
-                        (string.IsNullOrWhiteSpace(terminal.MachineCode) ||
-                         l.MachineCode == terminal.MachineCode))
-                    .OrderByDescending(l => l.ExpiresOn)
-                    .ThenByDescending(l => l.ImportedAt)
-                    .FirstOrDefault();
+                license =
+                    licenses
+                        .Where(
+                            item =>
+                                item.TerminalNo ==
+                                    terminal.TerminalNo &&
+                                (string.IsNullOrWhiteSpace(
+                                    terminal.MachineCode) ||
+                                 item.MachineCode ==
+                                    terminal.MachineCode))
+                        .OrderByDescending(
+                            item =>
+                                item.ExpiresOn)
+                        .ThenByDescending(
+                            item =>
+                                item.ImportedAt)
+                        .FirstOrDefault();
             }
 
-            LicenseStatus licenseStatus = terminal.IsCashierTerminal
-                ? LicenseRepository.CalculateCurrentStatus(license)
-                : LicenseStatus.Active;
+            LicenseStatus status =
+                terminal.IsCashierTerminal
+                    ? LicenseRepository
+                        .CalculateCurrentStatus(
+                            license)
+                    : LicenseStatus.Active;
 
             return new RegisteredTerminalSummary
             {
                 Id = terminal.Id,
-                TerminalNo = terminal.TerminalNo,
-                TerminalName = terminal.TerminalName,
-                MachineName = terminal.MachineName,
-                MachineCode = terminal.MachineCode,
-                Location = terminal.Location,
-                IsCashierTerminal = terminal.IsCashierTerminal,
-                IsBackOfficeAllowed = terminal.IsBackOfficeAllowed,
-                IsActive = terminal.IsActive,
-                LicenseId = terminal.IsCashierTerminal
-                    ? license?.LicenseId ?? terminal.LicenseId
-                    : "Not Required",
-                LicenseStatus = licenseStatus,
-                LicenseExpiryDate = terminal.IsCashierTerminal
-                    ? license?.ExpiresOn ?? terminal.LicenseExpiryDate
-                    : null,
-                LastLoginAt = terminal.LastLoginAt,
-                LastSaleAt = terminal.LastSaleAt
+
+                TerminalNo =
+                    terminal.TerminalNo,
+
+                TerminalName =
+                    terminal.TerminalName,
+
+                MachineName =
+                    terminal.MachineName,
+
+                MachineCode =
+                    terminal.MachineCode,
+
+                IsCashierTerminal =
+                    terminal.IsCashierTerminal,
+
+                IsActive =
+                    terminal.IsActive,
+
+                IsCurrentMachine =
+                    !string.IsNullOrWhiteSpace(
+                        currentMachineCode) &&
+                    string.Equals(
+                        NormalizeMachineCode(
+                            terminal.MachineCode),
+                        currentMachineCode,
+                        StringComparison.OrdinalIgnoreCase),
+
+                LicenseId =
+                    terminal.IsCashierTerminal
+                        ? license?.LicenseId ??
+                          terminal.LicenseId
+                        : "Not Required",
+
+                LicenseStatus =
+                    status,
+
+                LicenseExpiryDate =
+                    terminal.IsCashierTerminal
+                        ? license?.ExpiresOn ??
+                          terminal.LicenseExpiryDate
+                        : null,
+
+                CreatedAt =
+                    terminal.CreatedAt,
+
+                UpdatedAt =
+                    terminal.UpdatedAt,
+
+                UpdatedBy =
+                    terminal.UpdatedBy
             };
         }
 
-        private static async Task ApplyLicenseSnapshotAsync(
-            AppDbContext context,
-            RegisteredTerminal terminal,
-            DateTime now)
+        private static string NormalizeTerminalName(
+            string? terminalName,
+            string terminalNo)
         {
-            if (!terminal.IsCashierTerminal)
+            string safeName =
+                NormalizeText(
+                    terminalName);
+
+            return string.IsNullOrWhiteSpace(
+                safeName)
+                ? $"Terminal {terminalNo}"
+                : safeName;
+        }
+
+        private static string AppendRemark(
+            string? existing,
+            string message)
+        {
+            string safeExisting =
+                NormalizeText(existing);
+
+            string safeMessage =
+                NormalizeText(message);
+
+            if (string.IsNullOrWhiteSpace(
+                    safeExisting))
             {
-                terminal.LicenseId = string.Empty;
-                terminal.LicenseExpiryDate = null;
-                terminal.LicenseLastCheckedAt = now;
-                return;
+                return safeMessage;
             }
 
-            if (string.IsNullOrWhiteSpace(terminal.TerminalNo) ||
-                string.IsNullOrWhiteSpace(terminal.MachineCode))
+            if (string.IsNullOrWhiteSpace(
+                    safeMessage))
             {
-                terminal.LicenseLastCheckedAt = now;
-                return;
+                return safeExisting;
             }
 
-            var license = await context.InstalledLicenses
-                .AsNoTracking()
-                .Where(l =>
-                    l.IsActive &&
-                    l.LicenseType == LicenseType.TerminalLicense &&
-                    l.TerminalNo == terminal.TerminalNo &&
-                    l.MachineCode == terminal.MachineCode)
-                .OrderByDescending(l => l.ExpiresOn)
-                .ThenByDescending(l => l.ImportedAt)
-                .FirstOrDefaultAsync();
+            string combined =
+                $"{safeExisting} | {safeMessage}";
 
-            terminal.LicenseId = license?.LicenseId ?? string.Empty;
-            terminal.LicenseExpiryDate = license?.ExpiresOn;
-            terminal.LicenseLastCheckedAt = now;
+            return combined.Length <= 500
+                ? combined
+                : combined[^500..];
         }
 
-        private static void CopyToEntity(
-            RegisteredTerminal source,
-            RegisteredTerminal target)
-        {
-            target.TerminalNo = source.TerminalNo;
-            target.TerminalName = source.TerminalName;
-            target.MachineName = source.MachineName;
-            target.MachineCode = source.MachineCode;
-            target.Location = source.Location;
-            target.IsCashierTerminal = source.IsCashierTerminal;
-            target.IsBackOfficeAllowed = source.IsBackOfficeAllowed;
-            target.IsActive = source.IsActive;
-            target.Remarks = source.Remarks;
-        }
-
-        private static void Normalize(RegisteredTerminal terminal)
-        {
-            terminal.TerminalNo = NormalizeText(terminal.TerminalNo);
-
-            if (string.IsNullOrWhiteSpace(terminal.TerminalNo))
-                terminal.TerminalNo = "01";
-
-            terminal.TerminalName = NormalizeText(terminal.TerminalName);
-
-            if (string.IsNullOrWhiteSpace(terminal.TerminalName))
-                terminal.TerminalName = $"Terminal {terminal.TerminalNo}";
-
-            terminal.MachineName = NormalizeText(terminal.MachineName);
-            terminal.MachineCode = NormalizeMachineCode(terminal.MachineCode);
-
-            terminal.Location = NormalizeText(terminal.Location);
-
-            if (string.IsNullOrWhiteSpace(terminal.Location))
-                terminal.Location = "Main Store";
-
-            terminal.UpdatedBy = NormalizeText(terminal.UpdatedBy);
-            terminal.Remarks = NormalizeMultilineText(terminal.Remarks);
-            terminal.LicenseId = NormalizeText(terminal.LicenseId);
-        }
-
-        private static void Validate(RegisteredTerminal terminal)
-        {
-            if (string.IsNullOrWhiteSpace(terminal.TerminalNo))
-                throw new InvalidOperationException("Terminal number is required.");
-
-            if (string.IsNullOrWhiteSpace(terminal.TerminalName))
-                throw new InvalidOperationException("Terminal name is required.");
-
-            if (string.IsNullOrWhiteSpace(terminal.Location))
-                throw new InvalidOperationException("Terminal location is required.");
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            return (value ?? string.Empty).Trim();
-        }
-
-        private static string NormalizeMachineCode(string? value)
-        {
-            return NormalizeText(value).ToUpperInvariant();
-        }
-
-        private static string NormalizeMultilineText(string? value)
+        private static string NormalizeText(
+            string? value)
         {
             return (value ?? string.Empty)
-                .Replace("\r\n", "\n")
-                .Replace("\r", "\n")
                 .Trim();
         }
 
-        private static string AppendRemark(string? currentRemarks, string newRemark)
+        private static string NormalizeMachineCode(
+            string? value)
         {
-            string safeCurrent = NormalizeMultilineText(currentRemarks);
-            string safeNew = NormalizeText(newRemark);
-
-            if (string.IsNullOrWhiteSpace(safeCurrent))
-                return safeNew;
-
-            if (string.IsNullOrWhiteSpace(safeNew))
-                return safeCurrent;
-
-            return $"{safeCurrent}\n{safeNew}";
+            return NormalizeText(value)
+                .ToUpperInvariant();
         }
     }
 }
