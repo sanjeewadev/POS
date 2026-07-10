@@ -1,130 +1,304 @@
 <Window x:Class="POS.BackOffice.UI.Views.FirstRunAdminWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Initial Administrator Setup"
-        Height="590"
-        Width="520"
-        MinHeight="500"
-        MinWidth="480"
+        Title="Advanced POS - Initial Administrator Setup"
+        Height="620"
+        Width="680"
+        MinHeight="620"
+        MinWidth="680"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanResizeWithGrip"
-        WindowStyle="ToolWindow"
-        Background="#F3F4F6">
+        ResizeMode="NoResize"
+        WindowStyle="SingleBorderWindow"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        FontFamily="Segoe UI"
+        FontSize="12">
 
-    <Grid Margin="24">
-        <Border Background="White"
-                BorderBrush="#CBD5E1"
+    <Window.Resources>
+        <Style x:Key="SetupInput"
+               TargetType="TextBox">
+            <Setter Property="Height"
+                    Value="29"/>
+            <Setter Property="Padding"
+                    Value="7,0"/>
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
+            <Setter Property="Background"
+                    Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush"
+                    Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+        </Style>
+
+        <Style x:Key="SetupPassword"
+               TargetType="PasswordBox">
+            <Setter Property="Height"
+                    Value="29"/>
+            <Setter Property="Padding"
+                    Value="7,0"/>
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
+            <Setter Property="Background"
+                    Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush"
+                    Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+        </Style>
+
+        <Style x:Key="SetupButton"
+               TargetType="Button">
+            <Setter Property="Height"
+                    Value="34"/>
+            <Setter Property="MinWidth"
+                    Value="120"/>
+            <Setter Property="Padding"
+                    Value="14,0"/>
+            <Setter Property="Background"
+                    Value="{DynamicResource ButtonDefaultBrush}"/>
+            <Setter Property="Foreground"
+                    Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="BorderBrush"
+                    Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+            <Setter Property="FontWeight"
+                    Value="Bold"/>
+            <Setter Property="Cursor"
+                    Value="Hand"/>
+        </Style>
+
+        <Style x:Key="SetupPrimaryButton"
+               TargetType="Button"
+               BasedOn="{StaticResource SetupButton}">
+            <Setter Property="Background"
+                    Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="Foreground"
+                    Value="White"/>
+            <Setter Property="BorderBrush"
+                    Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="MinWidth"
+                    Value="190"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver"
+                         Value="True">
+                    <Setter Property="Background"
+                            Value="{DynamicResource ActionHoverBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="6"
-                Padding="24">
+                Padding="12">
+            <StackPanel>
+                <TextBlock Text="1. INITIAL ADMINISTRATOR SETUP"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource HeaderTextBrush}"/>
 
+                <TextBlock Text="Create the first permanent Administrator account for this POS installation."
+                           Margin="0,4,0,0"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Padding="12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="10"/>
+                    <RowDefinition Height="36"/>
+                    <RowDefinition Height="36"/>
+                    <RowDefinition Height="36"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0"
-                           Text="INITIAL ADMINISTRATOR SETUP"
-                           FontSize="20"
+                <TextBlock Text="2. ADMINISTRATOR DETAILS"
+                           FontSize="13"
                            FontWeight="Bold"
-                           Foreground="#0F172A"
-                           HorizontalAlignment="Center"/>
+                           Foreground="{DynamicResource HeaderTextBrush}"/>
 
-                <TextBlock Grid.Row="1"
-                           Margin="0,8,0,18"
-                           Text="No system users were found. Create the store's first administrator account."
-                           Foreground="#475569"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap"/>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="145"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="First Name"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <TextBox x:Name="FirstNameInput"
+                             Grid.Column="1"
+                             Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="50"
+                             Style="{StaticResource SetupInput}"/>
+                </Grid>
 
-                <ScrollViewer Grid.Row="2"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              PanningMode="VerticalOnly"
-                              Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="First name"
-                                   FontWeight="SemiBold"/>
-
-                        <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}"
-                                 Height="34"
-                                 Margin="0,5,0,12"
-                                 MaxLength="50"/>
-
-                        <TextBlock Text="Last name"
-                                   FontWeight="SemiBold"/>
-
-                        <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}"
-                                 Height="34"
-                                 Margin="0,5,0,12"
-                                 MaxLength="50"/>
-
-                        <TextBlock Text="Username"
-                                   FontWeight="SemiBold"/>
-
-                        <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                                 Height="34"
-                                 Margin="0,5,0,12"
-                                 MaxLength="50"/>
-
-                        <TextBlock Text="Password"
-                                   FontWeight="SemiBold"/>
-
-                        <PasswordBox x:Name="PasswordInput"
-                                     Height="34"
-                                     Margin="0,5,0,12"
-                                     MaxLength="128"/>
-
-                        <TextBlock Text="Confirm password"
-                                   FontWeight="SemiBold"/>
-
-                        <PasswordBox x:Name="ConfirmPasswordInput"
-                                     Height="34"
-                                     Margin="0,5,0,8"
-                                     MaxLength="128"/>
-
-                        <TextBlock Text="Use at least 6 characters with at least one letter and one number."
-                                   Foreground="#64748B"
-                                   FontSize="12"
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,8,4"/>
-                    </StackPanel>
-                </ScrollViewer>
-
-                <TextBlock Grid.Row="3"
-                           Text="{Binding ErrorMessage}"
-                           Foreground="#B91C1C"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap"
-                           MinHeight="28"
-                           MaxHeight="60"
-                           Margin="0,0,0,10"/>
+                <Grid Grid.Row="3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="145"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Last Name"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="50"
+                             Style="{StaticResource SetupInput}"/>
+                </Grid>
 
                 <Grid Grid.Row="4">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="145"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-
-                    <Button Grid.Column="0"
-                            Content="EXIT SETUP"
-                            Height="42"
-                            Click="ExitButton_Click"/>
-
-                    <Button x:Name="CreateButton"
-                            Grid.Column="2"
-                            Content="CREATE ADMINISTRATOR"
-                            Height="42"
-                            FontWeight="Bold"
-                            IsDefault="True"
-                            Click="CreateButton_Click"/>
+                    <TextBlock Text="Username"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="50"
+                             Style="{StaticResource SetupInput}"/>
                 </Grid>
             </Grid>
         </Border>
+
+        <Border Grid.Row="4"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="10"/>
+                    <RowDefinition Height="36"/>
+                    <RowDefinition Height="36"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="3. PASSWORD &amp; SECURITY"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource HeaderTextBrush}"/>
+
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="145"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Password"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <PasswordBox x:Name="PasswordInput"
+                                 Grid.Column="1"
+                                 MaxLength="128"
+                                 Style="{StaticResource SetupPassword}"/>
+                </Grid>
+
+                <Grid Grid.Row="3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="145"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Confirm Password"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <PasswordBox x:Name="ConfirmPasswordInput"
+                                 Grid.Column="1"
+                                 MaxLength="128"
+                                 Style="{StaticResource SetupPassword}"/>
+                </Grid>
+
+                <Border Grid.Row="4"
+                        Background="{DynamicResource HighlightBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        Padding="8"
+                        Margin="0,8,0,0">
+                    <TextBlock Text="Password requirement: at least 6 characters with at least one letter and one number. Special characters are optional."
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               TextWrapping="Wrap"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="6"
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="8"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="4. SETUP STATUS"
+                           FontSize="13"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource HeaderTextBrush}"/>
+
+                <Border Grid.Row="2"
+                        Background="{DynamicResource WhiteBackgroundBrush}"
+                        BorderBrush="{DynamicResource LightBorderBrush}"
+                        BorderThickness="1"
+                        Padding="9">
+                    <TextBlock Text="{Binding ErrorMessage}"
+                               Foreground="{DynamicResource WarningTextBrush}"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               MinHeight="46"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="This setup appears only when the system has no users."
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       VerticalAlignment="Center"/>
+
+            <Button Grid.Column="1"
+                    Content="EXIT SETUP"
+                    Click="ExitButton_Click"
+                    IsCancel="True"
+                    Style="{StaticResource SetupButton}"/>
+
+            <Button x:Name="CreateButton"
+                    Grid.Column="3"
+                    Content="CREATE ADMINISTRATOR"
+                    Click="CreateButton_Click"
+                    IsDefault="True"
+                    Style="{StaticResource SetupPrimaryButton}"/>
+        </Grid>
     </Grid>
 </Window>

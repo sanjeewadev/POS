@@ -15,6 +15,7 @@ using POS.Core.Services.Licensing;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace POS.BackOffice.UI
 {
@@ -22,8 +23,12 @@ namespace POS.BackOffice.UI
     {
         public static IServiceProvider? Services { get; private set; }
 
+        private bool _exitApproved;
+        private bool _fatalErrorShown;
+
         public App()
         {
+            RegisterGlobalExceptionHandlers();
             Services = ConfigureServices();
         }
 
@@ -198,82 +203,124 @@ namespace POS.BackOffice.UI
             return services.BuildServiceProvider();
         }
 
-        private async void Application_Startup(object sender, StartupEventArgs e)
+        private async void Application_Startup(
+            object sender,
+            StartupEventArgs e)
         {
             if (Services == null)
             {
+                LocalLogService.WriteInformation(
+                    "BackOffice",
+                    "Startup",
+                    "The dependency injection container was unavailable.");
+
+                Shutdown();
                 return;
             }
 
-            var dbFactory = Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            var dbFactory =
+                Services.GetRequiredService<
+                    IDbContextFactory<AppDbContext>>();
 
             try
             {
-                await using var context = await dbFactory.CreateDbContextAsync();
+                await using var context =
+                    await dbFactory.CreateDbContextAsync();
+
                 await context.Database.MigrateAsync();
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Database startup",
+                    ex);
+
                 MessageBox.Show(
-                    $"The POS database could not be initialized.\n\n{ex.Message}",
+                    "The POS database could not be initialized.\n\n" +
+                    "Close BackOffice and try again. Technical details " +
+                    "were saved in the local POS Logs folder.",
                     "Database Startup Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
 
-                Application.Current.Shutdown();
+                Shutdown();
                 return;
             }
 
-            Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
             try
             {
-                var userRepository = Services.GetRequiredService<UserRepository>();
+                var userRepository =
+                    Services.GetRequiredService<
+                        UserRepository>();
 
                 if (!await userRepository.AnyUsersAsync())
                 {
-                    var setupViewModel = Services.GetRequiredService<FirstRunAdminViewModel>();
-                    var setupWindow = new FirstRunAdminWindow(setupViewModel);
+                    var setupViewModel =
+                        Services.GetRequiredService<
+                            FirstRunAdminViewModel>();
+
+                    var setupWindow =
+                        new FirstRunAdminWindow(
+                            setupViewModel);
 
                     if (setupWindow.ShowDialog() != true)
                     {
-                        Application.Current.Shutdown();
+                        Shutdown();
                         return;
                     }
                 }
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Initial administrator setup",
+                    ex);
+
                 MessageBox.Show(
-                    $"Initial administrator setup could not be checked.\n\n{ex.Message}",
+                    "Initial Administrator Setup could not be opened.\n\n" +
+                    "Technical details were saved in the local POS Logs folder.",
                     "Administrator Setup Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
 
-                Application.Current.Shutdown();
+                Shutdown();
                 return;
             }
 
-            var loginViewModel = Services.GetRequiredService<LoginViewModel>();
-            var loginWindow = new LoginWindow(loginViewModel);
+            var loginViewModel =
+                Services.GetRequiredService<
+                    LoginViewModel>();
 
-            if (loginWindow.ShowDialog() == true)
+            var loginWindow =
+                new LoginWindow(loginViewModel);
+
+            if (loginWindow.ShowDialog() != true)
             {
-                await ShowLicenseNoticeAsync();
-
-                var mainWindow = new ManagementShellView();
-                var mainViewModel = Services.GetRequiredService<MainViewModel>();
-
-                mainWindow.DataContext = mainViewModel;
-
-                Application.Current.ShutdownMode = ShutdownMode.OnLastWindowClose;
-                mainWindow.Show();
+                Shutdown();
+                return;
             }
-            else
-            {
-                Application.Current.Shutdown();
-            }
+
+            await ShowLicenseNoticeAsync();
+
+            var mainWindow =
+                new ManagementShellView();
+
+            var mainViewModel =
+                Services.GetRequiredService<
+                    MainViewModel>();
+
+            mainViewModel.RefreshSessionInformation();
+            mainWindow.DataContext = mainViewModel;
+
+            MainWindow = mainWindow;
+            ShutdownMode = ShutdownMode.OnLastWindowClose;
+            mainWindow.Show();
         }
+
         private static async Task ShowLicenseNoticeAsync()
         {
             if (Services == null)
@@ -342,14 +389,172 @@ namespace POS.BackOffice.UI
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "License status check",
+                    ex);
+
                 MessageBox.Show(
                     "License status could not be checked. " +
-                    "BackOffice will remain available.\n\n" +
-                    ex.Message,
+                    "BackOffice will remain available. " +
+                    "Technical details were saved in the local POS Logs folder.",
                     "License Check",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
+        }
+
+        public bool TryApproveWindowClose()
+        {
+            if (_exitApproved)
+                return true;
+
+            MessageBoxResult result =
+                MessageBox.Show(
+                    "Close BackOffice and end the current session?",
+                    "Exit BackOffice",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+                return false;
+
+            ApproveExit();
+            return true;
+        }
+
+        public void RequestApplicationExit()
+        {
+            if (!TryApproveWindowClose())
+                return;
+
+            Shutdown();
+        }
+
+        private void ApproveExit()
+        {
+            if (_exitApproved)
+                return;
+
+            _exitApproved = true;
+
+            try
+            {
+                Services?
+                    .GetService<AuthService>()
+                    ?.Logout();
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Session cleanup during exit",
+                    ex);
+            }
+        }
+
+        private void RegisterGlobalExceptionHandlers()
+        {
+            DispatcherUnhandledException +=
+                App_DispatcherUnhandledException;
+
+            AppDomain.CurrentDomain.UnhandledException +=
+                CurrentDomain_UnhandledException;
+
+            TaskScheduler.UnobservedTaskException +=
+                TaskScheduler_UnobservedTaskException;
+        }
+
+        private void App_DispatcherUnhandledException(
+            object sender,
+            DispatcherUnhandledExceptionEventArgs e)
+        {
+            LocalLogService.WriteException(
+                "BackOffice",
+                "Unhandled WPF UI exception",
+                e.Exception);
+
+            e.Handled = true;
+            ShowFatalErrorMessage();
+
+            ApproveExit();
+            Shutdown(-1);
+        }
+
+        private void CurrentDomain_UnhandledException(
+            object sender,
+            UnhandledExceptionEventArgs e)
+        {
+            Exception exception =
+                e.ExceptionObject as Exception
+                ?? new Exception(
+                    Convert.ToString(
+                        e.ExceptionObject)
+                    ?? "Unknown application error.");
+
+            LocalLogService.WriteException(
+                "BackOffice",
+                "Unhandled application-domain exception",
+                exception);
+
+            if (e.IsTerminating)
+                ShowFatalErrorMessage();
+        }
+
+        private void TaskScheduler_UnobservedTaskException(
+            object? sender,
+            UnobservedTaskExceptionEventArgs e)
+        {
+            LocalLogService.WriteException(
+                "BackOffice",
+                "Unobserved background-task exception",
+                e.Exception);
+
+            e.SetObserved();
+        }
+
+        private void ShowFatalErrorMessage()
+        {
+            if (_fatalErrorShown)
+                return;
+
+            _fatalErrorShown = true;
+
+            try
+            {
+                MessageBox.Show(
+                    "BackOffice encountered an unexpected error and must close.\n\n" +
+                    "Technical details were saved in:\n" +
+                    LocalLogService.LogFolderPath,
+                    "Unexpected BackOffice Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            catch
+            {
+                // The process may already be shutting down.
+            }
+        }
+
+        protected override void OnExit(
+            ExitEventArgs e)
+        {
+            ApproveExit();
+
+            try
+            {
+                if (Services is IDisposable disposable)
+                    disposable.Dispose();
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Service disposal during exit",
+                    ex);
+            }
+
+            base.OnExit(e);
         }
 
     }

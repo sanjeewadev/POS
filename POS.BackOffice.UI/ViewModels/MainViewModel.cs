@@ -89,14 +89,13 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void ExitApplication()
         {
-            MessageBoxResult result = MessageBox.Show(
-                "Are you sure you want to close BackOffice?",
-                "Exit BackOffice",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+            if (Application.Current is App app)
+            {
+                app.RequestApplicationExit();
+                return;
+            }
 
-            if (result == MessageBoxResult.Yes)
-                Application.Current.Shutdown();
+            Application.Current.Shutdown();
         }
 
         // ==========================================

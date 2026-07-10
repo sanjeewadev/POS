@@ -14,6 +14,7 @@ using POS.Core.Services.Licensing;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace POS.Cashier.UI
 {
@@ -24,9 +25,11 @@ namespace POS.Cashier.UI
         private string _terminalNo = "01";
         private int _autoLockTimeoutMinutes = 10;
         private TillRepository? _tillRepository;
+        private bool _fatalErrorShown;
 
         public App()
         {
+            RegisterGlobalExceptionHandlers();
             Services = ConfigureServices();
         }
 
@@ -115,8 +118,20 @@ namespace POS.Cashier.UI
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Startup",
+                    ex);
+
+                string userMessage =
+                    ex is InvalidOperationException &&
+                    !string.IsNullOrWhiteSpace(ex.Message)
+                        ? ex.Message
+                        : "Cashier could not start.";
+
                 MessageBox.Show(
-                    ex.Message,
+                    userMessage +
+                    "\n\nTechnical details were saved in the local POS Logs folder.",
                     "Cashier Startup Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -162,8 +177,7 @@ namespace POS.Cashier.UI
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    "The POS database could not be initialized.\n\n" +
-                    ex.Message,
+                    "The POS database could not be initialized.",
                     ex);
             }
         }
@@ -370,5 +384,113 @@ namespace POS.Cashier.UI
             salesWindow.Show();
             oldLoginWindow.Close();
         }
+        private void RegisterGlobalExceptionHandlers()
+        {
+            DispatcherUnhandledException +=
+                App_DispatcherUnhandledException;
+
+            AppDomain.CurrentDomain.UnhandledException +=
+                CurrentDomain_UnhandledException;
+
+            TaskScheduler.UnobservedTaskException +=
+                TaskScheduler_UnobservedTaskException;
+        }
+
+        private void App_DispatcherUnhandledException(
+            object sender,
+            DispatcherUnhandledExceptionEventArgs e)
+        {
+            LocalLogService.WriteException(
+                "Cashier",
+                "Unhandled WPF UI exception",
+                e.Exception);
+
+            e.Handled = true;
+            ShowFatalErrorMessage();
+            Shutdown(-1);
+        }
+
+        private void CurrentDomain_UnhandledException(
+            object sender,
+            UnhandledExceptionEventArgs e)
+        {
+            Exception exception =
+                e.ExceptionObject as Exception
+                ?? new Exception(
+                    Convert.ToString(
+                        e.ExceptionObject)
+                    ?? "Unknown application error.");
+
+            LocalLogService.WriteException(
+                "Cashier",
+                "Unhandled application-domain exception",
+                exception);
+
+            if (e.IsTerminating)
+                ShowFatalErrorMessage();
+        }
+
+        private void TaskScheduler_UnobservedTaskException(
+            object? sender,
+            UnobservedTaskExceptionEventArgs e)
+        {
+            LocalLogService.WriteException(
+                "Cashier",
+                "Unobserved background-task exception",
+                e.Exception);
+
+            e.SetObserved();
+        }
+
+        private void ShowFatalErrorMessage()
+        {
+            if (_fatalErrorShown)
+                return;
+
+            _fatalErrorShown = true;
+
+            try
+            {
+                MessageBox.Show(
+                    "Cashier encountered an unexpected error and must close.\n\n" +
+                    "Technical details were saved in:\n" +
+                    LocalLogService.LogFolderPath,
+                    "Unexpected Cashier Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            catch
+            {
+                // The process may already be shutting down.
+            }
+        }
+
+        protected override void OnExit(
+            ExitEventArgs e)
+        {
+            try
+            {
+                Services?
+                    .GetService<CashierLockService>()
+                    ?.Stop();
+
+                Services?
+                    .GetService<AuthService>()
+                    ?.Logout();
+
+                if (Services is IDisposable disposable)
+                    disposable.Dispose();
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Cleanup during exit",
+                    ex);
+            }
+
+            base.OnExit(e);
+        }
+
     }
 }

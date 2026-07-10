@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using POS.Core.Enums;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
 using POS.Core.Utilities;
 using System;
 using System.Threading.Tasks;
@@ -130,7 +131,15 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                return (false, $"Administrator creation failed: {ex.Message}");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "First administrator creation",
+                    ex);
+
+                return (
+                    false,
+                    "The Administrator account could not be created. " +
+                    "Technical details were saved in the local POS Logs folder.");
             }
             finally
             {
