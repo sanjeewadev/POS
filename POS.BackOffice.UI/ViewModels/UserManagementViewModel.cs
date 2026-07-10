@@ -1,10 +1,10 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.Core.Enums;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Utilities;
-using POS.Core.Enums;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -18,83 +18,160 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly AuthService _authService;
 
         // --- DIRECTORY FILTERS ---
-        [ObservableProperty] private string _searchText = string.Empty;
-        [ObservableProperty] private string _selectedFilterRole = "All Roles";
+        [ObservableProperty]
+        private string _searchText = string.Empty;
+
+        [ObservableProperty]
+        private string _selectedFilterRole = "All Roles";
 
         // --- FORM FIELDS ---
-        [ObservableProperty] private string _firstName = string.Empty;
-        [ObservableProperty] private string _lastName = string.Empty;
-        [ObservableProperty] private string _employeeId = string.Empty;
-        [ObservableProperty] private string _email = string.Empty;
-        [ObservableProperty] private string _mobile = string.Empty;
-        [ObservableProperty] private string _username = string.Empty;
+        [ObservableProperty]
+        private string _firstName = string.Empty;
 
-        // Default role is now Cashier (Using Enum)
-        [ObservableProperty] private UserRole _selectedRole = UserRole.Cashier;
-        [ObservableProperty] private string _statusText = "Active";
+        [ObservableProperty]
+        private string _lastName = string.Empty;
 
-        // --- COLLECTIONS ---
-        // Includes the new "Manager" role
-        public ObservableCollection<string> FilterRoles { get; set; } = new() { "All Roles", "Admin", "Manager", "Cashier" };
-        public ObservableCollection<UserRole> AvailableRoles { get; set; } = new() { UserRole.Admin, UserRole.Manager, UserRole.Cashier };
+        [ObservableProperty]
+        private string _employeeId = string.Empty;
 
-        public ObservableCollection<string> AccountStatuses { get; set; } = new() { "Active", "Suspended" };
-        public ObservableCollection<User> Users { get; set; } = new();
+        [ObservableProperty]
+        private string _mobile = string.Empty;
 
-        [ObservableProperty] private User? _selectedUser;
+        [ObservableProperty]
+        private string _username = string.Empty;
 
-        public UserManagementViewModel(UserRepository userRepository, AuthService authService)
+        [ObservableProperty]
+        private UserRole _selectedRole = UserRole.Cashier;
+
+        [ObservableProperty]
+        private string _statusText = "Active";
+
+        public ObservableCollection<string> FilterRoles { get; } =
+            new() { "All Roles", "Admin", "Manager", "Cashier" };
+
+        public ObservableCollection<UserRole> AvailableRoles { get; } =
+            new() { UserRole.Admin, UserRole.Manager, UserRole.Cashier };
+
+        public ObservableCollection<string> AccountStatuses { get; } =
+            new() { "Active", "Suspended" };
+
+        public ObservableCollection<User> Users { get; } = new();
+
+        [ObservableProperty]
+        private User? _selectedUser;
+
+        public UserManagementViewModel(
+            UserRepository userRepository,
+            AuthService authService)
         {
             _userRepository = userRepository;
             _authService = authService;
+
             _ = LoadUsersAsync();
         }
 
-        // --- AUTO-TRIGGERS ---
+        partial void OnSearchTextChanged(string value)
+        {
+            _ = LoadUsersAsync();
+        }
 
-        partial void OnSearchTextChanged(string value) => _ = LoadUsersAsync();
-        partial void OnSelectedFilterRoleChanged(string value) => _ = LoadUsersAsync();
+        partial void OnSelectedFilterRoleChanged(string value)
+        {
+            _ = LoadUsersAsync();
+        }
 
         partial void OnSelectedUserChanged(User? value)
         {
-            if (value != null)
+            if (value == null)
             {
-                FirstName = value.FirstName;
-                LastName = value.LastName;
-                EmployeeId = value.EmployeeId;
-                Email = value.Email;
-                Mobile = value.Mobile;
-                Username = value.Username;
-                SelectedRole = value.Role;
-                StatusText = value.IsActive ? "Active" : "Suspended";
+                return;
             }
-        }
 
-        // --- ACTIONS ---
+            FirstName = value.FirstName;
+            LastName = value.LastName;
+            EmployeeId = value.EmployeeId;
+            Mobile = value.Mobile;
+            Username = value.Username;
+            SelectedRole = value.Role;
+            StatusText = value.IsActive ? "Active" : "Suspended";
+        }
 
         private async Task LoadUsersAsync()
         {
             Users.Clear();
-            var data = await _userRepository.GetAllAsync(SearchText, SelectedFilterRole);
+
+            var data = await _userRepository.GetAllAsync(
+                SearchText,
+                SelectedFilterRole);
+
             foreach (var user in data)
             {
                 Users.Add(user);
             }
         }
 
-        public async Task ExecuteSaveAsync(string plainTextPassword, string plainTextPin)
+        public async Task ExecuteSaveAsync(string plainTextPassword)
         {
-            // 1. RBAC Security Check (Checks for Admin OR the Skeleton Key Super Admin)
             if (!_authService.IsAdmin)
             {
-                MessageBox.Show("Only Administrators can create or modify system users.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Hand);
+                MessageBox.Show(
+                    "Only Administrators can create or modify system users.",
+                    "Access Denied",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Hand);
+
                 return;
             }
 
-            // 2. Validation
-            if (string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(Username))
+            string firstName = FirstName.Trim();
+            string lastName = LastName.Trim();
+            string username = Username.Trim();
+
+            if (string.IsNullOrWhiteSpace(firstName) ||
+                string.IsNullOrWhiteSpace(lastName) ||
+                string.IsNullOrWhiteSpace(username))
             {
-                MessageBox.Show("First Name and Username are mandatory.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "First Name, Last Name, and Username are mandatory.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            if (firstName.Length > 50 ||
+                lastName.Length > 50 ||
+                username.Length > 50)
+            {
+                MessageBox.Show(
+                    "First Name, Last Name, and Username cannot exceed 50 characters.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            if (username.Length < 4)
+            {
+                MessageBox.Show(
+                    "Username must contain at least 4 characters.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return;
+            }
+
+            if (IsReservedUsername(username))
+            {
+                MessageBox.Show(
+                    "That username is reserved. Choose another username.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return;
             }
 
@@ -102,15 +179,44 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (isNewUser && string.IsNullOrWhiteSpace(plainTextPassword))
             {
-                MessageBox.Show("A password is required when creating a new user.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "A password is required when creating a new user.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return;
             }
 
-            // Check Username uniqueness
-            bool isUnique = await _userRepository.IsUsernameUniqueAsync(Username, SelectedUser?.Id ?? 0);
+            if (!string.IsNullOrWhiteSpace(plainTextPassword))
+            {
+                var passwordValidation =
+                    PasswordPolicy.Validate(plainTextPassword, username);
+
+                if (!passwordValidation.IsValid)
+                {
+                    MessageBox.Show(
+                        passwordValidation.ErrorMessage,
+                        "Password Validation",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return;
+                }
+            }
+
+            bool isUnique = await _userRepository.IsUsernameUniqueAsync(
+                username,
+                SelectedUser?.Id ?? 0);
+
             if (!isUnique)
             {
-                MessageBox.Show("This username is already taken.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "This username is already taken.",
+                    "Validation Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return;
             }
 
@@ -118,29 +224,23 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 var user = SelectedUser ?? new User();
 
-                user.FirstName = FirstName.Trim();
-                user.LastName = LastName.Trim();
+                user.FirstName = firstName;
+                user.LastName = lastName;
                 user.EmployeeId = EmployeeId.Trim();
-                user.Email = Email.Trim();
                 user.Mobile = Mobile.Trim();
-                user.Username = Username.Trim();
+                user.Username = username;
                 user.Role = SelectedRole;
                 user.IsActive = StatusText == "Active";
 
-                // 3. Cryptographic Hashing
                 if (!string.IsNullOrWhiteSpace(plainTextPassword))
                 {
-                    user.PasswordHash = SecurityHelper.HashData(plainTextPassword, out string salt);
-                    user.PasswordSalt = salt;
+                    user.PasswordHash = SecurityHelper.HashData(
+                        plainTextPassword,
+                        out string passwordSalt);
+
+                    user.PasswordSalt = passwordSalt;
                 }
 
-                if (!string.IsNullOrWhiteSpace(plainTextPin))
-                {
-                    user.PosPinHash = SecurityHelper.HashData(plainTextPin, out string pinSalt);
-                    user.PosPinSalt = pinSalt;
-                }
-
-                // 4. Save to Database
                 if (isNewUser)
                 {
                     await _userRepository.AddAsync(user);
@@ -150,13 +250,30 @@ namespace POS.BackOffice.UI.ViewModels
                     await _userRepository.UpdateAsync(user);
                 }
 
-                MessageBox.Show($"User {user.Username} successfully saved.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    $"User {user.Username} was successfully saved.",
+                    "Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
                 ClearForm();
                 await LoadUsersAsync();
             }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Administrator Protection",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
             catch (Exception ex)
             {
-                MessageBox.Show($"Database Error: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(
+                    $"Database Error: {ex.Message}",
+                    "System Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
@@ -167,11 +284,17 @@ namespace POS.BackOffice.UI.ViewModels
             FirstName = string.Empty;
             LastName = string.Empty;
             EmployeeId = string.Empty;
-            Email = string.Empty;
             Mobile = string.Empty;
             Username = string.Empty;
             SelectedRole = UserRole.Cashier;
             StatusText = "Active";
+        }
+
+        private static bool IsReservedUsername(string username)
+        {
+            return username.Equals("sa", StringComparison.OrdinalIgnoreCase) ||
+                   username.Equals("superadmin", StringComparison.OrdinalIgnoreCase) ||
+                   username.Equals("system", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

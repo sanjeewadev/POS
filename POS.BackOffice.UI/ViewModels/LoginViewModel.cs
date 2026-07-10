@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
@@ -44,7 +44,7 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 // REAL LOGIC: Call your actual database Auth Service!
-                var (success, message) = await _authService.LoginAsync(Username, passwordBox.Password);
+                var (success, message) = await _authService.LoginAsync(Username, passwordBox.Password, "BackOffice");
 
                 if (success && _authService.CurrentUser != null)
                 {

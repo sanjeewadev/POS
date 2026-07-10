@@ -19,9 +19,6 @@ namespace POS.BackOffice.UI.ViewModels
         private string _lastName = string.Empty;
 
         [ObservableProperty]
-        private string _email = string.Empty;
-
-        [ObservableProperty]
         private string _username = string.Empty;
 
         [ObservableProperty]
@@ -51,7 +48,6 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 string firstName = FirstName.Trim();
                 string lastName = LastName.Trim();
-                string email = Email.Trim();
                 string username = Username.Trim();
 
                 if (string.IsNullOrWhiteSpace(firstName))
@@ -74,16 +70,6 @@ namespace POS.BackOffice.UI.ViewModels
                     return (false, "Last name cannot exceed 50 characters.");
                 }
 
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    return (false, "Email address is required.");
-                }
-
-                if (email.Length > 100 || !email.Contains('@'))
-                {
-                    return (false, "Enter a valid email address.");
-                }
-
                 if (string.IsNullOrWhiteSpace(username))
                 {
                     return (false, "Username is required.");
@@ -94,9 +80,7 @@ namespace POS.BackOffice.UI.ViewModels
                     return (false, "Username must contain between 4 and 50 characters.");
                 }
 
-                if (username.Equals("sa", StringComparison.OrdinalIgnoreCase) ||
-                    username.Equals("superadmin", StringComparison.OrdinalIgnoreCase) ||
-                    username.Equals("system", StringComparison.OrdinalIgnoreCase))
+                if (IsReservedUsername(username))
                 {
                     return (false, "That username is reserved. Choose another username.");
                 }
@@ -122,13 +106,13 @@ namespace POS.BackOffice.UI.ViewModels
                     return (false, "That username is already in use.");
                 }
 
-                string passwordHash = SecurityHelper.HashData(password, out string passwordSalt);
+                string passwordHash =
+                    SecurityHelper.HashData(password, out string passwordSalt);
 
                 var administrator = new User
                 {
                     FirstName = firstName,
                     LastName = lastName,
-                    Email = email,
                     Username = username,
                     PasswordHash = passwordHash,
                     PasswordSalt = passwordSalt,
@@ -137,7 +121,8 @@ namespace POS.BackOffice.UI.ViewModels
                     CreatedAt = DateTime.Now
                 };
 
-                bool created = await _userRepository.CreateFirstAdministratorAsync(administrator);
+                bool created =
+                    await _userRepository.CreateFirstAdministratorAsync(administrator);
 
                 return created
                     ? (true, "The first administrator account was created successfully.")
@@ -151,6 +136,13 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsProcessing = false;
             }
+        }
+
+        private static bool IsReservedUsername(string username)
+        {
+            return username.Equals("sa", StringComparison.OrdinalIgnoreCase) ||
+                   username.Equals("superadmin", StringComparison.OrdinalIgnoreCase) ||
+                   username.Equals("system", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

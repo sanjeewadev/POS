@@ -5,8 +5,8 @@ namespace POS.Core.Utilities
 {
     public static class PasswordPolicy
     {
-        public const int MinimumLength = 12;
-        public const int MaximumLength = 128;
+        public const int MinimumLength = 6;
+        public const int MaximumLength = 64;
 
         public static (bool IsValid, string ErrorMessage) Validate(
             string password,
@@ -19,12 +19,16 @@ namespace POS.Core.Utilities
 
             if (password.Length < MinimumLength)
             {
-                return (false, $"Password must contain at least {MinimumLength} characters.");
+                return (
+                    false,
+                    $"Password must contain at least {MinimumLength} characters.");
             }
 
             if (password.Length > MaximumLength)
             {
-                return (false, $"Password cannot exceed {MaximumLength} characters.");
+                return (
+                    false,
+                    $"Password cannot exceed {MaximumLength} characters.");
             }
 
             if (password.Any(char.IsWhiteSpace))
@@ -32,14 +36,9 @@ namespace POS.Core.Utilities
                 return (false, "Password cannot contain spaces.");
             }
 
-            if (!password.Any(char.IsUpper))
+            if (!password.Any(char.IsLetter))
             {
-                return (false, "Password must contain at least one uppercase letter.");
-            }
-
-            if (!password.Any(char.IsLower))
-            {
-                return (false, "Password must contain at least one lowercase letter.");
+                return (false, "Password must contain at least one letter.");
             }
 
             if (!password.Any(char.IsDigit))
@@ -47,15 +46,10 @@ namespace POS.Core.Utilities
                 return (false, "Password must contain at least one number.");
             }
 
-            if (!password.Any(character => !char.IsLetterOrDigit(character)))
-            {
-                return (false, "Password must contain at least one special character.");
-            }
-
             if (!string.IsNullOrWhiteSpace(username) &&
-                password.Contains(username, StringComparison.OrdinalIgnoreCase))
+                password.Equals(username, StringComparison.OrdinalIgnoreCase))
             {
-                return (false, "Password cannot contain the username.");
+                return (false, "Password cannot be the same as the username.");
             }
 
             return (true, string.Empty);

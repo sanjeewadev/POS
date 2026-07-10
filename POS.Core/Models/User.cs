@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using POS.Core.Enums;
 
@@ -20,28 +20,25 @@ namespace POS.Core.Models
         [MaxLength(20)]
         public string EmployeeId { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(100)]
-        public string Email { get; set; } = string.Empty;
-
         [MaxLength(20)]
         public string Mobile { get; set; } = string.Empty;
 
-        // --- AUTHENTICATION KEYS ---
+        // --- AUTHENTICATION ---
         [Required]
         [MaxLength(50)]
         public string Username { get; set; } = string.Empty;
 
-        // The secure mathematically derived hashes (NEVER plain text)
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
         [Required]
         public string PasswordSalt { get; set; } = string.Empty;
 
-        public string PosPinHash { get; set; } = string.Empty;
+        public int FailedLoginAttempts { get; set; }
 
-        public string PosPinSalt { get; set; } = string.Empty;
+        public DateTime? LockoutEndUtc { get; set; }
+
+        public DateTime? LastLoginAtUtc { get; set; }
 
         // --- AUTHORIZATION ---
         [Required]
@@ -51,8 +48,8 @@ namespace POS.Core.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-        // Helper property for the UI DataGrid
-        public string FullName => $"{FirstName} {LastName}";
+        // UI helper properties.
+        public string FullName => $"{FirstName} {LastName}".Trim();
 
         public string StatusText => IsActive ? "Active" : "Suspended";
     }

@@ -15,6 +15,7 @@ namespace POS.Core.Data
 
         // --- CORE MASTERS ---
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<LoginAuditEvent> LoginAuditEvents { get; set; } = null!;
         public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<SubCategory> SubCategories { get; set; } = null!;
         public DbSet<Supplier> Suppliers { get; set; } = null!;
@@ -117,9 +118,55 @@ namespace POS.Core.Data
             // =========================================================
             // USER / SECURITY
             // =========================================================
-            modelBuilder.Entity<User>()
-                .HasIndex(u => u.Username)
-                .IsUnique();
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasIndex(u => u.Username)
+                    .IsUnique();
+
+                entity.Property(u => u.FailedLoginAttempts)
+                    .HasDefaultValue(0);
+
+                entity.HasIndex(u => u.LockoutEndUtc);
+            });
+
+            modelBuilder.Entity<LoginAuditEvent>(entity =>
+            {
+                entity.ToTable("LoginAuditEvents");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.UsernameAttempted)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(e => e.EventType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(e => e.ApplicationName)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(e => e.MachineName)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.Message)
+                    .IsRequired()
+                    .HasMaxLength(250);
+
+                entity.Property(e => e.EventTimeUtc)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.UsernameAttempted);
+                entity.HasIndex(e => e.EventType);
+                entity.HasIndex(e => e.ApplicationName);
+                entity.HasIndex(e => e.EventTimeUtc);
+            });
 
             // =========================================================
             // CATEGORY MASTER

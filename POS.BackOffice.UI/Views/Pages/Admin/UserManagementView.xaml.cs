@@ -1,4 +1,4 @@
-﻿using POS.BackOffice.UI.ViewModels;
+using POS.BackOffice.UI.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -13,17 +13,20 @@ namespace POS.BackOffice.UI.Views.Pages.Admin
 
         private async void BtnSaveUser_Click(object sender, RoutedEventArgs e)
         {
-            if (DataContext is UserManagementViewModel viewModel)
+            if (DataContext is not UserManagementViewModel viewModel)
             {
-                // Extract plain text securely right before passing it to the logic engine
-                string password = pwdBox.Password;
-                string pin = pinBox.Password;
+                return;
+            }
 
-                await viewModel.ExecuteSaveAsync(password, pin);
+            string password = pwdBox.Password;
 
-                // Wipe the UI boxes from memory after processing
+            try
+            {
+                await viewModel.ExecuteSaveAsync(password);
+            }
+            finally
+            {
                 pwdBox.Clear();
-                pinBox.Clear();
             }
         }
     }

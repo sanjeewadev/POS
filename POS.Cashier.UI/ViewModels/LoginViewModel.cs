@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -65,7 +65,7 @@ namespace POS.Cashier.UI.ViewModels
 
             try
             {
-                var (success, message) = await _authService.LoginAsync(Username, Password);
+                var (success, message) = await _authService.LoginAsync(Username, Password, "Cashier");
 
                 if (!success)
                 {

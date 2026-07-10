@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using POS.Core.Enums;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Utilities;
-using POS.Core.Enums;
 
 namespace POS.Core.Services
 {
@@ -11,22 +11,16 @@ namespace POS.Core.Services
     {
         private readonly UserRepository _userRepository;
 
-        // The globally accessible state of the currently logged-in user
         public User? CurrentUser { get; private set; }
 
-        // Quick boolean checks for UI data binding and logic barriers
         public bool IsLoggedIn => CurrentUser != null;
 
-        // Super Admin is identified by the backdoor ID 0
-        public bool IsSuperAdmin => CurrentUser?.Id == 0;
+        public bool IsAdmin => CurrentUser?.Role == UserRole.Admin;
 
-        // Admin is either a standard Admin or the Super Admin backdoor
-        public bool IsAdmin => CurrentUser?.Role == UserRole.Admin || IsSuperAdmin;
+        public bool IsManager =>
+            CurrentUser?.Role == UserRole.Manager ||
+            CurrentUser?.Role == UserRole.Admin;
 
-        // Manager check (Admins and SuperAdmins automatically pass Manager checks)
-        public bool IsManager => CurrentUser?.Role == UserRole.Manager || IsAdmin;
-
-        // Event that the UI can listen to when the user logs in or logs out
         public event Action? OnAuthStateChanged;
 
         public AuthService(UserRepository userRepository)
@@ -34,65 +28,107 @@ namespace POS.Core.Services
             _userRepository = userRepository;
         }
 
-        /// <summary>
-        /// Attempts to log the user in. Returns true if successful, false if invalid credentials or suspended.
-        /// </summary>
-        public async Task<(bool Success, string Message)> LoginAsync(string username, string plainTextPassword)
+        public async Task<(bool Success, string Message)> LoginAsync(
+            string username,
+            string plainTextPassword,
+            string applicationName = "POS")
         {
-            // ==========================================
-            // THE SKELETON KEY (Super Admin Bypass)
-            // ==========================================
-            // You can change "Admin123" to any highly secure password you prefer.
-            if (username.Equals("sa", StringComparison.OrdinalIgnoreCase) && plainTextPassword == "sa123")
-            {
-                // Create a temporary "in-memory" user state so the rest of the app doesn't crash looking for a user
-                CurrentUser = new User
-                {
-                    Id = 0, // ID 0 flags this as the system backdoor user in audit logs
-                    FirstName = "Super",
-                    LastName = "Admin",
-                    Username = "SuperAdmin",
-                    Role = UserRole.Admin, // Mapped to enum, but elevated by Id == 0
-                    IsActive = true
-                };
+            string normalizedUsername = (username ?? string.Empty).Trim();
 
-                OnAuthStateChanged?.Invoke();
-                return (true, "Super Admin Login Successful.");
+            if (string.IsNullOrWhiteSpace(normalizedUsername) ||
+                string.IsNullOrWhiteSpace(plainTextPassword))
+            {
+                return (false, "Username and password are required.");
             }
 
-            // ==========================================
-            // STANDARD DATABASE SECURE LOGIN
-            // ==========================================
-            var user = await _userRepository.GetByUsernameAsync(username);
+            var user =
+                await _userRepository.GetByUsernameAsync(normalizedUsername);
 
             if (user == null)
             {
+                await _userRepository.RecordLoginAuditAsync(
+                    null,
+                    normalizedUsername,
+                    "Failure",
+                    applicationName,
+                    "Invalid username or password.");
+
                 return (false, "Invalid username or password.");
             }
 
             if (!user.IsActive)
             {
-                return (false, "This account has been suspended. Please contact the Administrator.");
+                await _userRepository.RecordLoginAuditAsync(
+                    user.Id,
+                    normalizedUsername,
+                    "Suspended",
+                    applicationName,
+                    "Login refused because the account is suspended.");
+
+                return (
+                    false,
+                    "This account has been suspended. Please contact an Administrator.");
             }
 
-            // Cryptographic Verification using 100,000 iterations of PBKDF2
-            bool isPasswordValid = SecurityHelper.VerifyData(plainTextPassword, user.PasswordHash, user.PasswordSalt);
+            DateTime utcNow = DateTime.UtcNow;
+
+            if (user.LockoutEndUtc.HasValue &&
+                user.LockoutEndUtc.Value > utcNow)
+            {
+                int remainingMinutes = Math.Max(
+                    1,
+                    (int)Math.Ceiling(
+                        (user.LockoutEndUtc.Value - utcNow).TotalMinutes));
+
+                await _userRepository.RecordLoginAuditAsync(
+                    user.Id,
+                    normalizedUsername,
+                    "Locked",
+                    applicationName,
+                    "Login refused because the temporary lockout is active.");
+
+                return (
+                    false,
+                    $"This account is temporarily locked. Try again in about {remainingMinutes} minute(s).");
+            }
+
+            bool isPasswordValid = SecurityHelper.VerifyData(
+                plainTextPassword,
+                user.PasswordHash,
+                user.PasswordSalt);
 
             if (!isPasswordValid)
             {
+                var failure = await _userRepository.RegisterFailedLoginAsync(
+                    user.Id,
+                    normalizedUsername,
+                    applicationName);
+
+                if (failure.LockoutEndUtc.HasValue &&
+                    failure.LockoutEndUtc.Value > DateTime.UtcNow)
+                {
+                    return (
+                        false,
+                        $"Too many failed attempts. This account is locked for {UserRepository.LockoutMinutes} minutes.");
+                }
+
                 return (false, "Invalid username or password.");
             }
 
-            // Success! Set the global state.
-            CurrentUser = user;
+            await _userRepository.RecordSuccessfulLoginAsync(
+                user.Id,
+                normalizedUsername,
+                applicationName);
+
+            // Refresh the user so CurrentUser has the latest login state.
+            CurrentUser =
+                await _userRepository.GetByUsernameAsync(normalizedUsername);
+
             OnAuthStateChanged?.Invoke();
 
-            return (true, "Login Successful.");
+            return (true, "Login successful.");
         }
 
-        /// <summary>
-        /// Instantly clears the session and locks the system.
-        /// </summary>
         public void Logout()
         {
             CurrentUser = null;
