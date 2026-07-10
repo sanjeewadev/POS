@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.ViewModels;
@@ -104,6 +104,7 @@ namespace POS.BackOffice.UI
             // ==========================================
             services.AddSingleton<MainViewModel>();
             services.AddTransient<LoginViewModel>();
+            services.AddTransient<FirstRunAdminViewModel>();
 
             // ==========================================
             // DASHBOARD
@@ -195,17 +196,19 @@ namespace POS.BackOffice.UI
             return services.BuildServiceProvider();
         }
 
-        private void Application_Startup(object sender, StartupEventArgs e)
+        private async void Application_Startup(object sender, StartupEventArgs e)
         {
             if (Services == null)
+            {
                 return;
+            }
 
             var dbFactory = Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
             try
             {
-                using var context = dbFactory.CreateDbContext();
-                context.Database.Migrate();
+                await using var context = await dbFactory.CreateDbContextAsync();
+                await context.Database.MigrateAsync();
             }
             catch (Exception ex)
             {
@@ -220,6 +223,34 @@ namespace POS.BackOffice.UI
             }
 
             Application.Current.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            try
+            {
+                var userRepository = Services.GetRequiredService<UserRepository>();
+
+                if (!await userRepository.AnyUsersAsync())
+                {
+                    var setupViewModel = Services.GetRequiredService<FirstRunAdminViewModel>();
+                    var setupWindow = new FirstRunAdminWindow(setupViewModel);
+
+                    if (setupWindow.ShowDialog() != true)
+                    {
+                        Application.Current.Shutdown();
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Initial administrator setup could not be checked.\n\n{ex.Message}",
+                    "Administrator Setup Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                Application.Current.Shutdown();
+                return;
+            }
 
             var loginViewModel = Services.GetRequiredService<LoginViewModel>();
             var loginWindow = new LoginWindow(loginViewModel);

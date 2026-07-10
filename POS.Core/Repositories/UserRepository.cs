@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +16,29 @@ namespace POS.Core.Repositories
         public UserRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
             _contextFactory = contextFactory;
+        }
+
+        public async Task<bool> AnyUsersAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            return await context.Users.AsNoTracking().AnyAsync();
+        }
+
+        public async Task<bool> CreateFirstAdministratorAsync(User administrator)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
+
+            if (await context.Users.AnyAsync())
+            {
+                return false;
+            }
+
+            context.Users.Add(administrator);
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return true;
         }
 
         public async Task<IEnumerable<User>> GetAllAsync(string searchTerm = "", string roleFilter = "All Roles")
