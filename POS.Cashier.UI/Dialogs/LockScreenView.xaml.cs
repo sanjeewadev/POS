@@ -1,111 +1,149 @@
-﻿//using System;
-//using System.ComponentModel;
-//using System.Windows;
-//using System.Windows.Controls;
-//using Microsoft.Extensions.DependencyInjection;
-//using POS.Core.Interfaces;
-//using POS.Core.Repositories;
-
-//namespace POS.Cashier.UI.Dialogs
-//{
-//    public partial class LockScreenView : Window
-//    {
-//        private readonly string _currentCashierName;
-//        private readonly TillRepository _authService;
-//        private bool _isUnlocked = false;
-
-//        public LockScreenView(string currentCashierName)
-//        {
-//            InitializeComponent();
-//            _currentCashierName = currentCashierName;
-//            CashierNameTxt.Text = $"Current User: {_currentCashierName}";
-
-//            _authService = App.Services!.GetRequiredService<TillRepository>();
-//        }
-
-//        private void NumpadBtn_Click(object sender, RoutedEventArgs e)
-//        {
-//            if (sender is Button btn && btn.Content != null)
-//            {
-//                PinBox.Password += btn.Content.ToString();
-//            }
-//        }
-
-//        private void ClearBtn_Click(object sender, RoutedEventArgs e)
-//        {
-//            PinBox.Password = string.Empty;
-//        }
-
-//        private async void UnlockBtn_Click(object sender, RoutedEventArgs e)
-//        {
-//            if (string.IsNullOrWhiteSpace(PinBox.Password)) return;
-
-//            string enteredPin = PinBox.Password;
-
-//            // 1. Check the database for the real manager PIN
-//            bool isAuthorized = await _authService.VerifyManagerPinAsync(enteredPin);
-
-//            // 2. >>> THE DEVELOPER ESCAPE HATCH <<<
-//            // Remove this before you sell the software to a real store!
-//            if (enteredPin == "0000")
-//            {
-//                isAuthorized = true;
-//            }
-
-//            if (isAuthorized)
-//            {
-//                _isUnlocked = true; // Flips the security flag
-//                this.Close();
-//            }
-//            else
-//            {
-//                MessageBox.Show("Incorrect PIN. Terminal remains locked.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Error);
-//                PinBox.Password = string.Empty;
-//            }
-//        }
-
-//        // ==========================================
-//        // ANTI-BYPASS SECURITY
-//        // ==========================================
-//        protected override void OnClosing(CancelEventArgs e)
-//        {
-//            // If a user tries to close the window via Alt+F4 or Task Manager injection
-//            // while _isUnlocked is false, we cancel the close event.
-//            if (!_isUnlocked)
-//            {
-//                e.Cancel = true;
-//            }
-
-//            base.OnClosing(e);
-//        }
-//    }
-//}
-
+using System;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
+using POS.Core.Services;
 
 namespace POS.Cashier.UI.Dialogs
 {
     public partial class LockScreenView : Window
     {
-        // Parameterless constructor fixes the "takes 1 arguments" error
-        public LockScreenView()
+        private readonly AuthService _authService;
+        private readonly string _username;
+        private bool _isUnlocking;
+
+        public bool IsUnlocked { get; private set; }
+
+        public LockScreenView(
+            AuthService authService,
+            string username,
+            string reason)
         {
             InitializeComponent();
+
+            _authService =
+                authService ??
+                throw new ArgumentNullException(
+                    nameof(authService));
+
+            _username =
+                (username ?? string.Empty).Trim();
+
+            UsernameText.Text = _username;
+
+            ReasonText.Text =
+                string.IsNullOrWhiteSpace(reason)
+                    ? "Locked manually."
+                    : reason.Trim();
+
+            Loaded += (_, _) =>
+            {
+                PasswordInput.Focus();
+                Keyboard.Focus(PasswordInput);
+            };
         }
 
-        private void NumpadBtn_Click(object sender, RoutedEventArgs e)
+        private async void UnlockButton_Click(
+            object sender,
+            RoutedEventArgs e)
         {
-            // Add pin typing logic here later
+            if (_isUnlocking)
+                return;
+
+            string password =
+                PasswordInput.Password;
+
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                ErrorText.Text =
+                    "Enter the current user's password.";
+
+                PasswordInput.Focus();
+                return;
+            }
+
+            try
+            {
+                _isUnlocking = true;
+                UnlockButton.IsEnabled = false;
+                ErrorText.Text =
+                    "Checking password...";
+
+                var (success, message) =
+                    await _authService.LoginAsync(
+                        _username,
+                        password,
+                        "CashierUnlock");
+
+                bool sameUser =
+                    string.Equals(
+                        _authService.CurrentUser?.Username,
+                        _username,
+                        StringComparison.OrdinalIgnoreCase);
+
+                if (!success || !sameUser)
+                {
+                    ErrorText.Text = message;
+                    PasswordInput.Password = string.Empty;
+                    PasswordInput.Focus();
+                    return;
+                }
+
+                IsUnlocked = true;
+                DialogResult = true;
+            }
+            catch (Exception ex)
+            {
+                ErrorText.Text =
+                    $"Unlock failed: {ex.Message}";
+
+                PasswordInput.Password = string.Empty;
+                PasswordInput.Focus();
+            }
+            finally
+            {
+                _isUnlocking = false;
+                UnlockButton.IsEnabled = true;
+            }
         }
 
-        private void ClearBtn_Click(object sender, RoutedEventArgs e)
+        private void Window_PreviewKeyDown(
+            object sender,
+            KeyEventArgs e)
         {
-            // Add pin clearing logic here later
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+
+                UnlockButton_Click(
+                    UnlockButton,
+                    new RoutedEventArgs());
+
+                return;
+            }
+
+            if (e.Key == Key.Escape ||
+                (e.Key == Key.F4 &&
+                 Keyboard.Modifiers.HasFlag(
+                     ModifierKeys.Alt)))
+            {
+                e.Handled = true;
+                ErrorText.Text =
+                    "Enter the current user's password to unlock.";
+            }
         }
 
-        private void UnlockBtn_Click(object sender, RoutedEventArgs e)
+        protected override void OnClosing(
+            CancelEventArgs e)
         {
-            // Add unlock logic here later
+            if (!IsUnlocked)
+            {
+                e.Cancel = true;
+                ErrorText.Text =
+                    "Enter the current user's password to unlock.";
+            }
+
+            base.OnClosing(e);
         }
     }
 }

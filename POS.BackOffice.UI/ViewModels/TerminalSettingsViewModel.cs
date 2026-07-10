@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -185,6 +185,13 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private string _eftposPortOrIp = string.Empty;
+
+        // =========================================================
+        // CASHIER SECURITY
+        // =========================================================
+
+        [ObservableProperty]
+        private int _autoLockTimeoutMinutes = 10;
 
         // =========================================================
         // STATUS
@@ -432,6 +439,9 @@ namespace POS.BackOffice.UI.ViewModels
             EftposProvider = settings.EftposProvider;
             EftposPortOrIp = settings.EftposPortOrIp;
 
+            AutoLockTimeoutMinutes =
+                settings.AutoLockTimeoutMinutes;
+
             RaiseCompatibilityPropertyChanges();
         }
 
@@ -470,7 +480,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 EnableEftpos = EnableEftpos,
                 EftposProvider = EftposProvider,
-                EftposPortOrIp = EftposPortOrIp
+                EftposPortOrIp = EftposPortOrIp,
+
+                AutoLockTimeoutMinutes =
+                    AutoLockTimeoutMinutes
             };
         }
 

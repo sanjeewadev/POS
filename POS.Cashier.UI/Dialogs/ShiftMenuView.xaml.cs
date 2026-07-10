@@ -76,12 +76,21 @@ namespace POS.Cashier.UI.Dialogs
             object sender,
             RoutedEventArgs e)
         {
-            MessageBox.Show(
-                "The password-based terminal lock will be connected " +
-                "in the next controlled Cashier lock patch.",
-                "Terminal Lock",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            if (Owner is not SalesView salesWindow)
+            {
+                MessageBox.Show(
+                    "The Cashier lock route is unavailable.",
+                    "Terminal Lock",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                return;
+            }
+
+            Close();
+
+            salesWindow.LockTerminal(
+                "Locked manually from Shift & Security.");
         }
 
         private void ToggleManagerBtn_Click(

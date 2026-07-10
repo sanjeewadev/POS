@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -216,6 +216,8 @@ namespace POS.Core.Repositories
                 EftposProvider = string.Empty,
                 EftposPortOrIp = string.Empty,
 
+                AutoLockTimeoutMinutes = 10,
+
                 IsActive = true,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = null,
@@ -253,6 +255,9 @@ namespace POS.Core.Repositories
             target.EnableEftpos = source.EnableEftpos;
             target.EftposProvider = source.EftposProvider;
             target.EftposPortOrIp = source.EftposPortOrIp;
+
+            target.AutoLockTimeoutMinutes =
+                source.AutoLockTimeoutMinutes;
         }
 
         private static void Normalize(TerminalSettings settings)
@@ -338,6 +343,14 @@ namespace POS.Core.Repositories
 
             if (string.IsNullOrWhiteSpace(settings.Location))
                 throw new InvalidOperationException("Terminal location is required.");
+
+            if (settings.AutoLockTimeoutMinutes < 0 ||
+                settings.AutoLockTimeoutMinutes > 120)
+            {
+                throw new InvalidOperationException(
+                    "Auto-lock timeout must be between 0 and 120 minutes. " +
+                    "Use 0 to disable automatic locking.");
+            }
 
             if (string.IsNullOrWhiteSpace(settings.PrinterMode))
                 throw new InvalidOperationException("Printer mode is required.");

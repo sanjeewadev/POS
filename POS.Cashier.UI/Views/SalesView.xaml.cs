@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Models;
+using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using System;
 using System.Globalization;
@@ -15,8 +16,8 @@ namespace POS.Cashier.UI.Views
 {
     public partial class SalesView : Window
     {
-        private readonly DispatcherTimer _inactivityTimer;
-        private const int INACTIVITY_TIMEOUT_MINUTES = 3;
+        private readonly CashierLockService _lockService;
+        private readonly int _autoLockTimeoutMinutes;
         private bool _isReturningToLogin;
 
         private TerminalActionMode _terminalActionMode = TerminalActionMode.Normal;
@@ -34,45 +35,58 @@ namespace POS.Cashier.UI.Views
         public SalesView()
             : this(
                 App.Services!
-                    .GetRequiredService<SalesViewModel>())
+                    .GetRequiredService<SalesViewModel>(),
+                App.Services!
+                    .GetRequiredService<CashierLockService>(),
+                10)
         {
         }
 
         public SalesView(
-            SalesViewModel viewModel)
+            SalesViewModel viewModel,
+            CashierLockService lockService,
+            int autoLockTimeoutMinutes)
         {
             InitializeComponent();
 
             Focusable = true;
+
             DataContext = viewModel
                 ?? throw new ArgumentNullException(
                     nameof(viewModel));
 
-            _inactivityTimer = new DispatcherTimer
-            {
-                Interval =
-                    TimeSpan.FromMinutes(
-                        INACTIVITY_TIMEOUT_MINUTES)
-            };
+            _lockService = lockService
+                ?? throw new ArgumentNullException(
+                    nameof(lockService));
 
-            _inactivityTimer.Tick +=
-                InactivityTimer_Tick;
-
-            _inactivityTimer.Start();
+            _autoLockTimeoutMinutes =
+                Math.Clamp(
+                    autoLockTimeoutMinutes,
+                    0,
+                    120);
 
             Loaded += SalesView_Loaded;
-
-            MouseMove += ResetInactivityTimer;
-            PreviewKeyDown += ResetInactivityTimer;
-            PreviewMouseDown += ResetInactivityTimer;
-            TouchDown += ResetInactivityTimer;
+            Closed += SalesView_Closed;
         }
 
         private SalesViewModel? ViewModel => DataContext as SalesViewModel;
 
-        private void SalesView_Loaded(object sender, RoutedEventArgs e)
+        private void SalesView_Loaded(
+            object sender,
+            RoutedEventArgs e)
         {
+            _lockService.Start(
+                this,
+                _autoLockTimeoutMinutes);
+
             ReturnFocusToTerminalInput();
+        }
+
+        private void SalesView_Closed(
+            object? sender,
+            EventArgs e)
+        {
+            _lockService.Stop();
         }
 
         private void ReturnFocusToTerminalInput()
@@ -90,26 +104,6 @@ namespace POS.Cashier.UI.Views
         private static bool IsEditableTextInputSource(object source)
         {
             return source is TextBox textBox && !textBox.IsReadOnly;
-        }
-
-        private void ResetInactivityTimer(object? sender, EventArgs e)
-        {
-            _inactivityTimer.Stop();
-            _inactivityTimer.Start();
-        }
-
-        private void InactivityTimer_Tick(object? sender, EventArgs e)
-        {
-            _inactivityTimer.Stop();
-
-            MessageBox.Show(
-                "The Cashier session ended due to inactivity. " +
-                "The shift remains open.",
-                "Cashier Inactivity",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-
-            PerformLogOff();
         }
 
         // =========================================================
@@ -402,7 +396,9 @@ namespace POS.Cashier.UI.Views
 
             if (e.Key == Key.F12)
             {
-                OpenMoreMenu();
+                LockTerminal(
+                    "Locked manually with F12.");
+
                 e.Handled = true;
                 return;
             }
@@ -1686,6 +1682,21 @@ namespace POS.Cashier.UI.Views
         // SYSTEM / SHIFT / OTHER
         // =========================================================
 
+        public void LockTerminal(
+            string reason = "Locked manually.")
+        {
+            _lockService.LockTerminal(reason);
+            ReturnFocusToTerminalInput();
+        }
+
+        private void LockTerminalBtn_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            LockTerminal(
+                "Locked manually from the Sales screen.");
+        }
+
         private void ShiftMenuBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isDialogOpen)
@@ -1963,7 +1974,7 @@ namespace POS.Cashier.UI.Views
                 return;
 
             _isReturningToLogin = true;
-            _inactivityTimer.Stop();
+            _lockService.Stop();
 
             if (Application.Current is App app)
             {

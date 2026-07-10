@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace POS.Core.Models
 {
@@ -77,6 +77,16 @@ namespace POS.Core.Models
         public string EftposProvider { get; set; } = string.Empty;
 
         public string EftposPortOrIp { get; set; } = string.Empty;
+
+        // =========================================================
+        // CASHIER SECURITY
+        // =========================================================
+
+        /// <summary>
+        /// Minutes of inactivity before Cashier locks.
+        /// 0 disables automatic locking. Manual lock remains available.
+        /// </summary>
+        public int AutoLockTimeoutMinutes { get; set; } = 10;
 
         // =========================================================
         // SYSTEM / AUDIT

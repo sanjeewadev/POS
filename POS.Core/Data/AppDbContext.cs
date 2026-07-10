@@ -3450,6 +3450,9 @@ namespace POS.Core.Data
                     .HasMaxLength(100)
                     .HasDefaultValue(string.Empty);
 
+                entity.Property(e => e.AutoLockTimeoutMinutes)
+                    .HasDefaultValue(10);
+
                 entity.Property(e => e.IsActive)
                     .HasDefaultValue(true);
 

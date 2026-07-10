@@ -22,6 +22,7 @@ namespace POS.Cashier.UI
         public static IServiceProvider? Services { get; private set; }
 
         private string _terminalNo = "01";
+        private int _autoLockTimeoutMinutes = 10;
         private TillRepository? _tillRepository;
 
         public App()
@@ -47,6 +48,7 @@ namespace POS.Cashier.UI
             services.AddTransient<TerminalSettingsRepository>();
 
             services.AddSingleton<AuthService>();
+            services.AddSingleton<CashierLockService>();
 
             services.AddTransient<
                 IReceiptPrintService,
@@ -130,6 +132,10 @@ namespace POS.Cashier.UI
                 return;
 
             Services
+                .GetRequiredService<CashierLockService>()
+                .Stop();
+
+            Services
                 .GetRequiredService<AuthService>()
                 .Logout();
 
@@ -188,6 +194,12 @@ namespace POS.Cashier.UI
                     terminalSettings.TerminalNo)
                     ? "01"
                     : terminalSettings.TerminalNo.Trim();
+
+            _autoLockTimeoutMinutes =
+                Math.Clamp(
+                    terminalSettings.AutoLockTimeoutMinutes,
+                    0,
+                    120);
 
             var licenseManager =
                 Services.GetRequiredService<
@@ -344,8 +356,15 @@ namespace POS.Cashier.UI
                 _terminalNo,
                 activeShift);
 
+            var lockService =
+                Services.GetRequiredService<
+                    CashierLockService>();
+
             var salesWindow =
-                new SalesView(salesViewModel);
+                new SalesView(
+                    salesViewModel,
+                    lockService,
+                    _autoLockTimeoutMinutes);
 
             MainWindow = salesWindow;
             salesWindow.Show();
