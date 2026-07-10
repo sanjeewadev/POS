@@ -50,7 +50,7 @@ namespace POS.Cashier.UI.ViewModels
             BalanceDue <= 0m &&
             PaymentLines.Any();
 
-        [ObservableProperty] private string _terminalNo = "01";
+        [ObservableProperty] private string _terminalNo = "Pending...";
         [ObservableProperty] private string _cashierName = "Pending...";
         [ObservableProperty] private string _invoiceNo = "PENDING...";
         [ObservableProperty] private DateTime _currentDate = DateTime.Now;
@@ -122,8 +122,6 @@ namespace POS.Cashier.UI.ViewModels
                 RecalculatePaymentTotals();
             };
 
-            _ = LoadActiveShiftAsync();
-
             WeakReferenceMessenger.Default.Register<AddToCartMessage>(this, (r, m) =>
             {
                 _ = AddToCartFromMessageAsync(m.Value);
@@ -178,6 +176,45 @@ namespace POS.Cashier.UI.ViewModels
             await Task.Delay(2500);
 
             IsNotificationVisible = false;
+        }
+
+        public void InitializeShiftContext(
+            string terminalNo,
+            ShiftSession activeShift)
+        {
+            if (activeShift == null)
+                throw new ArgumentNullException(nameof(activeShift));
+
+            string safeTerminalNo =
+                (terminalNo ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(safeTerminalNo))
+            {
+                throw new InvalidOperationException(
+                    "Terminal number is required.");
+            }
+
+            if (!string.Equals(
+                    activeShift.TerminalNo,
+                    safeTerminalNo,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "The active shift does not belong to this terminal.");
+            }
+
+            if (!string.Equals(
+                    activeShift.Status,
+                    "Open",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "The selected shift is not open.");
+            }
+
+            TerminalNo = safeTerminalNo;
+            _currentShiftId = activeShift.Id;
+            CashierName = activeShift.CashierName;
         }
 
         public async Task LoadActiveShiftAsync()

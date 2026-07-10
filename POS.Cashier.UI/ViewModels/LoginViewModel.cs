@@ -1,12 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models;
-using POS.Cashier.UI.Views;
 using POS.Core.Services;
-using POS.Core.Enums; // ADDED
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -14,58 +11,93 @@ namespace POS.Cashier.UI.ViewModels
     {
         private readonly AuthService _authService;
 
-        // The Action that triggers the App.xaml.cs routing
-        public event Action? LoginSuccessful;
+        public event Func<Task<bool>>? LoginCompletedAsync;
 
-        // --- UI Bindings ---
-        [ObservableProperty] private string _username = string.Empty;
-        [ObservableProperty] private string _password = string.Empty;
-        [ObservableProperty] private string _errorMessage = string.Empty;
+        [ObservableProperty]
+        private string _username = string.Empty;
 
-        // --- Security State Bindings ---
-        [ObservableProperty] private bool _isTerminalLocked = false;
-        [ObservableProperty] private string _lockoutMessage = "PLEASE LOG IN";
+        [ObservableProperty]
+        private string _password = string.Empty;
 
-        public bool HasOpenShift { get; private set; } = false;
-        private string _lockedCashierName = string.Empty;
+        [ObservableProperty]
+        private string _errorMessage = string.Empty;
+
+        [ObservableProperty]
+        private bool _isTerminalLocked;
+
+        [ObservableProperty]
+        private string _lockoutMessage = "PLEASE LOG IN";
+
+        [ObservableProperty]
+        private bool _isBusy;
+
+        public bool HasOpenShift { get; private set; }
+
+        private string _openShiftCashierName =
+            string.Empty;
 
         public LoginViewModel(AuthService authService)
         {
             _authService = authService;
         }
 
-        // Called by App.xaml.cs on startup
-        public void InitializeShiftState(ShiftSession? activeShift)
+        public void InitializeShiftState(
+            ShiftSession? activeShift)
         {
-            if (activeShift != null && activeShift.Status == "Open")
+            if (activeShift != null &&
+                string.Equals(
+                    activeShift.Status,
+                    "Open",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 HasOpenShift = true;
                 IsTerminalLocked = true;
-                _lockedCashierName = activeShift.CashierName;
-                LockoutMessage = $"TERMINAL LOCKED TO: {_lockedCashierName.ToUpper()}";
+
+                _openShiftCashierName =
+                    activeShift.CashierName?.Trim()
+                    ?? string.Empty;
+
+                LockoutMessage =
+                    $"OPEN SHIFT: {_openShiftCashierName.ToUpperInvariant()}";
             }
             else
             {
                 HasOpenShift = false;
                 IsTerminalLocked = false;
-                LockoutMessage = "PLEASE LOG IN";
+                _openShiftCashierName = string.Empty;
+                LockoutMessage =
+                    "LOGIN TO OPEN A SHIFT";
             }
         }
 
         [RelayCommand]
         public async Task LoginAsync()
         {
+            if (IsBusy)
+                return;
+
             ErrorMessage = string.Empty;
 
-            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+            string safeUsername =
+                (Username ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(safeUsername) ||
+                string.IsNullOrWhiteSpace(Password))
             {
-                ErrorMessage = "Username and password are required.";
+                ErrorMessage =
+                    "Username and password are required.";
                 return;
             }
 
             try
             {
-                var (success, message) = await _authService.LoginAsync(Username, Password, "Cashier");
+                IsBusy = true;
+
+                var (success, message) =
+                    await _authService.LoginAsync(
+                        safeUsername,
+                        Password,
+                        "Cashier");
 
                 if (!success)
                 {
@@ -74,61 +106,68 @@ namespace POS.Cashier.UI.ViewModels
                 }
 
                 var user = _authService.CurrentUser;
-                if (user == null) return;
 
-                // ==============================================
-                // THE TERMINAL LOCKOUT LOGIC
-                // ==============================================
-                if (IsTerminalLocked)
+                if (user == null)
                 {
-                    // 1. It's the SAME cashier returning -> Let them right in
-                    if (user.Username.Equals(_lockedCashierName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        LoginSuccessful?.Invoke();
-                        return;
-                    }
-
-                    // 2. It's a DIFFERENT person -> Show the aggressive red locked screen!
-                    var lockedWindow = new TerminalLockedView(_lockedCashierName);
-                    lockedWindow.ShowDialog();
-
-                    // 3. Did they click "Manager Override" on the red screen?
-                    if (lockedWindow.IsOverrideApproved)
-                    {
-                        // FIXED: Using strong Enums instead of strings
-                        if (user.Role == UserRole.Admin || user.Role == UserRole.Manager)
-                        {
-                            LoginSuccessful?.Invoke();
-                            return;
-                        }
-                        else
-                        {
-                            ErrorMessage = "OVERRIDE DENIED: You do not have Manager privileges.";
-                            _authService.Logout();
-                            return;
-                        }
-                    }
-
+                    ErrorMessage =
+                        "The authenticated user could not be loaded.";
                     _authService.Logout();
                     return;
                 }
 
-                // ==============================================
-                // NORMAL LOGIN (Streamlined)
-                // ==============================================
-                // This routes directly to the Sales View. 
-                // A background process should generate the ShiftSession with 0 OpeningCash.
-                LoginSuccessful?.Invoke();
+                if (HasOpenShift &&
+                    !string.Equals(
+                        user.Username,
+                        _openShiftCashierName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    ErrorMessage =
+                        $"This terminal has an open shift for " +
+                        $"'{_openShiftCashierName}'. " +
+                        "That cashier must log in.";
+
+                    _authService.Logout();
+                    Password = string.Empty;
+                    return;
+                }
+
+                if (LoginCompletedAsync == null)
+                {
+                    ErrorMessage =
+                        "The Cashier login route is unavailable.";
+                    _authService.Logout();
+                    return;
+                }
+
+                bool completed =
+                    await LoginCompletedAsync.Invoke();
+
+                if (!completed)
+                {
+                    ErrorMessage = HasOpenShift
+                        ? "The open shift could not be resumed."
+                        : "Shift opening was cancelled. Login again to continue.";
+
+                    _authService.Logout();
+                    Password = string.Empty;
+                }
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"System Error: {ex.Message}";
+                ErrorMessage =
+                    $"Login failed: {ex.Message}";
+
                 _authService.Logout();
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
         public void ResetForm()
         {
+            Username = string.Empty;
             Password = string.Empty;
             ErrorMessage = string.Empty;
             _authService.Logout();

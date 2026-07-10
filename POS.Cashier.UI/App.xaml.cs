@@ -1,15 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using POS.Cashier.UI.Views;
 using POS.Core.Data;
 using POS.Core.Interfaces;
+using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Licensing;
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace POS.Cashier.UI
@@ -17,6 +20,9 @@ namespace POS.Cashier.UI
     public partial class App : System.Windows.Application
     {
         public static IServiceProvider? Services { get; private set; }
+
+        private string _terminalNo = "01";
+        private TillRepository? _tillRepository;
 
         public App()
         {
@@ -30,8 +36,7 @@ namespace POS.Cashier.UI
             services.AddDbContextFactory<AppDbContext>(
                 options =>
                     options.UseSqlite(
-                        DatabasePathProvider
-                            .ConnectionString));
+                        DatabasePathProvider.ConnectionString));
 
             // Core repositories.
             services.AddTransient<UserRepository>();
@@ -57,6 +62,7 @@ namespace POS.Cashier.UI
             // ViewModels.
             services.AddTransient<LoginViewModel>();
             services.AddTransient<SalesViewModel>();
+            services.AddTransient<OpenShiftViewModel>();
             services.AddTransient<OpenCloseShiftViewModel>();
             services.AddTransient<CashMovementViewModel>();
             services.AddTransient<B2BCustomerViewModel>();
@@ -71,8 +77,7 @@ namespace POS.Cashier.UI
 
             services.AddSingleton<
                 IReceiptPrinterService,
-                POS.Hardware.Services
-                    .ReceiptPrinterService>();
+                POS.Hardware.Services.ReceiptPrinterService>();
 
             services.AddTransient<GiftVoucherRepository>();
             services.AddTransient<SellGiftVoucherDialogViewModel>();
@@ -96,6 +101,47 @@ namespace POS.Cashier.UI
                 return;
             }
 
+            try
+            {
+                await InitializeDatabaseAsync();
+                await InitializeTerminalAndLicenseAsync();
+
+                _tillRepository =
+                    Services.GetRequiredService<TillRepository>();
+
+                await ShowLoginWindowAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Cashier Startup Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                Shutdown();
+            }
+        }
+
+        public async Task ReturnToLoginAsync(
+            Window currentWindow)
+        {
+            if (Services == null)
+                return;
+
+            Services
+                .GetRequiredService<AuthService>()
+                .Logout();
+
+            await ShowLoginWindowAsync(currentWindow);
+        }
+
+        private async Task InitializeDatabaseAsync()
+        {
+            if (Services == null)
+                throw new InvalidOperationException(
+                    "Cashier services are not available.");
+
             var dbFactory =
                 Services.GetRequiredService<
                     IDbContextFactory<AppDbContext>>();
@@ -103,103 +149,88 @@ namespace POS.Cashier.UI
             try
             {
                 await using var context =
-                    await dbFactory
-                        .CreateDbContextAsync();
+                    await dbFactory.CreateDbContextAsync();
 
-                await context.Database
-                    .MigrateAsync();
+                await context.Database.MigrateAsync();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"The POS database could not be initialized.\n\n" +
+                throw new InvalidOperationException(
+                    "The POS database could not be initialized.\n\n" +
                     ex.Message,
-                    "Database Startup Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    ex);
+            }
+        }
 
-                Shutdown();
-                return;
+        private async Task InitializeTerminalAndLicenseAsync()
+        {
+            if (Services == null)
+                throw new InvalidOperationException(
+                    "Cashier services are not available.");
+
+            var terminalSettingsRepository =
+                Services.GetRequiredService<
+                    TerminalSettingsRepository>();
+
+            var terminalSettings =
+                await terminalSettingsRepository
+                    .GetOrCreateForCurrentMachineAsync("01");
+
+            if (!terminalSettings.IsActive)
+            {
+                throw new InvalidOperationException(
+                    "This terminal is disabled. " +
+                    "Open BackOffice Terminal Settings and activate it.");
             }
 
-            string terminalNo;
-
-            try
-            {
-                var terminalSettingsRepository =
-                    Services.GetRequiredService<
-                        TerminalSettingsRepository>();
-
-                var terminalSettings =
-                    await terminalSettingsRepository
-                        .GetOrCreateForCurrentMachineAsync(
-                            "01");
-
-                terminalNo =
-                    string.IsNullOrWhiteSpace(
-                        terminalSettings.TerminalNo)
+            _terminalNo =
+                string.IsNullOrWhiteSpace(
+                    terminalSettings.TerminalNo)
                     ? "01"
                     : terminalSettings.TerminalNo.Trim();
 
-                var licenseManager =
-                    Services.GetRequiredService<
-                        LicenseManagerService>();
+            var licenseManager =
+                Services.GetRequiredService<
+                    LicenseManagerService>();
 
-                LicenseSummary summary =
-                    await licenseManager
-                        .GetCurrentLicenseSummaryAsync();
+            LicenseSummary summary =
+                await licenseManager
+                    .GetCurrentLicenseSummaryAsync();
 
-                if (!summary.CanRunCashier)
-                {
-                    MessageBox.Show(
-                        summary.StatusMessage,
-                        "Cashier License Required",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-
-                    Shutdown();
-                    return;
-                }
-
-                if (summary.OverallStatus ==
-                    LicenseStatus.ExpiringSoon)
-                {
-                    MessageBox.Show(
-                        summary.StatusMessage,
-                        "License Expiry Warning",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                }
+            if (!summary.CanRunCashier)
+            {
+                throw new InvalidOperationException(
+                    summary.StatusMessage);
             }
-            catch (Exception ex)
+
+            if (summary.OverallStatus ==
+                LicenseStatus.ExpiringSoon)
             {
                 MessageBox.Show(
-                    "The Cashier license could not be verified.\n\n" +
-                    ex.Message,
-                    "License Check Error",
+                    summary.StatusMessage,
+                    "License Expiry Warning",
                     MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-
-                Shutdown();
-                return;
+                    MessageBoxImage.Warning);
             }
+        }
 
-            var tillRepository =
-                Services.GetRequiredService<
-                    TillRepository>();
+        private async Task ShowLoginWindowAsync(
+            Window? previousWindow = null)
+        {
+            if (Services == null)
+                return;
 
-            var activeShift =
-                await tillRepository
-                    .GetActiveShiftAsync(
-                        terminalNo);
+            _tillRepository ??=
+                Services.GetRequiredService<TillRepository>();
+
+            ShiftSession? activeShift =
+                await _tillRepository
+                    .GetActiveShiftAsync(_terminalNo);
 
             var loginViewModel =
-                Services.GetRequiredService<
-                    LoginViewModel>();
+                Services.GetRequiredService<LoginViewModel>();
 
-            loginViewModel
-                .InitializeShiftState(
-                    activeShift);
+            loginViewModel.InitializeShiftState(activeShift);
 
             var loginWindow =
                 new LoginView
@@ -207,40 +238,114 @@ namespace POS.Cashier.UI
                     DataContext = loginViewModel
                 };
 
-            loginViewModel.LoginSuccessful +=
+            loginViewModel.LoginCompletedAsync +=
                 async () =>
-                {
-                    if (!loginViewModel
-                            .HasOpenShift)
-                    {
-                        var authService =
-                            Services
-                                .GetRequiredService<
-                                    AuthService>();
-
-                        string cashierName =
-                            authService.CurrentUser
-                                ?.Username ??
-                            "Unknown";
-
-                        await tillRepository
-                            .CreateNewShiftAsync(
-                                terminalNo,
-                                cashierName);
-                    }
-
-                    LaunchMainPos(loginWindow);
-                };
+                    await CompleteLoginAsync(loginWindow);
 
             MainWindow = loginWindow;
             loginWindow.Show();
+
+            if (previousWindow != null &&
+                previousWindow != loginWindow)
+            {
+                previousWindow.Close();
+            }
+        }
+
+        private async Task<bool> CompleteLoginAsync(
+            LoginView loginWindow)
+        {
+            if (Services == null ||
+                _tillRepository == null)
+            {
+                return false;
+            }
+
+            var authService =
+                Services.GetRequiredService<AuthService>();
+
+            string cashierName =
+                authService.CurrentUser?.Username
+                ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(cashierName))
+                return false;
+
+            ShiftSession? activeShift =
+                await _tillRepository
+                    .GetActiveShiftAsync(_terminalNo);
+
+            if (activeShift != null &&
+                !string.Equals(
+                    activeShift.CashierName,
+                    cashierName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    $"Terminal {_terminalNo} already has an open shift " +
+                    $"for '{activeShift.CashierName}'.\n\n" +
+                    "That cashier must log in, or the shift must be " +
+                    "closed through the approved shift-closing workflow.",
+                    "Terminal Shift In Use",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
+                return false;
+            }
+
+            if (activeShift == null)
+            {
+                var openShiftViewModel =
+                    Services.GetRequiredService<
+                        OpenShiftViewModel>();
+
+                openShiftViewModel.Initialize(
+                    _terminalNo,
+                    cashierName);
+
+                var openShiftWindow =
+                    new OpenShiftView
+                    {
+                        Owner = loginWindow,
+                        DataContext = openShiftViewModel
+                    };
+
+                bool? result =
+                    openShiftWindow.ShowDialog();
+
+                if (result != true ||
+                    openShiftViewModel.CreatedShift == null)
+                {
+                    return false;
+                }
+
+                activeShift =
+                    openShiftViewModel.CreatedShift;
+            }
+
+            LaunchMainPos(
+                loginWindow,
+                activeShift);
+
+            return true;
         }
 
         private void LaunchMainPos(
-            Window oldLoginWindow)
+            Window oldLoginWindow,
+            ShiftSession activeShift)
         {
+            if (Services == null)
+                return;
+
+            var salesViewModel =
+                Services.GetRequiredService<SalesViewModel>();
+
+            salesViewModel.InitializeShiftContext(
+                _terminalNo,
+                activeShift);
+
             var salesWindow =
-                new SalesView();
+                new SalesView(salesViewModel);
 
             MainWindow = salesWindow;
             salesWindow.Show();

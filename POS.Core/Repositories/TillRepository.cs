@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -16,26 +16,113 @@ namespace POS.Core.Repositories
             _contextFactory = contextFactory;
         }
 
-        public async Task<ShiftSession?> GetActiveShiftAsync(string terminalNo)
+        public async Task<ShiftSession?> GetActiveShiftAsync(
+            string terminalNo)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            return await context.ShiftSessions.FirstOrDefaultAsync(s => s.TerminalNo == terminalNo && s.Status == "Open");
+            string safeTerminalNo =
+                (terminalNo ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(safeTerminalNo))
+                return null;
+
+            await using var context =
+                await _contextFactory.CreateDbContextAsync();
+
+            return await context.ShiftSessions
+                .AsNoTracking()
+                .Where(shift =>
+                    shift.TerminalNo == safeTerminalNo &&
+                    shift.Status == "Open")
+                .OrderByDescending(shift => shift.StartTime)
+                .ThenByDescending(shift => shift.Id)
+                .FirstOrDefaultAsync();
         }
 
-        public async Task<ShiftSession> CreateNewShiftAsync(string terminalNo, string cashierName)
+        // Compatibility overload. Startup no longer uses this method.
+        public Task<ShiftSession> CreateNewShiftAsync(
+            string terminalNo,
+            string cashierName)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var newShift = new ShiftSession
+            return CreateNewShiftAsync(
+                terminalNo,
+                cashierName,
+                0m);
+        }
+
+        public async Task<ShiftSession> CreateNewShiftAsync(
+            string terminalNo,
+            string cashierName,
+            decimal openingCash)
+        {
+            string safeTerminalNo =
+                (terminalNo ?? string.Empty).Trim();
+
+            string safeCashierName =
+                (cashierName ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(safeTerminalNo))
             {
-                TerminalNo = terminalNo,
-                CashierName = cashierName,
-                StartTime = DateTime.Now,
-                Status = "Open",
-                OpeningCash = 0m
-            };
-            context.ShiftSessions.Add(newShift);
-            await context.SaveChangesAsync();
-            return newShift;
+                throw new InvalidOperationException(
+                    "Terminal number is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(safeCashierName))
+            {
+                throw new InvalidOperationException(
+                    "Cashier name is required.");
+            }
+
+            if (openingCash < 0)
+            {
+                throw new InvalidOperationException(
+                    "Opening cash cannot be negative.");
+            }
+
+            await using var context =
+                await _contextFactory.CreateDbContextAsync();
+
+            await using var transaction =
+                await context.Database.BeginTransactionAsync();
+
+            try
+            {
+                bool openShiftExists =
+                    await context.ShiftSessions.AnyAsync(
+                        shift =>
+                            shift.TerminalNo == safeTerminalNo &&
+                            shift.Status == "Open");
+
+                if (openShiftExists)
+                {
+                    throw new InvalidOperationException(
+                        $"Terminal '{safeTerminalNo}' already has an open shift.");
+                }
+
+                var newShift = new ShiftSession
+                {
+                    TerminalNo = safeTerminalNo,
+                    CashierName = safeCashierName,
+                    StartTime = DateTime.Now,
+                    Status = "Open",
+                    OpeningCash = decimal.Round(
+                        openingCash,
+                        2,
+                        MidpointRounding.AwayFromZero)
+                };
+
+                await context.ShiftSessions.AddAsync(
+                    newShift);
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return newShift;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<decimal> GetCurrentFloatBalanceAsync(int shiftId)

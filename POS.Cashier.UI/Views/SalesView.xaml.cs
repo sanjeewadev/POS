@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Models;
 using POS.Cashier.UI.ViewModels;
@@ -17,6 +17,7 @@ namespace POS.Cashier.UI.Views
     {
         private readonly DispatcherTimer _inactivityTimer;
         private const int INACTIVITY_TIMEOUT_MINUTES = 3;
+        private bool _isReturningToLogin;
 
         private TerminalActionMode _terminalActionMode = TerminalActionMode.Normal;
         private bool _isDialogOpen;
@@ -31,18 +32,32 @@ namespace POS.Cashier.UI.Views
         }
 
         public SalesView()
+            : this(
+                App.Services!
+                    .GetRequiredService<SalesViewModel>())
+        {
+        }
+
+        public SalesView(
+            SalesViewModel viewModel)
         {
             InitializeComponent();
 
             Focusable = true;
-            DataContext = App.Services!.GetRequiredService<SalesViewModel>();
+            DataContext = viewModel
+                ?? throw new ArgumentNullException(
+                    nameof(viewModel));
 
             _inactivityTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMinutes(INACTIVITY_TIMEOUT_MINUTES)
+                Interval =
+                    TimeSpan.FromMinutes(
+                        INACTIVITY_TIMEOUT_MINUTES)
             };
 
-            _inactivityTimer.Tick += InactivityTimer_Tick;
+            _inactivityTimer.Tick +=
+                InactivityTimer_Tick;
+
             _inactivityTimer.Start();
 
             Loaded += SalesView_Loaded;
@@ -88,8 +103,9 @@ namespace POS.Cashier.UI.Views
             _inactivityTimer.Stop();
 
             MessageBox.Show(
-                "Terminal locked due to inactivity.",
-                "Security Lockout",
+                "The Cashier session ended due to inactivity. " +
+                "The shift remains open.",
+                "Cashier Inactivity",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
 
@@ -1941,31 +1957,28 @@ namespace POS.Cashier.UI.Views
             }
         }
 
-        private void PerformLogOff()
+        private async void PerformLogOff()
         {
+            if (_isReturningToLogin)
+                return;
+
+            _isReturningToLogin = true;
             _inactivityTimer.Stop();
 
-            var loginViewModel = App.Services?.GetService<LoginViewModel>();
-
-            if (loginViewModel != null)
+            if (Application.Current is App app)
             {
-                loginViewModel.LoginSuccessful += delegate
-                {
-                    SalesView newSalesWindow = new SalesView();
-                    Application.Current.MainWindow = newSalesWindow;
-                    newSalesWindow.Show();
-                };
+                await app.ReturnToLoginAsync(this);
+                return;
             }
 
-            LoginView loginWindow = new LoginView
-            {
-                DataContext = loginViewModel
-            };
+            MessageBox.Show(
+                "The Cashier login route is unavailable. " +
+                "Close and reopen Cashier.",
+                "Log Off Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
 
-            Application.Current.MainWindow = loginWindow;
-            loginWindow.Show();
-
-            Close();
+            _isReturningToLogin = false;
         }
 
         private void MoreBtn_Click(object sender, RoutedEventArgs e)
