@@ -38,6 +38,14 @@ namespace POS.Core.Models
 
         public decimal GlobalVatRate { get; set; } = 0m;
 
+        public bool IsVatRegistered { get; set; } = false;
+
+        public string TaxpayerIdentificationNumber { get; set; } = string.Empty;
+
+        public string VatRegistrationNumber { get; set; } = string.Empty;
+
+        public string TaxInvoicePrefix { get; set; } = "TI";
+
         public string CurrencyCode { get; set; } = "LKR";
 
         public string CurrencySymbol { get; set; } = "Rs.";

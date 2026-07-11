@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using POS.Core.Configuration;
 
 namespace POS.Core.Models
 {
@@ -45,8 +46,20 @@ namespace POS.Core.Models
         public string BaseUom { get; set; } = string.Empty;
 
         // =========================================================
+        // ITEM TYPE
+        // =========================================================
+
+        [Required]
+        [MaxLength(20)]
+        public string ItemType { get; set; } = ItemTypeCodes.StockItem;
+
+        // =========================================================
         // TAX
         // =========================================================
+
+        public int? TaxCategoryId { get; set; }
+
+        public TaxCategory? TaxCategory { get; set; }
 
         // Temporary until Tax Master is added.
         // Current accepted values:

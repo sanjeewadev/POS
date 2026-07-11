@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 
@@ -53,13 +54,19 @@ namespace POS.Core.Repositories
 
             DateTime now = DateTime.Now;
 
+            int? standardCategoryId = await context.TaxCategories
+                .Where(c => c.CategoryCode == TaxCategoryCodes.Standard)
+                .Select(c => (int?)c.Id)
+                .FirstOrDefaultAsync();
+
             await EnsureDefaultAsync(
                 set,
                 "TAX-FREE",
                 "Tax Free / Exempted",
                 0m,
                 10,
-                now);
+                now,
+                taxCategoryId: null);
 
             await EnsureDefaultAsync(
                 set,
@@ -67,7 +74,8 @@ namespace POS.Core.Repositories
                 "Standard VAT",
                 18m,
                 20,
-                now);
+                now,
+                taxCategoryId: standardCategoryId);
 
             await EnsureDefaultAsync(
                 set,
@@ -75,7 +83,8 @@ namespace POS.Core.Repositories
                 "Reduced VAT",
                 5m,
                 30,
-                now);
+                now,
+                taxCategoryId: null);
 
             await context.SaveChangesAsync();
         }
@@ -86,20 +95,31 @@ namespace POS.Core.Repositories
             string taxName,
             decimal ratePercent,
             int displayOrder,
-            DateTime now)
+            DateTime now,
+            int? taxCategoryId)
         {
             string code = NormalizeCode(taxCode);
 
-            bool exists = await set.AnyAsync(t =>
+            var existing = await set.FirstOrDefaultAsync(t =>
                 EF.Functions.Collate(t.TaxCode, "NOCASE") == code);
 
-            if (exists)
+            if (existing != null)
+            {
+                if (!existing.TaxCategoryId.HasValue &&
+                    taxCategoryId.HasValue)
+                {
+                    existing.TaxCategoryId = taxCategoryId;
+                    existing.UpdatedAt = now;
+                }
+
                 return;
+            }
 
             await set.AddAsync(new TaxRate
             {
                 TaxCode = code,
                 TaxName = NormalizeText(taxName),
+                TaxCategoryId = taxCategoryId,
                 RatePercent = ratePercent,
                 IsActive = true,
                 IsSystemDefault = true,

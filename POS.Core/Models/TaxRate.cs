@@ -16,8 +16,25 @@ namespace POS.Core.Models
         [MaxLength(100)]
         public string TaxName { get; set; } = string.Empty;
 
+        public int? TaxCategoryId { get; set; }
+
+        public TaxCategory? TaxCategory { get; set; }
+
         [Column(TypeName = "decimal(5,2)")]
         public decimal RatePercent { get; set; } = 0m;
+
+        public DateTime? EffectiveFrom { get; set; }
+
+        public DateTime? EffectiveTo { get; set; }
+
+        [MaxLength(250)]
+        public string? ChangeReason { get; set; }
+
+        [MaxLength(100)]
+        public string? CreatedBy { get; set; }
+
+        [MaxLength(100)]
+        public string? UpdatedBy { get; set; }
 
         public bool IsActive { get; set; } = true;
 

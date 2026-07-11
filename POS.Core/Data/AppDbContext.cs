@@ -22,6 +22,7 @@ namespace POS.Core.Data
         public DbSet<Supplier> Suppliers { get; set; } = null!;
 
         public DbSet<TaxRate> TaxRates { get; set; } = null!;
+        public DbSet<TaxCategory> TaxCategories { get; set; } = null!;
 
         // --- MATRIX INVENTORY ---
         public DbSet<AttributeGroup> AttributeGroups { get; set; } = null!;
@@ -422,6 +423,13 @@ namespace POS.Core.Data
                 entity.Property(i => i.BaseUom)
                     .HasMaxLength(20);
 
+                entity.Property(i => i.ItemType)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue(ItemTypeCodes.StockItem);
+
+                entity.Property(i => i.TaxCategoryId);
+
                 entity.Property(i => i.TaxCode)
                     .HasMaxLength(20);
 
@@ -475,6 +483,11 @@ namespace POS.Core.Data
                     .HasForeignKey(i => i.UnitOfMeasureId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(i => i.TaxCategory)
+                    .WithMany(t => t.Items)
+                    .HasForeignKey(i => i.TaxCategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(i => i.ItemCode)
                     .IsUnique();
 
@@ -485,6 +498,10 @@ namespace POS.Core.Data
                 entity.HasIndex(i => i.SubCategoryId);
 
                 entity.HasIndex(i => i.UnitOfMeasureId);
+
+                entity.HasIndex(i => i.ItemType);
+
+                entity.HasIndex(i => i.TaxCategoryId);
 
                 entity.HasIndex(i => i.HasBatchTracking);
 
@@ -3310,6 +3327,21 @@ namespace POS.Core.Data
                     .HasPrecision(5, 2)
                     .HasDefaultValue(0m);
 
+                entity.Property(e => e.IsVatRegistered)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.TaxpayerIdentificationNumber)
+                    .HasMaxLength(30)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.VatRegistrationNumber)
+                    .HasMaxLength(30)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(e => e.TaxInvoicePrefix)
+                    .HasMaxLength(20)
+                    .HasDefaultValue("TI");
+
                 entity.Property(e => e.CurrencyCode)
                     .HasMaxLength(10)
                     .HasDefaultValue("LKR");
@@ -3690,6 +3722,50 @@ namespace POS.Core.Data
                 entity.HasIndex(e => e.TerminalNo);
             });
 
+            modelBuilder.Entity<TaxCategory>(entity =>
+            {
+                entity.ToTable("TaxCategories");
+
+                entity.HasKey(t => t.Id);
+
+                entity.Property(t => t.CategoryCode)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.CategoryName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(t => t.TreatmentType)
+                    .IsRequired()
+                    .HasMaxLength(30);
+
+                entity.Property(t => t.IsRateBased)
+                    .HasDefaultValue(false);
+
+                entity.Property(t => t.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(t => t.DisplayOrder)
+                    .HasDefaultValue(0);
+
+                entity.Property(t => t.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(t => t.UpdatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasIndex(t => t.CategoryCode)
+                    .IsUnique();
+
+                entity.HasIndex(t => t.TreatmentType);
+
+                entity.HasIndex(t => t.IsActive);
+
+                entity.HasIndex(t => t.DisplayOrder);
+            });
+
             modelBuilder.Entity<TaxRate>(entity =>
             {
                 entity.ToTable("TaxRates");
@@ -3708,6 +3784,15 @@ namespace POS.Core.Data
                 entity.Property(t => t.RatePercent)
                     .HasColumnType("decimal(5,2)");
 
+                entity.Property(t => t.ChangeReason)
+                    .HasMaxLength(250);
+
+                entity.Property(t => t.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(t => t.UpdatedBy)
+                    .HasMaxLength(100);
+
                 entity.Property(t => t.IsActive)
                     .HasDefaultValue(true);
 
@@ -3717,8 +3802,27 @@ namespace POS.Core.Data
                 entity.Property(t => t.DisplayOrder)
                     .HasDefaultValue(0);
 
+                entity.HasOne(t => t.TaxCategory)
+                    .WithMany(c => c.TaxRates)
+                    .HasForeignKey(t => t.TaxCategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(t => t.TaxCode)
                     .IsUnique();
+
+                entity.HasIndex(t => t.TaxCategoryId);
+
+                entity.HasIndex(t => new
+                {
+                    t.TaxCategoryId,
+                    t.EffectiveFrom
+                });
+
+                entity.HasIndex(t => new
+                {
+                    t.TaxCategoryId,
+                    t.IsActive
+                });
             });
         }
 

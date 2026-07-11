@@ -2418,12 +2418,22 @@ namespace POS.Core.Migrations
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("StockItem");
+
                     b.Property<string>("PrintName")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("SubCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("TaxCategoryId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("TaxCode")
@@ -2460,7 +2470,11 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("ItemName");
 
+                    b.HasIndex("ItemType");
+
                     b.HasIndex("SubCategoryId");
+
+                    b.HasIndex("TaxCategoryId");
 
                     b.HasIndex("UnitOfMeasureId");
 
@@ -4198,6 +4212,11 @@ namespace POS.Core.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("IsVatRegistered")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("LegalName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -4250,10 +4269,24 @@ namespace POS.Core.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TaxInvoicePrefix")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("TI");
+
                     b.Property<string>("TaxNo")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("TaxpayerIdentificationNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
@@ -4271,6 +4304,13 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("VatRegistrationNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
@@ -4731,14 +4771,27 @@ namespace POS.Core.Migrations
                     b.ToTable("SupplierReturnLines", (string)null);
                 });
 
-            modelBuilder.Entity("POS.Core.Models.TaxRate", b =>
+            modelBuilder.Entity("POS.Core.Models.TaxCategory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<string>("CategoryCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<DateTime?>("DeactivatedAt")
                         .HasColumnType("TEXT");
@@ -4753,6 +4806,71 @@ namespace POS.Core.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("IsRateBased")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("TreatmentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryCode")
+                        .IsUnique();
+
+                    b.HasIndex("DisplayOrder");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("TreatmentType");
+
+                    b.ToTable("TaxCategories", (string)null);
+                });
+
+            modelBuilder.Entity("POS.Core.Models.TaxRate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ChangeReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeactivatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DisplayOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("EffectiveFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("IsSystemDefault")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -4760,6 +4878,9 @@ namespace POS.Core.Migrations
 
                     b.Property<decimal>("RatePercent")
                         .HasColumnType("decimal(5,2)");
+
+                    b.Property<int?>("TaxCategoryId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("TaxCode")
                         .IsRequired()
@@ -4775,10 +4896,20 @@ namespace POS.Core.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TaxCategoryId");
 
                     b.HasIndex("TaxCode")
                         .IsUnique();
+
+                    b.HasIndex("TaxCategoryId", "EffectiveFrom");
+
+                    b.HasIndex("TaxCategoryId", "IsActive");
 
                     b.ToTable("TaxRates", (string)null);
                 });
@@ -5432,6 +5563,11 @@ namespace POS.Core.Migrations
                         .HasForeignKey("SubCategoryId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("POS.Core.Models.TaxCategory", "TaxCategory")
+                        .WithMany("Items")
+                        .HasForeignKey("TaxCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("POS.Core.Models.UnitOfMeasure", "UnitOfMeasure")
                         .WithMany("ItemParents")
                         .HasForeignKey("UnitOfMeasureId")
@@ -5441,6 +5577,8 @@ namespace POS.Core.Migrations
                     b.Navigation("Category");
 
                     b.Navigation("SubCategory");
+
+                    b.Navigation("TaxCategory");
 
                     b.Navigation("UnitOfMeasure");
                 });
@@ -5753,6 +5891,16 @@ namespace POS.Core.Migrations
                     b.Navigation("ReturnHeader");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.TaxRate", b =>
+                {
+                    b.HasOne("POS.Core.Models.TaxCategory", "TaxCategory")
+                        .WithMany("TaxRates")
+                        .HasForeignKey("TaxCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("TaxCategory");
+                });
+
             modelBuilder.Entity("POS.Core.Models.AttributeGroup", b =>
                 {
                     b.Navigation("AttributeValues");
@@ -5785,6 +5933,13 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
                 {
                     b.Navigation("GrnLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.TaxCategory", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("TaxRates");
                 });
 
             modelBuilder.Entity("POS.Core.Models.ItemParent", b =>
