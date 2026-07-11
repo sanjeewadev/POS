@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using POS.Core.Configuration;
@@ -93,6 +93,20 @@ namespace POS.Core.Models
 
         [NotMapped]
         public decimal GrossAmount => Math.Round(OrderQty * ExpectedCost, 2);
+
+        [NotMapped]
+        public decimal GlobalDiscountAllocation { get; set; }
+
+        [NotMapped]
+        public decimal TaxableAmountPreview { get; set; }
+
+        [NotMapped]
+        public string TaxCategoryDisplay =>
+            string.IsNullOrWhiteSpace(TaxCategoryCodeSnapshot)
+                ? "Unclassified"
+                : string.IsNullOrWhiteSpace(TaxNameSnapshot)
+                    ? TaxCategoryCodeSnapshot
+                    : $"{TaxCategoryCodeSnapshot} - {TaxNameSnapshot}";
 
         [NotMapped]
         public decimal VatAmount

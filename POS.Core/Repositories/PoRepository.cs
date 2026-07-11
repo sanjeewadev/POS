@@ -95,6 +95,18 @@ namespace POS.Core.Repositories
 
         public bool IsVatIncluded { get; set; } = false;
 
+        public int TaxCategoryId { get; set; }
+
+        public string TaxCategoryCode { get; set; } = string.Empty;
+
+        public string TaxCategoryName { get; set; } = string.Empty;
+
+        public string TaxTreatmentType { get; set; } = string.Empty;
+
+        public int? TaxRateId { get; set; }
+
+        public string TaxName { get; set; } = string.Empty;
+
         public decimal LastSupplierCost { get; set; } = 0m;
 
         public decimal CurrentCost { get; set; } = 0m;
@@ -166,6 +178,18 @@ namespace POS.Core.Repositories
                 .OrderBy(s => s.SupplierName)
                 .ThenBy(s => s.SupplierCode)
                 .ToListAsync();
+        }
+
+        public async Task<IReadOnlyDictionary<int, PurchasingTaxProfile>> GetTaxProfilesAsync(
+            IReadOnlyCollection<int> itemVariantIds,
+            DateTime transactionDate)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                itemVariantIds,
+                transactionDate.Date);
         }
 
         public async Task<IEnumerable<PoHeader>> GetOpenPurchaseOrdersAsync()
@@ -253,7 +277,8 @@ namespace POS.Core.Repositories
 
         public async Task<List<PoVariantLookupDto>> GetSupplierApprovedVariantsByParentAsync(
             int parentId,
-            int supplierId)
+            int supplierId,
+            DateTime? transactionDate = null)
         {
             if (parentId <= 0 || supplierId <= 0)
                 return new List<PoVariantLookupDto>();
@@ -311,7 +336,7 @@ namespace POS.Core.Repositories
             var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
                 context,
                 rows.Select(r => r.ItemVariantId).ToList(),
-                DateTime.Today);
+                (transactionDate ?? DateTime.Today).Date);
 
             return rows
                 .Select(r =>
@@ -332,6 +357,12 @@ namespace POS.Core.Repositories
                         TaxCode = profile.TaxCode,
                         VatRatePercent = profile.RatePercent,
                         IsVatIncluded = false,
+                        TaxCategoryId = profile.TaxCategoryId,
+                        TaxCategoryCode = profile.TaxCategoryCode,
+                        TaxCategoryName = profile.TaxCategoryName,
+                        TaxTreatmentType = profile.TaxTreatmentType,
+                        TaxRateId = profile.TaxRateId,
+                        TaxName = profile.TaxName,
                         LastSupplierCost = r.LastSupplierCost,
                         CurrentCost = r.CurrentCost,
                         SupplierItemCode = r.SupplierItemCode ?? string.Empty,
@@ -349,7 +380,8 @@ namespace POS.Core.Repositories
 
         public async Task<PoVariantLookupDto?> GetSupplierApprovedVariantByBarcodeOrSkuAsync(
             string barcodeOrSku,
-            int supplierId)
+            int supplierId,
+            DateTime? transactionDate = null)
         {
             string term = NormalizeText(barcodeOrSku);
 
@@ -417,7 +449,7 @@ namespace POS.Core.Repositories
             var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
                 context,
                 new[] { row.ItemVariantId },
-                DateTime.Today);
+                (transactionDate ?? DateTime.Today).Date);
 
             var profile = taxProfiles[row.ItemVariantId];
 
@@ -435,6 +467,12 @@ namespace POS.Core.Repositories
                 TaxCode = profile.TaxCode,
                 VatRatePercent = profile.RatePercent,
                 IsVatIncluded = false,
+                TaxCategoryId = profile.TaxCategoryId,
+                TaxCategoryCode = profile.TaxCategoryCode,
+                TaxCategoryName = profile.TaxCategoryName,
+                TaxTreatmentType = profile.TaxTreatmentType,
+                TaxRateId = profile.TaxRateId,
+                TaxName = profile.TaxName,
                 LastSupplierCost = row.LastSupplierCost,
                 CurrentCost = row.CurrentCost,
                 SupplierItemCode = row.SupplierItemCode ?? string.Empty,

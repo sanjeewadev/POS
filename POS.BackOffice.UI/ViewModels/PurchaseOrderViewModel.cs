@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -37,6 +37,18 @@ namespace POS.BackOffice.UI.ViewModels
         public decimal CurrentSOH { get; set; } = 0m;
 
         public string TaxCode { get; set; } = "VAT";
+
+        public int TaxCategoryId { get; set; }
+
+        public string TaxCategoryCode { get; set; } = string.Empty;
+
+        public string TaxCategoryName { get; set; } = string.Empty;
+
+        public string TaxTreatmentType { get; set; } = string.Empty;
+
+        public int? TaxRateId { get; set; }
+
+        public string TaxName { get; set; } = string.Empty;
 
         public string SupplierItemCode { get; set; } = string.Empty;
 
@@ -496,6 +508,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnGlobalBillDiscountChanged(decimal value)
         {
+            if (_isNormalizingGlobalBillDiscount)
+                return;
+
             RecalculateTotals();
         }
 
@@ -617,7 +632,8 @@ namespace POS.BackOffice.UI.ViewModels
 
                 var variants = await _poRepository.GetSupplierApprovedVariantsByParentAsync(
                     parentId,
-                    SelectedSupplier.Id);
+                    SelectedSupplier.Id,
+                    OrderDate);
 
                 foreach (var variant in variants)
                 {
@@ -635,6 +651,12 @@ namespace POS.BackOffice.UI.ViewModels
                             : variant.VariantDescription,
                         Uom = string.IsNullOrWhiteSpace(variant.Uom) ? "PCS" : variant.Uom,
                         TaxCode = string.IsNullOrWhiteSpace(variant.TaxCode) ? "VAT" : variant.TaxCode,
+                        TaxCategoryId = variant.TaxCategoryId,
+                        TaxCategoryCode = variant.TaxCategoryCode,
+                        TaxCategoryName = variant.TaxCategoryName,
+                        TaxTreatmentType = variant.TaxTreatmentType,
+                        TaxRateId = variant.TaxRateId,
+                        TaxName = variant.TaxName,
                         SupplierItemCode = variant.SupplierItemCode,
                         Moq = variant.Moq <= 0 ? 1 : variant.Moq,
                         AllowDecimalQuantity = variant.AllowDecimalQuantity,
@@ -648,7 +670,7 @@ namespace POS.BackOffice.UI.ViewModels
                         LineDiscountMode = "Amount",
                         LineDiscountValue = 0m,
                         VatRatePercent = variant.VatRatePercent,
-                        IsVatIncluded = BulkMatrixVatIncluded || variant.IsVatIncluded
+                        IsVatIncluded = IsTaxInclusive
                     };
 
                     item.RecalculateLineAmounts();
@@ -735,7 +757,8 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 var variant = await _poRepository.GetSupplierApprovedVariantByBarcodeOrSkuAsync(
                     term,
-                    SelectedSupplier.Id);
+                    SelectedSupplier.Id,
+                    OrderDate);
 
                 if (variant == null)
                 {
@@ -772,7 +795,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private static PoLine BuildPoLineFromVariant(
+        private PoLine BuildPoLineFromVariant(
             PoVariantLookupDto variant,
             decimal qty)
         {
@@ -797,6 +820,12 @@ namespace POS.BackOffice.UI.ViewModels
                 Barcode = variant.Barcode,
                 Uom = string.IsNullOrWhiteSpace(variant.Uom) ? "PCS" : variant.Uom,
                 TaxCode = string.IsNullOrWhiteSpace(variant.TaxCode) ? "VAT" : variant.TaxCode,
+                TaxCategoryId = variant.TaxCategoryId,
+                TaxRateId = variant.TaxRateId,
+                TaxCategoryCodeSnapshot = variant.TaxCategoryCode,
+                TaxCodeSnapshot = variant.TaxCode,
+                TaxNameSnapshot = variant.TaxName,
+                TaxRatePercentSnapshot = variant.VatRatePercent,
                 SupplierItemCode = variant.SupplierItemCode,
                 Moq = variant.Moq <= 0 ? 1 : variant.Moq,
                 HasBatchTracking = variant.HasBatchTracking,
@@ -807,7 +836,7 @@ namespace POS.BackOffice.UI.ViewModels
                 LineDiscountValue = 0m,
                 LineDiscount = 0m,
                 VatRatePercent = variant.VatRatePercent,
-                IsVatIncluded = variant.IsVatIncluded,
+                IsVatIncluded = IsTaxInclusive,
                 TaxAmount = 0m,
                 LineTotal = 0m,
                 LineStatus = "Open"
@@ -818,7 +847,7 @@ namespace POS.BackOffice.UI.ViewModels
             return line;
         }
 
-        private static PoLine BuildPoLineFromMatrix(PoMatrixEntryDto item)
+        private PoLine BuildPoLineFromMatrix(PoMatrixEntryDto item)
         {
             item.RecalculateLineAmounts();
 
@@ -835,6 +864,12 @@ namespace POS.BackOffice.UI.ViewModels
                 Barcode = item.Barcode,
                 Uom = string.IsNullOrWhiteSpace(item.Uom) ? "PCS" : item.Uom,
                 TaxCode = string.IsNullOrWhiteSpace(item.TaxCode) ? "VAT" : item.TaxCode,
+                TaxCategoryId = item.TaxCategoryId,
+                TaxRateId = item.TaxRateId,
+                TaxCategoryCodeSnapshot = item.TaxCategoryCode,
+                TaxCodeSnapshot = item.TaxCode,
+                TaxNameSnapshot = item.TaxName,
+                TaxRatePercentSnapshot = item.VatRatePercent,
                 SupplierItemCode = item.SupplierItemCode,
                 Moq = item.Moq <= 0 ? 1 : item.Moq,
                 HasBatchTracking = item.HasBatchTracking,
@@ -845,7 +880,7 @@ namespace POS.BackOffice.UI.ViewModels
                 LineDiscountValue = item.LineDiscountValue,
                 LineDiscount = item.LineDiscount,
                 VatRatePercent = item.VatRatePercent,
-                IsVatIncluded = item.IsVatIncluded,
+                IsVatIncluded = IsTaxInclusive,
                 TaxAmount = item.VatAmount,
                 LineTotal = item.LineTotal,
                 LineStatus = "Open"
@@ -968,7 +1003,13 @@ namespace POS.BackOffice.UI.ViewModels
             existing.LineDiscountMode = newLine.LineDiscountMode;
             existing.LineDiscountValue = newLine.LineDiscountValue;
             existing.VatRatePercent = newLine.VatRatePercent;
-            existing.IsVatIncluded = newLine.IsVatIncluded;
+            existing.IsVatIncluded = IsTaxInclusive;
+            existing.TaxCategoryId = newLine.TaxCategoryId;
+            existing.TaxRateId = newLine.TaxRateId;
+            existing.TaxCategoryCodeSnapshot = newLine.TaxCategoryCodeSnapshot;
+            existing.TaxCodeSnapshot = newLine.TaxCodeSnapshot;
+            existing.TaxNameSnapshot = newLine.TaxNameSnapshot;
+            existing.TaxRatePercentSnapshot = newLine.TaxRatePercentSnapshot;
             existing.Moq = newLine.Moq;
 
             RecalculateLine(existing);
@@ -1277,47 +1318,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         public void RecalculateTotals()
         {
-            if (!PoLines.Any())
-            {
-                Subtotal = 0m;
-                TotalDiscountAmount = 0m;
-                TotalTaxAmount = 0m;
-                NetPayable = 0m;
-                RefreshPoLineGrid();
-                SaveOrderCommand.NotifyCanExecuteChanged();
-                return;
-            }
-
-            decimal subtotal = 0m;
-            decimal lineDiscountTotal = 0m;
-            decimal vatTotal = 0m;
-            decimal lineNetTotal = 0m;
-
-            foreach (var line in PoLines)
-            {
-                RecalculateLine(line);
-
-                subtotal += line.OrderQty * line.ExpectedCost;
-                lineDiscountTotal += line.LineDiscount;
-                vatTotal += line.TaxAmount;
-                lineNetTotal += line.LineTotal;
-            }
-
-            if (GlobalBillDiscount < 0)
-                GlobalBillDiscount = 0m;
-
-            if (GlobalBillDiscount > lineNetTotal)
-                GlobalBillDiscount = lineNetTotal;
-
-            Subtotal = Math.Round(subtotal, 2);
-            TotalDiscountAmount = Math.Round(lineDiscountTotal + GlobalBillDiscount, 2);
-            TotalTaxAmount = Math.Round(vatTotal, 2);
-
-            decimal net = lineNetTotal - GlobalBillDiscount;
-            NetPayable = Math.Round(net < 0 ? 0m : net, 2);
-
-            RefreshPoLineGrid();
-            SaveOrderCommand.NotifyCanExecuteChanged();
+            RecalculateAuthoritativeTotals();
         }
 
         private static void RecalculateLine(PoLine line)
@@ -1410,7 +1411,12 @@ namespace POS.BackOffice.UI.ViewModels
                     NetPayable = NetPayable,
                     CreatedBy = string.IsNullOrWhiteSpace(CurrentUser) ? "Admin" : CurrentUser.Trim(),
                     ApprovedBy = string.IsNullOrWhiteSpace(CurrentUser) ? "Admin" : CurrentUser.Trim(),
-                    IsTaxInclusive = false,
+                    IsTaxInclusive = IsTaxInclusive,
+                    TaxableAmountTotal = TaxableAmountTotal,
+                    StandardRatedAmount = StandardRatedAmount,
+                    ZeroRatedAmount = ZeroRatedAmount,
+                    ExemptAmount = ExemptAmount,
+                    OutOfScopeAmount = OutOfScopeAmount,
                     Status = "Approved"
                 };
 
@@ -1660,6 +1666,12 @@ namespace POS.BackOffice.UI.ViewModels
                 BulkIsVatIncluded = false;
 
                 GlobalBillDiscount = 0m;
+                IsTaxInclusive = false;
+                TaxableAmountTotal = 0m;
+                StandardRatedAmount = 0m;
+                ZeroRatedAmount = 0m;
+                ExemptAmount = 0m;
+                OutOfScopeAmount = 0m;
                 SelectedItem = null;
                 SelectedLine = null;
                 SelectedMatrixVariant = null;
