@@ -220,8 +220,10 @@
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
 
-                    <TextBlock Text="BANDULA TRADE CENTER"
+                    <TextBlock Text="{Binding StoreDisplayName}"
                                Style="{StaticResource TopBarTitleText}"
+                               MaxWidth="320"
+                               TextTrimming="CharacterEllipsis"
                                Margin="0,0,14,0"/>
 
                     <Border Background="#334155"
@@ -229,7 +231,7 @@
                             BorderThickness="1"
                             Padding="8,3"
                             VerticalAlignment="Center">
-                        <TextBlock Text="{Binding TerminalNo, StringFormat=Terminal {0}}"
+                        <TextBlock Text="{Binding TerminalDisplayName}"
                                    Style="{StaticResource TopBarSmallText}"/>
                     </Border>
                 </StackPanel>
@@ -351,10 +353,10 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Text="Terminal" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="0"/>
-                            <TextBox Text="{Binding TerminalNo}" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="1"/>
+                            <TextBox Text="{Binding TerminalDisplayName}" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="1"/>
 
-                            <TextBlock Text="Location" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="0"/>
-                            <TextBox Text="CB" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="1"/>
+                            <TextBlock Text="Shift" Style="{StaticResource HeaderLabel}" Grid.Row="1" Grid.Column="0"/>
+                            <TextBox Text="{Binding ShiftDisplayText}" Style="{StaticResource LockedInput}" Grid.Row="1" Grid.Column="1"/>
 
                             <TextBlock Text="Date" Style="{StaticResource HeaderLabel}" Grid.Row="0" Grid.Column="2"/>
                             <TextBox Text="{Binding CurrentDate, StringFormat=yyyy-MM-dd}" Style="{StaticResource LockedInput}" Grid.Row="0" Grid.Column="3"/>

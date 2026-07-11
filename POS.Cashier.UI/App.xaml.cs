@@ -25,6 +25,7 @@ namespace POS.Cashier.UI
         private string _terminalNo = "01";
         private int _autoLockTimeoutMinutes = 10;
         private TerminalSettings? _terminalSettings;
+        private StoreSettings? _storeSettings;
         private TillRepository? _tillRepository;
         private bool _fatalErrorShown;
 
@@ -205,7 +206,7 @@ namespace POS.Cashier.UI
             {
                 throw new InvalidOperationException(
                     "This terminal is disabled. " +
-                    "Open BackOffice Terminal Settings and activate it.");
+                    "Open BackOffice Terminal Management and activate it.");
             }
 
             _terminalNo =
@@ -219,6 +220,14 @@ namespace POS.Cashier.UI
                     terminalSettings.AutoLockTimeoutMinutes,
                     0,
                     120);
+
+            var storeSettingsRepository =
+                Services.GetRequiredService<
+                    StoreSettingsRepository>();
+
+            _storeSettings =
+                await storeSettingsRepository
+                    .GetOrCreateDefaultAsync();
 
             var licenseManager =
                 Services.GetRequiredService<
@@ -377,10 +386,17 @@ namespace POS.Cashier.UI
                     "Terminal settings are not loaded.");
             }
 
+            if (_storeSettings == null)
+            {
+                throw new InvalidOperationException(
+                    "Store settings are not loaded.");
+            }
+
             salesViewModel.InitializeShiftContext(
                 _terminalNo,
                 activeShift,
-                _terminalSettings);
+                _terminalSettings,
+                _storeSettings);
 
             var lockService =
                 Services.GetRequiredService<

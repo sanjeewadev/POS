@@ -52,6 +52,9 @@ namespace POS.Cashier.UI.ViewModels
             PaymentLines.Any();
 
         [ObservableProperty] private string _terminalNo = "Pending...";
+        [ObservableProperty] private string _terminalDisplayName = "Terminal";
+        [ObservableProperty] private string _storeDisplayName = "My Store";
+        [ObservableProperty] private string _shiftDisplayText = "Shift -";
         [ObservableProperty] private string _cashierName = "Pending...";
         [ObservableProperty] private string _invoiceNo = "PENDING...";
         [ObservableProperty] private DateTime _currentDate = DateTime.Now;
@@ -193,7 +196,8 @@ namespace POS.Cashier.UI.ViewModels
         public void InitializeShiftContext(
             string terminalNo,
             ShiftSession activeShift,
-            TerminalSettings terminalSettings)
+            TerminalSettings terminalSettings,
+            StoreSettings storeSettings)
         {
             if (activeShift == null)
                 throw new ArgumentNullException(nameof(activeShift));
@@ -202,6 +206,12 @@ namespace POS.Cashier.UI.ViewModels
             {
                 throw new ArgumentNullException(
                     nameof(terminalSettings));
+            }
+
+            if (storeSettings == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(storeSettings));
             }
 
             string safeTerminalNo =
@@ -232,7 +242,25 @@ namespace POS.Cashier.UI.ViewModels
             }
 
             TerminalNo = safeTerminalNo;
+
+            string terminalName =
+                FirstNonEmpty(
+                    terminalSettings.TerminalName,
+                    $"Terminal {safeTerminalNo}");
+
+            TerminalDisplayName =
+                $"{terminalName} ({safeTerminalNo})";
+
+            StoreDisplayName =
+                FirstNonEmpty(
+                    storeSettings.StoreName,
+                    storeSettings.LegalName,
+                    "My Store");
+
             _currentShiftId = activeShift.Id;
+            ShiftDisplayText =
+                $"Shift {activeShift.Id} - OPEN";
+
             CashierName = activeShift.CashierName;
 
             _receiptPrinterName =
@@ -275,17 +303,28 @@ namespace POS.Cashier.UI.ViewModels
                 if (shift != null)
                 {
                     _currentShiftId = shift.Id;
+                    ShiftDisplayText =
+                        $"Shift {shift.Id} - OPEN";
                     CashierName = shift.CashierName;
                 }
                 else
                 {
                     _currentShiftId = 0;
+                    ShiftDisplayText =
+                        "NO OPEN SHIFT";
                     CashierName = "NO OPEN SHIFT";
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Load active shift",
+                    ex);
+
                 _currentShiftId = 0;
+                ShiftDisplayText =
+                    "SHIFT ERROR";
                 CashierName = "ERROR LOADING SHIFT";
             }
         }
@@ -2061,7 +2100,16 @@ namespace POS.Cashier.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _ = ShowNotificationAsync($"Quotation print failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Quotation printing",
+                    ex);
+
+                _ = ShowNotificationAsync(
+                    "Quotation could not be printed. " +
+                    "Check Terminal Settings.",
+                    "#EF4444");
+
                 return false;
             }
         }
@@ -2116,6 +2164,21 @@ namespace POS.Cashier.UI.ViewModels
                     .OpenCashDrawerAsync(
                         _receiptPrinterName);
             }
+        }
+
+        private static string FirstNonEmpty(
+            params string?[] values)
+        {
+            foreach (string? value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(
+                        value))
+                {
+                    return value.Trim();
+                }
+            }
+
+            return string.Empty;
         }
 
         private static string GenerateTemporaryQuotationNo()
