@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -193,10 +193,10 @@ namespace POS.BackOffice.UI.ViewModels
                 Interval = TimeSpan.FromMilliseconds(120)
             };
 
-            _recalculateTimer.Tick += (_, _) =>
+            _recalculateTimer.Tick += async (_, _) =>
             {
                 _recalculateTimer.Stop();
-                RecalculateTotals();
+                await RecalculateTotalsAuthoritativelyAsync();
             };
         }
 
@@ -390,6 +390,8 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedSupplierChanged(Supplier? value)
         {
+            OnPropertyChanged(nameof(SupplierVatStatusText));
+
             if (_isClearing)
                 return;
 
@@ -448,6 +450,9 @@ namespace POS.BackOffice.UI.ViewModels
 
                 DueDate = value.Date.AddDays(creditDays);
             }
+
+            if (GrnLines.Any())
+                QueueRecalculate();
         }
 
         partial void OnGlobalBillDiscountChanged(decimal value)
@@ -591,6 +596,8 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
+                SupplierPricesIncludeVat = poLines[0].IsVatIncluded;
+
                 UnsubscribeGrnLineEvents();
 
                 GrnLines.Clear();
@@ -631,8 +638,10 @@ namespace POS.BackOffice.UI.ViewModels
                         LineDiscountValue = poLine.LineDiscountValue,
                         LineDiscount = poLine.LineDiscount,
 
+                        TaxCategoryCode = poLine.TaxCategoryCode,
+                        TaxCategoryName = poLine.TaxCategoryName,
                         VatRatePercent = poLine.VatRatePercent,
-                        IsVatIncluded = poLine.IsVatIncluded,
+                        IsVatIncluded = SupplierPricesIncludeVat,
                         VatAmount = poLine.VatAmount,
 
                         BatchNo = string.Empty,
@@ -763,12 +772,13 @@ namespace POS.BackOffice.UI.ViewModels
 
                 var variants = await _grnRepository.GetReceivableVariantsByParentForSupplierAsync(
                     parentId,
-                    SelectedSupplier.Id);
+                    SelectedSupplier.Id,
+                    InvoiceDate.Date);
 
                 foreach (var variant in variants)
                 {
                     var newLine = BuildLineFromLookup(variant);
-                    newLine.IsVatIncluded = BulkMatrixVatIncluded;
+                    newLine.IsVatIncluded = SupplierPricesIncludeVat;
                     newLine.RecalculateLineAmounts();
 
                     _allMatrixVariants.Add(newLine);
@@ -961,7 +971,8 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 var variant = await _grnRepository.GetReceivableVariantByBarcodeOrSkuAsync(
                     term,
-                    SelectedSupplier.Id);
+                    SelectedSupplier.Id,
+                    InvoiceDate.Date);
 
                 if (variant == null)
                 {
@@ -998,7 +1009,7 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private static GrnLineEntryDto BuildLineFromLookup(GrnVariantLookupDto variant)
+        private GrnLineEntryDto BuildLineFromLookup(GrnVariantLookupDto variant)
         {
             decimal cost = variant.LastSupplierCost > 0
                 ? variant.LastSupplierCost
@@ -1029,8 +1040,10 @@ namespace POS.BackOffice.UI.ViewModels
                 LineDiscountValue = variant.LineDiscountValue,
                 LineDiscount = variant.LineDiscount,
 
+                TaxCategoryCode = variant.TaxCategoryCode,
+                TaxCategoryName = variant.TaxCategoryName,
                 VatRatePercent = variant.VatRatePercent,
-                IsVatIncluded = variant.IsVatIncluded,
+                IsVatIncluded = SupplierPricesIncludeVat,
                 VatAmount = variant.VatAmount,
 
                 BatchNo = string.Empty,
@@ -1090,7 +1103,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var item in itemsToAdd)
             {
-                item.IsVatIncluded = BulkMatrixVatIncluded;
+                item.IsVatIncluded = SupplierPricesIncludeVat;
                 item.RecalculateLineAmounts();
 
                 errors.AddRange(item.ValidateForPost(isPoLinked: false));
@@ -1147,6 +1160,7 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 SubscribeGrnLineEvents(newLine);
                 GrnLines.Add(newLine);
+                NotifyPriceUpdateSummary();
                 PostGrnCommand.NotifyCanExecuteChanged();
                 return;
             }
@@ -1159,8 +1173,10 @@ namespace POS.BackOffice.UI.ViewModels
             existing.LineDiscountMode = newLine.LineDiscountMode;
             existing.LineDiscountValue += newLine.LineDiscountValue;
 
+            existing.TaxCategoryCode = newLine.TaxCategoryCode;
+            existing.TaxCategoryName = newLine.TaxCategoryName;
             existing.VatRatePercent = newLine.VatRatePercent;
-            existing.IsVatIncluded = newLine.IsVatIncluded;
+            existing.IsVatIncluded = SupplierPricesIncludeVat;
 
             if (!string.IsNullOrWhiteSpace(newLine.Uom))
                 existing.Uom = newLine.Uom;
@@ -1181,6 +1197,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             existing.RecalculateLineAmounts();
 
+            NotifyPriceUpdateSummary();
             PostGrnCommand.NotifyCanExecuteChanged();
         }
 
@@ -1194,6 +1211,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             GrnLines.Remove(line);
             RecalculateTotals();
+            NotifyPriceUpdateSummary();
 
             StatusMessage = "Line removed.";
 
@@ -1322,6 +1340,9 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             PostGrnCommand.NotifyCanExecuteChanged();
+
+            if (!_isApplyingAuthoritativePreview)
+                QueueRecalculate();
         }
 
         private void AllocateLandedCost()
@@ -1394,14 +1415,22 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanPostGrn))]
         private async Task PostGrnAsync()
         {
-            RecalculateTotals();
+            bool taxPreviewReady = await RecalculateTotalsAuthoritativelyAsync(showErrors: true);
 
-            if (!ValidateBeforePost())
+            if (!taxPreviewReady || !ValidateBeforePost())
                 return;
+
+            int retailChanges = GrnLines.Count(line => line.HasRetailPriceChange);
+            int wholesaleChanges = GrnLines.Count(line => line.HasWholesalePriceChange);
+
+            string priceChangeText = retailChanges == 0 && wholesaleChanges == 0
+                ? "No selling prices will change."
+                : $"{retailChanges} retail and {wholesaleChanges} wholesale price change(s) will be applied and audited.";
 
             bool confirmed = _messageBoxService.ShowConfirmation(
                 $"Post GRN for Rs. {NetPayable:N2}?\n\n" +
-                "This will update inventory, item batches/stock buckets, PO received quantities, and supplier ledger.",
+                "This will update inventory, item batches/stock buckets, PO received quantities, and supplier ledger.\n\n" +
+                priceChangeText,
                 "Confirm GRN Posting",
                 MessageBoxImage.Warning);
 
@@ -1413,7 +1442,8 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                RecalculateTotals();
+                if (!await RecalculateTotalsAuthoritativelyAsync(showErrors: true))
+                    return;
 
                 var sourceLinesForPosting = GrnLines
                     .Where(l => l.ReceivedQty > 0)
@@ -1436,6 +1466,7 @@ namespace POS.BackOffice.UI.ViewModels
                     DueDate = DueDate.Date,
                     CreditDays = Math.Max(0, (DueDate.Date - InvoiceDate.Date).Days),
                     Remarks = Remarks.Trim(),
+                    IsTaxInclusive = SupplierPricesIncludeVat,
                     Subtotal = Subtotal,
                     GlobalBillDiscount = GlobalBillDiscount,
                     FreightAmount = FreightAmount,
@@ -1684,6 +1715,7 @@ namespace POS.BackOffice.UI.ViewModels
                 BulkMatrixUnitCost = 0m;
                 BulkMatrixSellingPrice = 0m;
                 BulkMatrixVatIncluded = false;
+                SupplierPricesIncludeVat = false;
 
                 BulkDiscountMode = DiscountModes.FirstOrDefault() ?? "Amount";
                 BulkDiscountValue = 0m;
@@ -1698,6 +1730,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                 UnsubscribeGrnLineEvents();
                 GrnLines.Clear();
+                NotifyPriceUpdateSummary();
 
                 ClearLoadedMatrixOnly();
 
@@ -1705,6 +1738,12 @@ namespace POS.BackOffice.UI.ViewModels
                 TotalDiscountAmount = 0m;
                 TotalVatAmount = 0m;
                 NetPayable = 0m;
+                TaxableAmountTotal = 0m;
+                StandardRatedAmount = 0m;
+                ZeroRatedAmount = 0m;
+                ExemptAmount = 0m;
+                OutOfScopeAmount = 0m;
+                TaxPreviewStatus = "Add GRN rows to calculate authoritative VAT.";
 
                 DocumentStatus = "DRAFT";
                 StatusMessage = "Ready for new GRN.";
@@ -1764,7 +1803,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         private void GrnLine_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_isRecalculating)
+            if (_isRecalculating || _isApplyingAuthoritativePreview)
                 return;
 
             if (e.PropertyName == nameof(GrnLineEntryDto.ReceivedQty) ||
@@ -1781,6 +1820,15 @@ namespace POS.BackOffice.UI.ViewModels
             if (e.PropertyName == nameof(GrnLineEntryDto.RequiresExpiry))
             {
                 OnPropertyChanged(nameof(IsMatrixExpiryEnabled));
+            }
+
+            if (e.PropertyName == nameof(GrnLineEntryDto.UpdateSellingPrices) ||
+                e.PropertyName == nameof(GrnLineEntryDto.NewRetailPrice) ||
+                e.PropertyName == nameof(GrnLineEntryDto.NewWholesalePrice) ||
+                e.PropertyName == nameof(GrnLineEntryDto.CurrentRetailPrice) ||
+                e.PropertyName == nameof(GrnLineEntryDto.CurrentWholesalePrice))
+            {
+                NotifyPriceUpdateSummary();
             }
 
             PostGrnCommand.NotifyCanExecuteChanged();
@@ -1823,6 +1871,8 @@ namespace POS.BackOffice.UI.ViewModels
             ApplyBulkDiscountModeToLinesCommand.NotifyCanExecuteChanged();
             ApplyBulkDiscountValueToLinesCommand.NotifyCanExecuteChanged();
 
+            OpenBulkSellingPriceDialogCommand.NotifyCanExecuteChanged();
+            ResetProposedSellingPricesCommand.NotifyCanExecuteChanged();
             PostGrnCommand.NotifyCanExecuteChanged();
         }
 
@@ -1957,9 +2007,13 @@ namespace POS.BackOffice.UI.ViewModels
                 LineDiscountValue = source.LineDiscountValue,
                 LineDiscount = source.LineDiscount,
 
+                TaxCategoryCode = source.TaxCategoryCode,
+                TaxCategoryName = source.TaxCategoryName,
                 VatRatePercent = source.VatRatePercent,
                 IsVatIncluded = source.IsVatIncluded,
                 VatAmount = source.VatAmount,
+                TaxableAmount = source.TaxableAmount,
+                GlobalDiscountAllocation = source.GlobalDiscountAllocation,
 
                 LandedCost = source.LandedCost,
                 LineTotal = source.LineTotal,

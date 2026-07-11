@@ -90,6 +90,10 @@ namespace POS.Core.Models.DTOs
 
         public decimal VatAmount { get; set; } = 0m;
 
+        public string TaxCategoryCode { get; set; } = string.Empty;
+
+        public string TaxCategoryName { get; set; } = string.Empty;
+
         public decimal CurrentRetailPrice { get; set; } = 0m;
 
         public decimal CurrentWholesalePrice { get; set; } = 0m;
@@ -165,6 +169,10 @@ namespace POS.Core.Models.DTOs
 
         public decimal VatAmount { get; set; } = 0m;
 
+        public string TaxCategoryCode { get; set; } = string.Empty;
+
+        public string TaxCategoryName { get; set; } = string.Empty;
+
         public decimal CurrentRetailPrice { get; set; } = 0m;
 
         public decimal CurrentWholesalePrice { get; set; } = 0m;
@@ -188,6 +196,64 @@ namespace POS.Core.Models.DTOs
             GrnDisplayNameHelper.IsStandardVariantDescription(VariantDescription)
                 ? "Standard"
                 : GrnDisplayNameHelper.NormalizeText(VariantDescription);
+    }
+
+    public sealed class GrnTaxPreviewLineDto
+    {
+        public int SourceIndex { get; set; }
+
+        public int ItemVariantId { get; set; }
+
+        public string TaxCategoryCode { get; set; } = string.Empty;
+
+        public string TaxCategoryName { get; set; } = string.Empty;
+
+        public string TaxCode { get; set; } = string.Empty;
+
+        public decimal VatRatePercent { get; set; }
+
+        public decimal GrossAmount { get; set; }
+
+        public decimal LineDiscountAmount { get; set; }
+
+        public decimal GlobalDiscountAllocation { get; set; }
+
+        public decimal TaxableAmount { get; set; }
+
+        public decimal VatAmount { get; set; }
+
+        public decimal TaxInclusiveAmount { get; set; }
+
+        public decimal LandedCost { get; set; }
+    }
+
+    public sealed class GrnTaxPreviewDto
+    {
+        public List<GrnTaxPreviewLineDto> Lines { get; set; } = new();
+
+        public decimal Subtotal { get; set; }
+
+        public decimal LineDiscountTotal { get; set; }
+
+        public decimal GlobalDiscount { get; set; }
+
+        public decimal TotalDiscount { get; set; }
+
+        public decimal TotalVat { get; set; }
+
+        public decimal FreightAmount { get; set; }
+
+        public decimal NetPayable { get; set; }
+
+        public decimal TaxableAmountTotal { get; set; }
+
+        public decimal StandardRatedAmount { get; set; }
+
+        public decimal ZeroRatedAmount { get; set; }
+
+        public decimal ExemptAmount { get; set; }
+
+        public decimal OutOfScopeAmount { get; set; }
     }
 
     public partial class GrnLineEntryDto : ObservableObject
@@ -274,6 +340,18 @@ namespace POS.Core.Models.DTOs
 
         [ObservableProperty]
         private decimal _lineTotal;
+
+        [ObservableProperty]
+        private string _taxCategoryCode = string.Empty;
+
+        [ObservableProperty]
+        private string _taxCategoryName = string.Empty;
+
+        [ObservableProperty]
+        private decimal _taxableAmount;
+
+        [ObservableProperty]
+        private decimal _globalDiscountAllocation;
 
         // =========================================================
         // SELLING PRICE UPDATE FIELDS
@@ -375,12 +453,59 @@ namespace POS.Core.Models.DTOs
         {
             get
             {
-                if (VatRatePercent <= 0)
-                    return "No VAT";
+                string category = string.IsNullOrWhiteSpace(TaxCategoryName)
+                    ? TaxCategoryCode
+                    : TaxCategoryName;
 
-                return IsVatIncluded
-                    ? $"VAT {VatRatePercent:N2}% Included"
-                    : $"VAT {VatRatePercent:N2}% Added";
+                if (VatRatePercent <= 0)
+                    return string.IsNullOrWhiteSpace(category) ? "No VAT" : category;
+
+                string mode = IsVatIncluded ? "Included" : "Added";
+                return string.IsNullOrWhiteSpace(category)
+                    ? $"VAT {VatRatePercent:N2}% {mode}"
+                    : $"{category} {VatRatePercent:N2}% {mode}";
+            }
+        }
+
+        public string TaxCategoryDisplayText
+        {
+            get
+            {
+                string name = string.IsNullOrWhiteSpace(TaxCategoryName)
+                    ? TaxCategoryCode
+                    : TaxCategoryName;
+
+                if (string.IsNullOrWhiteSpace(name))
+                    name = "Tax pending";
+
+                return VatRatePercent > 0m
+                    ? $"{name} ({VatRatePercent:N2}%)"
+                    : name;
+            }
+        }
+
+        public bool HasRetailPriceChange =>
+            UpdateSellingPrices && Math.Round(CurrentRetailPrice, 2) != Math.Round(NewRetailPrice, 2);
+
+        public bool HasWholesalePriceChange =>
+            UpdateSellingPrices && Math.Round(CurrentWholesalePrice, 2) != Math.Round(NewWholesalePrice, 2);
+
+        public string PriceUpdateText
+        {
+            get
+            {
+                if (!UpdateSellingPrices || (!HasRetailPriceChange && !HasWholesalePriceChange))
+                    return "Keep current";
+
+                var parts = new List<string>();
+
+                if (HasRetailPriceChange)
+                    parts.Add($"Retail {CurrentRetailPrice:N2} → {NewRetailPrice:N2}");
+
+                if (HasWholesalePriceChange)
+                    parts.Add($"W/S {CurrentWholesalePrice:N2} → {NewWholesalePrice:N2}");
+
+                return string.Join(" | ", parts);
             }
         }
 
@@ -598,6 +723,8 @@ namespace POS.Core.Models.DTOs
         partial void OnVatRatePercentChanged(decimal value)
         {
             RecalculateLineAmounts();
+            OnPropertyChanged(nameof(TaxCategoryDisplayText));
+            OnPropertyChanged(nameof(VatDisplayText));
         }
 
         partial void OnIsVatIncludedChanged(bool value)
@@ -607,40 +734,75 @@ namespace POS.Core.Models.DTOs
 
         partial void OnLandedCostChanged(decimal value)
         {
-            if (UpdateSellingPrices)
-                ApplyRetailMarkupFromLandedCost();
+            OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         partial void OnRetailMarkupPercentChanged(decimal value)
         {
-            if (UpdateSellingPrices)
-                ApplyRetailMarkupFromLandedCost();
+            OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         partial void OnWholesaleMarkupPercentChanged(decimal value)
         {
-            if (UpdateSellingPrices)
-                ApplyRetailMarkupFromLandedCost();
+            OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         partial void OnUpdateSellingPricesChanged(bool value)
         {
-            if (!value)
-                return;
+            if (value)
+            {
+                if (NewRetailPrice <= 0)
+                    NewRetailPrice = CurrentRetailPrice;
 
-            if (NewRetailPrice <= 0)
-                NewRetailPrice = CurrentRetailPrice;
+                if (NewWholesalePrice <= 0)
+                    NewWholesalePrice = CurrentWholesalePrice;
 
-            if (NewWholesalePrice <= 0)
-                NewWholesalePrice = CurrentWholesalePrice;
+                if (NewMinimumPrice <= 0)
+                    NewMinimumPrice = CurrentMinimumPrice;
 
-            if (NewMinimumPrice <= 0)
-                NewMinimumPrice = CurrentMinimumPrice;
+                if (NewMaximumPrice <= 0)
+                    NewMaximumPrice = CurrentMaximumPrice;
+            }
 
-            if (NewMaximumPrice <= 0)
-                NewMaximumPrice = CurrentMaximumPrice;
+            OnPropertyChanged(nameof(HasRetailPriceChange));
+            OnPropertyChanged(nameof(HasWholesalePriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
 
-            ApplyRetailMarkupFromLandedCost();
+        partial void OnTaxCategoryCodeChanged(string value)
+        {
+            OnPropertyChanged(nameof(TaxCategoryDisplayText));
+            OnPropertyChanged(nameof(VatDisplayText));
+        }
+
+        partial void OnTaxCategoryNameChanged(string value)
+        {
+            OnPropertyChanged(nameof(TaxCategoryDisplayText));
+            OnPropertyChanged(nameof(VatDisplayText));
+        }
+
+        partial void OnNewRetailPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasRetailPriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
+
+        partial void OnNewWholesalePriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasWholesalePriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
+
+        partial void OnCurrentRetailPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasRetailPriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
+
+        partial void OnCurrentWholesalePriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasWholesalePriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         private bool IsAmountDiscount =>

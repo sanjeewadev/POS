@@ -4,6 +4,7 @@ using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Services.Tax;
+using POS.Core.Services.Pricing;
 
 namespace POS.Core.CalculationTests
 {
@@ -21,7 +22,12 @@ namespace POS.Core.CalculationTests
                 ("Mixed categories with global discount", MixedCategoriesWithGlobalDiscount),
                 ("Global discount allocation reconciliation", GlobalDiscountAllocationReconciliation),
                 ("Fixed zero-percent treatments", FixedZeroPercentTreatments),
-                ("Effective-dated rate resolution", EffectiveDatedRateResolution)
+                ("Effective-dated rate resolution", EffectiveDatedRateResolution),
+                ("GRN landed-cost markup includes VAT", GrnLandedCostMarkupIncludesVat),
+                ("GRN exact selling price", GrnExactSellingPrice),
+                ("GRN current-price percentage change", GrnCurrentPricePercentageChange),
+                ("GRN selling-price rounding", GrnSellingPriceRounding),
+                ("GRN keep-current pricing", GrnKeepCurrentPricing)
             };
 
             try
@@ -33,7 +39,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing tax calculation checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing VAT and GRN selling-price calculation checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -271,6 +277,81 @@ namespace POS.Core.CalculationTests
 
             if (oldProfile.TaxCode != "VAT-OLD" || currentProfile.TaxCode != "VAT-STD")
                 throw new InvalidOperationException("Effective tax-code resolution failed.");
+        }
+
+        private static void GrnLandedCostMarkupIncludesVat()
+        {
+            var calculator = new GrnSellingPriceCalculator();
+
+            decimal result = calculator.Calculate(
+                currentVatInclusivePrice: 1180m,
+                landedCostExcludingVat: 1000m,
+                vatRatePercent: 18m,
+                method: GrnSellingPriceMethods.MarkupFromLandedCost,
+                value: 20m,
+                roundingMode: GrnSellingPriceRoundingModes.None);
+
+            AssertMoney(1416m, result, "VAT-inclusive markup price");
+        }
+
+        private static void GrnExactSellingPrice()
+        {
+            var calculator = new GrnSellingPriceCalculator();
+
+            decimal result = calculator.Calculate(
+                currentVatInclusivePrice: 1180m,
+                landedCostExcludingVat: 1000m,
+                vatRatePercent: 18m,
+                method: GrnSellingPriceMethods.SetExactPrice,
+                value: 1250m,
+                roundingMode: GrnSellingPriceRoundingModes.None);
+
+            AssertMoney(1250m, result, "exact selling price");
+        }
+
+        private static void GrnCurrentPricePercentageChange()
+        {
+            var calculator = new GrnSellingPriceCalculator();
+
+            decimal result = calculator.Calculate(
+                currentVatInclusivePrice: 1000m,
+                landedCostExcludingVat: 800m,
+                vatRatePercent: 18m,
+                method: GrnSellingPriceMethods.ChangeCurrentByPercent,
+                value: 10m,
+                roundingMode: GrnSellingPriceRoundingModes.None);
+
+            AssertMoney(1100m, result, "current-price percentage change");
+        }
+
+        private static void GrnSellingPriceRounding()
+        {
+            var calculator = new GrnSellingPriceCalculator();
+
+            decimal result = calculator.Calculate(
+                currentVatInclusivePrice: 1180m,
+                landedCostExcludingVat: 1000m,
+                vatRatePercent: 18m,
+                method: GrnSellingPriceMethods.MarkupFromLandedCost,
+                value: 20m,
+                roundingMode: GrnSellingPriceRoundingModes.NearestFive);
+
+            AssertMoney(1415m, result, "nearest-five selling price");
+        }
+
+        private static void GrnKeepCurrentPricing()
+        {
+            var calculator = new GrnSellingPriceCalculator();
+
+            decimal result = calculator.Calculate(
+                currentVatInclusivePrice: 987.65m,
+                landedCostExcludingVat: 800m,
+                vatRatePercent: 18m,
+                method: GrnSellingPriceMethods.KeepCurrent,
+                value: 999m,
+                roundingMode: GrnSellingPriceRoundingModes.NearestTen);
+
+            AssertMoney(987.65m, result, "keep-current selling price");
         }
 
         private static PurchasingTaxLineInput Line(

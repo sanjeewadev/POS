@@ -213,6 +213,8 @@ namespace POS.Core.Repositories
                     VatAmount = l.TaxSnapshotStatus == TaxSnapshotStatuses.Complete
                         ? l.VatAmountSnapshot ?? l.TaxAmount
                         : l.TaxAmount,
+                    TaxCategoryCode = l.TaxCategoryCodeSnapshot ?? string.Empty,
+                    TaxCategoryName = l.TaxNameSnapshot ?? l.TaxCategoryCodeSnapshot ?? string.Empty,
 
                     CurrentRetailPrice = l.ItemVariant.RetailPrice,
                     CurrentWholesalePrice = l.ItemVariant.WholesalePrice,
@@ -291,7 +293,8 @@ namespace POS.Core.Repositories
 
         public async Task<List<GrnVariantLookupDto>> GetReceivableVariantsByParentForSupplierAsync(
             int parentId,
-            int supplierId)
+            int supplierId,
+            DateTime transactionDate)
         {
             if (parentId <= 0 || supplierId <= 0)
                 return new List<GrnVariantLookupDto>();
@@ -337,16 +340,19 @@ namespace POS.Core.Repositories
                     CurrentWholesalePrice = v.WholesalePrice,
                     CurrentMinimumPrice = v.MinimumPrice,
                     CurrentMaximumPrice = v.MaximumPrice,
-                    TaxCode = string.IsNullOrWhiteSpace(v.ItemParent.TaxCode)
-                        ? "VAT"
-                        : v.ItemParent.TaxCode
+                    TaxCategoryCode = v.ItemParent.TaxCategory != null
+                        ? v.ItemParent.TaxCategory.CategoryCode
+                        : string.Empty,
+                    TaxCategoryName = v.ItemParent.TaxCategory != null
+                        ? v.ItemParent.TaxCategory.CategoryName
+                        : string.Empty
                 })
                 .ToListAsync();
 
             var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
                 context,
                 rows.Select(r => r.ItemVariantId).ToList(),
-                DateTime.Today);
+                transactionDate.Date);
 
             return rows
                 .Select(r =>
@@ -374,6 +380,8 @@ namespace POS.Core.Repositories
                         CurrentWholesalePrice = r.CurrentWholesalePrice,
                         CurrentMinimumPrice = r.CurrentMinimumPrice,
                         CurrentMaximumPrice = r.CurrentMaximumPrice,
+                        TaxCategoryCode = profile.TaxCategoryCode,
+                        TaxCategoryName = profile.TaxCategoryName,
                         VatRatePercent = profile.RatePercent,
                         IsVatIncluded = false
                     };
@@ -385,7 +393,8 @@ namespace POS.Core.Repositories
 
         public async Task<GrnVariantLookupDto?> GetReceivableVariantByBarcodeOrSkuAsync(
             string barcodeOrSku,
-            int supplierId)
+            int supplierId,
+            DateTime transactionDate)
         {
             string term = NormalizeText(barcodeOrSku);
 
@@ -438,9 +447,12 @@ namespace POS.Core.Repositories
                     CurrentWholesalePrice = v.WholesalePrice,
                     CurrentMinimumPrice = v.MinimumPrice,
                     CurrentMaximumPrice = v.MaximumPrice,
-                    TaxCode = string.IsNullOrWhiteSpace(v.ItemParent.TaxCode)
-                        ? "VAT"
-                        : v.ItemParent.TaxCode
+                    TaxCategoryCode = v.ItemParent.TaxCategory != null
+                        ? v.ItemParent.TaxCategory.CategoryCode
+                        : string.Empty,
+                    TaxCategoryName = v.ItemParent.TaxCategory != null
+                        ? v.ItemParent.TaxCategory.CategoryName
+                        : string.Empty
                 })
                 .FirstOrDefaultAsync();
 
@@ -450,7 +462,7 @@ namespace POS.Core.Repositories
             var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
                 context,
                 new[] { row.ItemVariantId },
-                DateTime.Today);
+                transactionDate.Date);
 
             var profile = taxProfiles[row.ItemVariantId];
 
@@ -475,8 +487,162 @@ namespace POS.Core.Repositories
                 CurrentWholesalePrice = row.CurrentWholesalePrice,
                 CurrentMinimumPrice = row.CurrentMinimumPrice,
                 CurrentMaximumPrice = row.CurrentMaximumPrice,
+                TaxCategoryCode = profile.TaxCategoryCode,
+                TaxCategoryName = profile.TaxCategoryName,
                 VatRatePercent = profile.RatePercent,
                 IsVatIncluded = false
+            };
+        }
+
+        // =========================================================
+        // AUTHORITATIVE LIVE PREVIEW
+        // =========================================================
+
+        public async Task<GrnTaxPreviewDto> CalculateGrnPreviewAsync(
+            DateTime invoiceDate,
+            bool supplierPricesIncludeVat,
+            decimal globalBillDiscount,
+            decimal freightAmount,
+            IReadOnlyList<GrnLineEntryDto> sourceLines)
+        {
+            if (sourceLines == null)
+                throw new ArgumentNullException(nameof(sourceLines));
+
+            if (globalBillDiscount < 0m)
+                throw new InvalidOperationException("Global bill discount cannot be negative.");
+
+            if (freightAmount < 0m)
+                throw new InvalidOperationException("Freight amount cannot be negative.");
+
+            var indexedLines = sourceLines
+                .Select((line, index) => new { Line = line, Index = index })
+                .Where(row =>
+                    row.Line.ItemVariantId > 0 &&
+                    row.Line.ReceivedQty > 0m &&
+                    row.Line.UnitCost > 0m)
+                .ToList();
+
+            if (indexedLines.Count == 0)
+            {
+                return new GrnTaxPreviewDto
+                {
+                    FreightAmount = Math.Round(
+                        freightAmount,
+                        2,
+                        MidpointRounding.AwayFromZero),
+                    NetPayable = Math.Round(
+                        freightAmount,
+                        2,
+                        MidpointRounding.AwayFromZero)
+                };
+            }
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var profiles = await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                indexedLines
+                    .Select(row => row.Line.ItemVariantId)
+                    .Distinct()
+                    .ToList(),
+                invoiceDate.Date);
+
+            var calculation = _purchasingTaxService.CalculateDocument(
+                indexedLines
+                    .Select(row => new PurchasingTaxLineInput
+                    {
+                        ItemVariantId = row.Line.ItemVariantId,
+                        Quantity = row.Line.ReceivedQty,
+                        UnitPrice = row.Line.UnitCost,
+                        DiscountMode = row.Line.LineDiscountMode,
+                        DiscountValue = row.Line.LineDiscountValue,
+                        TaxProfile = profiles[row.Line.ItemVariantId]
+                    })
+                    .ToList(),
+                globalBillDiscount,
+                supplierPricesIncludeVat);
+
+            decimal totalTaxExclusiveBase = calculation.Lines.Sum(line => line.TaxableAmount);
+            decimal allocatedFreightTotal = 0m;
+            var previewLines = new List<GrnTaxPreviewLineDto>(calculation.Lines.Count);
+
+            for (int index = 0; index < calculation.Lines.Count; index++)
+            {
+                var result = calculation.Lines[index];
+                var source = indexedLines[index];
+                bool isLast = index == calculation.Lines.Count - 1;
+
+                decimal allocatedFreight = 0m;
+
+                if (totalTaxExclusiveBase > 0m && freightAmount > 0m)
+                {
+                    allocatedFreight = isLast
+                        ? freightAmount - allocatedFreightTotal
+                        : Math.Round(
+                            freightAmount * result.TaxableAmount / totalTaxExclusiveBase,
+                            2,
+                            MidpointRounding.AwayFromZero);
+
+                    allocatedFreight = Math.Max(
+                        0m,
+                        Math.Round(
+                            allocatedFreight,
+                            2,
+                            MidpointRounding.AwayFromZero));
+
+                    allocatedFreightTotal = Math.Round(
+                        allocatedFreightTotal + allocatedFreight,
+                        2,
+                        MidpointRounding.AwayFromZero);
+                }
+
+                decimal landedCost = source.Line.ReceivedQty > 0m
+                    ? Math.Round(
+                        (result.TaxableAmount + allocatedFreight) /
+                        source.Line.ReceivedQty,
+                        2,
+                        MidpointRounding.AwayFromZero)
+                    : 0m;
+
+                previewLines.Add(new GrnTaxPreviewLineDto
+                {
+                    SourceIndex = source.Index,
+                    ItemVariantId = source.Line.ItemVariantId,
+                    TaxCategoryCode = result.TaxProfile.TaxCategoryCode,
+                    TaxCategoryName = result.TaxProfile.TaxCategoryName,
+                    TaxCode = result.TaxProfile.TaxCode,
+                    VatRatePercent = result.TaxProfile.RatePercent,
+                    GrossAmount = result.GrossAmount,
+                    LineDiscountAmount = result.LineDiscountAmount,
+                    GlobalDiscountAllocation = result.GlobalDiscountAllocation,
+                    TaxableAmount = result.TaxableAmount,
+                    VatAmount = result.VatAmount,
+                    TaxInclusiveAmount = result.TaxInclusiveAmount,
+                    LandedCost = landedCost
+                });
+            }
+
+            return new GrnTaxPreviewDto
+            {
+                Lines = previewLines,
+                Subtotal = calculation.Subtotal,
+                LineDiscountTotal = calculation.LineDiscountTotal,
+                GlobalDiscount = calculation.GlobalDiscount,
+                TotalDiscount = calculation.TotalDiscount,
+                TotalVat = calculation.TotalVat,
+                FreightAmount = Math.Round(
+                    freightAmount,
+                    2,
+                    MidpointRounding.AwayFromZero),
+                NetPayable = Math.Round(
+                    calculation.NetPayable + freightAmount,
+                    2,
+                    MidpointRounding.AwayFromZero),
+                TaxableAmountTotal = calculation.TaxableAmountTotal,
+                StandardRatedAmount = calculation.StandardRatedAmount,
+                ZeroRatedAmount = calculation.ZeroRatedAmount,
+                ExemptAmount = calculation.ExemptAmount,
+                OutOfScopeAmount = calculation.OutOfScopeAmount
             };
         }
 
@@ -549,6 +715,13 @@ namespace POS.Core.Repositories
                     await context.GrnLines.AddAsync(line);
 
                 await context.SaveChangesAsync();
+
+                await CreateGrnPriceChangeHistoryAsync(
+                    context,
+                    header,
+                    lines,
+                    variants,
+                    now);
 
                 PoHeader? linkedPo = null;
 
@@ -856,6 +1029,27 @@ namespace POS.Core.Repositories
                     }
                 }
             }
+
+            var inconsistentPriceGroup = lines
+                .Where(line => line.UpdateSellingPrices)
+                .GroupBy(line => line.ItemVariantId)
+                .FirstOrDefault(group => group
+                    .Select(line => new
+                    {
+                        Retail = RoundMoney(line.NewRetailPrice),
+                        Wholesale = RoundMoney(line.NewWholesalePrice),
+                        Minimum = RoundMoney(line.NewMinimumPrice),
+                        Maximum = RoundMoney(line.NewMaximumPrice)
+                    })
+                    .Distinct()
+                    .Count() > 1);
+
+            if (inconsistentPriceGroup != null &&
+                variants.TryGetValue(inconsistentPriceGroup.Key, out var inconsistentVariant))
+            {
+                throw new InvalidOperationException(
+                    $"All GRN rows for item '{inconsistentVariant.SkuCode}' must use the same proposed selling prices.");
+            }
         }
 
         private static void ValidatePreparedLineDuplicates(List<GrnLine> lines)
@@ -887,6 +1081,21 @@ namespace POS.Core.Repositories
                     $"Selling prices cannot be negative for item '{skuCode}'.");
             }
 
+            bool retailChanged = RoundMoney(line.CurrentRetailPrice) != RoundMoney(line.NewRetailPrice);
+            bool wholesaleChanged = RoundMoney(line.CurrentWholesalePrice) != RoundMoney(line.NewWholesalePrice);
+
+            if (retailChanged && line.NewRetailPrice <= 0m)
+            {
+                throw new InvalidOperationException(
+                    $"New retail price must be greater than zero for item '{skuCode}'.");
+            }
+
+            if (wholesaleChanged && line.NewWholesalePrice <= 0m)
+            {
+                throw new InvalidOperationException(
+                    $"New wholesale price must be greater than zero for item '{skuCode}'.");
+            }
+
             if (line.NewMaximumPrice > 0 &&
                 line.NewMinimumPrice > line.NewMaximumPrice)
             {
@@ -911,7 +1120,11 @@ namespace POS.Core.Repositories
             GrnHeader header,
             List<GrnLine> lines)
         {
-            bool documentIsTaxInclusive = ResolveDocumentTaxMode(lines);
+            bool documentIsTaxInclusive = header.IsTaxInclusive ?? ResolveDocumentTaxMode(lines);
+
+            foreach (var line in lines)
+                line.IsVatIncluded = documentIsTaxInclusive;
+
             header.IsTaxInclusive = documentIsTaxInclusive;
 
             var variantIds = lines
@@ -1181,6 +1394,128 @@ namespace POS.Core.Repositories
 
             itemSupplier.LastCostPrice = unitCost;
             itemSupplier.UpdatedAt = now;
+        }
+
+        private static async Task CreateGrnPriceChangeHistoryAsync(
+            AppDbContext context,
+            GrnHeader header,
+            List<GrnLine> lines,
+            IReadOnlyDictionary<int, ItemVariant> variants,
+            DateTime now)
+        {
+            var proposedGroups = lines
+                .Where(line => line.UpdateSellingPrices)
+                .GroupBy(line => line.ItemVariantId)
+                .ToList();
+
+            if (proposedGroups.Count == 0)
+                return;
+
+            var rows = new List<PriceChangeHistory>();
+            string? priceChangeNo = null;
+
+            foreach (var group in proposedGroups)
+            {
+                if (!variants.TryGetValue(group.Key, out var variant))
+                    throw new InvalidOperationException("One or more price-update variants were not found.");
+
+                var sourceLine = group.OrderBy(line => line.Id).First();
+
+                decimal oldRetail = RoundMoney(variant.RetailPrice);
+                decimal oldWholesale = RoundMoney(variant.WholesalePrice);
+                decimal oldMinimum = RoundMoney(variant.MinimumPrice);
+                decimal oldMaximum = RoundMoney(variant.MaximumPrice);
+
+                decimal newRetail = RoundMoney(sourceLine.NewRetailPrice);
+                decimal newWholesale = RoundMoney(sourceLine.NewWholesalePrice);
+                decimal newMinimum = RoundMoney(sourceLine.NewMinimumPrice);
+                decimal newMaximum = RoundMoney(sourceLine.NewMaximumPrice);
+
+                bool retailChanged = oldRetail != newRetail;
+                bool wholesaleChanged = oldWholesale != newWholesale;
+                bool minimumChanged = oldMinimum != newMinimum;
+                bool maximumChanged = oldMaximum != newMaximum;
+                bool anyChanged = retailChanged || wholesaleChanged || minimumChanged || maximumChanged;
+
+                foreach (var line in group)
+                {
+                    line.CurrentRetailPrice = oldRetail;
+                    line.CurrentWholesalePrice = oldWholesale;
+                    line.CurrentMinimumPrice = oldMinimum;
+                    line.CurrentMaximumPrice = oldMaximum;
+                    line.NewRetailPrice = newRetail;
+                    line.NewWholesalePrice = newWholesale;
+                    line.NewMinimumPrice = newMinimum;
+                    line.NewMaximumPrice = newMaximum;
+                    line.UpdateSellingPrices = anyChanged;
+                }
+
+                if (!anyChanged)
+                    continue;
+
+                priceChangeNo ??= await GenerateDocumentNumberAsync(context, "PCH");
+
+                var changedParts = new List<string>();
+
+                if (retailChanged)
+                    changedParts.Add($"Retail {oldRetail:N2} to {newRetail:N2}");
+
+                if (wholesaleChanged)
+                    changedParts.Add($"Wholesale {oldWholesale:N2} to {newWholesale:N2}");
+
+                if (minimumChanged)
+                    changedParts.Add($"Minimum {oldMinimum:N2} to {newMinimum:N2}");
+
+                if (maximumChanged)
+                    changedParts.Add($"Maximum {oldMaximum:N2} to {newMaximum:N2}");
+
+                rows.Add(new PriceChangeHistory
+                {
+                    PriceChangeNo = priceChangeNo,
+                    PriceLevel = "Master",
+                    ChangeSource = "GRN",
+
+                    ItemVariantId = variant.Id,
+                    ItemBatchId = null,
+
+                    SourceDocumentType = "GRN",
+                    SourceDocumentId = header.Id,
+                    SourceDocumentLineId = sourceLine.Id,
+                    SourceDocumentNo = header.GrnNumber,
+
+                    ItemCode = variant.ItemParent.ItemCode,
+                    SkuCode = variant.SkuCode,
+                    Barcode = variant.Barcode ?? string.Empty,
+                    ItemDescription = variant.ItemParent.ItemName,
+                    VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
+                        ? "Standard"
+                        : variant.VariantDescription,
+
+                    BatchNo = string.Empty,
+                    BatchExpiryDate = null,
+                    EffectiveCost = RoundMoney(sourceLine.LandedCost),
+
+                    OldMinimumPrice = oldMinimum,
+                    NewMinimumPrice = newMinimum,
+                    OldRetailPrice = oldRetail,
+                    NewRetailPrice = newRetail,
+                    OldWholesalePrice = oldWholesale,
+                    NewWholesalePrice = newWholesale,
+                    OldMaximumPrice = oldMaximum,
+                    NewMaximumPrice = newMaximum,
+
+                    ChangedBy = string.IsNullOrWhiteSpace(header.PostedBy)
+                        ? header.CreatedBy
+                        : header.PostedBy,
+                    ChangedAt = now,
+                    ReasonCode = "GRN_PRICE_UPDATE",
+                    ChangeReason = $"Selling price update from GRN {header.GrnNumber}",
+                    Remarks = string.Join("; ", changedParts)
+                });
+            }
+
+            if (rows.Count > 0)
+                await context.PriceChangeHistories.AddRangeAsync(rows);
         }
 
         private static void UpdateVariantCostAndSellingPrices(
@@ -1525,6 +1860,11 @@ namespace POS.Core.Repositories
                 return MaxTakeLimit;
 
             return take;
+        }
+
+        private static decimal RoundMoney(decimal value)
+        {
+            return Math.Round(value, 2, MidpointRounding.AwayFromZero);
         }
 
         private static bool HasDecimalPart(decimal value)
