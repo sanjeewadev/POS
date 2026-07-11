@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using POS.Core.Configuration;
 
 namespace POS.Core.Models
 {
@@ -64,6 +65,45 @@ namespace POS.Core.Models
         // Final amount posted to supplier ledger.
         [Column(TypeName = "decimal(18,2)")]
         public decimal NetPayable { get; set; } = 0m;
+
+        // =========================================================
+        // IMMUTABLE TAX SNAPSHOT FOUNDATION
+        // =========================================================
+        // Nullable values avoid inventing VAT classifications for legacy GRNs.
+
+        public bool? IsTaxInclusive { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxableAmountTotal { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? StandardRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ZeroRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ExemptAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OutOfScopeAmount { get; set; }
+
+        [MaxLength(30)]
+        public string? FreightTaxCategoryCodeSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? FreightTaxableAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? FreightVatAmount { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string FreightTaxSnapshotStatus { get; set; } = TaxSnapshotStatuses.LegacyUnknown;
+
+        [Required]
+        [MaxLength(30)]
+        public string TaxSnapshotStatus { get; set; } = TaxSnapshotStatuses.LegacyUnknown;
 
         // Posted, Cancelled.
         // Draft removed from GRN workflow.

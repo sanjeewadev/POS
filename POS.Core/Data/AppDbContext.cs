@@ -933,6 +933,42 @@ namespace POS.Core.Data
                 entity.Property(g => g.NetPayable)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(g => g.TaxableAmountTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(g => g.StandardRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(g => g.ZeroRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(g => g.ExemptAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(g => g.OutOfScopeAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(g => g.FreightTaxCategoryCodeSnapshot)
+                    .HasMaxLength(30);
+
+                entity.Property(g => g.FreightTaxableAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(g => g.FreightVatAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(g => g.FreightTaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
+                entity.Property(g => g.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
                 entity.HasOne(g => g.Supplier)
                     .WithMany()
                     .HasForeignKey(g => g.SupplierId)
@@ -964,6 +1000,8 @@ namespace POS.Core.Data
                 entity.HasIndex(g => g.DueDate);
 
                 entity.HasIndex(g => g.Status);
+
+                entity.HasIndex(g => g.TaxSnapshotStatus);
             });
 
 
@@ -1014,6 +1052,33 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.LineTotal)
                     .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxCategoryCodeSnapshot)
+                    .HasMaxLength(30);
+
+                entity.Property(l => l.TaxCodeSnapshot)
+                    .HasMaxLength(20);
+
+                entity.Property(l => l.TaxNameSnapshot)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.TaxRatePercentSnapshot)
+                    .HasColumnType("decimal(7,4)");
+
+                entity.Property(l => l.TaxableAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.VatAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxInclusiveAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
 
                 entity.Property(l => l.UpdateSellingPrices)
                     .HasDefaultValue(false);
@@ -1074,6 +1139,16 @@ namespace POS.Core.Data
                     .HasForeignKey(l => l.ItemBatchId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(l => l.TaxCategory)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxCategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.TaxRate)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxRateId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(l => l.GrnHeaderId);
 
                 entity.HasIndex(l => l.ItemVariantId);
@@ -1085,6 +1160,12 @@ namespace POS.Core.Data
                 entity.HasIndex(l => l.BatchNo);
 
                 entity.HasIndex(l => l.LineStatus);
+
+                entity.HasIndex(l => l.TaxCategoryId);
+
+                entity.HasIndex(l => l.TaxRateId);
+
+                entity.HasIndex(l => l.TaxSnapshotStatus);
 
                 entity.HasIndex(l => new
                 {
@@ -1702,6 +1783,27 @@ namespace POS.Core.Data
                 entity.Property(p => p.NetPayable)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(p => p.TaxableAmountTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.StandardRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.ZeroRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.ExemptAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.OutOfScopeAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
                 entity.HasOne(p => p.Supplier)
                     .WithMany()
                     .HasForeignKey(p => p.SupplierId)
@@ -1717,6 +1819,8 @@ namespace POS.Core.Data
                 entity.HasIndex(p => p.ExpectedDate);
 
                 entity.HasIndex(p => p.Status);
+
+                entity.HasIndex(p => p.TaxSnapshotStatus);
             });
 
             // =========================================================
@@ -1767,6 +1871,33 @@ namespace POS.Core.Data
                 entity.Property(l => l.LineTotal)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(l => l.TaxCategoryCodeSnapshot)
+                    .HasMaxLength(30);
+
+                entity.Property(l => l.TaxCodeSnapshot)
+                    .HasMaxLength(20);
+
+                entity.Property(l => l.TaxNameSnapshot)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.TaxRatePercentSnapshot)
+                    .HasColumnType("decimal(7,4)");
+
+                entity.Property(l => l.TaxableAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.VatAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxInclusiveAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
                 entity.Property(l => l.LineStatus)
                     .IsRequired()
                     .HasMaxLength(30)
@@ -1782,6 +1913,16 @@ namespace POS.Core.Data
                     .HasForeignKey(l => l.ItemVariantId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(l => l.TaxCategory)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxCategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.TaxRate)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxRateId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(l => l.PoHeaderId);
 
                 entity.HasIndex(l => l.ItemVariantId);
@@ -1794,6 +1935,12 @@ namespace POS.Core.Data
                 .IsUnique();
 
                 entity.HasIndex(l => l.LineStatus);
+
+                entity.HasIndex(l => l.TaxCategoryId);
+
+                entity.HasIndex(l => l.TaxRateId);
+
+                entity.HasIndex(l => l.TaxSnapshotStatus);
             });
 
             // =========================================================

@@ -1955,6 +1955,24 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("FreightAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("FreightTaxCategoryCodeSnapshot")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FreightTaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal?>("FreightTaxableAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("FreightVatAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("GlobalBillDiscount")
                         .HasColumnType("decimal(18,2)");
 
@@ -1967,7 +1985,13 @@ namespace POS.Core.Migrations
                     b.Property<DateTime>("InvoiceDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool?>("IsTaxInclusive")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("NetPayable")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("OutOfScopeAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("PostedAt")
@@ -1989,6 +2013,9 @@ namespace POS.Core.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("StandardRatedAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -2009,6 +2036,17 @@ namespace POS.Core.Migrations
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
+                    b.Property<string>("TaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal?>("TaxableAmountTotal")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("TotalDiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
@@ -2017,6 +2055,12 @@ namespace POS.Core.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("ZeroRatedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ExemptAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -2034,6 +2078,8 @@ namespace POS.Core.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("TaxSnapshotStatus");
 
                     b.HasIndex("SupplierId", "SupplierInvoiceNo")
                         .IsUnique();
@@ -2072,6 +2118,9 @@ namespace POS.Core.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("GrnHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool?>("IsTaxInclusiveSnapshot")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsVatIncluded")
@@ -2131,6 +2180,41 @@ namespace POS.Core.Migrations
                     b.Property<int?>("PoLineId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("TaxCategoryCodeSnapshot")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TaxCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TaxCodeSnapshot")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("TaxInclusiveAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TaxNameSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TaxRateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("TaxRatePercentSnapshot")
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<string>("TaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal?>("TaxableAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("ReceivedQty")
                         .HasColumnType("decimal(18,3)");
 
@@ -2156,6 +2240,9 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("VatAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("VatAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("VatRatePercent")
                         .HasColumnType("decimal(5,2)");
 
@@ -2175,6 +2262,12 @@ namespace POS.Core.Migrations
                     b.HasIndex("LineStatus");
 
                     b.HasIndex("PoLineId");
+
+                    b.HasIndex("TaxCategoryId");
+
+                    b.HasIndex("TaxRateId");
+
+                    b.HasIndex("TaxSnapshotStatus");
 
                     b.HasIndex("GrnHeaderId", "ItemVariantId", "BatchNo")
                         .IsUnique();
@@ -2855,6 +2948,9 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("NetPayable")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("OutOfScopeAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("TEXT");
 
@@ -2869,6 +2965,9 @@ namespace POS.Core.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("StandardRatedAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -2880,6 +2979,17 @@ namespace POS.Core.Migrations
 
                     b.Property<int>("SupplierId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("TaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal?>("TaxableAmountTotal")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Terms")
                         .IsRequired()
@@ -2895,6 +3005,12 @@ namespace POS.Core.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("ZeroRatedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ExemptAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExpectedDate");
@@ -2907,6 +3023,8 @@ namespace POS.Core.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("TaxSnapshotStatus");
 
                     b.ToTable("PoHeaders");
                 });
@@ -2925,6 +3043,9 @@ namespace POS.Core.Migrations
 
                     b.Property<decimal>("ExpectedCost")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool?>("IsTaxInclusiveSnapshot")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsVatIncluded")
                         .ValueGeneratedOnAdd()
@@ -2975,6 +3096,41 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("TaxAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("TaxCategoryCodeSnapshot")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TaxCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TaxCodeSnapshot")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("TaxInclusiveAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TaxNameSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TaxRateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("TaxRatePercentSnapshot")
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<string>("TaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal?>("TaxableAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("TaxCode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -2988,6 +3144,9 @@ namespace POS.Core.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("VatAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("VatRatePercent")
                         .HasColumnType("decimal(5,2)");
 
@@ -2998,6 +3157,12 @@ namespace POS.Core.Migrations
                     b.HasIndex("LineStatus");
 
                     b.HasIndex("PoHeaderId");
+
+                    b.HasIndex("TaxCategoryId");
+
+                    b.HasIndex("TaxRateId");
+
+                    b.HasIndex("TaxSnapshotStatus");
 
                     b.HasIndex("PoHeaderId", "ItemVariantId")
                         .IsUnique();
@@ -5512,6 +5677,16 @@ namespace POS.Core.Migrations
                         .HasForeignKey("PoLineId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("POS.Core.Models.TaxCategory", "TaxCategory")
+                        .WithMany()
+                        .HasForeignKey("TaxCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.TaxRate", "TaxRate")
+                        .WithMany()
+                        .HasForeignKey("TaxRateId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("GrnHeader");
 
                     b.Navigation("ItemBatch");
@@ -5519,6 +5694,10 @@ namespace POS.Core.Migrations
                     b.Navigation("ItemVariant");
 
                     b.Navigation("PoLine");
+
+                    b.Navigation("TaxCategory");
+
+                    b.Navigation("TaxRate");
                 });
 
             modelBuilder.Entity("POS.Core.Models.InventoryTransaction", b =>
@@ -5665,9 +5844,23 @@ namespace POS.Core.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("POS.Core.Models.TaxCategory", "TaxCategory")
+                        .WithMany()
+                        .HasForeignKey("TaxCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.TaxRate", "TaxRate")
+                        .WithMany()
+                        .HasForeignKey("TaxRateId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("ItemVariant");
 
                     b.Navigation("PoHeader");
+
+                    b.Navigation("TaxCategory");
+
+                    b.Navigation("TaxRate");
                 });
 
             modelBuilder.Entity("POS.Core.Models.PriceChangeHistory", b =>

@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using POS.Core.Configuration;
 
 namespace POS.Core.Models
 {
@@ -166,6 +167,47 @@ namespace POS.Core.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal LineTotal { get; set; } = 0m;
+
+        // =========================================================
+        // IMMUTABLE TAX SNAPSHOT FOUNDATION
+        // =========================================================
+        // These fields remain null for legacy rows and for documents created
+        // before the shared VAT engine is enabled.
+
+        public int? TaxCategoryId { get; set; }
+
+        public TaxCategory? TaxCategory { get; set; }
+
+        public int? TaxRateId { get; set; }
+
+        public TaxRate? TaxRate { get; set; }
+
+        [MaxLength(30)]
+        public string? TaxCategoryCodeSnapshot { get; set; }
+
+        [MaxLength(20)]
+        public string? TaxCodeSnapshot { get; set; }
+
+        [MaxLength(100)]
+        public string? TaxNameSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(7,4)")]
+        public decimal? TaxRatePercentSnapshot { get; set; }
+
+        public bool? IsTaxInclusiveSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxableAmountSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? VatAmountSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxInclusiveAmountSnapshot { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string TaxSnapshotStatus { get; set; } = TaxSnapshotStatuses.LegacyUnknown;
 
         // =========================================================
         // SELLING PRICE UPDATE SNAPSHOT

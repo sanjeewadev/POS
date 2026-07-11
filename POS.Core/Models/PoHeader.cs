@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using POS.Core.Configuration;
 
 namespace POS.Core.Models
 {
@@ -48,6 +49,31 @@ namespace POS.Core.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal NetPayable { get; set; } = 0m;
+
+        // =========================================================
+        // IMMUTABLE TAX SNAPSHOT FOUNDATION
+        // =========================================================
+        // Nullable totals preserve the fact that historical documents
+        // were created before authoritative VAT snapshots existed.
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxableAmountTotal { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? StandardRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ZeroRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ExemptAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OutOfScopeAmount { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string TaxSnapshotStatus { get; set; } = TaxSnapshotStatuses.LegacyUnknown;
 
         // False = tax added on top.
         // True = prices already include tax.
