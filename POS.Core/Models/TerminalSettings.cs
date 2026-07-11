@@ -1,4 +1,5 @@
 using System;
+using POS.Core.Configuration;
 
 namespace POS.Core.Models
 {
@@ -10,27 +11,34 @@ namespace POS.Core.Models
         // TERMINAL IDENTITY
         // =========================================================
 
-        public string TerminalNo { get; set; } = "01";
+        public string TerminalNo { get; set; } =
+            TerminalConfigurationDefaults.InitialTerminalNumber;
 
-        public string TerminalName { get; set; } = "Cashier Terminal 01";
+        public string TerminalName { get; set; } =
+            TerminalConfigurationDefaults.BuildTerminalName(
+                TerminalConfigurationDefaults.InitialTerminalNumber);
 
         public string MachineName { get; set; } = string.Empty;
 
-        public string Location { get; set; } = "Main Store";
+        public string Location { get; set; } =
+            TerminalConfigurationDefaults.DefaultLocation;
 
         // =========================================================
         // RECEIPT PRINTER
         // =========================================================
 
-        public string PrinterMode { get; set; } = "WindowsSpooler";
+        public string PrinterMode { get; set; } =
+            TerminalConfigurationDefaults.PrinterMode;
 
         public string ReceiptPrinterName { get; set; } = string.Empty;
 
-        public int ReceiptPaperWidth { get; set; } = 80;
+        public int ReceiptPaperWidth { get; set; } =
+            TerminalConfigurationDefaults.ReceiptPaperWidth;
 
         public bool AutoPrintReceipt { get; set; } = false;
 
-        public int ReceiptCopies { get; set; } = 1;
+        public int ReceiptCopies { get; set; } =
+            TerminalConfigurationDefaults.ReceiptCopies;
 
         // =========================================================
         // CASH DRAWER
@@ -38,7 +46,8 @@ namespace POS.Core.Models
 
         public bool EnableCashDrawer { get; set; } = false;
 
-        public string DrawerKickCode { get; set; } = "27,112,0,25,250";
+        public string DrawerKickCode { get; set; } =
+            TerminalConfigurationDefaults.DrawerKickCode;
 
         public bool OpenDrawerAfterCashSale { get; set; } = false;
 
@@ -86,7 +95,8 @@ namespace POS.Core.Models
         /// Minutes of inactivity before Cashier locks.
         /// 0 disables automatic locking. Manual lock remains available.
         /// </summary>
-        public int AutoLockTimeoutMinutes { get; set; } = 10;
+        public int AutoLockTimeoutMinutes { get; set; } =
+            TerminalConfigurationDefaults.AutoLockTimeoutMinutes;
 
         // =========================================================
         // SYSTEM / AUDIT

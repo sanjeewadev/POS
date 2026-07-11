@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Models.Terminals;
@@ -3377,7 +3378,7 @@ namespace POS.Core.Data
 
                 entity.Property(e => e.TerminalName)
                     .HasMaxLength(100)
-                    .HasDefaultValue("Cashier Terminal 01");
+                    .HasDefaultValue(string.Empty);
 
                 entity.Property(e => e.MachineName)
                     .HasMaxLength(150)
@@ -3385,34 +3386,44 @@ namespace POS.Core.Data
 
                 entity.Property(e => e.Location)
                     .HasMaxLength(100)
-                    .HasDefaultValue("Main Store");
+                    .HasDefaultValue(
+                        TerminalConfigurationDefaults
+                            .DefaultLocation);
 
                 entity.Property(e => e.PrinterMode)
                     .HasMaxLength(50)
-                    .HasDefaultValue("WindowsSpooler");
+                    .HasDefaultValue(
+                        TerminalConfigurationDefaults
+                            .PrinterMode);
 
                 entity.Property(e => e.ReceiptPrinterName)
                     .HasMaxLength(150)
-                    .HasDefaultValue("POS-80");
+                    .HasDefaultValue(string.Empty);
 
                 entity.Property(e => e.ReceiptPaperWidth)
-                    .HasDefaultValue(80);
+                    .HasDefaultValue(
+                        TerminalConfigurationDefaults
+                            .ReceiptPaperWidth);
 
                 entity.Property(e => e.AutoPrintReceipt)
-                    .HasDefaultValue(true);
+                    .HasDefaultValue(false);
 
                 entity.Property(e => e.ReceiptCopies)
-                    .HasDefaultValue(1);
+                    .HasDefaultValue(
+                        TerminalConfigurationDefaults
+                            .ReceiptCopies);
 
                 entity.Property(e => e.EnableCashDrawer)
-                    .HasDefaultValue(true);
+                    .HasDefaultValue(false);
 
                 entity.Property(e => e.DrawerKickCode)
                     .HasMaxLength(100)
-                    .HasDefaultValue("27,112,0,25,250");
+                    .HasDefaultValue(
+                        TerminalConfigurationDefaults
+                            .DrawerKickCode);
 
                 entity.Property(e => e.OpenDrawerAfterCashSale)
-                    .HasDefaultValue(true);
+                    .HasDefaultValue(false);
 
                 entity.Property(e => e.ScannerSuffixAction)
                     .HasMaxLength(50)

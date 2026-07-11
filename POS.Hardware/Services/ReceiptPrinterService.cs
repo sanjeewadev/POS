@@ -1,4 +1,4 @@
-﻿using POS.Core.Interfaces;
+using POS.Core.Interfaces;
 using POS.Core.Models;
 using System;
 using System.Drawing;
@@ -9,8 +9,29 @@ namespace POS.Hardware.Services
 {
     public class ReceiptPrinterService : IReceiptPrinterService
     {
-        // Change this to match your installed Windows printer name (e.g., "EPSON TM-T88V")
-        private readonly string _printerName = "POS_Printer";
+        private readonly string _printerName;
+        private readonly string _storeName;
+
+        public ReceiptPrinterService(
+            string printerName,
+            string storeName)
+        {
+            _printerName =
+                string.IsNullOrWhiteSpace(
+                    printerName)
+                    ? throw new ArgumentException(
+                        "Printer name is required.",
+                        nameof(printerName))
+                    : printerName.Trim();
+
+            _storeName =
+                string.IsNullOrWhiteSpace(
+                    storeName)
+                    ? throw new ArgumentException(
+                        "Store name is required.",
+                        nameof(storeName))
+                    : storeName.Trim();
+        }
 
         public void PrintCashVoucher(CashMovement movement)
         {
@@ -27,7 +48,7 @@ namespace POS.Hardware.Services
                 int y = 10;
                 int lineOffset = 20;
 
-                g.DrawString("BANDULA TRADE CENTER", headerFont, Brushes.Black, 10, y);
+                g.DrawString(_storeName, headerFont, Brushes.Black, 10, y);
                 y += lineOffset * 2;
 
                 g.DrawString($"--- {movement.MovementType.ToUpper()} VOUCHER ---", boldFont, Brushes.Black, 10, y);

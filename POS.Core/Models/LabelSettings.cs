@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace POS.Core.Models
@@ -14,7 +14,7 @@ namespace POS.Core.Models
 
         // Visual Toggles
         [ObservableProperty] private bool _printStoreName = true;
-        [ObservableProperty] private string _storeName = "MY RETAIL STORE"; // TODO: Load from global app settings later
+        [ObservableProperty] private string _storeName = string.Empty;
 
         [ObservableProperty] private bool _printItemName = true;
         [ObservableProperty] private bool _printPrice = true;

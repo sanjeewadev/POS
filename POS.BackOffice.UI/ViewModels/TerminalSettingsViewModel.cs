@@ -192,8 +192,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                 TerminalSettings settings =
                     await _terminalSettingsRepository
-                        .GetOrCreateForCurrentMachineAsync(
-                            "01");
+                        .GetOrCreateForCurrentMachineAsync();
 
                 LicenseSummary licenseSummary =
                     await _licenseManagerService

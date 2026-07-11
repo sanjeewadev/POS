@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,7 +20,7 @@ namespace POS.Cashier.UI.ViewModels
         // --- UI Text Bindings ---
         [ObservableProperty] private string _shiftModeTitle = "OPEN NEW SHIFT / REGISTER";
         [ObservableProperty] private string _cashierName = "Unknown";
-        [ObservableProperty] private string _terminalNo = "01";
+        [ObservableProperty] private string _terminalNo = string.Empty;
         [ObservableProperty] private string _currentDate = DateTime.Now.ToString("yyyy-MM-dd");
 
         // --- Denomination Counters ---
@@ -74,9 +74,21 @@ namespace POS.Cashier.UI.ViewModels
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(
+                        TerminalNo))
+                {
+                    MessageBox.Show(
+                        "Terminal identity is unavailable.",
+                        "Shift Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return false;
+                }
+
                 if (CurrentMode == ShiftMode.Open)
                 {
-                    // Phase 2: Open Shift (Uses Terminal string "01")
+                    // Open the shift for the terminal supplied by Cashier startup.
                     await _tillRepository.CreateNewShiftAsync(TerminalNo, CashierName);
                 }
                 else

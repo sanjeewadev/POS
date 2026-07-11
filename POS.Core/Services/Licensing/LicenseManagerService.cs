@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.Core.Services.Licensing
 {
@@ -472,8 +473,7 @@ namespace POS.Core.Services.Licensing
             {
                 var settings =
                     await _terminalSettingsRepository
-                        .GetOrCreateForCurrentMachineAsync(
-                            "01");
+                        .GetOrCreateForCurrentMachineAsync();
 
                 if (!string.IsNullOrWhiteSpace(
                         settings.TerminalNo))
@@ -482,12 +482,20 @@ namespace POS.Core.Services.Licensing
                         .Trim();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Safe first-start fallback.
+                LocalLogService.WriteException(
+                    "POS.Core",
+                    "Resolve current terminal for licensing",
+                    ex);
+
+                throw new InvalidOperationException(
+                    "The current terminal identity could not be resolved.",
+                    ex);
             }
 
-            return "01";
+            throw new InvalidOperationException(
+                "The current terminal number is missing.");
         }
 
         private static void

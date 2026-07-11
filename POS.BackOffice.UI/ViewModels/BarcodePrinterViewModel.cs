@@ -18,6 +18,9 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly IBarcodePrintService _printService;
         private readonly BarcodePrinterRepository _printerRepository;
+        private readonly StoreSettingsRepository _storeSettingsRepository;
+
+        private string _configuredStoreName = string.Empty;
 
         private bool _isBulkSelectionChanging;
         private bool _isUpdatingSelectAllFromQueue;
@@ -89,10 +92,21 @@ namespace POS.BackOffice.UI.ViewModels
 
         public BarcodePrinterViewModel(
             IBarcodePrintService printService,
-            BarcodePrinterRepository printerRepository)
+            BarcodePrinterRepository printerRepository,
+            StoreSettingsRepository storeSettingsRepository)
         {
-            _printService = printService ?? throw new ArgumentNullException(nameof(printService));
-            _printerRepository = printerRepository ?? throw new ArgumentNullException(nameof(printerRepository));
+            _printService = printService ??
+                throw new ArgumentNullException(
+                    nameof(printService));
+
+            _printerRepository = printerRepository ??
+                throw new ArgumentNullException(
+                    nameof(printerRepository));
+
+            _storeSettingsRepository =
+                storeSettingsRepository ??
+                throw new ArgumentNullException(
+                    nameof(storeSettingsRepository));
 
             PrintQueue.CollectionChanged += PrintQueue_CollectionChanged;
 
@@ -110,6 +124,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
+                await LoadStoreIdentityAsync();
                 LoadInstalledPrinters();
                 await LoadRecentGrnsAsync();
 
@@ -129,6 +144,23 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        private async Task LoadStoreIdentityAsync()
+        {
+            StoreSettings settings =
+                await _storeSettingsRepository
+                    .GetOrCreateDefaultAsync();
+
+            _configuredStoreName =
+                !string.IsNullOrWhiteSpace(
+                    settings.StoreName)
+                    ? settings.StoreName.Trim()
+                    : settings.LegalName?.Trim() ??
+                      string.Empty;
+
+            PrintConfig.StoreName =
+                _configuredStoreName;
         }
 
         private void LoadInstalledPrinters()
@@ -536,6 +568,9 @@ namespace POS.BackOffice.UI.ViewModels
                         PrintQuantity = q.PrintQuantity
                     })
                     .ToList();
+
+                PrintConfig.StoreName =
+                    _configuredStoreName;
 
                 var modelSettings = new LabelSettings
                 {

@@ -167,8 +167,7 @@ namespace POS.Core.Repositories
 
             TerminalSettings settings =
                 await _terminalSettingsRepository
-                    .GetOrCreateForCurrentMachineAsync(
-                        "01");
+                    .GetOrCreateForCurrentMachineAsync();
 
             string terminalNo =
                 NormalizeText(

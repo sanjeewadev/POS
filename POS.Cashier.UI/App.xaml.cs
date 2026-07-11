@@ -5,7 +5,6 @@ using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using POS.Cashier.UI.Views;
 using POS.Core.Data;
-using POS.Core.Interfaces;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
@@ -22,7 +21,7 @@ namespace POS.Cashier.UI
     {
         public static IServiceProvider? Services { get; private set; }
 
-        private string _terminalNo = "01";
+        private string _terminalNo = string.Empty;
         private int _autoLockTimeoutMinutes = 10;
         private TerminalSettings? _terminalSettings;
         private StoreSettings? _storeSettings;
@@ -82,10 +81,6 @@ namespace POS.Cashier.UI
             services.AddTransient<PluSearchViewModel>();
 
             services.AddTransient<ExpressItemRepository>();
-
-            services.AddSingleton<
-                IReceiptPrinterService,
-                POS.Hardware.Services.ReceiptPrinterService>();
 
             services.AddTransient<GiftVoucherRepository>();
             services.AddTransient<SellGiftVoucherDialogViewModel>();
@@ -197,7 +192,10 @@ namespace POS.Cashier.UI
 
             var terminalSettings =
                 await terminalSettingsRepository
-                    .GetOrCreateForCurrentMachineAsync("01");
+                    .GetOrCreateForCurrentMachineAsync();
+
+            ValidateTerminalConfiguration(
+                terminalSettings);
 
             _terminalSettings =
                 terminalSettings;
@@ -210,10 +208,7 @@ namespace POS.Cashier.UI
             }
 
             _terminalNo =
-                string.IsNullOrWhiteSpace(
-                    terminalSettings.TerminalNo)
-                    ? "01"
-                    : terminalSettings.TerminalNo.Trim();
+                terminalSettings.TerminalNo.Trim();
 
             _autoLockTimeoutMinutes =
                 Math.Clamp(
@@ -251,6 +246,76 @@ namespace POS.Cashier.UI
                     "License Expiry Warning",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
+            }
+        }
+
+        private static void ValidateTerminalConfiguration(
+            TerminalSettings settings)
+        {
+            if (settings == null)
+            {
+                throw new InvalidOperationException(
+                    "Terminal settings are unavailable.");
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    settings.TerminalNo))
+            {
+                throw new InvalidOperationException(
+                    "The current terminal number is missing. " +
+                    "Open BackOffice Terminal Management and register this computer.");
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    settings.TerminalName))
+            {
+                throw new InvalidOperationException(
+                    "The current terminal name is missing. " +
+                    "Open BackOffice Terminal Settings and save a terminal name.");
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    settings.MachineName))
+            {
+                throw new InvalidOperationException(
+                    "The current terminal is not assigned to a computer.");
+            }
+
+            if (settings.AutoLockTimeoutMinutes < 0 ||
+                settings.AutoLockTimeoutMinutes > 120)
+            {
+                throw new InvalidOperationException(
+                    "The terminal auto-lock timeout is invalid. " +
+                    "Open BackOffice Terminal Settings and save it again.");
+            }
+
+            if (settings.ReceiptPaperWidth != 58 &&
+                settings.ReceiptPaperWidth != 80)
+            {
+                throw new InvalidOperationException(
+                    "The receipt paper width is invalid. " +
+                    "Open BackOffice Terminal Settings and select 58 mm or 80 mm.");
+            }
+
+            if (settings.ReceiptCopies < 1 ||
+                settings.ReceiptCopies > 3)
+            {
+                throw new InvalidOperationException(
+                    "The receipt copy count is invalid. " +
+                    "Open BackOffice Terminal Settings and select 1 to 3 copies.");
+            }
+
+            bool printerIsRequired =
+                settings.AutoPrintReceipt ||
+                settings.EnableCashDrawer;
+
+            if (printerIsRequired &&
+                string.IsNullOrWhiteSpace(
+                    settings.ReceiptPrinterName))
+            {
+                throw new InvalidOperationException(
+                    "A receipt printer must be selected when automatic printing " +
+                    "or the cash drawer is enabled.");
             }
         }
 

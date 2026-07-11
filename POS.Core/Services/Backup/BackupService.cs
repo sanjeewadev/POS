@@ -573,7 +573,7 @@ namespace POS.Core.Services.Backup
 
             var terminalSettings =
                 await _terminalSettingsRepository
-                    .GetOrCreateForCurrentMachineAsync("01");
+                    .GetOrCreateForCurrentMachineAsync();
 
             string storeId = string.IsNullOrWhiteSpace(
                 storeSettings.Brn)

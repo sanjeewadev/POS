@@ -4797,7 +4797,7 @@ namespace POS.Core.Migrations
                     b.Property<bool>("AutoPrintReceipt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
-                        .HasDefaultValue(true);
+                        .HasDefaultValue(false);
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -4828,7 +4828,7 @@ namespace POS.Core.Migrations
                     b.Property<bool>("EnableCashDrawer")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
-                        .HasDefaultValue(true);
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("EnableEftpos")
                         .ValueGeneratedOnAdd()
@@ -4867,7 +4867,7 @@ namespace POS.Core.Migrations
                     b.Property<bool>("OpenDrawerAfterCashSale")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
-                        .HasDefaultValue(true);
+                        .HasDefaultValue(false);
 
                     b.Property<string>("PoleDisplayComPort")
                         .IsRequired()
@@ -4905,7 +4905,7 @@ namespace POS.Core.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(150)
                         .HasColumnType("TEXT")
-                        .HasDefaultValue("POS-80");
+                        .HasDefaultValue("");
 
                     b.Property<int>("ScaleBaudRate")
                         .ValueGeneratedOnAdd()
@@ -4931,7 +4931,7 @@ namespace POS.Core.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
                         .HasColumnType("TEXT")
-                        .HasDefaultValue("Cashier Terminal 01");
+                        .HasDefaultValue("");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()

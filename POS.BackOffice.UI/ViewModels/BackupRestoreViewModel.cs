@@ -645,7 +645,7 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 var terminalSettings =
                     await _terminalSettingsRepository
-                        .GetOrCreateForCurrentMachineAsync("01");
+                        .GetOrCreateForCurrentMachineAsync();
 
                 BackupHistory history =
                     BackupRepository

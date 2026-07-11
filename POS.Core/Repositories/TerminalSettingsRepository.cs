@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 
@@ -69,8 +70,7 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(
                     terminal =>
                         terminal.MachineName ==
-                            safeMachineName &&
-                        terminal.IsActive);
+                            safeMachineName);
         }
 
         public async Task<TerminalSettings>
@@ -83,7 +83,9 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(
                     safeTerminalNo))
             {
-                safeTerminalNo = "01";
+                safeTerminalNo =
+                    TerminalConfigurationDefaults
+                        .InitialTerminalNumber;
             }
 
             await using AppDbContext context =
@@ -116,7 +118,9 @@ namespace POS.Core.Repositories
 
         public async Task<TerminalSettings>
             GetOrCreateForCurrentMachineAsync(
-                string fallbackTerminalNo = "01")
+                string fallbackTerminalNo =
+                    TerminalConfigurationDefaults
+                        .InitialTerminalNumber)
         {
             string machineName =
                 Environment.MachineName.Trim();
@@ -133,8 +137,7 @@ namespace POS.Core.Repositories
                     .FirstOrDefaultAsync(
                         terminal =>
                             terminal.MachineName ==
-                                machineName &&
-                            terminal.IsActive);
+                                machineName);
 
             if (existingForMachine != null)
                 return existingForMachine;
@@ -146,7 +149,9 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(
                     safeTerminalNo))
             {
-                safeTerminalNo = "01";
+                safeTerminalNo =
+                    TerminalConfigurationDefaults
+                        .InitialTerminalNumber;
             }
 
             TerminalSettings? existingByTerminal =
@@ -314,7 +319,9 @@ namespace POS.Core.Repositories
 
         public static TerminalSettings
             CreateDefaultSettings(
-                string terminalNo = "01",
+                string terminalNo =
+                    TerminalConfigurationDefaults
+                        .InitialTerminalNumber,
                 string? machineName = null)
         {
             string safeTerminalNo =
@@ -323,7 +330,9 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(
                     safeTerminalNo))
             {
-                safeTerminalNo = "01";
+                safeTerminalNo =
+                    TerminalConfigurationDefaults
+                        .InitialTerminalNumber;
             }
 
             string safeMachineName =
@@ -342,28 +351,37 @@ namespace POS.Core.Repositories
                     safeTerminalNo,
 
                 TerminalName =
-                    $"Cashier Terminal " +
-                    $"{safeTerminalNo}",
+                    TerminalConfigurationDefaults
+                        .BuildTerminalName(
+                            safeTerminalNo),
 
                 MachineName =
                     safeMachineName,
 
-                Location = "Main Store",
+                Location =
+                    TerminalConfigurationDefaults
+                        .DefaultLocation,
 
                 PrinterMode =
-                    "WindowsSpooler",
+                    TerminalConfigurationDefaults
+                        .PrinterMode,
 
                 ReceiptPrinterName =
                     string.Empty,
 
-                ReceiptPaperWidth = 80,
+                ReceiptPaperWidth =
+                    TerminalConfigurationDefaults
+                        .ReceiptPaperWidth,
                 AutoPrintReceipt = false,
-                ReceiptCopies = 1,
+                ReceiptCopies =
+                    TerminalConfigurationDefaults
+                        .ReceiptCopies,
 
                 EnableCashDrawer = false,
 
                 DrawerKickCode =
-                    "27,112,0,25,250",
+                    TerminalConfigurationDefaults
+                        .DrawerKickCode,
 
                 OpenDrawerAfterCashSale =
                     false,
@@ -390,7 +408,8 @@ namespace POS.Core.Repositories
                     string.Empty,
 
                 AutoLockTimeoutMinutes =
-                    10,
+                    TerminalConfigurationDefaults
+                        .AutoLockTimeoutMinutes,
 
                 IsActive = true,
                 CreatedAt = DateTime.Now,
@@ -483,7 +502,9 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(
                     settings.TerminalNo))
             {
-                settings.TerminalNo = "01";
+                settings.TerminalNo =
+                    TerminalConfigurationDefaults
+                        .InitialTerminalNumber;
             }
 
             settings.TerminalName =
@@ -494,8 +515,9 @@ namespace POS.Core.Repositories
                     settings.TerminalName))
             {
                 settings.TerminalName =
-                    $"Cashier Terminal " +
-                    $"{settings.TerminalNo}";
+                    TerminalConfigurationDefaults
+                        .BuildTerminalName(
+                            settings.TerminalNo);
             }
 
             settings.MachineName =
@@ -517,11 +539,13 @@ namespace POS.Core.Repositories
                     settings.Location))
             {
                 settings.Location =
-                    "Main Store";
+                    TerminalConfigurationDefaults
+                        .DefaultLocation;
             }
 
             settings.PrinterMode =
-                "WindowsSpooler";
+                TerminalConfigurationDefaults
+                    .PrinterMode;
 
             settings.ReceiptPrinterName =
                 NormalizeText(
@@ -531,12 +555,15 @@ namespace POS.Core.Repositories
                 settings.ReceiptPaperWidth != 80)
             {
                 settings.ReceiptPaperWidth =
-                    80;
+                    TerminalConfigurationDefaults
+                        .ReceiptPaperWidth;
             }
 
             if (settings.ReceiptCopies <= 0)
             {
-                settings.ReceiptCopies = 1;
+                settings.ReceiptCopies =
+                    TerminalConfigurationDefaults
+                        .ReceiptCopies;
             }
 
             settings.DrawerKickCode =
@@ -547,7 +574,8 @@ namespace POS.Core.Repositories
                     settings.DrawerKickCode))
             {
                 settings.DrawerKickCode =
-                    "27,112,0,25,250";
+                    TerminalConfigurationDefaults
+                        .DrawerKickCode;
             }
 
             if (!settings.EnableCashDrawer)

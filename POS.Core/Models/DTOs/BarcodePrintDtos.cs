@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 
@@ -204,7 +204,7 @@ namespace POS.Core.Models.DTOs
         private bool _printStoreName = true;
 
         [ObservableProperty]
-        private string _storeName = "MY STORE";
+        private string _storeName = string.Empty;
 
         [ObservableProperty]
         private bool _printItemName = true;
