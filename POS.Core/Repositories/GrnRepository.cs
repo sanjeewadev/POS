@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
+using POS.Core.Services.Tax;
 
 namespace POS.Core.Repositories
 {
@@ -17,6 +18,7 @@ namespace POS.Core.Repositories
         private const int MaxTakeLimit = 2000;
 
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly PurchasingTaxService _purchasingTaxService = new();
 
         public GrnRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
@@ -202,9 +204,15 @@ namespace POS.Core.Repositories
                     LineDiscountValue = l.LineDiscountValue,
                     LineDiscount = l.LineDiscount,
 
-                    VatRatePercent = l.VatRatePercent,
-                    IsVatIncluded = l.IsVatIncluded,
-                    VatAmount = l.TaxAmount,
+                    VatRatePercent = l.TaxSnapshotStatus == TaxSnapshotStatuses.Complete
+                        ? l.TaxRatePercentSnapshot ?? l.VatRatePercent
+                        : l.VatRatePercent,
+                    IsVatIncluded = l.TaxSnapshotStatus == TaxSnapshotStatuses.Complete
+                        ? l.IsTaxInclusiveSnapshot ?? l.IsVatIncluded
+                        : l.IsVatIncluded,
+                    VatAmount = l.TaxSnapshotStatus == TaxSnapshotStatuses.Complete
+                        ? l.VatAmountSnapshot ?? l.TaxAmount
+                        : l.TaxAmount,
 
                     CurrentRetailPrice = l.ItemVariant.RetailPrice,
                     CurrentWholesalePrice = l.ItemVariant.WholesalePrice,
@@ -335,30 +343,40 @@ namespace POS.Core.Repositories
                 })
                 .ToListAsync();
 
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                rows.Select(r => r.ItemVariantId).ToList(),
+                DateTime.Today);
+
             return rows
-                .Select(r => new GrnVariantLookupDto
+                .Select(r =>
                 {
-                    ItemVariantId = r.ItemVariantId,
-                    ItemParentId = r.ItemParentId,
-                    ItemCode = r.ItemCode,
-                    SkuCode = r.SkuCode,
-                    Barcode = r.Barcode,
-                    Description = r.Description,
-                    PrintName = r.PrintName,
-                    VariantDescription = r.VariantDescription,
-                    Uom = string.IsNullOrWhiteSpace(r.Uom) ? "PCS" : r.Uom,
-                    LastSupplierCost = r.LastSupplierCost,
-                    CurrentCost = r.CurrentCost,
-                    HasBatchTracking = r.HasBatchTracking,
-                    HasExpiryTracking = r.HasExpiryTracking,
-                    IsScaleItem = r.IsScaleItem,
-                    AllowDecimalQuantity = r.AllowDecimalQuantity,
-                    CurrentRetailPrice = r.CurrentRetailPrice,
-                    CurrentWholesalePrice = r.CurrentWholesalePrice,
-                    CurrentMinimumPrice = r.CurrentMinimumPrice,
-                    CurrentMaximumPrice = r.CurrentMaximumPrice,
-                    VatRatePercent = ResolveVatRatePercent(r.TaxCode),
-                    IsVatIncluded = false
+                    var profile = taxProfiles[r.ItemVariantId];
+
+                    return new GrnVariantLookupDto
+                    {
+                        ItemVariantId = r.ItemVariantId,
+                        ItemParentId = r.ItemParentId,
+                        ItemCode = r.ItemCode,
+                        SkuCode = r.SkuCode,
+                        Barcode = r.Barcode,
+                        Description = r.Description,
+                        PrintName = r.PrintName,
+                        VariantDescription = r.VariantDescription,
+                        Uom = string.IsNullOrWhiteSpace(r.Uom) ? "PCS" : r.Uom,
+                        LastSupplierCost = r.LastSupplierCost,
+                        CurrentCost = r.CurrentCost,
+                        HasBatchTracking = r.HasBatchTracking,
+                        HasExpiryTracking = r.HasExpiryTracking,
+                        IsScaleItem = r.IsScaleItem,
+                        AllowDecimalQuantity = r.AllowDecimalQuantity,
+                        CurrentRetailPrice = r.CurrentRetailPrice,
+                        CurrentWholesalePrice = r.CurrentWholesalePrice,
+                        CurrentMinimumPrice = r.CurrentMinimumPrice,
+                        CurrentMaximumPrice = r.CurrentMaximumPrice,
+                        VatRatePercent = profile.RatePercent,
+                        IsVatIncluded = false
+                    };
                 })
                 .OrderBy(v => v.FullDisplayName)
                 .ThenBy(v => v.SkuCode)
@@ -429,6 +447,13 @@ namespace POS.Core.Repositories
             if (row == null)
                 return null;
 
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                new[] { row.ItemVariantId },
+                DateTime.Today);
+
+            var profile = taxProfiles[row.ItemVariantId];
+
             return new GrnVariantLookupDto
             {
                 ItemVariantId = row.ItemVariantId,
@@ -450,7 +475,7 @@ namespace POS.Core.Repositories
                 CurrentWholesalePrice = row.CurrentWholesalePrice,
                 CurrentMinimumPrice = row.CurrentMinimumPrice,
                 CurrentMaximumPrice = row.CurrentMaximumPrice,
-                VatRatePercent = ResolveVatRatePercent(row.TaxCode),
+                VatRatePercent = profile.RatePercent,
                 IsVatIncluded = false
             };
         }
@@ -469,15 +494,15 @@ namespace POS.Core.Repositories
 
             NormalizeHeader(header);
             NormalizeLines(lines);
-            RecalculateHeaderTotals(header, lines);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
             await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
-                await ValidateHeaderAsync(context, header);
                 await ValidateLinesAsync(context, header, lines);
+                await ApplyAuthoritativeTaxAsync(context, header, lines);
+                await ValidateHeaderAsync(context, header);
 
                 DateTime now = DateTime.Now;
 
@@ -768,17 +793,6 @@ namespace POS.Core.Repositories
                 if (IsPercentDiscount(line.LineDiscountMode) && line.LineDiscountValue > 100)
                     throw new InvalidOperationException($"Discount percentage cannot be greater than 100 for item '{variant.SkuCode}'.");
 
-                if (line.LineDiscount < 0)
-                    throw new InvalidOperationException($"Line discount cannot be negative for item '{variant.SkuCode}'.");
-
-                decimal gross = line.ReceivedQty * line.UnitCost;
-
-                if (line.LineDiscount > gross)
-                    throw new InvalidOperationException($"Line discount cannot be greater than line value for item '{variant.SkuCode}'.");
-
-                if (line.VatRatePercent < 0 || line.VatRatePercent > 100)
-                    throw new InvalidOperationException($"VAT rate must be between 0 and 100 for item '{variant.SkuCode}'.");
-
                 if (line.BatchNo.Length > 50)
                     throw new InvalidOperationException($"Batch number is too long for item '{variant.SkuCode}'.");
 
@@ -892,78 +906,119 @@ namespace POS.Core.Repositories
         // CALCULATION
         // =========================================================
 
-        private static void RecalculateHeaderTotals(
+        private async Task ApplyAuthoritativeTaxAsync(
+            AppDbContext context,
             GrnHeader header,
             List<GrnLine> lines)
         {
-            decimal subtotalGross = 0m;
-            decimal lineDiscountTotal = 0m;
-            decimal vatTotal = 0m;
-            decimal lineTotalPayable = 0m;
+            bool documentIsTaxInclusive = ResolveDocumentTaxMode(lines);
+            header.IsTaxInclusive = documentIsTaxInclusive;
 
-            foreach (var line in lines)
+            var variantIds = lines
+                .Select(l => l.ItemVariantId)
+                .Distinct()
+                .ToList();
+
+            var profiles = await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                variantIds,
+                header.InvoiceDate);
+
+            var calculation = _purchasingTaxService.CalculateDocument(
+                lines.Select(line => new PurchasingTaxLineInput
+                {
+                    ItemVariantId = line.ItemVariantId,
+                    Quantity = line.ReceivedQty,
+                    UnitPrice = line.UnitCost,
+                    DiscountMode = line.LineDiscountMode,
+                    DiscountValue = line.LineDiscountValue,
+                    TaxProfile = profiles[line.ItemVariantId]
+                }).ToList(),
+                header.GlobalBillDiscount,
+                documentIsTaxInclusive);
+
+            for (int index = 0; index < lines.Count; index++)
             {
-                NormalizeLine(line);
-
-                decimal gross = line.ReceivedQty * line.UnitCost;
-
-                line.LineDiscount = CalculateDiscountAmount(
-                    gross,
-                    line.LineDiscountMode,
-                    line.LineDiscountValue);
-
-                decimal afterLineDiscount = gross - line.LineDiscount;
-
-                if (afterLineDiscount < 0)
-                    afterLineDiscount = 0m;
-
-                decimal vatRate = line.VatRatePercent / 100m;
-
-                if (line.VatRatePercent <= 0)
-                {
-                    line.VatAmount = 0m;
-                    line.LineTotal = Math.Round(afterLineDiscount, 2);
-                }
-                else if (line.IsVatIncluded)
-                {
-                    line.VatAmount = Math.Round(
-                        afterLineDiscount - (afterLineDiscount / (1 + vatRate)),
-                        2);
-
-                    line.LineTotal = Math.Round(afterLineDiscount, 2);
-                }
-                else
-                {
-                    line.VatAmount = Math.Round(afterLineDiscount * vatRate, 2);
-                    line.LineTotal = Math.Round(afterLineDiscount + line.VatAmount, 2);
-                }
-
-                subtotalGross += gross;
-                lineDiscountTotal += line.LineDiscount;
-                vatTotal += line.VatAmount;
-                lineTotalPayable += line.LineTotal;
+                ApplyTaxResult(lines[index], calculation.Lines[index]);
             }
 
-            if (header.GlobalBillDiscount > lineTotalPayable)
-                throw new InvalidOperationException("Global bill discount cannot be greater than GRN value.");
+            header.Subtotal = calculation.Subtotal;
+            header.TotalDiscountAmount = calculation.TotalDiscount;
+            header.TotalVatAmount = calculation.TotalVat;
+            header.NetPayable = Math.Round(
+                calculation.NetPayable + header.FreightAmount,
+                2,
+                MidpointRounding.AwayFromZero);
+            header.TaxableAmountTotal = calculation.TaxableAmountTotal;
+            header.StandardRatedAmount = calculation.StandardRatedAmount;
+            header.ZeroRatedAmount = calculation.ZeroRatedAmount;
+            header.ExemptAmount = calculation.ExemptAmount;
+            header.OutOfScopeAmount = calculation.OutOfScopeAmount;
+            header.TaxSnapshotStatus = TaxSnapshotStatuses.Complete;
 
-            header.Subtotal = Math.Round(subtotalGross, 2);
-            header.TotalDiscountAmount = Math.Round(lineDiscountTotal + header.GlobalBillDiscount, 2);
-            header.TotalVatAmount = Math.Round(vatTotal, 2);
-
-            decimal netPayable = lineTotalPayable - header.GlobalBillDiscount + header.FreightAmount;
-            header.NetPayable = Math.Round(netPayable < 0 ? 0m : netPayable, 2);
+            // Freight VAT treatment is deliberately not invented in this phase.
+            header.FreightTaxCategoryCodeSnapshot = null;
+            header.FreightTaxableAmount = null;
+            header.FreightVatAmount = null;
+            header.FreightTaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown;
 
             AllocateLandedCost(header, lines);
+        }
+
+        private static void ApplyTaxResult(
+            GrnLine line,
+            PurchasingTaxLineResult result)
+        {
+            var profile = result.TaxProfile;
+
+            line.LineDiscount = result.LineDiscountAmount;
+            line.VatRatePercent = profile.RatePercent;
+            line.VatAmount = result.VatAmount;
+            line.LineTotal = result.TaxInclusiveAmount;
+
+            line.TaxCategoryId = profile.TaxCategoryId;
+            line.TaxRateId = profile.TaxRateId;
+            line.TaxCategoryCodeSnapshot = profile.TaxCategoryCode;
+            line.TaxCodeSnapshot = profile.TaxCode;
+            line.TaxNameSnapshot = profile.TaxName;
+            line.TaxRatePercentSnapshot = profile.RatePercent;
+            line.IsTaxInclusiveSnapshot = line.IsVatIncluded;
+            line.TaxableAmountSnapshot = result.TaxableAmount;
+            line.VatAmountSnapshot = result.VatAmount;
+            line.TaxInclusiveAmountSnapshot = result.TaxInclusiveAmount;
+            line.TaxSnapshotStatus = TaxSnapshotStatuses.Complete;
+        }
+
+        private static bool ResolveDocumentTaxMode(List<GrnLine> lines)
+        {
+            bool mode = lines[0].IsVatIncluded;
+
+            if (lines.Any(line => line.IsVatIncluded != mode))
+            {
+                throw new InvalidOperationException(
+                    "All GRN lines must use the same supplier-price VAT mode. Use either VAT Inclusive or VAT Exclusive for the whole document.");
+            }
+
+            foreach (var line in lines)
+                line.IsVatIncluded = mode;
+
+            return mode;
         }
 
         private static void AllocateLandedCost(
             GrnHeader header,
             List<GrnLine> lines)
         {
-            decimal totalCostBase = lines.Sum(GetLineCostBaseForLandedCost);
+            var eligibleLines = lines
+                .Where(line =>
+                    line.ReceivedQty > 0m &&
+                    (line.TaxableAmountSnapshot ?? 0m) > 0m)
+                .ToList();
 
-            if (totalCostBase <= 0)
+            decimal totalCostBase = eligibleLines.Sum(line =>
+                line.TaxableAmountSnapshot ?? 0m);
+
+            if (totalCostBase <= 0m)
             {
                 foreach (var line in lines)
                     line.LandedCost = 0m;
@@ -971,63 +1026,42 @@ namespace POS.Core.Repositories
                 return;
             }
 
-            foreach (var line in lines)
+            decimal allocatedFreightTotal = 0m;
+
+            foreach (var line in lines.Except(eligibleLines))
+                line.LandedCost = 0m;
+
+            for (int index = 0; index < eligibleLines.Count; index++)
             {
-                if (line.ReceivedQty <= 0)
-                {
-                    line.LandedCost = 0m;
-                    continue;
-                }
+                var line = eligibleLines[index];
+                decimal lineCostBase = line.TaxableAmountSnapshot ?? 0m;
+                bool isLastEligible = index == eligibleLines.Count - 1;
 
-                decimal lineCostBase = GetLineCostBaseForLandedCost(line);
-                decimal weight = lineCostBase / totalCostBase;
+                decimal allocatedFreight = isLastEligible
+                    ? header.FreightAmount - allocatedFreightTotal
+                    : Math.Round(
+                        header.FreightAmount * lineCostBase / totalCostBase,
+                        2,
+                        MidpointRounding.AwayFromZero);
 
-                decimal allocatedFreight = header.FreightAmount * weight;
-                decimal allocatedGlobalDiscount = header.GlobalBillDiscount * weight;
+                allocatedFreight = Math.Max(
+                    0m,
+                    Math.Round(
+                        allocatedFreight,
+                        2,
+                        MidpointRounding.AwayFromZero));
 
-                decimal landedLineTotal = lineCostBase + allocatedFreight - allocatedGlobalDiscount;
+                allocatedFreightTotal = Math.Round(
+                    allocatedFreightTotal + allocatedFreight,
+                    2,
+                    MidpointRounding.AwayFromZero);
 
-                if (landedLineTotal < 0)
-                    landedLineTotal = 0m;
-
-                line.LandedCost = Math.Round(landedLineTotal / line.ReceivedQty, 2);
+                decimal landedLineTotal = lineCostBase + allocatedFreight;
+                line.LandedCost = Math.Round(
+                    landedLineTotal / line.ReceivedQty,
+                    2,
+                    MidpointRounding.AwayFromZero);
             }
-        }
-
-        private static decimal GetLineCostBaseForLandedCost(GrnLine line)
-        {
-            decimal gross = line.ReceivedQty * line.UnitCost;
-            decimal afterLineDiscount = gross - line.LineDiscount;
-
-            if (afterLineDiscount < 0)
-                afterLineDiscount = 0m;
-
-            if (line.VatRatePercent <= 0)
-                return afterLineDiscount;
-
-            if (!line.IsVatIncluded)
-                return afterLineDiscount;
-
-            decimal vatRate = line.VatRatePercent / 100m;
-
-            if (vatRate <= 0)
-                return afterLineDiscount;
-
-            return afterLineDiscount / (1 + vatRate);
-        }
-
-        private static decimal CalculateDiscountAmount(
-            decimal gross,
-            string? discountMode,
-            decimal discountValue)
-        {
-            if (gross <= 0 || discountValue <= 0)
-                return 0m;
-
-            if (IsPercentDiscount(discountMode))
-                return Math.Round(gross * discountValue / 100m, 2);
-
-            return Math.Round(discountValue, 2);
         }
 
         // =========================================================
@@ -1058,6 +1092,8 @@ namespace POS.Core.Repositories
                 line.ItemVariant = null!;
                 line.PoLine = null;
                 line.ItemBatch = null;
+                line.TaxCategory = null;
+                line.TaxRate = null;
                 line.ItemBatchId = null;
 
                 if (!hasBatchTracking)
@@ -1405,37 +1441,6 @@ namespace POS.Core.Repositories
                 return value.ToUpperInvariant();
 
             return $"SYS-{grnNumber}-L{lineNumber.ToString().PadLeft(3, '0')}";
-        }
-
-        private static decimal ResolveVatRatePercent(string? taxCode)
-        {
-            string value = NormalizeText(taxCode).ToUpperInvariant();
-
-            if (string.IsNullOrWhiteSpace(value) ||
-                value == "TAX-FREE" ||
-                value == "NONE" ||
-                value == "NO VAT" ||
-                value == "NOVAT")
-            {
-                return 0m;
-            }
-
-            if (value.Contains("18"))
-                return 18m;
-
-            if (value.Contains("15"))
-                return 15m;
-
-            if (value.Contains("12"))
-                return 12m;
-
-            if (value.Contains("8"))
-                return 8m;
-
-            if (value.Contains("5"))
-                return 5m;
-
-            return 0m;
         }
 
         private static bool IsValidDiscountMode(string? value)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
+using POS.Core.Services.Tax;
 
 namespace POS.Core.Repositories
 {
@@ -144,6 +145,7 @@ namespace POS.Core.Repositories
         private const int MaxTakeLimit = 2000;
 
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly PurchasingTaxService _purchasingTaxService = new();
 
         public PoRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
@@ -306,29 +308,39 @@ namespace POS.Core.Repositories
                 })
                 .ToListAsync();
 
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                rows.Select(r => r.ItemVariantId).ToList(),
+                DateTime.Today);
+
             return rows
-                .Select(r => new PoVariantLookupDto
+                .Select(r =>
                 {
-                    ItemVariantId = r.ItemVariantId,
-                    ItemParentId = r.ItemParentId,
-                    ItemCode = r.ItemCode,
-                    SkuCode = r.SkuCode,
-                    Barcode = r.Barcode,
-                    Description = r.Description,
-                    PrintName = r.PrintName,
-                    VariantDescription = r.VariantDescription,
-                    Uom = r.Uom,
-                    TaxCode = r.TaxCode,
-                    VatRatePercent = ResolveVatRatePercent(r.TaxCode),
-                    IsVatIncluded = false,
-                    LastSupplierCost = r.LastSupplierCost,
-                    CurrentCost = r.CurrentCost,
-                    SupplierItemCode = r.SupplierItemCode ?? string.Empty,
-                    Moq = r.Moq <= 0 ? 1 : r.Moq,
-                    AllowDecimalQuantity = r.AllowDecimalQuantity,
-                    HasBatchTracking = r.HasBatchTracking,
-                    HasExpiryTracking = r.HasExpiryTracking,
-                    CurrentSOH = 0m
+                    var profile = taxProfiles[r.ItemVariantId];
+
+                    return new PoVariantLookupDto
+                    {
+                        ItemVariantId = r.ItemVariantId,
+                        ItemParentId = r.ItemParentId,
+                        ItemCode = r.ItemCode,
+                        SkuCode = r.SkuCode,
+                        Barcode = r.Barcode,
+                        Description = r.Description,
+                        PrintName = r.PrintName,
+                        VariantDescription = r.VariantDescription,
+                        Uom = r.Uom,
+                        TaxCode = profile.TaxCode,
+                        VatRatePercent = profile.RatePercent,
+                        IsVatIncluded = false,
+                        LastSupplierCost = r.LastSupplierCost,
+                        CurrentCost = r.CurrentCost,
+                        SupplierItemCode = r.SupplierItemCode ?? string.Empty,
+                        Moq = r.Moq <= 0 ? 1 : r.Moq,
+                        AllowDecimalQuantity = r.AllowDecimalQuantity,
+                        HasBatchTracking = r.HasBatchTracking,
+                        HasExpiryTracking = r.HasExpiryTracking,
+                        CurrentSOH = 0m
+                    };
                 })
                 .OrderBy(r => r.FullDisplayName)
                 .ThenBy(r => r.SkuCode)
@@ -402,6 +414,13 @@ namespace POS.Core.Repositories
             if (row == null)
                 return null;
 
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                new[] { row.ItemVariantId },
+                DateTime.Today);
+
+            var profile = taxProfiles[row.ItemVariantId];
+
             return new PoVariantLookupDto
             {
                 ItemVariantId = row.ItemVariantId,
@@ -413,8 +432,8 @@ namespace POS.Core.Repositories
                 PrintName = row.PrintName,
                 VariantDescription = row.VariantDescription,
                 Uom = row.Uom,
-                TaxCode = row.TaxCode,
-                VatRatePercent = ResolveVatRatePercent(row.TaxCode),
+                TaxCode = profile.TaxCode,
+                VatRatePercent = profile.RatePercent,
                 IsVatIncluded = false,
                 LastSupplierCost = row.LastSupplierCost,
                 CurrentCost = row.CurrentCost,
@@ -444,15 +463,15 @@ namespace POS.Core.Repositories
             NormalizeHeader(header);
             NormalizeLines(lines);
             ValidateSubmittedLineDuplicates(lines);
-            RecalculateTotals(header, lines);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
             await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
-                await ValidateHeaderAsync(context, header);
                 await ValidateLinesAsync(context, header.SupplierId, lines);
+                await ApplyAuthoritativeTaxAsync(context, header, lines);
+                await ValidateHeaderAsync(context, header);
 
                 DateTime now = DateTime.Now;
 
@@ -546,6 +565,12 @@ namespace POS.Core.Repositories
             existingHeader.TotalDiscountAmount = incomingHeader.TotalDiscountAmount;
             existingHeader.NetPayable = incomingHeader.NetPayable;
             existingHeader.IsTaxInclusive = incomingHeader.IsTaxInclusive;
+            existingHeader.TaxableAmountTotal = incomingHeader.TaxableAmountTotal;
+            existingHeader.StandardRatedAmount = incomingHeader.StandardRatedAmount;
+            existingHeader.ZeroRatedAmount = incomingHeader.ZeroRatedAmount;
+            existingHeader.ExemptAmount = incomingHeader.ExemptAmount;
+            existingHeader.OutOfScopeAmount = incomingHeader.OutOfScopeAmount;
+            existingHeader.TaxSnapshotStatus = incomingHeader.TaxSnapshotStatus;
 
             existingHeader.Status = "Approved";
             existingHeader.UpdatedAt = now;
@@ -616,6 +641,17 @@ namespace POS.Core.Repositories
                 existingLine.VatRatePercent = incomingLine.VatRatePercent;
                 existingLine.IsVatIncluded = incomingLine.IsVatIncluded;
                 existingLine.TaxAmount = incomingLine.TaxAmount;
+                existingLine.TaxCategoryId = incomingLine.TaxCategoryId;
+                existingLine.TaxRateId = incomingLine.TaxRateId;
+                existingLine.TaxCategoryCodeSnapshot = incomingLine.TaxCategoryCodeSnapshot;
+                existingLine.TaxCodeSnapshot = incomingLine.TaxCodeSnapshot;
+                existingLine.TaxNameSnapshot = incomingLine.TaxNameSnapshot;
+                existingLine.TaxRatePercentSnapshot = incomingLine.TaxRatePercentSnapshot;
+                existingLine.IsTaxInclusiveSnapshot = incomingLine.IsTaxInclusiveSnapshot;
+                existingLine.TaxableAmountSnapshot = incomingLine.TaxableAmountSnapshot;
+                existingLine.VatAmountSnapshot = incomingLine.VatAmountSnapshot;
+                existingLine.TaxInclusiveAmountSnapshot = incomingLine.TaxInclusiveAmountSnapshot;
+                existingLine.TaxSnapshotStatus = incomingLine.TaxSnapshotStatus;
 
                 existingLine.LineTotal = incomingLine.LineTotal;
                 existingLine.LineStatus = "Open";
@@ -663,6 +699,8 @@ namespace POS.Core.Repositories
             line.PoHeaderId = headerId;
             line.PoHeader = null!;
             line.ItemVariant = null!;
+            line.TaxCategory = null;
+            line.TaxRate = null;
 
             // GRN owns ReceivedQty.
             line.ReceivedQty = 0m;
@@ -810,8 +848,14 @@ namespace POS.Core.Repositories
                 line.HasExpiryTracking = line.ItemVariant.ItemParent.HasExpiryTracking || line.ItemVariant.ItemParent.HasBatchExpiry;
                 line.SOH = 0m;
 
-                if (line.VatRatePercent <= 0)
-                    line.VatRatePercent = ResolveVatRatePercent(line.TaxCode);
+                if (line.TaxSnapshotStatus == TaxSnapshotStatuses.Complete)
+                {
+                    line.TaxCode = line.TaxCodeSnapshot ?? line.TaxCode;
+                    line.VatRatePercent = line.TaxRatePercentSnapshot ?? line.VatRatePercent;
+                    line.IsVatIncluded = line.IsTaxInclusiveSnapshot ?? line.IsVatIncluded;
+                    line.TaxAmount = line.VatAmountSnapshot ?? line.TaxAmount;
+                    line.LineTotal = line.TaxInclusiveAmountSnapshot ?? line.LineTotal;
+                }
             }
 
             return po;
@@ -1008,25 +1052,11 @@ namespace POS.Core.Repositories
                 if (IsPercentDiscount(line.LineDiscountMode) && line.LineDiscountValue > 100)
                     throw new InvalidOperationException($"Discount percentage cannot be greater than 100 for item '{variant.SkuCode}'.");
 
-                if (line.LineDiscount < 0)
-                    throw new InvalidOperationException($"Line discount cannot be negative for item '{variant.SkuCode}'.");
-
-                decimal gross = line.OrderQty * line.ExpectedCost;
-
-                if (line.LineDiscount > gross)
-                    throw new InvalidOperationException($"Line discount cannot be greater than line value for item '{variant.SkuCode}'.");
-
-                if (line.VatRatePercent < 0 || line.VatRatePercent > 100)
-                    throw new InvalidOperationException($"VAT rate must be between 0 and 100 for item '{variant.SkuCode}'.");
-
                 if (line.Uom.Length > 20)
                     throw new InvalidOperationException($"UOM is too long for item '{variant.SkuCode}'.");
 
                 if (line.SupplierItemCode.Length > 100)
                     throw new InvalidOperationException($"Supplier item code is too long for item '{variant.SkuCode}'.");
-
-                if (line.TaxCode.Length > 20)
-                    throw new InvalidOperationException($"Tax code is too long for item '{variant.SkuCode}'.");
 
                 if (string.IsNullOrWhiteSpace(line.SupplierItemCode))
                     line.SupplierItemCode = supplierLink.SupplierItemCode ?? string.Empty;
@@ -1055,77 +1085,93 @@ namespace POS.Core.Repositories
         // CALCULATION / NORMALIZATION
         // =========================================================
 
-        private static void RecalculateTotals(PoHeader header, List<PoLine> lines)
+        private async Task ApplyAuthoritativeTaxAsync(
+            AppDbContext context,
+            PoHeader header,
+            List<PoLine> lines)
         {
-            decimal subtotal = 0m;
-            decimal lineDiscountTotal = 0m;
-            decimal taxTotal = 0m;
-            decimal lineNetTotal = 0m;
+            bool documentIsTaxInclusive = ResolveDocumentTaxMode(lines);
+            header.IsTaxInclusive = documentIsTaxInclusive;
 
-            foreach (var line in lines)
+            var variantIds = lines
+                .Select(l => l.ItemVariantId)
+                .Distinct()
+                .ToList();
+
+            var profiles = await _purchasingTaxService.ResolveProfilesAsync(
+                context,
+                variantIds,
+                header.OrderDate);
+
+            var calculation = _purchasingTaxService.CalculateDocument(
+                lines.Select(line => new PurchasingTaxLineInput
+                {
+                    ItemVariantId = line.ItemVariantId,
+                    Quantity = line.OrderQty,
+                    UnitPrice = line.ExpectedCost,
+                    DiscountMode = line.LineDiscountMode,
+                    DiscountValue = line.LineDiscountValue,
+                    TaxProfile = profiles[line.ItemVariantId]
+                }).ToList(),
+                header.GlobalBillDiscount,
+                documentIsTaxInclusive);
+
+            for (int index = 0; index < lines.Count; index++)
             {
-                NormalizeLine(line);
-
-                decimal gross = line.OrderQty * line.ExpectedCost;
-
-                line.LineDiscount = CalculateDiscountAmount(
-                    gross,
-                    line.LineDiscountMode,
-                    line.LineDiscountValue);
-
-                decimal afterLineDiscount = gross - line.LineDiscount;
-
-                if (afterLineDiscount < 0)
-                    afterLineDiscount = 0;
-
-                decimal vatRate = line.VatRatePercent / 100m;
-
-                if (line.VatRatePercent <= 0)
-                {
-                    line.TaxAmount = 0m;
-                    line.LineTotal = Math.Round(afterLineDiscount, 2);
-                }
-                else if (line.IsVatIncluded)
-                {
-                    line.TaxAmount = Math.Round(
-                        afterLineDiscount - (afterLineDiscount / (1 + vatRate)),
-                        2);
-
-                    line.LineTotal = Math.Round(afterLineDiscount, 2);
-                }
-                else
-                {
-                    line.TaxAmount = Math.Round(afterLineDiscount * vatRate, 2);
-                    line.LineTotal = Math.Round(afterLineDiscount + line.TaxAmount, 2);
-                }
-
-                subtotal += gross;
-                lineDiscountTotal += line.LineDiscount;
-                taxTotal += line.TaxAmount;
-                lineNetTotal += line.LineTotal;
+                ApplyTaxResult(lines[index], calculation.Lines[index]);
             }
 
-            if (header.GlobalBillDiscount > lineNetTotal)
-                throw new InvalidOperationException("Global bill discount cannot be greater than order value.");
-
-            header.Subtotal = Math.Round(subtotal, 2);
-            header.TotalTaxAmount = Math.Round(taxTotal, 2);
-            header.TotalDiscountAmount = Math.Round(lineDiscountTotal + header.GlobalBillDiscount, 2);
-            header.NetPayable = Math.Round(lineNetTotal - header.GlobalBillDiscount, 2);
+            header.Subtotal = calculation.Subtotal;
+            header.TotalTaxAmount = calculation.TotalVat;
+            header.TotalDiscountAmount = calculation.TotalDiscount;
+            header.NetPayable = calculation.NetPayable;
+            header.TaxableAmountTotal = calculation.TaxableAmountTotal;
+            header.StandardRatedAmount = calculation.StandardRatedAmount;
+            header.ZeroRatedAmount = calculation.ZeroRatedAmount;
+            header.ExemptAmount = calculation.ExemptAmount;
+            header.OutOfScopeAmount = calculation.OutOfScopeAmount;
+            header.TaxSnapshotStatus = TaxSnapshotStatuses.Complete;
         }
 
-        private static decimal CalculateDiscountAmount(
-            decimal gross,
-            string? discountMode,
-            decimal discountValue)
+        private static void ApplyTaxResult(
+            PoLine line,
+            PurchasingTaxLineResult result)
         {
-            if (gross <= 0 || discountValue <= 0)
-                return 0m;
+            var profile = result.TaxProfile;
 
-            if (IsPercentDiscount(discountMode))
-                return Math.Round(gross * discountValue / 100m, 2);
+            line.LineDiscount = result.LineDiscountAmount;
+            line.TaxCode = profile.TaxCode;
+            line.VatRatePercent = profile.RatePercent;
+            line.TaxAmount = result.VatAmount;
+            line.LineTotal = result.TaxInclusiveAmount;
 
-            return Math.Round(discountValue, 2);
+            line.TaxCategoryId = profile.TaxCategoryId;
+            line.TaxRateId = profile.TaxRateId;
+            line.TaxCategoryCodeSnapshot = profile.TaxCategoryCode;
+            line.TaxCodeSnapshot = profile.TaxCode;
+            line.TaxNameSnapshot = profile.TaxName;
+            line.TaxRatePercentSnapshot = profile.RatePercent;
+            line.IsTaxInclusiveSnapshot = line.IsVatIncluded;
+            line.TaxableAmountSnapshot = result.TaxableAmount;
+            line.VatAmountSnapshot = result.VatAmount;
+            line.TaxInclusiveAmountSnapshot = result.TaxInclusiveAmount;
+            line.TaxSnapshotStatus = TaxSnapshotStatuses.Complete;
+        }
+
+        private static bool ResolveDocumentTaxMode(List<PoLine> lines)
+        {
+            bool mode = lines[0].IsVatIncluded;
+
+            if (lines.Any(line => line.IsVatIncluded != mode))
+            {
+                throw new InvalidOperationException(
+                    "All Purchase Order lines must use the same supplier-price VAT mode. Use either VAT Inclusive or VAT Exclusive for the whole document.");
+            }
+
+            foreach (var line in lines)
+                line.IsVatIncluded = mode;
+
+            return mode;
         }
 
         private static bool IsValidDiscountMode(string? value)
@@ -1151,37 +1197,6 @@ namespace POS.Core.Repositories
             }
 
             return "Amount";
-        }
-
-        private static decimal ResolveVatRatePercent(string? taxCode)
-        {
-            string value = NormalizeText(taxCode).ToUpperInvariant();
-
-            if (string.IsNullOrWhiteSpace(value) ||
-                value == "TAX-FREE" ||
-                value == "NONE" ||
-                value == "NO VAT" ||
-                value == "NOVAT")
-            {
-                return 0m;
-            }
-
-            if (value.Contains("18"))
-                return 18m;
-
-            if (value.Contains("15"))
-                return 15m;
-
-            if (value.Contains("12"))
-                return 12m;
-
-            if (value.Contains("8"))
-                return 8m;
-
-            if (value.Contains("5"))
-                return 5m;
-
-            return 0m;
         }
 
         private static bool HasDecimalPart(decimal value)
@@ -1223,8 +1238,8 @@ namespace POS.Core.Repositories
             line.TaxCode = NormalizeText(line.TaxCode);
             line.LineDiscountMode = NormalizeDiscountMode(line.LineDiscountMode);
 
-            if (string.IsNullOrWhiteSpace(line.TaxCode))
-                line.TaxCode = line.VatRatePercent > 0 ? "VAT" : "TAX-FREE";
+            // Legacy fields are overwritten from the authoritative tax profile
+            // immediately before saving. Do not infer percentages from code text.
 
             // Backward compatibility:
             // Old UI may still send fixed LineDiscount without LineDiscountValue.
@@ -1235,8 +1250,6 @@ namespace POS.Core.Repositories
                 line.LineDiscountValue = line.LineDiscount;
             }
 
-            if (line.VatRatePercent <= 0 && !string.IsNullOrWhiteSpace(line.TaxCode))
-                line.VatRatePercent = ResolveVatRatePercent(line.TaxCode);
         }
 
         private static int NormalizeTakeLimit(int take)
