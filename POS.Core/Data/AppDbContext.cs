@@ -1273,6 +1273,30 @@ namespace POS.Core.Data
                 entity.Property(r => r.NetCredit)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(r => r.TaxableAmountTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.TotalVatAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.StandardRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.ZeroRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.ExemptAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.OutOfScopeAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
                 entity.Property(r => r.Status)
                     .IsRequired()
                     .HasMaxLength(30)
@@ -1312,6 +1336,8 @@ namespace POS.Core.Data
                 entity.HasIndex(r => r.ReturnDate);
 
                 entity.HasIndex(r => r.Status);
+
+                entity.HasIndex(r => r.TaxSnapshotStatus);
             });
 
 
@@ -1334,6 +1360,44 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.CreditValue)
                     .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxCategoryCodeSnapshot)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxCodeSnapshot)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxNameSnapshot)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.TaxRatePercentSnapshot)
+                    .HasColumnType("decimal(7,4)");
+
+                entity.Property(l => l.TaxableAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.VatAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxInclusiveAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.OriginalTaxableAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.OriginalVatAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.OriginalTaxInclusiveAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
 
                 entity.Property(l => l.ReasonCode)
                     .IsRequired()
@@ -1368,6 +1432,16 @@ namespace POS.Core.Data
                     .HasForeignKey(l => l.ItemBatchId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(l => l.TaxCategory)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxCategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.TaxRate)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxRateId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(l => l.ReturnHeaderId);
 
                 entity.HasIndex(l => l.GrnLineId);
@@ -1380,6 +1454,12 @@ namespace POS.Core.Data
 
                 entity.HasIndex(l => l.LineStatus);
 
+                entity.HasIndex(l => l.TaxCategoryId);
+
+                entity.HasIndex(l => l.TaxRateId);
+
+                entity.HasIndex(l => l.TaxSnapshotStatus);
+
                 // Same physical batch should appear only once in one supplier return document.
                 entity.HasIndex(l => new
                 {
@@ -1387,6 +1467,205 @@ namespace POS.Core.Data
                     l.ItemBatchId
                 })
                 .IsUnique();
+            });
+
+            // =========================================================
+            // CUSTOMER RETURN HEADER
+            // =========================================================
+            modelBuilder.Entity<CustomerReturnHeader>(entity =>
+            {
+                entity.ToTable("CustomerReturnHeaders");
+
+                entity.Property(r => r.ReturnNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.OriginalInvoiceNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.TerminalNo)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.CashierName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.AuthorizedBy)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(r => r.TotalRefundAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.RefundMethod)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.DocumentType)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Return")
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.CreditNoteNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(r => r.TaxableAmountTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.TotalVatAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.StandardRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.ZeroRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.ExemptAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.OutOfScopeAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
+                entity.HasOne(r => r.OriginalSalesHeader)
+                    .WithMany()
+                    .HasForeignKey(r => r.OriginalSalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(r => r.ReturnNo)
+                    .IsUnique();
+
+                entity.HasIndex(r => r.OriginalSalesHeaderId);
+
+                entity.HasIndex(r => r.DocumentType);
+
+                entity.HasIndex(r => r.CreditNoteNo);
+
+                entity.HasIndex(r => r.TaxSnapshotStatus);
+            });
+
+            // =========================================================
+            // CUSTOMER RETURN LINE
+            // =========================================================
+            modelBuilder.Entity<CustomerReturnLine>(entity =>
+            {
+                entity.ToTable("CustomerReturnLines");
+
+                entity.Property(l => l.ItemDescription)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(l => l.QuantityReturned)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.RefundValue)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.LineTotalRefund)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.ReturnReason)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.InventoryAction)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.ItemTypeSnapshot)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxCategoryCodeSnapshot)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxCodeSnapshot)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxNameSnapshot)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.TaxRatePercentSnapshot)
+                    .HasColumnType("decimal(7,4)");
+
+                entity.Property(l => l.TaxableAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.VatAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxInclusiveAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.OriginalTaxableAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.OriginalVatAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.OriginalTaxInclusiveAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
+                entity.HasOne(l => l.CustomerReturnHeader)
+                    .WithMany(h => h.Lines)
+                    .HasForeignKey(l => l.CustomerReturnHeaderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(l => l.SalesLine)
+                    .WithMany()
+                    .HasForeignKey(l => l.SalesLineId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.ItemBatch)
+                    .WithMany()
+                    .HasForeignKey(l => l.ItemBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.TaxCategory)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxCategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.TaxRate)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxRateId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(l => l.CustomerReturnHeaderId);
+
+                entity.HasIndex(l => l.SalesLineId);
+
+                entity.HasIndex(l => l.ItemBatchId);
+
+                entity.HasIndex(l => l.ItemTypeSnapshot);
+
+                entity.HasIndex(l => l.TaxCategoryId);
+
+                entity.HasIndex(l => l.TaxRateId);
+
+                entity.HasIndex(l => l.TaxSnapshotStatus);
             });
 
             // =========================================================
@@ -2500,6 +2779,76 @@ namespace POS.Core.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 // =====================================================
+                // DOCUMENT AND TAX-INVOICE SNAPSHOTS
+                // =====================================================
+
+                entity.Property(s => s.DocumentType)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Receipt")
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.TaxInvoiceNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.IsVatRegisteredSale)
+                    .HasDefaultValue(false);
+
+                entity.Property(s => s.SupplierTinSnapshot)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("")
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.SupplierVatNoSnapshot)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("")
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CustomerTinSnapshot)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("")
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CustomerVatNoSnapshot)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("")
+                    .UseCollation("NOCASE");
+
+                entity.Property(s => s.CustomerAddressSnapshot)
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasDefaultValue("");
+
+                entity.Property(s => s.TaxableAmountTotal)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.TotalVatAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.StandardRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.ZeroRatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.ExemptAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.OutOfScopeAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(s => s.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
+
+                // =====================================================
                 // TOTALS / PAYMENT SUMMARY
                 // =====================================================
 
@@ -2569,6 +2918,14 @@ namespace POS.Core.Data
                 entity.HasIndex(s => s.CustomerIsCreditEnabled);
 
                 entity.HasIndex(s => s.IsWholesaleSale);
+
+                entity.HasIndex(s => s.DocumentType);
+
+                entity.HasIndex(s => s.TaxInvoiceNo);
+
+                entity.HasIndex(s => s.IsVatRegisteredSale);
+
+                entity.HasIndex(s => s.TaxSnapshotStatus);
             });
 
 
@@ -2596,6 +2953,39 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.Uom)
                     .HasMaxLength(20);
+
+                entity.Property(l => l.ItemTypeSnapshot)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxCategoryCodeSnapshot)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxCodeSnapshot)
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.TaxNameSnapshot)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.TaxRatePercentSnapshot)
+                    .HasColumnType("decimal(7,4)");
+
+                entity.Property(l => l.TaxableAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.VatAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxInclusiveAmountSnapshot)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.TaxSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
+                    .UseCollation("NOCASE");
 
                 entity.Property(l => l.Quantity)
                     .HasColumnType("decimal(18,3)");
@@ -2666,6 +3056,16 @@ namespace POS.Core.Data
                     .HasForeignKey(l => l.ItemBatchId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(l => l.TaxCategory)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxCategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(l => l.TaxRate)
+                    .WithMany()
+                    .HasForeignKey(l => l.TaxRateId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(l => l.SalesHeaderId);
 
                 entity.HasIndex(l => l.ItemVariantId);
@@ -2677,6 +3077,14 @@ namespace POS.Core.Data
                 entity.HasIndex(l => l.ExpiryDate);
 
                 entity.HasIndex(l => l.IsReturned);
+
+                entity.HasIndex(l => l.ItemTypeSnapshot);
+
+                entity.HasIndex(l => l.TaxCategoryId);
+
+                entity.HasIndex(l => l.TaxRateId);
+
+                entity.HasIndex(l => l.TaxSnapshotStatus);
 
                 // Gift voucher sale line fields.
                 entity.Property(l => l.IsGiftVoucherSale)

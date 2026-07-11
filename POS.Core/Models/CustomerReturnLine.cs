@@ -8,12 +8,26 @@ namespace POS.Core.Models
         [Key]
         public int Id { get; set; }
 
-        // Mapped to the new Customer Header
         [Required]
         public int CustomerReturnHeaderId { get; set; }
 
+        [ForeignKey(nameof(CustomerReturnHeaderId))]
+        public virtual CustomerReturnHeader? CustomerReturnHeader { get; set; }
+
+        // Original sales line used for exact tax reversal.
+        public int? SalesLineId { get; set; }
+
+        [ForeignKey(nameof(SalesLineId))]
+        public virtual SalesLine? SalesLine { get; set; }
+
         [Required]
         public int ItemVariantId { get; set; }
+
+        // Null for Service returns/refunds.
+        public int? ItemBatchId { get; set; }
+
+        [ForeignKey(nameof(ItemBatchId))]
+        public virtual ItemBatch? ItemBatch { get; set; }
 
         [Required]
         [MaxLength(255)]
@@ -33,14 +47,63 @@ namespace POS.Core.Models
 
         [Required]
         [MaxLength(100)]
-        public string ReturnReason { get; set; } = string.Empty; // e.g., "Wrong Size", "Damaged"
+        public string ReturnReason { get; set; } = string.Empty;
 
         [Required]
         [MaxLength(50)]
-        public string InventoryAction { get; set; } = string.Empty; // e.g., "Restocked", "Write-Off"
+        public string InventoryAction { get; set; } = string.Empty;
 
-        // Navigation Property
-        [ForeignKey("CustomerReturnHeaderId")]
-        public virtual CustomerReturnHeader? CustomerReturnHeader { get; set; }
+        // =========================================================
+        // ORIGINAL ITEM/TAX SNAPSHOTS
+        // =========================================================
+
+        [MaxLength(20)]
+        public string? ItemTypeSnapshot { get; set; }
+
+        public int? TaxCategoryId { get; set; }
+
+        public TaxCategory? TaxCategory { get; set; }
+
+        public int? TaxRateId { get; set; }
+
+        public TaxRate? TaxRate { get; set; }
+
+        [MaxLength(30)]
+        public string? TaxCategoryCodeSnapshot { get; set; }
+
+        [MaxLength(20)]
+        public string? TaxCodeSnapshot { get; set; }
+
+        [MaxLength(100)]
+        public string? TaxNameSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(7,4)")]
+        public decimal? TaxRatePercentSnapshot { get; set; }
+
+        public bool? IsTaxInclusiveSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxableAmountSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? VatAmountSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxInclusiveAmountSnapshot { get; set; }
+
+        // Full original sales-line values are preserved separately so a partial
+        // return can store both the source values and the returned portion.
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OriginalTaxableAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OriginalVatAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OriginalTaxInclusiveAmount { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string TaxSnapshotStatus { get; set; } = "LegacyUnknown";
     }
 }

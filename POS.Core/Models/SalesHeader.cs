@@ -68,6 +68,59 @@ namespace POS.Core.Models
         public DateTime TransactionDate { get; set; } = DateTime.Now;
 
         // =========================================================
+        // DOCUMENT AND TAX-INVOICE SNAPSHOT FOUNDATION
+        // =========================================================
+        // These fields are storage only in Phase 7B3. Cashier and printing
+        // behavior will be connected in later controlled phases.
+
+        // Receipt / TaxInvoice
+        [Required]
+        [MaxLength(20)]
+        public string DocumentType { get; set; } = "Receipt";
+
+        [MaxLength(50)]
+        public string? TaxInvoiceNo { get; set; }
+
+        public bool IsVatRegisteredSale { get; set; } = false;
+
+        [MaxLength(30)]
+        public string SupplierTinSnapshot { get; set; } = string.Empty;
+
+        [MaxLength(30)]
+        public string SupplierVatNoSnapshot { get; set; } = string.Empty;
+
+        [MaxLength(30)]
+        public string CustomerTinSnapshot { get; set; } = string.Empty;
+
+        [MaxLength(30)]
+        public string CustomerVatNoSnapshot { get; set; } = string.Empty;
+
+        [MaxLength(500)]
+        public string CustomerAddressSnapshot { get; set; } = string.Empty;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxableAmountTotal { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TotalVatAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? StandardRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ZeroRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ExemptAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OutOfScopeAmount { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string TaxSnapshotStatus { get; set; } = "LegacyUnknown";
+
+        // =========================================================
         // MATH SUMMARY
         // =========================================================
 

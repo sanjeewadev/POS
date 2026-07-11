@@ -26,7 +26,7 @@ namespace POS.Core.Models
 
         public int? ItemBatchId { get; set; }
 
-        public ItemBatch ItemBatch { get; set; } = null!;
+        public ItemBatch? ItemBatch { get; set; }
 
         // =========================================================
         // SNAPSHOT FIELDS
@@ -50,6 +50,50 @@ namespace POS.Core.Models
 
         [MaxLength(20)]
         public string Uom { get; set; } = "PCS";
+
+        // =========================================================
+        // ITEM-TYPE AND TAX SNAPSHOT FOUNDATION
+        // =========================================================
+        // Historical rows stay LegacyUnknown. Future completed sales will
+        // receive immutable values from the shared tax calculation service.
+
+        [MaxLength(20)]
+        public string? ItemTypeSnapshot { get; set; }
+
+        public int? TaxCategoryId { get; set; }
+
+        public TaxCategory? TaxCategory { get; set; }
+
+        public int? TaxRateId { get; set; }
+
+        public TaxRate? TaxRate { get; set; }
+
+        [MaxLength(30)]
+        public string? TaxCategoryCodeSnapshot { get; set; }
+
+        [MaxLength(20)]
+        public string? TaxCodeSnapshot { get; set; }
+
+        [MaxLength(100)]
+        public string? TaxNameSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(7,4)")]
+        public decimal? TaxRatePercentSnapshot { get; set; }
+
+        public bool? IsTaxInclusiveSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxableAmountSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? VatAmountSnapshot { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxInclusiveAmountSnapshot { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string TaxSnapshotStatus { get; set; } = "LegacyUnknown";
 
         // =========================================================
         // QTY / PRICE / COST

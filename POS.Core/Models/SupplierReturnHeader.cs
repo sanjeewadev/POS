@@ -71,6 +71,32 @@ namespace POS.Core.Models
         public decimal NetCredit { get; set; } = 0m;
 
         // =========================================================
+        // TAX REVERSAL SNAPSHOT FOUNDATION
+        // =========================================================
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TaxableAmountTotal { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? TotalVatAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? StandardRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ZeroRatedAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ExemptAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OutOfScopeAmount { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string TaxSnapshotStatus { get; set; } = "LegacyUnknown";
+
+        // =========================================================
         // STATUS / AUDIT
         // =========================================================
 
