@@ -4,31 +4,30 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="700"
-             d:DesignWidth="1200"
+             d:DesignHeight="720"
+             d:DesignWidth="1280"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
 
     <UserControl.Resources>
-
-        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+        <Style TargetType="TextBlock" x:Key="SectionHeader">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="InlineLabel">
+        <Style TargetType="TextBlock" x:Key="FieldLabel">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
         </Style>
 
         <Style TargetType="TextBox" x:Key="ClassicInput">
-            <Setter Property="Height" Value="25"/>
+            <Setter Property="Height" Value="26"/>
             <Setter Property="Padding" Value="5,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
@@ -38,24 +37,22 @@
             <Style.Triggers>
                 <Trigger Property="IsReadOnly" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
                     <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                    <Setter Property="Opacity" Value="0.75"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="ClassicBtn">
-            <Setter Property="Height" Value="28"/>
+        <Style TargetType="Button" x:Key="ClassicButton">
+            <Setter Property="Height" Value="27"/>
+            <Setter Property="Padding" Value="10,0"/>
             <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
@@ -66,7 +63,7 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style TargetType="Button" x:Key="PrimaryButton" BasedOn="{StaticResource ClassicButton}">
             <Setter Property="Background" Value="{DynamicResource ActionBackgroundBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource WhiteBackgroundBrush}"/>
             <Style.Triggers>
@@ -76,10 +73,10 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Border" x:Key="ClassicGroupBox">
+        <Style TargetType="Border" x:Key="ClassicPanel">
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
             <Setter Property="Padding" Value="10"/>
         </Style>
 
@@ -88,14 +85,14 @@
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="5"/>
-            <Setter Property="BorderThickness" Value="0,0,1,1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
         </Style>
 
-        <Style TargetType="DataGridCell" x:Key="BaseCell">
+        <Style TargetType="DataGridCell" x:Key="ClassicCell">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
@@ -106,128 +103,265 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="RightText">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="0,0,6,0"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="CenterText">
+        <Style TargetType="TextBlock" x:Key="CenterCellText">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
+        <Style TargetType="TextBlock" x:Key="RightCellText">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0,0,5,0"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="5">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="420"/>
-            <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <Grid Margin="6">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-        <!-- LEFT: TAX RATE FORM -->
-        <Grid Grid.Column="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="255"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="420"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
-                <StackPanel>
-                    <TextBlock Text="1. TAX MASTER SETUP"
-                               Style="{StaticResource HeaderLabel}"/>
+            <!-- 1. FIXED TAX CATEGORIES -->
+            <Border Grid.Column="0" Style="{StaticResource ClassicPanel}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="1. TAX CATEGORIES"
+                                   Style="{StaticResource SectionHeader}"/>
+                        <TextBlock Text="The four approved categories are fixed. Select one to view its treatment or rate history."
+                                   FontSize="10"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8"/>
+                    </StackPanel>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="Tax Code *"
-                                   Style="{StaticResource InlineLabel}"
-                                   Foreground="{DynamicResource WarningTextBrush}"/>
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding TaxCategories}"
+                              SelectedItem="{Binding SelectedTaxCategory, Mode=TwoWay}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="All"
+                              RowHeight="42"
+                              SelectionMode="Single"
+                              Background="{DynamicResource WhiteBackgroundBrush}"
+                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1"
+                              HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                              VerticalGridLinesBrush="{DynamicResource LightBorderBrush}">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource ClassicCell}"/>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Category" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding CategoryName}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding CategoryCode}"
+                                                       FontSize="9"
+                                                       Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Mode"
+                                                Binding="{Binding RateModeText}"
+                                                Width="92"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
 
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding TaxCodeInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 IsReadOnly="{Binding IsTaxCodeReadOnly}"
-                                 Style="{StaticResource ClassicInput}"
-                                 FontWeight="Bold"
-                                 CharacterCasing="Upper"
-                                 MaxLength="20"
-                                 ToolTip="Examples: TAX-FREE, VAT-STD, VAT-RED"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Tax Name *"
-                                   Style="{StaticResource InlineLabel}"
-                                   Foreground="{DynamicResource WarningTextBrush}"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding TaxNameInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 MaxLength="100"
-                                 ToolTip="Example: Standard VAT"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="90"/>
-                            <ColumnDefinition Width="18"/>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Rate %"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding RatePercentText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 HorizontalContentAlignment="Right"
-                                 MaxLength="6"/>
-
-                        <TextBlock Grid.Column="2"
-                                   Text=""
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBlock Grid.Column="3"
-                                   Text="Order"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Grid.Column="4"
-                                 Text="{Binding DisplayOrderText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 HorizontalContentAlignment="Right"
-                                 MaxLength="4"/>
-                    </Grid>
-
-                    <CheckBox Content="Active"
-                              IsChecked="{Binding IsActiveInput, Mode=TwoWay}"
-                              FontWeight="Bold"
-                              Margin="110,2,0,10"/>
-
-                    <TextBlock Text="Tax rates are used by Item Master, PO, GRN, cashier sales, and future VAT reports. Do not delete real tax records after they are used. Deactivate them instead."
-                               FontSize="10"
-                               Foreground="{DynamicResource SecondaryTextBrush}"
-                               FontStyle="Italic"
-                               TextWrapping="Wrap"
-                               Margin="110,0,0,10"/>
-
-                    <Border Background="{DynamicResource WindowBackgroundBrush}"
+                    <Border Grid.Row="2"
+                            Background="{DynamicResource WindowBackgroundBrush}"
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1"
-                            Padding="5">
+                            Padding="7"
+                            Margin="0,8,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedCategoryName}"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource HeaderTextBrush}"/>
+                            <TextBlock Text="{Binding CategoryGuidance}"
+                                       FontSize="10"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- 2. RATE VERSION EDITOR -->
+            <Border Grid.Column="2" Style="{StaticResource ClassicPanel}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{Binding EditorTitle}"
+                               Style="{StaticResource SectionHeader}"/>
+
+                    <StackPanel Grid.Row="1">
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="118"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Category" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding SelectedCategoryName, Mode=OneWay}"
+                                     Style="{StaticResource ClassicInput}"
+                                     IsReadOnly="True"
+                                     FontWeight="SemiBold"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="118"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Rate Code" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding TaxCodeInput}"
+                                     Style="{StaticResource ClassicInput}"
+                                     IsReadOnly="True"
+                                     FontWeight="Bold"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="118"/>
+                                <ColumnDefinition Width="105"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Rate % *" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding RatePercentText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource ClassicInput}"
+                                     IsEnabled="{Binding IsRateEditorEnabled}"
+                                     IsReadOnly="{Binding IsCoreRateReadOnly}"
+                                     HorizontalContentAlignment="Right"
+                                     MaxLength="8"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="Rate and start date lock after use."
+                                       FontSize="9"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="8,0,0,0"
+                                       TextWrapping="Wrap"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="118"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Effective From *" Style="{StaticResource FieldLabel}"/>
+                            <DatePicker Grid.Column="1"
+                                        SelectedDate="{Binding EffectiveFromInput, Mode=TwoWay}"
+                                        IsEnabled="{Binding CanEditCoreRateFields}"
+                                        SelectedDateFormat="Short"
+                                        Height="26"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="118"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <CheckBox Grid.Column="0"
+                                      Content="Effective To"
+                                      IsChecked="{Binding HasEffectiveToInput, Mode=TwoWay}"
+                                      IsEnabled="{Binding IsRateEditorEnabled}"
+                                      FontWeight="SemiBold"
+                                      VerticalAlignment="Center"/>
+                            <DatePicker Grid.Column="2"
+                                        SelectedDate="{Binding EffectiveToInput, Mode=TwoWay}"
+                                        IsEnabled="{Binding CanEditEffectiveTo}"
+                                        SelectedDateFormat="Short"
+                                        Height="26"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="118"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Change Reason *"
+                                       Style="{StaticResource FieldLabel}"
+                                       VerticalAlignment="Top"
+                                       Margin="0,5,6,0"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding ChangeReasonInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     IsEnabled="{Binding IsRateEditorEnabled}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     Height="62"
+                                     Padding="5"
+                                     MaxLength="250"
+                                     BorderBrush="{DynamicResource InputBoxBorderBrush}"
+                                     BorderThickness="1"
+                                     Background="{DynamicResource WhiteBackgroundBrush}"/>
+                        </Grid>
+
+                        <Border Background="{DynamicResource WindowBackgroundBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                Padding="7"
+                                Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="USAGE / HISTORY SAFETY"
+                                           FontSize="10"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource HeaderTextBrush}"/>
+                                <TextBlock Text="{Binding UsageSummary}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,3,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="{Binding CategoryGuidance}"
+                                   FontSize="10"
+                                   FontStyle="Italic"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="2"
+                            Background="{DynamicResource WindowBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            Padding="5"
+                            Margin="0,8,0,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -238,172 +372,167 @@
                             </Grid.ColumnDefinitions>
 
                             <Button Grid.Column="0"
-                                    Content="DELETE"
-                                    Command="{Binding DeleteCommand}"
-                                    Style="{StaticResource ClassicBtn}"
-                                    Foreground="{DynamicResource WarningTextBrush}"
-                                    BorderBrush="{DynamicResource WarningTextBrush}"
-                                    Padding="10,0"
-                                    ToolTip="Deletes only if this tax rate is unused."/>
+                                    Content="NEW VERSION"
+                                    Command="{Binding NewRateCommand}"
+                                    Style="{StaticResource ClassicButton}"
+                                    Margin="0,0,5,0"/>
 
                             <Button Grid.Column="1"
-                                    Content="{Binding DeactivateReactivateButtonText}"
-                                    Command="{Binding DeactivateReactivateCommand}"
-                                    Style="{StaticResource ClassicBtn}"
-                                    Margin="5,0,0,0"
-                                    Padding="10,0"/>
+                                    Content="DELETE UNUSED"
+                                    Command="{Binding DeleteCommand}"
+                                    Style="{StaticResource ClassicButton}"
+                                    Foreground="{DynamicResource WarningTextBrush}"
+                                    BorderBrush="{DynamicResource WarningTextBrush}"/>
 
                             <Button Grid.Column="3"
-                                    Content="CLEAR"
-                                    Command="{Binding ClearCommand}"
-                                    Style="{StaticResource ClassicBtn}"
-                                    Margin="0,0,5,0"
-                                    Padding="10,0"/>
+                                    Content="{Binding DeactivateReactivateButtonText}"
+                                    Command="{Binding DeactivateReactivateCommand}"
+                                    Style="{StaticResource ClassicButton}"
+                                    Margin="0,0,5,0"/>
 
                             <Button Grid.Column="4"
-                                    Content="SAVE"
+                                    Content="{Binding SaveButtonText}"
                                     Command="{Binding SaveCommand}"
-                                    Style="{StaticResource ActionBtn}"
-                                    Padding="18,0"/>
+                                    Style="{StaticResource PrimaryButton}"
+                                    Padding="14,0"/>
                         </Grid>
                     </Border>
-                </StackPanel>
+                </Grid>
             </Border>
 
-            <Border Grid.Row="2"
-                    Background="{DynamicResource PanelBackgroundBrush}"
+            <!-- 3. RATE HISTORY -->
+            <Border Grid.Column="4"
+                    Background="{DynamicResource HeaderTextBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
-                    Padding="8"
-                    Margin="0,5,0,0">
-                <TextBlock Text="{Binding StatusMessage}"
-                           Foreground="{DynamicResource SecondaryTextBrush}"
-                           FontSize="11"
-                           TextWrapping="Wrap"/>
+                    Padding="5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="5,0,0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="3. RATE HISTORY"
+                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ClassicInput}"
+                                 Margin="0,0,8,0"
+                                 ToolTip="Search rate code, name or category. Press Enter to refresh.">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding SearchRefreshCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+
+                        <CheckBox Grid.Column="2"
+                                  Content="Include Inactive"
+                                  IsChecked="{Binding IncludeDeactivated, Mode=TwoWay}"
+                                  Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                  FontWeight="SemiBold"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,8,0"/>
+
+                        <Button Grid.Column="3"
+                                Content="REFRESH"
+                                Command="{Binding RefreshCommand}"
+                                Style="{StaticResource ClassicButton}"/>
+                    </Grid>
+
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding TaxRates}"
+                              SelectedItem="{Binding SelectedTaxRate, Mode=TwoWay}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="All"
+                              RowHeight="28"
+                              SelectionMode="Single"
+                              Background="{DynamicResource WhiteBackgroundBrush}"
+                              AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1"
+                              HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                              VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource ClassicCell}"/>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Code"
+                                                Binding="{Binding TaxCode}"
+                                                Width="132"
+                                                FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Rate %"
+                                                Binding="{Binding RatePercent, StringFormat=N2}"
+                                                Width="72"
+                                                ElementStyle="{StaticResource RightCellText}"/>
+                            <DataGridTextColumn Header="From"
+                                                Binding="{Binding EffectiveFrom, StringFormat={}{0:yyyy-MM-dd}}"
+                                                Width="92"/>
+                            <DataGridTextColumn Header="To"
+                                                Binding="{Binding EffectiveTo, StringFormat={}{0:yyyy-MM-dd}}"
+                                                Width="92"/>
+                            <DataGridTextColumn Header="Status"
+                                                Binding="{Binding PeriodStatusText}"
+                                                Width="92"
+                                                ElementStyle="{StaticResource CenterCellText}"/>
+                            <DataGridTextColumn Header="Reason"
+                                                Binding="{Binding ChangeReason}"
+                                                Width="*"
+                                                MinWidth="150"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
             </Border>
         </Grid>
 
-        <!-- RIGHT: TAX RATE DATABASE -->
-        <Border Grid.Column="2"
-                Background="{DynamicResource HeaderTextBrush}"
-                Padding="5"
+        <Border Grid.Row="1"
+                Background="{DynamicResource PanelBackgroundBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1">
-
+                BorderThickness="1"
+                Padding="7"
+                Margin="0,6,0,0">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                <Grid Grid.Row="0" Margin="5,0,0,5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Column="0"
-                               Text="TAX RATE DATABASE"
-                               Foreground="{DynamicResource WhiteBackgroundBrush}"
-                               FontSize="12"
-                               FontWeight="Bold"
-                               VerticalAlignment="Center"
-                               Margin="0,0,12,0"/>
+                <Button Grid.Column="1"
+                        Content="CLEAR SEARCH"
+                        Command="{Binding ClearSearchCommand}"
+                        Style="{StaticResource ClassicButton}"
+                        Margin="8,0,5,0"/>
 
-                    <TextBox Grid.Column="1"
-                             Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"
-                             Height="25"
-                             Margin="0,0,8,0"
-                             ToolTip="Search by tax code or tax name. Press Enter or click Search / Refresh.">
-                        <TextBox.InputBindings>
-                            <KeyBinding Key="Enter"
-                                        Command="{Binding SearchRefreshCommand}"/>
-                        </TextBox.InputBindings>
-                    </TextBox>
-
-                    <CheckBox Grid.Column="2"
-                              Content="Include Deactivated"
-                              IsChecked="{Binding IncludeDeactivated, Mode=TwoWay}"
-                              Foreground="{DynamicResource WhiteBackgroundBrush}"
-                              FontWeight="SemiBold"
-                              VerticalAlignment="Center"
-                              Margin="0,0,10,0"/>
-
-                    <Button Grid.Column="3"
-                            Content="SEARCH / REFRESH"
-                            Command="{Binding SearchRefreshCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="25"
-                            Padding="10,0"
-                            Margin="0,0,5,0"/>
-
-                    <Button Grid.Column="4"
-                            Content="CLEAR SEARCH"
-                            Command="{Binding ClearSearchCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="25"
-                            Padding="10,0"/>
-                </Grid>
-
-                <DataGrid Grid.Row="1"
-                          ItemsSource="{Binding TaxRates}"
-                          SelectedItem="{Binding SelectedTaxRate, Mode=TwoWay}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          IsReadOnly="True"
-                          GridLinesVisibility="All"
-                          HorizontalGridLinesBrush="{DynamicResource LightBorderBrush}"
-                          VerticalGridLinesBrush="{DynamicResource LightBorderBrush}"
-                          RowHeight="28"
-                          HeadersVisibility="Column"
-                          Background="{DynamicResource WhiteBackgroundBrush}"
-                          BorderBrush="{DynamicResource BorderBrush}"
-                          BorderThickness="1"
-                          SelectionMode="Single"
-                          AlternatingRowBackground="{DynamicResource DataGridAlternatingRow}"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          ScrollViewer.VerticalScrollBarVisibility="Auto">
-
-                    <DataGrid.Resources>
-                        <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
-                    </DataGrid.Resources>
-
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Order"
-                                            Binding="{Binding DisplayOrder}"
-                                            Width="65"
-                                            ElementStyle="{StaticResource CenterText}"/>
-
-                        <DataGridTextColumn Header="Tax Code"
-                                            Binding="{Binding TaxCode}"
-                                            Width="110"
-                                            FontWeight="Bold"/>
-
-                        <DataGridTextColumn Header="Tax Name"
-                                            Binding="{Binding TaxName}"
-                                            Width="*"
-                                            MinWidth="190"/>
-
-                        <DataGridTextColumn Header="Rate %"
-                                            Binding="{Binding RatePercent, StringFormat=N2}"
-                                            Width="80"
-                                            ElementStyle="{StaticResource RightText}"/>
-
-                        <DataGridTextColumn Header="Status"
-                                            Binding="{Binding StatusText}"
-                                            Width="100"
-                                            ElementStyle="{StaticResource CenterText}"/>
-
-                        <DataGridTextColumn Header="Updated"
-                                            Binding="{Binding UpdatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
-                                            Width="135"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                <Button Grid.Column="2"
+                        Content="SEARCH / REFRESH"
+                        Command="{Binding SearchRefreshCommand}"
+                        Style="{StaticResource ClassicButton}"/>
             </Grid>
         </Border>
     </Grid>

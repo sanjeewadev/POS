@@ -7,23 +7,80 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Services;
+using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
+    public sealed class TaxCategoryOption
+    {
+        public int? Id { get; init; }
+        public string CategoryCode { get; init; } = string.Empty;
+        public string CategoryName { get; init; } = string.Empty;
+        public string TreatmentType { get; init; } = string.Empty;
+        public bool IsRateBased { get; init; }
+        public bool IsActive { get; init; }
+        public int DisplayOrder { get; init; }
+        public bool IsLegacy { get; init; }
+
+        public string RateModeText =>
+            IsLegacy
+                ? "Compatibility"
+                : IsRateBased
+                    ? "Effective rate"
+                    : "Fixed 0% treatment";
+
+        public string StatusText => IsActive ? "Active" : "Inactive";
+
+        public static TaxCategoryOption FromCategory(TaxCategory category)
+        {
+            return new TaxCategoryOption
+            {
+                Id = category.Id,
+                CategoryCode = category.CategoryCode,
+                CategoryName = category.CategoryName,
+                TreatmentType = category.TreatmentType,
+                IsRateBased = category.IsRateBased,
+                IsActive = category.IsActive,
+                DisplayOrder = category.DisplayOrder,
+                IsLegacy = false
+            };
+        }
+
+        public static TaxCategoryOption Legacy()
+        {
+            return new TaxCategoryOption
+            {
+                Id = null,
+                CategoryCode = "LEGACY",
+                CategoryName = "Legacy / Unclassified",
+                TreatmentType = "CompatibilityOnly",
+                IsRateBased = false,
+                IsActive = true,
+                DisplayOrder = 999,
+                IsLegacy = true
+            };
+        }
+    }
+
     public partial class TaxRateViewModel : ObservableObject
     {
-        private const int MaxDisplayOrder = 9999;
-
         private readonly TaxRateRepository _taxRateRepository;
         private readonly IMessageBoxService _messageBoxService;
+        private readonly AuthService _authService;
 
         private bool _isInitialized;
-        private bool _isApplyingSelection;
-        private bool _isClearing;
+        private bool _isApplyingCategory;
+        private bool _isApplyingRate;
+        private bool _isClearingForm;
 
+        public ObservableCollection<TaxCategoryOption> TaxCategories { get; } = new();
         public ObservableCollection<TaxRate> TaxRates { get; } = new();
+
+        [ObservableProperty]
+        private TaxCategoryOption? _selectedTaxCategory;
 
         [ObservableProperty]
         private TaxRate? _selectedTaxRate;
@@ -32,32 +89,115 @@ namespace POS.BackOffice.UI.ViewModels
         private string _taxCodeInput = string.Empty;
 
         [ObservableProperty]
-        private string _taxNameInput = string.Empty;
+        private string _ratePercentText = "18";
 
         [ObservableProperty]
-        private string _ratePercentText = "0";
+        private DateTime? _effectiveFromInput = DateTime.Today;
 
         [ObservableProperty]
-        private string _displayOrderText = "0";
+        private bool _hasEffectiveToInput;
 
         [ObservableProperty]
-        private bool _isActiveInput = true;
+        private DateTime? _effectiveToInput;
+
+        [ObservableProperty]
+        private string _changeReasonInput = string.Empty;
 
         [ObservableProperty]
         private string _searchText = string.Empty;
 
         [ObservableProperty]
-        private bool _includeDeactivated = false;
+        private bool _includeDeactivated = true;
 
         [ObservableProperty]
-        private bool _isBusy = false;
+        private bool _selectedRateHasUsage;
 
         [ObservableProperty]
-        private string _statusMessage = "Ready.";
+        private string _usageSummary = "Select a rate version to view its usage.";
 
-        public bool IsExistingTaxRate => SelectedTaxRate != null;
+        [ObservableProperty]
+        private bool _isBusy;
 
-        public bool IsTaxCodeReadOnly => IsExistingTaxRate;
+        [ObservableProperty]
+        private string _statusMessage = "Loading Tax Master...";
+
+        public bool IsExistingRate => SelectedTaxRate != null;
+
+        public bool IsLegacyCategorySelected =>
+            SelectedTaxCategory?.IsLegacy == true;
+
+        public bool IsRateBasedCategorySelected =>
+            SelectedTaxCategory?.IsLegacy == false &&
+            SelectedTaxCategory?.IsRateBased == true;
+
+        public bool IsFixedTreatmentCategorySelected =>
+            SelectedTaxCategory != null &&
+            !SelectedTaxCategory.IsLegacy &&
+            !SelectedTaxCategory.IsRateBased;
+
+        public bool IsRateEditorEnabled =>
+            IsRateBasedCategorySelected;
+
+        public bool CanEditCoreRateFields =>
+            IsRateBasedCategorySelected &&
+            (SelectedTaxRate == null || !SelectedRateHasUsage);
+
+        public bool IsCoreRateReadOnly =>
+            !CanEditCoreRateFields;
+
+        public bool CanEditEffectiveTo =>
+            IsRateBasedCategorySelected &&
+            HasEffectiveToInput;
+
+        public string SelectedCategoryCode =>
+            SelectedTaxCategory?.CategoryCode ?? string.Empty;
+
+        public string SelectedCategoryName =>
+            SelectedTaxCategory?.CategoryName ?? "No category selected";
+
+        public string EditorTitle =>
+            IsLegacyCategorySelected
+                ? "2. LEGACY RATE REVIEW"
+                : IsRateBasedCategorySelected
+                    ? "2. STANDARD VAT RATE VERSION"
+                    : "2. TAX TREATMENT";
+
+        public string CategoryGuidance
+        {
+            get
+            {
+                if (SelectedTaxCategory == null)
+                    return "Select a tax category.";
+
+                if (IsLegacyCategorySelected)
+                {
+                    return "Legacy records are preserved only for compatibility with existing Item Master and purchasing data. " +
+                           "They are not authoritative tax categories. Reclassification will be completed during the Item Master rebuild.";
+                }
+
+                return SelectedTaxCategory.CategoryCode switch
+                {
+                    TaxCategoryCodes.Standard =>
+                        "Standard VAT uses effective-dated percentage versions. Active periods must not overlap.",
+
+                    TaxCategoryCodes.ZeroRated =>
+                        "Zero Rated is a taxable 0% treatment. It does not need an editable percentage record.",
+
+                    TaxCategoryCodes.Exempt =>
+                        "Exempt is legally distinct from Zero Rated. It does not need an editable percentage record.",
+
+                    TaxCategoryCodes.OutOfScope =>
+                        "Out of Scope is outside VAT and does not need an editable percentage record.",
+
+                    _ => "This is a fixed tax treatment."
+                };
+            }
+        }
+
+        public string SaveButtonText =>
+            SelectedTaxRate == null
+                ? "SAVE NEW VERSION"
+                : "SAVE CHANGES";
 
         public string DeactivateReactivateButtonText =>
             SelectedTaxRate?.IsActive == false
@@ -66,10 +206,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         public TaxRateViewModel(
             TaxRateRepository taxRateRepository,
-            IMessageBoxService messageBoxService)
+            IMessageBoxService messageBoxService,
+            AuthService authService)
         {
             _taxRateRepository = taxRateRepository ?? throw new ArgumentNullException(nameof(taxRateRepository));
             _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
 
             _ = InitializeAsync();
         }
@@ -86,9 +228,10 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 await _taxRateRepository.EnsureDefaultsAsync();
-                await LoadTaxRatesInternalAsync();
+                await LoadCategoriesInternalAsync();
+                await LoadRatesInternalAsync(selectCurrentRate: true);
 
-                StatusMessage = "Tax Master loaded.";
+                StatusMessage = "Tax Category and Rate Management loaded.";
             }
             catch (Exception ex)
             {
@@ -104,26 +247,59 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
+        private async Task LoadCategoriesInternalAsync()
+        {
+            string previousCode = SelectedTaxCategory?.CategoryCode ?? TaxCategoryCodes.Standard;
+
+            var categories = await _taxRateRepository.GetApprovedCategoriesAsync();
+
+            _isApplyingCategory = true;
+
+            try
+            {
+                TaxCategories.Clear();
+
+                foreach (var category in categories)
+                    TaxCategories.Add(TaxCategoryOption.FromCategory(category));
+
+                TaxCategories.Add(TaxCategoryOption.Legacy());
+
+                SelectedTaxCategory = TaxCategories.FirstOrDefault(c =>
+                    string.Equals(c.CategoryCode, previousCode, StringComparison.OrdinalIgnoreCase))
+                    ?? TaxCategories.FirstOrDefault(c => c.CategoryCode == TaxCategoryCodes.Standard)
+                    ?? TaxCategories.FirstOrDefault();
+            }
+            finally
+            {
+                _isApplyingCategory = false;
+            }
+
+            RaiseCategoryState();
+        }
+
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
-        private async Task LoadTaxRatesAsync()
+        private async Task RefreshAsync()
         {
             IsBusy = true;
 
             try
             {
-                await LoadTaxRatesInternalAsync();
+                int? selectedRateId = SelectedTaxRate?.Id;
 
-                StatusMessage = IncludeDeactivated
-                    ? $"{TaxRates.Count} tax rate record(s) loaded, including deactivated."
-                    : $"{TaxRates.Count} active tax rate record(s) loaded.";
+                await LoadCategoriesInternalAsync();
+                await LoadRatesInternalAsync(
+                    selectCurrentRate: selectedRateId == null,
+                    preferredRateId: selectedRateId);
+
+                StatusMessage = $"{TaxRates.Count} rate record(s) loaded.";
             }
             catch (Exception ex)
             {
-                StatusMessage = "Failed to load tax rates.";
+                StatusMessage = "Refresh failed.";
 
                 _messageBoxService.ShowError(
-                    $"Failed to load tax rates:\n\n{ex.Message}",
-                    "Database Error");
+                    $"Failed to refresh Tax Master:\n\n{ex.Message}",
+                    "Refresh Error");
             }
             finally
             {
@@ -131,86 +307,174 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private async Task LoadTaxRatesInternalAsync()
-        {
-            TaxRates.Clear();
-
-            var taxRates = await _taxRateRepository.GetAllAsync(
-                SearchText,
-                IncludeDeactivated);
-
-            foreach (var taxRate in taxRates)
-                TaxRates.Add(taxRate);
-        }
-
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task SearchRefreshAsync()
         {
-            await LoadTaxRatesAsync();
+            IsBusy = true;
+
+            try
+            {
+                await LoadRatesInternalAsync(selectCurrentRate: true);
+                StatusMessage = $"{TaxRates.Count} matching rate record(s) loaded.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Search failed.";
+
+                _messageBoxService.ShowError(
+                    $"Failed to search tax rates:\n\n{ex.Message}",
+                    "Search Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task ClearSearchAsync()
         {
             SearchText = string.Empty;
-            await LoadTaxRatesAsync();
+            await SearchRefreshAsync();
+        }
+
+        private async Task LoadRatesInternalAsync(
+            bool selectCurrentRate,
+            int? preferredRateId = null)
+        {
+            if (SelectedTaxCategory == null)
+            {
+                _isApplyingRate = true;
+
+                try
+                {
+                    TaxRates.Clear();
+                    SelectedTaxRate = null;
+                }
+                finally
+                {
+                    _isApplyingRate = false;
+                }
+
+                ClearEditorForCategory();
+                return;
+            }
+
+            var rates = await _taxRateRepository.GetAllAsync(
+                SearchText,
+                IncludeDeactivated,
+                SelectedTaxCategory.Id,
+                SelectedTaxCategory.IsLegacy);
+
+            TaxRate? rateToSelect = null;
+
+            _isApplyingRate = true;
+
+            try
+            {
+                TaxRates.Clear();
+
+                foreach (var rate in rates)
+                    TaxRates.Add(rate);
+
+                if (preferredRateId.HasValue)
+                    rateToSelect = TaxRates.FirstOrDefault(r => r.Id == preferredRateId.Value);
+
+                if (rateToSelect == null && selectCurrentRate)
+                {
+                    DateTime today = DateTime.Today;
+
+                    rateToSelect = TaxRates.FirstOrDefault(r =>
+                        r.IsActive &&
+                        r.EffectiveFrom.HasValue &&
+                        r.EffectiveFrom.Value.Date <= today &&
+                        (!r.EffectiveTo.HasValue || r.EffectiveTo.Value.Date >= today));
+
+                    rateToSelect ??= TaxRates.FirstOrDefault();
+                }
+
+                SelectedTaxRate = rateToSelect;
+            }
+            finally
+            {
+                _isApplyingRate = false;
+            }
+
+            await ApplySelectedRateAsync(rateToSelect);
+        }
+
+        [RelayCommand(CanExecute = nameof(CanCreateNewRate))]
+        private void NewRate()
+        {
+            _isApplyingRate = true;
+
+            try
+            {
+                SelectedTaxRate = null;
+            }
+            finally
+            {
+                _isApplyingRate = false;
+            }
+
+            PrepareNewRateForm("Ready for a new Standard VAT rate version.");
         }
 
         [RelayCommand(CanExecute = nameof(CanSave))]
         private async Task SaveAsync()
         {
-            string taxCode = NormalizeCode(TaxCodeInput);
-            string taxName = NormalizeText(TaxNameInput);
+            if (SelectedTaxCategory?.Id == null || !IsRateBasedCategorySelected)
+                return;
 
             if (!TryParseRatePercent(RatePercentText, out decimal ratePercent))
                 return;
 
-            if (!TryParseDisplayOrder(DisplayOrderText, out int displayOrder))
+            if (!ValidateForm(ratePercent))
                 return;
 
-            if (!ValidateInput(taxCode, taxName, ratePercent, displayOrder))
-                return;
+            DateTime effectiveFrom = EffectiveFromInput!.Value.Date;
+            DateTime? effectiveTo = HasEffectiveToInput
+                ? EffectiveToInput?.Date
+                : null;
+
+            string auditUser = GetAuditUser();
+            string taxCode = SelectedTaxRate?.TaxCode ?? GenerateTaxCode(effectiveFrom);
+
+            var rate = new TaxRate
+            {
+                Id = SelectedTaxRate?.Id ?? 0,
+                TaxCode = taxCode,
+                TaxName = "Standard VAT",
+                TaxCategoryId = SelectedTaxCategory.Id,
+                RatePercent = ratePercent,
+                EffectiveFrom = effectiveFrom,
+                EffectiveTo = effectiveTo,
+                ChangeReason = NormalizeText(ChangeReasonInput),
+                CreatedBy = SelectedTaxRate?.CreatedBy ?? auditUser,
+                UpdatedBy = auditUser,
+                IsActive = SelectedTaxRate?.IsActive ?? true,
+                IsSystemDefault = SelectedTaxRate?.IsSystemDefault ?? false,
+                DisplayOrder = SelectedTaxRate?.DisplayOrder ?? 10
+            };
 
             IsBusy = true;
 
             try
             {
                 if (SelectedTaxRate == null)
-                {
-                    var newTaxRate = new TaxRate
-                    {
-                        TaxCode = taxCode,
-                        TaxName = taxName,
-                        RatePercent = ratePercent,
-                        IsActive = IsActiveInput,
-                        DisplayOrder = displayOrder,
-                        IsSystemDefault = false
-                    };
-
-                    await _taxRateRepository.AddAsync(newTaxRate);
-                }
+                    rate = await _taxRateRepository.AddAsync(rate);
                 else
-                {
-                    var updatedTaxRate = new TaxRate
-                    {
-                        Id = SelectedTaxRate.Id,
-                        TaxCode = SelectedTaxRate.TaxCode,
-                        TaxName = taxName,
-                        RatePercent = ratePercent,
-                        IsActive = IsActiveInput,
-                        DisplayOrder = displayOrder,
-                        IsSystemDefault = SelectedTaxRate.IsSystemDefault
-                    };
+                    await _taxRateRepository.UpdateAsync(rate);
 
-                    await _taxRateRepository.UpdateAsync(updatedTaxRate);
-                }
+                await LoadRatesInternalAsync(
+                    selectCurrentRate: false,
+                    preferredRateId: rate.Id);
 
-                await LoadTaxRatesInternalAsync();
-                ClearFormOnly("Tax rate saved successfully.");
+                StatusMessage = "Tax rate version saved successfully.";
 
                 _messageBoxService.ShowInformation(
-                    "Tax rate saved successfully.",
-                    "Success");
+                    "Tax rate version saved successfully.",
+                    "Saved");
             }
             catch (InvalidOperationException ex)
             {
@@ -225,7 +489,7 @@ namespace POS.BackOffice.UI.ViewModels
                 StatusMessage = "Save failed.";
 
                 _messageBoxService.ShowError(
-                    $"Failed to save tax rate:\n\n{ex.Message}",
+                    $"Failed to save the tax rate version:\n\n{ex.Message}",
                     "Save Error");
             }
             finally
@@ -234,78 +498,17 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        [RelayCommand]
-        private void Clear()
-        {
-            ClearFormOnly("Ready for new tax rate.");
-        }
-
-        private void ClearFormOnly(string statusMessage)
-        {
-            _isClearing = true;
-
-            try
-            {
-                SelectedTaxRate = null;
-                TaxCodeInput = string.Empty;
-                TaxNameInput = string.Empty;
-                RatePercentText = "0";
-                DisplayOrderText = "0";
-                IsActiveInput = true;
-                StatusMessage = statusMessage;
-            }
-            finally
-            {
-                _isClearing = false;
-            }
-
-            RaiseFormState();
-        }
-
         [RelayCommand(CanExecute = nameof(CanDelete))]
         private async Task DeleteAsync()
         {
             if (SelectedTaxRate == null)
                 return;
 
-            var selected = SelectedTaxRate;
-
-            IsBusy = true;
-
-            try
-            {
-                var linkedData = await _taxRateRepository.GetLinkedDataSummaryAsync(selected.Id);
-
-                if (linkedData.HasLinkedData)
-                {
-                    StatusMessage = "Delete blocked.";
-
-                    _messageBoxService.ShowWarning(
-                        linkedData.ToUserMessage(selected.TaxCode),
-                        "Delete Blocked");
-
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = "Delete check failed.";
-
-                _messageBoxService.ShowError(
-                    $"Failed to check linked data:\n\n{ex.Message}",
-                    "Delete Check Error");
-
-                return;
-            }
-            finally
-            {
-                IsBusy = false;
-            }
+            TaxRate selected = SelectedTaxRate;
 
             bool confirmed = _messageBoxService.ShowConfirmation(
-                $"Permanently delete tax rate '{selected.TaxCode}'?\n\n" +
-                "This is only safe for wrongly-created unused tax records.\n" +
-                "For real business records, deactivate instead.",
+                $"Permanently delete unused rate version '{selected.TaxCode}'?\n\n" +
+                "Used or system-standard records cannot be deleted.",
                 "Confirm Delete",
                 MessageBoxImage.Warning);
 
@@ -317,12 +520,9 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 await _taxRateRepository.DeleteAsync(selected.Id);
-                await LoadTaxRatesInternalAsync();
-                ClearFormOnly("Tax rate deleted successfully.");
+                await LoadRatesInternalAsync(selectCurrentRate: true);
 
-                _messageBoxService.ShowInformation(
-                    "Tax rate deleted successfully.",
-                    "Deleted");
+                StatusMessage = "Unused tax rate version deleted.";
             }
             catch (InvalidOperationException ex)
             {
@@ -337,7 +537,7 @@ namespace POS.BackOffice.UI.ViewModels
                 StatusMessage = "Delete failed.";
 
                 _messageBoxService.ShowError(
-                    $"Failed to delete tax rate:\n\n{ex.Message}",
+                    $"Failed to delete the tax rate version:\n\n{ex.Message}",
                     "Delete Error");
             }
             finally
@@ -352,15 +552,16 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedTaxRate == null)
                 return;
 
-            var selected = SelectedTaxRate;
-            bool shouldReactivate = !selected.IsActive;
+            TaxRate selected = SelectedTaxRate;
+            bool reactivate = !selected.IsActive;
 
             bool confirmed = _messageBoxService.ShowConfirmation(
-                shouldReactivate
-                    ? $"Reactivate tax rate '{selected.TaxCode}'?"
-                    : $"Deactivate tax rate '{selected.TaxCode}'?\n\nIt will be hidden from new Item Master selections, but old item/PO history will remain safe.",
-                shouldReactivate ? "Confirm Reactivation" : "Confirm Deactivation",
-                shouldReactivate ? MessageBoxImage.Question : MessageBoxImage.Warning);
+                reactivate
+                    ? $"Reactivate rate version '{selected.TaxCode}'?"
+                    : $"Deactivate rate version '{selected.TaxCode}'?\n\n" +
+                      "The currently effective Standard VAT rate cannot be deactivated until a replacement period exists.",
+                reactivate ? "Confirm Reactivation" : "Confirm Deactivation",
+                reactivate ? MessageBoxImage.Question : MessageBoxImage.Warning);
 
             if (!confirmed)
                 return;
@@ -369,25 +570,187 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                if (shouldReactivate)
-                    await _taxRateRepository.ReactivateAsync(selected.Id);
+                if (reactivate)
+                    await _taxRateRepository.ReactivateAsync(selected.Id, GetAuditUser());
                 else
-                    await _taxRateRepository.DeactivateAsync(selected.Id);
+                    await _taxRateRepository.DeactivateAsync(selected.Id, GetAuditUser());
 
-                await LoadTaxRatesInternalAsync();
-                ClearFormOnly(shouldReactivate
-                    ? "Tax rate reactivated successfully."
-                    : "Tax rate deactivated successfully.");
+                await LoadRatesInternalAsync(
+                    selectCurrentRate: false,
+                    preferredRateId: selected.Id);
+
+                StatusMessage = reactivate
+                    ? "Tax rate version reactivated."
+                    : "Tax rate version deactivated.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                StatusMessage = "Status update blocked.";
+
+                _messageBoxService.ShowWarning(
+                    ex.Message,
+                    "Status Update Blocked");
             }
             catch (Exception ex)
             {
-                StatusMessage = shouldReactivate
-                    ? "Reactivate failed."
-                    : "Deactivate failed.";
+                StatusMessage = "Status update failed.";
 
                 _messageBoxService.ShowError(
-                    $"Failed to update tax rate status:\n\n{ex.Message}",
+                    $"Failed to update the rate status:\n\n{ex.Message}",
                     "Status Update Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task ApplySelectedRateAsync(TaxRate? value)
+        {
+            if (_isClearingForm)
+                return;
+
+            _isClearingForm = true;
+
+            try
+            {
+                SelectedRateHasUsage = false;
+
+                if (value == null)
+                {
+                    if (IsRateBasedCategorySelected)
+                        PrepareNewRateForm("Ready for a new Standard VAT rate version.");
+                    else
+                        ClearEditorForCategory();
+
+                    return;
+                }
+
+                TaxCodeInput = value.TaxCode;
+                RatePercentText = value.RatePercent.ToString("0.##", CultureInfo.InvariantCulture);
+                EffectiveFromInput = value.EffectiveFrom?.Date;
+                HasEffectiveToInput = value.EffectiveTo.HasValue;
+                EffectiveToInput = value.EffectiveTo?.Date;
+                ChangeReasonInput = value.ChangeReason ?? string.Empty;
+                UsageSummary = "Checking linked records...";
+                StatusMessage = $"Selected rate version: {value.TaxCode}";
+            }
+            finally
+            {
+                _isClearingForm = false;
+            }
+
+            try
+            {
+                var summary = await _taxRateRepository.GetLinkedDataSummaryAsync(value.Id);
+
+                if (SelectedTaxRate?.Id != value.Id)
+                    return;
+
+                SelectedRateHasUsage = summary.HasLinkedData;
+                UsageSummary = summary.ToCompactSummary();
+            }
+            catch (Exception ex)
+            {
+                if (SelectedTaxRate?.Id == value.Id)
+                {
+                    UsageSummary = "Could not read linked-record usage.";
+
+                    _messageBoxService.ShowError(
+                        $"Failed to check tax-rate usage:\n\n{ex.Message}",
+                        "Usage Check Error");
+                }
+            }
+            finally
+            {
+                RaiseEditorState();
+            }
+        }
+
+        private void PrepareNewRateForm(string statusMessage)
+        {
+            _isClearingForm = true;
+
+            try
+            {
+                DateTime proposedDate = DateTime.Today;
+                decimal proposedRate = GetLatestKnownStandardRate();
+
+                TaxCodeInput = GenerateTaxCode(proposedDate);
+                RatePercentText = proposedRate.ToString("0.##", CultureInfo.InvariantCulture);
+                EffectiveFromInput = proposedDate;
+                HasEffectiveToInput = false;
+                EffectiveToInput = null;
+                ChangeReasonInput = string.Empty;
+                SelectedRateHasUsage = false;
+                UsageSummary = "New rate version. Save only after confirming its legal effective date.";
+                StatusMessage = statusMessage;
+            }
+            finally
+            {
+                _isClearingForm = false;
+            }
+
+            RaiseEditorState();
+        }
+
+        private void ClearEditorForCategory()
+        {
+            _isClearingForm = true;
+
+            try
+            {
+                TaxCodeInput = string.Empty;
+                RatePercentText = "0";
+                EffectiveFromInput = null;
+                HasEffectiveToInput = false;
+                EffectiveToInput = null;
+                ChangeReasonInput = string.Empty;
+                SelectedRateHasUsage = false;
+
+                UsageSummary = IsLegacyCategorySelected
+                    ? "Select a legacy row to review its references and status."
+                    : "No percentage record is required for this fixed 0% treatment.";
+            }
+            finally
+            {
+                _isClearingForm = false;
+            }
+
+            RaiseEditorState();
+        }
+
+        partial void OnSelectedTaxCategoryChanged(TaxCategoryOption? value)
+        {
+            RaiseCategoryState();
+
+            if (_isApplyingCategory || !_isInitialized)
+                return;
+
+            _ = ChangeCategoryAsync();
+        }
+
+        private async Task ChangeCategoryAsync()
+        {
+            IsBusy = true;
+
+            try
+            {
+                await LoadRatesInternalAsync(selectCurrentRate: true);
+
+                StatusMessage = IsRateBasedCategorySelected
+                    ? "Standard VAT rate history loaded."
+                    : IsLegacyCategorySelected
+                        ? "Legacy tax records loaded for review."
+                        : "Fixed tax treatment selected; no rate version is required.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Failed to load the selected tax category.";
+
+                _messageBoxService.ShowError(
+                    $"Failed to load tax category data:\n\n{ex.Message}",
+                    "Load Error");
             }
             finally
             {
@@ -397,57 +760,48 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedTaxRateChanged(TaxRate? value)
         {
-            if (_isApplyingSelection || _isClearing)
+            RaiseEditorState();
+
+            if (_isApplyingRate || _isClearingForm)
                 return;
 
-            _isApplyingSelection = true;
+            _ = ApplySelectedRateAsync(value);
+        }
 
-            try
-            {
-                if (value == null)
-                {
-                    TaxCodeInput = string.Empty;
-                    TaxNameInput = string.Empty;
-                    RatePercentText = "0";
-                    DisplayOrderText = "0";
-                    IsActiveInput = true;
-                    StatusMessage = "Ready for new tax rate.";
-                    return;
-                }
+        partial void OnEffectiveFromInputChanged(DateTime? value)
+        {
+            if (_isClearingForm)
+                return;
 
-                TaxCodeInput = value.TaxCode ?? string.Empty;
-                TaxNameInput = value.TaxName ?? string.Empty;
-                RatePercentText = value.RatePercent.ToString("0.##", CultureInfo.InvariantCulture);
-                DisplayOrderText = value.DisplayOrder.ToString(CultureInfo.InvariantCulture);
-                IsActiveInput = value.IsActive;
-                StatusMessage = $"Editing tax rate: {value.TaxCode}";
-            }
-            finally
+            if (SelectedTaxRate == null && value.HasValue && IsRateBasedCategorySelected)
+                TaxCodeInput = GenerateTaxCode(value.Value.Date);
+
+            if (HasEffectiveToInput &&
+                value.HasValue &&
+                EffectiveToInput.HasValue &&
+                EffectiveToInput.Value.Date < value.Value.Date)
             {
-                _isApplyingSelection = false;
+                EffectiveToInput = value.Value.Date;
             }
 
-            RaiseFormState();
-        }
-
-        partial void OnSearchTextChanged(string value)
-        {
-            if (_isInitialized)
-                StatusMessage = "Type search text and click SEARCH / REFRESH.";
-        }
-
-        partial void OnIncludeDeactivatedChanged(bool value)
-        {
-            if (_isInitialized && !IsBusy)
-                _ = LoadTaxRatesAsync();
-        }
-
-        partial void OnTaxCodeInputChanged(string value)
-        {
             SaveCommand.NotifyCanExecuteChanged();
         }
 
-        partial void OnTaxNameInputChanged(string value)
+        partial void OnHasEffectiveToInputChanged(bool value)
+        {
+            if (_isClearingForm)
+                return;
+
+            if (!value)
+                EffectiveToInput = null;
+            else if (!EffectiveToInput.HasValue)
+                EffectiveToInput = EffectiveFromInput?.Date ?? DateTime.Today;
+
+            OnPropertyChanged(nameof(CanEditEffectiveTo));
+            SaveCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnEffectiveToInputChanged(DateTime? value)
         {
             SaveCommand.NotifyCanExecuteChanged();
         }
@@ -457,28 +811,64 @@ namespace POS.BackOffice.UI.ViewModels
             SaveCommand.NotifyCanExecuteChanged();
         }
 
-        partial void OnDisplayOrderTextChanged(string value)
+        partial void OnChangeReasonInputChanged(string value)
         {
             SaveCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIncludeDeactivatedChanged(bool value)
+        {
+            if (_isInitialized && !IsBusy)
+                _ = SearchRefreshAsync();
+        }
+
+        partial void OnSearchTextChanged(string value)
+        {
+            if (_isInitialized)
+                StatusMessage = "Press Enter or click SEARCH / REFRESH.";
+        }
+
+        partial void OnSelectedRateHasUsageChanged(bool value)
+        {
+            RaiseEditorState();
         }
 
         partial void OnIsBusyChanged(bool value)
         {
             InitializeCommand.NotifyCanExecuteChanged();
-            LoadTaxRatesCommand.NotifyCanExecuteChanged();
+            RefreshCommand.NotifyCanExecuteChanged();
             SearchRefreshCommand.NotifyCanExecuteChanged();
             ClearSearchCommand.NotifyCanExecuteChanged();
+            NewRateCommand.NotifyCanExecuteChanged();
             SaveCommand.NotifyCanExecuteChanged();
             DeleteCommand.NotifyCanExecuteChanged();
             DeactivateReactivateCommand.NotifyCanExecuteChanged();
         }
 
-        private void RaiseFormState()
+        private void RaiseCategoryState()
         {
-            OnPropertyChanged(nameof(IsExistingTaxRate));
-            OnPropertyChanged(nameof(IsTaxCodeReadOnly));
+            OnPropertyChanged(nameof(IsLegacyCategorySelected));
+            OnPropertyChanged(nameof(IsRateBasedCategorySelected));
+            OnPropertyChanged(nameof(IsFixedTreatmentCategorySelected));
+            OnPropertyChanged(nameof(IsRateEditorEnabled));
+            OnPropertyChanged(nameof(SelectedCategoryCode));
+            OnPropertyChanged(nameof(SelectedCategoryName));
+            OnPropertyChanged(nameof(EditorTitle));
+            OnPropertyChanged(nameof(CategoryGuidance));
+
+            RaiseEditorState();
+        }
+
+        private void RaiseEditorState()
+        {
+            OnPropertyChanged(nameof(IsExistingRate));
+            OnPropertyChanged(nameof(CanEditCoreRateFields));
+            OnPropertyChanged(nameof(IsCoreRateReadOnly));
+            OnPropertyChanged(nameof(CanEditEffectiveTo));
+            OnPropertyChanged(nameof(SaveButtonText));
             OnPropertyChanged(nameof(DeactivateReactivateButtonText));
 
+            NewRateCommand.NotifyCanExecuteChanged();
             SaveCommand.NotifyCanExecuteChanged();
             DeleteCommand.NotifyCanExecuteChanged();
             DeactivateReactivateCommand.NotifyCanExecuteChanged();
@@ -489,16 +879,26 @@ namespace POS.BackOffice.UI.ViewModels
             return !IsBusy;
         }
 
+        private bool CanCreateNewRate()
+        {
+            return !IsBusy && IsRateBasedCategorySelected;
+        }
+
         private bool CanSave()
         {
             return !IsBusy &&
-                   !string.IsNullOrWhiteSpace(TaxCodeInput) &&
-                   !string.IsNullOrWhiteSpace(TaxNameInput);
+                   IsRateBasedCategorySelected &&
+                   EffectiveFromInput.HasValue &&
+                   !string.IsNullOrWhiteSpace(RatePercentText) &&
+                   !string.IsNullOrWhiteSpace(ChangeReasonInput);
         }
 
         private bool CanDelete()
         {
-            return !IsBusy && SelectedTaxRate != null;
+            return !IsBusy &&
+                   SelectedTaxRate != null &&
+                   !SelectedRateHasUsage &&
+                   !SelectedTaxRate.IsSystemDefault;
         }
 
         private bool CanDeactivateReactivate()
@@ -506,45 +906,71 @@ namespace POS.BackOffice.UI.ViewModels
             return !IsBusy && SelectedTaxRate != null;
         }
 
-        private bool ValidateInput(
-            string taxCode,
-            string taxName,
-            decimal ratePercent,
-            int displayOrder)
+        private bool ValidateForm(decimal ratePercent)
         {
-            if (string.IsNullOrWhiteSpace(taxCode))
+            if (ratePercent <= 0m || ratePercent > 100m)
             {
-                _messageBoxService.ShowWarning("Tax code is required.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Standard VAT rate must be greater than 0 and not more than 100.",
+                    "Validation Error");
+
                 return false;
             }
 
-            if (taxCode.Length > 20)
+            if (decimal.Round(ratePercent, 2) != ratePercent)
             {
-                _messageBoxService.ShowWarning("Tax code cannot be longer than 20 characters.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Standard VAT rate can have no more than two decimal places.",
+                    "Validation Error");
+
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(taxName))
+            if (!EffectiveFromInput.HasValue)
             {
-                _messageBoxService.ShowWarning("Tax name is required.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Effective-from date is required.",
+                    "Validation Error");
+
                 return false;
             }
 
-            if (taxName.Length > 100)
+            if (HasEffectiveToInput && !EffectiveToInput.HasValue)
             {
-                _messageBoxService.ShowWarning("Tax name cannot be longer than 100 characters.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Select an effective-to date or untick the end-date option.",
+                    "Validation Error");
+
                 return false;
             }
 
-            if (ratePercent < 0 || ratePercent > 100)
+            if (EffectiveToInput.HasValue &&
+                EffectiveToInput.Value.Date < EffectiveFromInput.Value.Date)
             {
-                _messageBoxService.ShowWarning("Tax rate must be between 0 and 100.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Effective-to date cannot be earlier than effective-from date.",
+                    "Validation Error");
+
                 return false;
             }
 
-            if (displayOrder < 0 || displayOrder > MaxDisplayOrder)
+            string reason = NormalizeText(ChangeReasonInput);
+
+            if (string.IsNullOrWhiteSpace(reason))
             {
-                _messageBoxService.ShowWarning($"Display order must be between 0 and {MaxDisplayOrder}.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Change reason is required for the tax-rate audit history.",
+                    "Validation Error");
+
+                return false;
+            }
+
+            if (reason.Length > 250)
+            {
+                _messageBoxService.ShowWarning(
+                    "Change reason cannot be longer than 250 characters.",
+                    "Validation Error");
+
                 return false;
             }
 
@@ -553,12 +979,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool TryParseRatePercent(string value, out decimal ratePercent)
         {
-            ratePercent = 0m;
-
             string raw = NormalizeText(value);
-
-            if (string.IsNullOrWhiteSpace(raw))
-                return true;
 
             bool parsed = decimal.TryParse(
                 raw,
@@ -568,40 +989,45 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (!parsed)
             {
-                _messageBoxService.ShowWarning("Rate percent must be a number.", "Validation Error");
-                return false;
+                parsed = decimal.TryParse(
+                    raw,
+                    NumberStyles.Number,
+                    CultureInfo.CurrentCulture,
+                    out ratePercent);
             }
-
-            return true;
-        }
-
-        private bool TryParseDisplayOrder(string value, out int displayOrder)
-        {
-            displayOrder = 0;
-
-            string raw = NormalizeText(value);
-
-            if (string.IsNullOrWhiteSpace(raw))
-                return true;
-
-            bool parsed = int.TryParse(
-                raw,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out displayOrder);
 
             if (!parsed)
             {
-                _messageBoxService.ShowWarning("Display order must be a whole number.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Rate percent must be a valid number.",
+                    "Validation Error");
+
                 return false;
             }
 
             return true;
         }
 
-        private static string NormalizeCode(string? value)
+        private decimal GetLatestKnownStandardRate()
         {
-            return (value ?? string.Empty).Trim().ToUpperInvariant();
+            var latest = TaxRates
+                .Where(r => r.TaxCategoryId == SelectedTaxCategory?.Id)
+                .OrderByDescending(r => r.EffectiveFrom)
+                .FirstOrDefault();
+
+            return latest?.RatePercent ?? 18m;
+        }
+
+        private string GetAuditUser()
+        {
+            return string.IsNullOrWhiteSpace(_authService.CurrentUser?.Username)
+                ? "System"
+                : _authService.CurrentUser.Username.Trim();
+        }
+
+        private static string GenerateTaxCode(DateTime effectiveFrom)
+        {
+            return $"VAT-STD-{effectiveFrom:yyyyMMdd}";
         }
 
         private static string NormalizeText(string? value)

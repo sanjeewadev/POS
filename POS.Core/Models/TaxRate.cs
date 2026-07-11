@@ -63,6 +63,33 @@ namespace POS.Core.Models
         public string StatusText => IsActive ? "Active" : "Deactivated";
 
         [NotMapped]
+        public string PeriodStatusText
+        {
+            get
+            {
+                if (!IsActive)
+                    return "Inactive";
+
+                if (!EffectiveFrom.HasValue)
+                    return "Date Required";
+
+                DateTime today = DateTime.Today;
+
+                if (EffectiveFrom.Value.Date > today)
+                    return "Future";
+
+                if (EffectiveTo.HasValue && EffectiveTo.Value.Date < today)
+                    return "Ended";
+
+                return "Current";
+            }
+        }
+
+        [NotMapped]
+        public string CategoryDisplayText =>
+            TaxCategory?.CategoryName ?? "Legacy / Unclassified";
+
+        [NotMapped]
         public string DisplayText => $"{TaxCode} - {TaxName} ({RatePercent:N2}%)";
     }
 }
