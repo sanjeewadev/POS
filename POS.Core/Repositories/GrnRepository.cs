@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
@@ -233,6 +234,7 @@ namespace POS.Core.Repositories
                 .AsNoTracking()
                 .Where(p =>
                     !p.IsDeactivated &&
+                    p.ItemType == ItemTypeCodes.StockItem &&
                     !p.IsPurchaseLocked &&
                     p.Variants.Any(v =>
                         !v.IsDeactivated &&
@@ -263,6 +265,7 @@ namespace POS.Core.Repositories
                     ItemCode = p.ItemCode,
                     ItemName = p.ItemName,
                     CategoryName = p.Category.CategoryName,
+                    ItemType = p.ItemType,
                     VariantCount = p.Variants.Count(v =>
                         !v.IsDeactivated &&
                         v.ItemSuppliers.Any(s =>
@@ -293,6 +296,7 @@ namespace POS.Core.Repositories
                     v.ItemParentId == parentId &&
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     !v.ItemParent.IsPurchaseLocked &&
                     v.ItemSuppliers.Any(s =>
                         s.SupplierId == supplierId &&
@@ -379,6 +383,7 @@ namespace POS.Core.Repositories
                 .Where(v =>
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     !v.ItemParent.IsPurchaseLocked &&
                     (
                         v.SkuCode.ToUpper() == upperTerm ||
@@ -721,6 +726,15 @@ namespace POS.Core.Repositories
 
                 if (variant.IsDeactivated || variant.ItemParent.IsDeactivated)
                     throw new InvalidOperationException($"Item '{variant.SkuCode}' is deactivated.");
+
+                if (!string.Equals(
+                        variant.ItemParent.ItemType,
+                        ItemTypeCodes.StockItem,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Service '{variant.SkuCode}' cannot be received through GRN.");
+                }
 
                 if (variant.ItemParent.IsPurchaseLocked)
                     throw new InvalidOperationException($"Item '{variant.SkuCode}' is purchase locked.");

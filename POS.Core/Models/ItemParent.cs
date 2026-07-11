@@ -69,11 +69,10 @@ namespace POS.Core.Models
         [MaxLength(20)]
         public string TaxCode { get; set; } = "TAX-FREE";
 
-        // Default purchase cost entry mode.
-        // false = supplier cost is normally VAT exclusive.
-        // true  = supplier cost is normally VAT inclusive.
-        // PO/GRN can still store the final transaction flag per line.
-        public bool IsTaxInclusive { get; set; } = false;
+        // Legacy compatibility flag.
+        // Retail and wholesale selling prices are stored VAT inclusive.
+        // Purchase price entry mode is selected at PO/GRN document level.
+        public bool IsTaxInclusive { get; set; } = true;
 
         // =========================================================
         // STOCK / POS TRACKING RULES

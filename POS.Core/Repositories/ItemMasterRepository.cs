@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
@@ -19,6 +20,16 @@ namespace POS.Core.Repositories
 
         public string CategoryName { get; set; } = string.Empty;
 
+        public string ItemType { get; set; } = ItemTypeCodes.StockItem;
+
+        public string ItemTypeText =>
+            string.Equals(ItemType, ItemTypeCodes.Service, StringComparison.Ordinal)
+                ? "Service"
+                : "Stock Item";
+
+        public bool IsService =>
+            string.Equals(ItemType, ItemTypeCodes.Service, StringComparison.Ordinal);
+
         public int VariantCount { get; set; }
 
         public decimal TotalStockOnHand { get; set; }
@@ -30,6 +41,20 @@ namespace POS.Core.Repositories
         public bool HasBatchTracking { get; set; }
 
         public bool HasExpiryTracking { get; set; }
+
+        public string TrackingText
+        {
+            get
+            {
+                if (IsService)
+                    return "No Stock";
+
+                if (!HasBatchTracking)
+                    return "Average Cost";
+
+                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
+            }
+        }
     }
 
     public class ParentSeekDto
@@ -274,6 +299,7 @@ namespace POS.Core.Repositories
                     EF.Functions.Like(p.ItemCode, $"%{term}%") ||
                     EF.Functions.Like(p.ItemName, $"%{term}%") ||
                     EF.Functions.Like(p.Category.CategoryName, $"%{term}%") ||
+                    EF.Functions.Like(p.ItemType, $"%{term}%") ||
                     p.Variants.Any(v =>
                         EF.Functions.Like(v.SkuCode, $"%{term}%") ||
                         EF.Functions.Like(v.Barcode, $"%{term}%") ||
@@ -290,6 +316,7 @@ namespace POS.Core.Repositories
                     ItemCode = p.ItemCode,
                     ItemName = p.ItemName,
                     CategoryName = p.Category.CategoryName,
+                    ItemType = p.ItemType,
                     VariantCount = includeDeactivated
                         ? p.Variants.Count()
                         : p.Variants.Count(v => !v.IsDeactivated),
@@ -347,6 +374,7 @@ namespace POS.Core.Repositories
                 .Include(p => p.Category)
                 .Include(p => p.SubCategory)
                 .Include(p => p.UnitOfMeasure)
+                .Include(p => p.TaxCategory)
                 .Include(p => p.Variants)
                     .ThenInclude(v => v.PropertyMappings)
                         .ThenInclude(m => m.AttributeGroup)
@@ -449,12 +477,22 @@ namespace POS.Core.Repositories
             foreach (var variant in variants)
             {
                 NormalizeVariant(variant);
-                ValidateVariant(variant);
+
+                if (string.Equals(parent.ItemType, ItemTypeCodes.Service, StringComparison.Ordinal))
+                {
+                    variant.ReorderLevel = 0;
+                    variant.ItemSuppliers?.Clear();
+                }
+
+                ValidateVariant(variant, parent.ItemType);
             }
 
             ValidateSubmittedVariantDuplicates(variants);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+
+            await ValidateParentReferencesAsync(context, parent);
+
             await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
@@ -494,11 +532,12 @@ namespace POS.Core.Repositories
                     if (existingParent == null)
                         throw new InvalidOperationException("Item record was not found.");
 
-                    await ValidateLockedSetupFieldsForExistingItemAsync(
-                        context,
-                        existingParent,
-                        parent,
-                        variants);
+                    bool parentHasHistory =
+                        await ValidateLockedSetupFieldsForExistingItemAsync(
+                            context,
+                            existingParent,
+                            parent,
+                            variants);
 
                     bool parentWasDeactivated = existingParent.IsDeactivated;
                     bool parentIsBeingReactivated = parentWasDeactivated && !parent.IsDeactivated;
@@ -509,12 +548,29 @@ namespace POS.Core.Repositories
                         parentIsBeingReactivated,
                         now);
 
-                    // Editable fields after first save.
+                    // Common editable fields.
                     existingParent.ItemName = parent.ItemName;
                     existingParent.PrintName = parent.PrintName;
                     existingParent.UnitOfMeasureId = parent.UnitOfMeasureId;
                     existingParent.BaseUom = parent.BaseUom;
+                    existingParent.TaxCategoryId = parent.TaxCategoryId;
                     existingParent.TaxCode = parent.TaxCode;
+                    existingParent.IsTaxInclusive = true;
+
+                    // Structural fields may be corrected only while the item has no
+                    // stock, batch, purchase, sale, return, or adjustment history.
+                    if (!parentHasHistory)
+                    {
+                        existingParent.CategoryId = parent.CategoryId;
+                        existingParent.SubCategoryId = parent.SubCategoryId;
+                        existingParent.ItemType = parent.ItemType;
+                        existingParent.HasBatchTracking = parent.HasBatchTracking;
+                        existingParent.HasExpiryTracking = parent.HasExpiryTracking;
+                        existingParent.HasBatchExpiry = parent.HasBatchExpiry;
+                        existingParent.IsScaleItem = parent.IsScaleItem;
+                        existingParent.IsSerialized = parent.IsSerialized;
+                    }
+
                     existingParent.AllowCashierDiscount = parent.AllowCashierDiscount;
                     existingParent.IsPurchaseLocked = parent.IsPurchaseLocked;
                     existingParent.IsSaleLocked = parent.IsSaleLocked;
@@ -629,7 +685,7 @@ namespace POS.Core.Repositories
             }
         }
 
-        private static async Task ValidateLockedSetupFieldsForExistingItemAsync(
+        private static async Task<bool> ValidateLockedSetupFieldsForExistingItemAsync(
             AppDbContext context,
             ItemParent existingParent,
             ItemParent submittedParent,
@@ -644,6 +700,26 @@ namespace POS.Core.Repositories
                     "Item code cannot be changed after the item is saved. Delete the unused item and create it again with the correct code.");
             }
 
+            var existingVariantIds = await context.ItemVariants
+                .Where(v => v.ItemParentId == existingParent.Id)
+                .Select(v => v.Id)
+                .ToListAsync();
+
+            bool parentHasHistory =
+                (await GetUsedVariantIdsAsync(context, existingVariantIds)).Any();
+
+            if (!parentHasHistory)
+                return false;
+
+            if (!string.Equals(
+                    existingParent.ItemType,
+                    submittedParent.ItemType,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Item type cannot be changed after stock or transaction history exists.");
+            }
+
             if (existingParent.CategoryId != submittedParent.CategoryId)
             {
                 throw new InvalidOperationException(
@@ -653,7 +729,13 @@ namespace POS.Core.Repositories
             if ((existingParent.SubCategoryId ?? 0) != (submittedParent.SubCategoryId ?? 0))
             {
                 throw new InvalidOperationException(
-                    "Sub-category cannot be changed after the item is saved. Delete the unused item and create it again under the correct sub-category.");
+                    "Sub-category cannot be changed after stock or transaction history exists.");
+            }
+
+            if (existingParent.UnitOfMeasureId != submittedParent.UnitOfMeasureId)
+            {
+                throw new InvalidOperationException(
+                    "Unit of Measure cannot be changed after stock or transaction history exists.");
             }
 
             if (existingParent.HasBatchTracking != submittedParent.HasBatchTracking)
@@ -733,6 +815,8 @@ namespace POS.Core.Repositories
                         $"Variant matrix/property structure cannot be changed after save: {existingVariant.SkuCode}.");
                 }
             }
+
+            return true;
         }
 
         private static void ApplyParentActivationStateToSubmittedVariants(
@@ -1400,6 +1484,7 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(v =>
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     !v.ItemParent.IsPurchaseLocked &&
                     (
                         v.SkuCode.ToUpper() == upperTerm ||
@@ -1421,7 +1506,8 @@ namespace POS.Core.Repositories
                 .Where(v =>
                     v.ItemParentId == parentId &&
                     !v.IsDeactivated &&
-                    !v.ItemParent.IsDeactivated)
+                    !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem)
                 .AsNoTracking()
                 .OrderBy(v => v.VariantDescription)
                 .ThenBy(v => v.SkuCode)
@@ -1440,7 +1526,10 @@ namespace POS.Core.Repositories
 
             var query = context.ItemParents
                 .AsNoTracking()
-                .Where(p => !p.IsDeactivated && !p.IsSaleLocked);
+                .Where(p =>
+                    !p.IsDeactivated &&
+                    p.ItemType == ItemTypeCodes.StockItem &&
+                    !p.IsSaleLocked);
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -1492,6 +1581,7 @@ namespace POS.Core.Repositories
                     v.ItemParentId == parentId &&
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     !v.ItemParent.IsSaleLocked)
                 .Select(v => new
                 {
@@ -1783,6 +1873,7 @@ namespace POS.Core.Repositories
                     v.Id == variantId &&
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     !v.ItemParent.IsSaleLocked);
 
             if (variant == null)
@@ -1810,6 +1901,7 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(v =>
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     !v.ItemParent.IsSaleLocked &&
                     (
                         v.SkuCode.ToUpper() == upperTerm ||
@@ -1876,21 +1968,143 @@ namespace POS.Core.Repositories
             return take;
         }
 
+        private static async Task ValidateParentReferencesAsync(
+            AppDbContext context,
+            ItemParent parent)
+        {
+            bool categoryExists = await context.Categories
+                .AnyAsync(c => c.Id == parent.CategoryId && !c.IsDeactivated);
+
+            if (!categoryExists)
+                throw new InvalidOperationException("Selected category is inactive or missing.");
+
+            if (parent.SubCategoryId.HasValue)
+            {
+                bool subCategoryExists = await context.SubCategories
+                    .AnyAsync(s =>
+                        s.Id == parent.SubCategoryId.Value &&
+                        s.CategoryId == parent.CategoryId &&
+                        !s.IsDeactivated);
+
+                if (!subCategoryExists)
+                {
+                    throw new InvalidOperationException(
+                        "Selected sub-category is inactive, missing, or does not belong to the selected category.");
+                }
+            }
+
+            bool uomExists = await context.UnitsOfMeasure
+                .AnyAsync(u => u.Id == parent.UnitOfMeasureId && u.IsActive);
+
+            if (!uomExists)
+                throw new InvalidOperationException("Selected Unit of Measure is inactive or missing.");
+
+            var taxCategory = await context.TaxCategories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t =>
+                    t.Id == parent.TaxCategoryId &&
+                    t.IsActive);
+
+            if (taxCategory == null)
+                throw new InvalidOperationException("Selected tax category is inactive or missing.");
+
+            string[] approvedTaxCategories =
+            {
+                TaxCategoryCodes.Standard,
+                TaxCategoryCodes.ZeroRated,
+                TaxCategoryCodes.Exempt,
+                TaxCategoryCodes.OutOfScope
+            };
+
+            if (!approvedTaxCategories.Contains(taxCategory.CategoryCode))
+                throw new InvalidOperationException("Selected tax category is not approved for Item Master.");
+
+            if (string.Equals(
+                    taxCategory.CategoryCode,
+                    TaxCategoryCodes.Standard,
+                    StringComparison.Ordinal))
+            {
+                DateTime today = DateTime.Today;
+
+                var effectiveRate = await context.TaxRates
+                    .AsNoTracking()
+                    .Where(t =>
+                        t.TaxCategoryId == taxCategory.Id &&
+                        t.IsActive &&
+                        t.EffectiveFrom.HasValue &&
+                        t.EffectiveFrom.Value <= today &&
+                        (!t.EffectiveTo.HasValue || t.EffectiveTo.Value >= today))
+                    .OrderByDescending(t => t.EffectiveFrom)
+                    .FirstOrDefaultAsync();
+
+                if (effectiveRate == null)
+                {
+                    throw new InvalidOperationException(
+                        "No active Standard VAT rate is effective today. Correct Tax Rate Management before saving this item.");
+                }
+
+                parent.TaxCode = effectiveRate.TaxCode;
+            }
+            else
+            {
+                // Legacy compatibility only. The authoritative treatment is
+                // ItemParent.TaxCategoryId.
+                parent.TaxCode = "TAX-FREE";
+            }
+
+            parent.IsTaxInclusive = true;
+        }
+
         private static void NormalizeParent(ItemParent parent)
         {
             parent.ItemCode = NormalizeCode(parent.ItemCode);
             parent.ItemName = NormalizeText(parent.ItemName);
             parent.PrintName = NormalizeText(parent.PrintName);
             parent.BaseUom = NormalizeText(parent.BaseUom);
-            parent.TaxCode = NormalizeText(parent.TaxCode);
+            string submittedItemType = NormalizeText(parent.ItemType);
 
-            if (parent.HasExpiryTracking && !parent.HasBatchTracking)
+            if (submittedItemType.Equals(
+                    ItemTypeCodes.StockItem,
+                    StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
-                    "Expiry tracking requires batch tracking.");
+                parent.ItemType = ItemTypeCodes.StockItem;
+            }
+            else if (submittedItemType.Equals(
+                         ItemTypeCodes.Service,
+                         StringComparison.OrdinalIgnoreCase))
+            {
+                parent.ItemType = ItemTypeCodes.Service;
+            }
+            else
+            {
+                parent.ItemType = submittedItemType;
             }
 
-            parent.HasBatchExpiry = parent.HasExpiryTracking;
+            parent.TaxCode = NormalizeCode(parent.TaxCode);
+
+            if (string.Equals(parent.ItemType, ItemTypeCodes.Service, StringComparison.Ordinal))
+            {
+                parent.HasBatchTracking = false;
+                parent.HasExpiryTracking = false;
+                parent.HasBatchExpiry = false;
+                parent.IsScaleItem = false;
+                parent.IsSerialized = false;
+                parent.IsPurchaseLocked = true;
+            }
+            else
+            {
+                if (parent.HasExpiryTracking && !parent.HasBatchTracking)
+                {
+                    throw new InvalidOperationException(
+                        "Expiry tracking requires batch tracking.");
+                }
+
+                parent.HasBatchExpiry = parent.HasExpiryTracking;
+            }
+
+            // Retail and wholesale prices are stored VAT inclusive.
+            // Purchase price entry mode is selected at PO/GRN document level.
+            parent.IsTaxInclusive = true;
         }
 
         private static void ValidateParent(ItemParent parent)
@@ -1916,6 +2130,12 @@ namespace POS.Core.Repositories
             if (parent.UnitOfMeasureId <= 0)
                 throw new InvalidOperationException("Unit of Measure is required.");
 
+            if (!ItemTypeCodes.IsValid(parent.ItemType))
+                throw new InvalidOperationException("Item type must be Stock Item or Service.");
+
+            if (!parent.TaxCategoryId.HasValue || parent.TaxCategoryId.Value <= 0)
+                throw new InvalidOperationException("Tax category is required.");
+
             if (parent.TaxCode.Length > 20)
                 throw new InvalidOperationException("Tax code cannot be longer than 20 characters.");
 
@@ -1933,7 +2153,9 @@ namespace POS.Core.Repositories
                 variant.VariantDescription = "Standard";
         }
 
-        private static void ValidateVariant(ItemVariant variant)
+        private static void ValidateVariant(
+            ItemVariant variant,
+            string itemType)
         {
             if (string.IsNullOrWhiteSpace(variant.SkuCode))
                 throw new InvalidOperationException("Variant SKU is required.");
@@ -1968,8 +2190,11 @@ namespace POS.Core.Repositories
             if (variant.MaximumPrice > 0 && variant.MinimumPrice > variant.MaximumPrice)
                 throw new InvalidOperationException("Minimum price cannot be greater than maximum price.");
 
-            if (variant.ReorderLevel < 0)
+            if (string.Equals(itemType, ItemTypeCodes.StockItem, StringComparison.Ordinal) &&
+                variant.ReorderLevel < 0)
+            {
                 throw new InvalidOperationException("Reorder level cannot be negative.");
+            }
         }
 
         private static void ValidateSubmittedVariantDuplicates(List<ItemVariant> variants)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models.DTOs;
 
@@ -41,7 +42,8 @@ namespace POS.Core.Repositories
                 .AsNoTracking()
                 .Where(v =>
                     !v.IsDeactivated &&
-                    !v.ItemParent.IsDeactivated)
+                    !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))

@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.Views.Dialogs;
+using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Repositories;
 
@@ -26,6 +27,25 @@ namespace POS.BackOffice.UI.ViewModels
         public AttributeGroup Group { get; set; } = null!;
         public string GroupName => Group.GroupName;
         public ObservableCollection<MatrixPropertySelection> Values { get; } = new();
+    }
+
+    public sealed class ItemTypeOption
+    {
+        public ItemTypeOption(
+            string code,
+            string name,
+            string description)
+        {
+            Code = code;
+            Name = name;
+            Description = description;
+        }
+
+        public string Code { get; }
+
+        public string Name { get; }
+
+        public string Description { get; }
     }
 
     public partial class ItemMasterViewModel : ViewModelBase
@@ -46,6 +66,8 @@ namespace POS.BackOffice.UI.ViewModels
         private bool _isClearing;
         private bool _isUpdatingSupplierSelection;
         private bool _loadedItemWasDeactivated;
+        private bool _loadedItemHasHistory;
+        private bool _isApplyingItemType;
         private bool _isCalculatingPricing; // Safety flag for bi-directional math
 
         private static readonly Random _random = new();
@@ -56,6 +78,7 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private ItemParent _currentItem = new()
         {
+            ItemType = ItemTypeCodes.StockItem,
             HasBatchTracking = true,
             HasExpiryTracking = false,
             HasBatchExpiry = false,
@@ -88,7 +111,23 @@ namespace POS.BackOffice.UI.ViewModels
         private AttributeValue? _propertyValueInput;
 
         [ObservableProperty]
-        private bool _isTaxInclusiveEnabled = true;
+        private ItemTypeOption? _selectedItemType;
+
+        [ObservableProperty]
+        private TaxCategory? _selectedTaxCategory;
+
+        public ObservableCollection<ItemTypeOption> ItemTypes { get; } = new()
+        {
+            new ItemTypeOption(
+                ItemTypeCodes.StockItem,
+                "Stock Item",
+                "Tracks inventory and can be purchased, received, counted, adjusted, and sold."),
+
+            new ItemTypeOption(
+                ItemTypeCodes.Service,
+                "Service",
+                "Does not track stock or batches. It can have prices and VAT and will be enabled in Cashier during the sales integration phase.")
+        };
 
         public ObservableCollection<MatrixPropertySelection> DynamicProperties { get; } = new();
         public ObservableCollection<MatrixPropertyGroupSelection> SelectedPropertyGroups { get; } = new();
@@ -183,8 +222,9 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<AttributeGroup> PropertyKeys { get; } = new();
         public ObservableCollection<AttributeValue> PropertyValues { get; } = new();
         public ObservableCollection<UnitOfMeasure> Uoms { get; } = new();
+        public ObservableCollection<TaxCategory> TaxCategories { get; } = new();
 
-        // FIXED: Using your actual TaxRate Model
+        // Kept internally to resolve the currently effective Standard VAT code.
         public ObservableCollection<TaxRate> AvailableTaxes { get; } = new();
 
         [ObservableProperty]
@@ -194,11 +234,100 @@ namespace POS.BackOffice.UI.ViewModels
         private string _statusMessage = "Ready.";
 
         public bool IsExistingItem => CurrentItem.Id > 0;
-        public bool IsSetupEditable => !IsBusy && !IsExistingItem;
-        public bool IsCurrentItemDeactivated => IsExistingItem && _loadedItemWasDeactivated;
 
-        public string ItemStatusText => !IsExistingItem ? "New Item" : (IsCurrentItemDeactivated ? "Deactivated" : "Active");
-        public string DeactivateReactivateButtonText => IsCurrentItemDeactivated ? "REACTIVATE ITEM" : "DEACTIVATE ITEM";
+        public bool HasItemHistory => IsExistingItem && _loadedItemHasHistory;
+
+        public bool IsSetupEditable =>
+            !IsBusy &&
+            (!IsExistingItem || !_loadedItemHasHistory);
+
+        public bool IsCurrentItemDeactivated =>
+            IsExistingItem && _loadedItemWasDeactivated;
+
+        public bool IsStockItem =>
+            string.Equals(
+                SelectedItemType?.Code ?? CurrentItem.ItemType,
+                ItemTypeCodes.StockItem,
+                StringComparison.Ordinal);
+
+        public bool IsServiceItem =>
+            string.Equals(
+                SelectedItemType?.Code ?? CurrentItem.ItemType,
+                ItemTypeCodes.Service,
+                StringComparison.Ordinal);
+
+        public bool IsSupplierManagementEnabled =>
+            !IsBusy && IsStockItem;
+
+        public bool IsTaxCategoryEditable =>
+            !IsBusy && !IsCurrentItemDeactivated;
+
+        public string ItemStatusText =>
+            !IsExistingItem
+                ? "New Item"
+                : IsCurrentItemDeactivated
+                    ? "Deactivated"
+                    : HasItemHistory
+                        ? "Active / History Locked"
+                        : "Active / Unused";
+
+        public string DeactivateReactivateButtonText =>
+            IsCurrentItemDeactivated
+                ? "REACTIVATE ITEM"
+                : "DEACTIVATE ITEM";
+
+        public string SelectedItemTypeDescription =>
+            SelectedItemType?.Description ??
+            "Select whether this record is a physical stock item or a non-stock service.";
+
+        public string SelectedTaxCategoryText =>
+            SelectedTaxCategory?.CategoryName ?? "Select a tax category";
+
+        public string TaxCategoryHelpText
+        {
+            get
+            {
+                if (SelectedTaxCategory == null)
+                    return "Select Standard VAT, Zero Rated, Exempt, or Out of Scope.";
+
+                if (string.Equals(
+                        SelectedTaxCategory.CategoryCode,
+                        TaxCategoryCodes.Standard,
+                        StringComparison.Ordinal))
+                {
+                    TaxRate? rate = GetCurrentStandardRate();
+
+                    return rate == null
+                        ? "No Standard VAT rate is effective today. Correct Tax Rate Management first."
+                        : $"Current Standard VAT rate: {rate.RatePercent:N2}% from {rate.EffectiveFrom!.Value:yyyy-MM-dd}.";
+                }
+
+                return $"{SelectedTaxCategory.CategoryName} is a fixed 0% treatment. The category remains distinct for reporting.";
+            }
+        }
+
+        public string StructureSafetyText =>
+            !IsExistingItem
+                ? "Structure can be edited until the item receives stock or transaction history."
+                : HasItemHistory
+                    ? "Item type, category, tracking, and variant structure are locked because history exists."
+                    : "This item is unused. Its structure can still be corrected before transactions begin.";
+
+        public string VariantBuilderHelpText =>
+            IsServiceItem
+                ? "Leave matrix values empty for one Standard service, or use variants for options such as A4/A3, colour/black-and-white, or service levels."
+                : "Leave matrix values empty for one Standard stock item, or add property values to generate product variants.";
+
+        public string BulkCostLabel =>
+            IsServiceItem ? "Std. Cost" : "Cost Price";
+
+        public string BulkRetailPriceLabel => "Retail Inc. VAT";
+
+        public string BulkWholesalePriceLabel => "W/S Inc. VAT";
+
+        public string BulkMinimumPriceLabel => "Min Inc. VAT";
+
+        public string BulkMaximumPriceLabel => "Max Inc. VAT";
 
         public ItemMasterViewModel(
             ItemMasterRepository itemMasterRepository,
@@ -223,35 +352,30 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnCurrentItemChanged(ItemParent value)
         {
             RaiseItemStateProperties();
-
-            if (value != null)
-            {
-                var tax = AvailableTaxes.FirstOrDefault(t =>
-                    string.Equals(t.TaxCode, value.TaxCode, StringComparison.OrdinalIgnoreCase));
-                CheckTaxInclusiveState(tax);
-            }
-        }
-
-        private void CheckTaxInclusiveState(TaxRate? tax) // FIXED: Uses TaxRate
-        {
-            if (tax != null && (tax.TaxCode == "TAX-FREE" || tax.RatePercent == 0))
-            {
-                IsTaxInclusiveEnabled = false;
-                CurrentItem.IsTaxInclusive = false;
-            }
-            else
-            {
-                IsTaxInclusiveEnabled = IsSetupEditable;
-            }
         }
 
         private void RaiseItemStateProperties()
         {
             OnPropertyChanged(nameof(IsExistingItem));
+            OnPropertyChanged(nameof(HasItemHistory));
             OnPropertyChanged(nameof(IsSetupEditable));
             OnPropertyChanged(nameof(IsCurrentItemDeactivated));
+            OnPropertyChanged(nameof(IsStockItem));
+            OnPropertyChanged(nameof(IsServiceItem));
+            OnPropertyChanged(nameof(IsSupplierManagementEnabled));
+            OnPropertyChanged(nameof(IsTaxCategoryEditable));
             OnPropertyChanged(nameof(ItemStatusText));
             OnPropertyChanged(nameof(DeactivateReactivateButtonText));
+            OnPropertyChanged(nameof(SelectedItemTypeDescription));
+            OnPropertyChanged(nameof(SelectedTaxCategoryText));
+            OnPropertyChanged(nameof(TaxCategoryHelpText));
+            OnPropertyChanged(nameof(StructureSafetyText));
+            OnPropertyChanged(nameof(VariantBuilderHelpText));
+            OnPropertyChanged(nameof(BulkCostLabel));
+            OnPropertyChanged(nameof(BulkRetailPriceLabel));
+            OnPropertyChanged(nameof(BulkWholesalePriceLabel));
+            OnPropertyChanged(nameof(BulkMinimumPriceLabel));
+            OnPropertyChanged(nameof(BulkMaximumPriceLabel));
 
             DeleteUnusedItemCommand.NotifyCanExecuteChanged();
             DeactivateItemCommand.NotifyCanExecuteChanged();
@@ -259,10 +383,6 @@ namespace POS.BackOffice.UI.ViewModels
             DeleteCommand.NotifyCanExecuteChanged();
             GenerateVariantsCommand.NotifyCanExecuteChanged();
             AddPropertyCommand.NotifyCanExecuteChanged();
-
-            var tax = AvailableTaxes.FirstOrDefault(t =>
-                string.Equals(t.TaxCode, CurrentItem.TaxCode, StringComparison.OrdinalIgnoreCase));
-            CheckTaxInclusiveState(tax);
         }
 
         [RelayCommand(CanExecute = nameof(CanInitialize))]
@@ -294,6 +414,7 @@ namespace POS.BackOffice.UI.ViewModels
             Categories.Clear();
             Uoms.Clear();
             AvailableSuppliers.Clear();
+            TaxCategories.Clear();
             AvailableTaxes.Clear();
 
             var categories = await _categoryRepository.GetAllAsync();
@@ -308,17 +429,40 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var supplier in suppliers.OrderBy(s => s.SupplierCode).ThenBy(s => s.SupplierName))
                 AvailableSuppliers.Add(supplier);
 
-            // FIXED: Fetch Real Taxes from Database
+            await _taxRateRepository.EnsureDefaultsAsync();
+
+            var taxCategories = await _taxRateRepository.GetApprovedCategoriesAsync();
+            foreach (var taxCategory in taxCategories.Where(t => t.IsActive))
+                TaxCategories.Add(taxCategory);
+
             var taxes = await _taxRateRepository.GetActiveAsync();
-            foreach (var tax in taxes.OrderBy(t => t.DisplayOrder))
+            foreach (var tax in taxes.OrderBy(t => t.DisplayOrder).ThenBy(t => t.TaxCode))
                 AvailableTaxes.Add(tax);
 
-            SelectedUom = Uoms.FirstOrDefault();
-
-            if (string.IsNullOrWhiteSpace(CurrentItem.TaxCode) && AvailableTaxes.Any())
+            _isLoadingItem = true;
+            try
             {
-                CurrentItem.TaxCode = AvailableTaxes.First().TaxCode;
+                SelectedUom = Uoms.FirstOrDefault();
+
+                SelectedItemType =
+                    ItemTypes.FirstOrDefault(t =>
+                        string.Equals(t.Code, CurrentItem.ItemType, StringComparison.Ordinal))
+                    ?? ItemTypes.FirstOrDefault(t => t.Code == ItemTypeCodes.StockItem);
+
+                SelectedTaxCategory =
+                    TaxCategories.FirstOrDefault(t => t.Id == CurrentItem.TaxCategoryId)
+                    ?? ResolveUnambiguousLegacyTaxCategory(CurrentItem.TaxCode)
+                    ?? TaxCategories.FirstOrDefault(t =>
+                        t.CategoryCode == TaxCategoryCodes.Standard);
+
+                ApplyTaxCategoryToCurrentItem();
             }
+            finally
+            {
+                _isLoadingItem = false;
+            }
+
+            RaiseItemStateProperties();
         }
 
         partial void OnSelectedCategoryChanged(Category? value)
@@ -359,7 +503,11 @@ namespace POS.BackOffice.UI.ViewModels
 
                 await LoadSubCategoriesAsync(categoryId);
                 await LoadPropertyKeysForCategoryAsync(categoryId);
-                StatusMessage = "Category changed. Select a sub-category and build variants again.";
+
+                if (!IsCodeReadOnly && SelectedCategory != null)
+                    ItemPrefix = BuildItemCodePrefix(SelectedCategory, null);
+
+                StatusMessage = "Category changed. Sub-category is optional. Build variants again.";
             }
             catch (Exception ex)
             {
@@ -374,28 +522,47 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSelectedSubCategoryChanged(SubCategory? value)
         {
-            if (_isLoadingItem || _isClearing) return;
+            if (_isLoadingItem || _isClearing)
+                return;
 
-            if (value != null && SelectedCategory != null && !IsCodeReadOnly)
-            {
-                if (!IsSetupEditable) return;
-                CurrentItem.SubCategoryId = value.Id;
+            if (SelectedCategory == null || !IsSetupEditable)
+                return;
+
+            CurrentItem.SubCategoryId = value?.Id;
+
+            if (!IsCodeReadOnly)
                 ItemPrefix = BuildItemCodePrefix(SelectedCategory, value);
-            }
         }
 
-        private static string BuildItemCodePrefix(Category category, SubCategory subCategory)
+        private static string BuildItemCodePrefix(
+            Category category,
+            SubCategory? subCategory)
         {
-            string categoryCode = (category.CategoryCode ?? string.Empty).Trim().ToUpperInvariant();
-            string subCategoryCode = (subCategory.SubCategoryCode ?? string.Empty).Trim().ToUpperInvariant();
+            string categoryCode =
+                NormalizeCode(category.CategoryCode);
 
-            if (string.IsNullOrWhiteSpace(categoryCode) || string.IsNullOrWhiteSpace(subCategoryCode))
+            if (string.IsNullOrWhiteSpace(categoryCode))
                 return string.Empty;
 
             string categoryPrefix = categoryCode + "-";
 
-            if (subCategoryCode.StartsWith(categoryPrefix, StringComparison.OrdinalIgnoreCase))
-                return subCategoryCode.EndsWith("-") ? subCategoryCode : subCategoryCode + "-";
+            if (subCategory == null)
+                return categoryPrefix;
+
+            string subCategoryCode =
+                NormalizeCode(subCategory.SubCategoryCode);
+
+            if (string.IsNullOrWhiteSpace(subCategoryCode))
+                return categoryPrefix;
+
+            if (subCategoryCode.StartsWith(
+                    categoryPrefix,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return subCategoryCode.EndsWith("-")
+                    ? subCategoryCode
+                    : subCategoryCode + "-";
+            }
 
             return $"{categoryCode}-{subCategoryCode}-";
         }
@@ -476,8 +643,20 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
+                _loadedItemHasHistory =
+                    await _itemMasterRepository.ParentHasHistoryAsync(parentId);
+
                 CurrentItem = fullItem;
                 _loadedItemWasDeactivated = fullItem.IsDeactivated;
+
+                SelectedItemType =
+                    ItemTypes.FirstOrDefault(t =>
+                        string.Equals(t.Code, fullItem.ItemType, StringComparison.Ordinal))
+                    ?? ItemTypes.First(t => t.Code == ItemTypeCodes.StockItem);
+
+                SelectedTaxCategory =
+                    TaxCategories.FirstOrDefault(t => t.Id == fullItem.TaxCategoryId)
+                    ?? ResolveUnambiguousLegacyTaxCategory(fullItem.TaxCode);
 
                 IsCodeReadOnly = true;
                 ItemPrefix = fullItem.ItemCode;
@@ -514,7 +693,13 @@ namespace POS.BackOffice.UI.ViewModels
                 UpdateSupplierAssignmentSelectionCount();
 
                 int activeVariantCount = GeneratedVariants.Count(v => !v.IsDeactivated);
-                StatusMessage = fullItem.IsDeactivated ? "Loaded deactivated item." : "Loaded active item.";
+
+                StatusMessage = fullItem.IsDeactivated
+                    ? "Loaded deactivated item."
+                    : _loadedItemHasHistory
+                        ? "Loaded active item. Structural fields are history locked."
+                        : "Loaded active unused item. Structural corrections are still allowed.";
+
                 RaiseItemStateProperties();
             }
             catch (Exception ex)
@@ -637,7 +822,7 @@ namespace POS.BackOffice.UI.ViewModels
                     WholesalePrice = BulkWholesalePrice,
                     MinimumPrice = BulkMinimumPrice,
                     MaximumPrice = BulkMaximumPrice,
-                    ReorderLevel = BulkReorderLevel,
+                    ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel,
                     ItemSuppliers = new List<ItemSupplier>(),
                     PropertyMappings = new List<ItemPropertyMapping>(),
                     IsSelectedForSupplierAssignment = false,
@@ -677,7 +862,7 @@ namespace POS.BackOffice.UI.ViewModels
                     WholesalePrice = BulkWholesalePrice,
                     MinimumPrice = BulkMinimumPrice,
                     MaximumPrice = BulkMaximumPrice,
-                    ReorderLevel = BulkReorderLevel,
+                    ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel,
                     ItemSuppliers = new List<ItemSupplier>(),
                     PropertyMappings = new List<ItemPropertyMapping>(),
                     IsSelectedForSupplierAssignment = false,
@@ -861,35 +1046,64 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnBulkHasBatchTrackingChanged(bool value)
         {
-            if (!_isLoadingItem && IsExistingItem && value != CurrentItem.HasBatchTracking)
+            if (_isLoadingItem)
+                return;
+
+            if (IsServiceItem)
             {
-                BulkHasBatchTracking = CurrentItem.HasBatchTracking;
-                StatusMessage = "Batch tracking is locked after the item is saved.";
+                BulkHasBatchTracking = false;
+                BulkHasExpiryTracking = false;
+                BulkHasBatchExpiry = false;
                 return;
             }
+
+            if (HasItemHistory && value != CurrentItem.HasBatchTracking)
+            {
+                BulkHasBatchTracking = CurrentItem.HasBatchTracking;
+                StatusMessage = "Batch tracking is locked because stock or transaction history exists.";
+                return;
+            }
+
             if (!value)
             {
                 BulkHasExpiryTracking = false;
                 BulkHasBatchExpiry = false;
             }
+
             NotifyCommandStates();
         }
 
         partial void OnBulkHasExpiryTrackingChanged(bool value)
         {
-            bool currentExpiryTracking = CurrentItem.HasExpiryTracking || CurrentItem.HasBatchExpiry;
-            if (!_isLoadingItem && IsExistingItem && value != currentExpiryTracking)
+            if (_isLoadingItem)
+                return;
+
+            bool currentExpiryTracking =
+                CurrentItem.HasExpiryTracking ||
+                CurrentItem.HasBatchExpiry;
+
+            if (IsServiceItem)
+            {
+                BulkHasExpiryTracking = false;
+                BulkHasBatchExpiry = false;
+                return;
+            }
+
+            if (HasItemHistory && value != currentExpiryTracking)
             {
                 BulkHasExpiryTracking = currentExpiryTracking;
                 BulkHasBatchExpiry = currentExpiryTracking;
+                StatusMessage = "Expiry tracking is locked because history exists.";
                 return;
             }
+
             if (value && !BulkHasBatchTracking)
             {
                 BulkHasExpiryTracking = false;
                 BulkHasBatchExpiry = false;
                 return;
             }
+
             BulkHasBatchExpiry = value;
         }
 
@@ -901,11 +1115,22 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnBulkIsScaleItemChanged(bool value)
         {
-            if (!_isLoadingItem && IsExistingItem && value != CurrentItem.IsScaleItem)
+            if (_isLoadingItem)
+                return;
+
+            if (IsServiceItem)
             {
-                BulkIsScaleItem = CurrentItem.IsScaleItem;
+                BulkIsScaleItem = false;
                 return;
             }
+
+            if (HasItemHistory && value != CurrentItem.IsScaleItem)
+            {
+                BulkIsScaleItem = CurrentItem.IsScaleItem;
+                StatusMessage = "Scale setting is locked because history exists.";
+                return;
+            }
+
             SaveCommand.NotifyCanExecuteChanged();
         }
 
@@ -923,7 +1148,11 @@ namespace POS.BackOffice.UI.ViewModels
                 variant.WholesalePrice = BulkWholesalePrice;
                 variant.MinimumPrice = BulkMinimumPrice;
                 variant.MaximumPrice = BulkMaximumPrice;
-                variant.ReorderLevel = BulkReorderLevel;
+                variant.ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel;
+
+                if (IsServiceItem)
+                    variant.ItemSuppliers.Clear();
+
                 ApplyParentDisplayNames(variant);
             }
             RefreshGeneratedVariantGrid(variants);
@@ -1179,19 +1408,45 @@ namespace POS.BackOffice.UI.ViewModels
                 CurrentItem.UnitOfMeasureId = SelectedUom!.Id;
                 CurrentItem.BaseUom = SelectedUom.UomCode;
 
-                CurrentItem.IsScaleItem = BulkIsScaleItem;
-                CurrentItem.HasBatchTracking = BulkHasBatchTracking;
-                CurrentItem.HasExpiryTracking = BulkHasExpiryTracking;
-                CurrentItem.HasBatchExpiry = BulkHasExpiryTracking;
-                CurrentItem.IsSerialized = BulkIsSerialized;
+                CurrentItem.ItemType = SelectedItemType!.Code;
+                CurrentItem.TaxCategoryId = SelectedTaxCategory!.Id;
+                CurrentItem.TaxCode = ResolveLegacyTaxCode();
+                CurrentItem.IsTaxInclusive = true;
+
+                CurrentItem.IsScaleItem =
+                    IsStockItem && BulkIsScaleItem;
+
+                CurrentItem.HasBatchTracking =
+                    IsStockItem && BulkHasBatchTracking;
+
+                CurrentItem.HasExpiryTracking =
+                    IsStockItem &&
+                    BulkHasBatchTracking &&
+                    BulkHasExpiryTracking;
+
+                CurrentItem.HasBatchExpiry =
+                    CurrentItem.HasExpiryTracking;
+
+                CurrentItem.IsSerialized =
+                    IsStockItem && BulkIsSerialized;
+
+                if (IsServiceItem)
+                    CurrentItem.IsPurchaseLocked = true;
 
                 CurrentItem.Category = null!;
                 CurrentItem.SubCategory = null;
                 CurrentItem.UnitOfMeasure = null!;
+                CurrentItem.TaxCategory = null;
                 CurrentItem.Variants = new List<ItemVariant>();
 
                 foreach (var variant in GeneratedVariants)
                 {
+                    if (IsServiceItem)
+                    {
+                        variant.ReorderLevel = 0;
+                        variant.ItemSuppliers.Clear();
+                    }
+
                     variant.ItemParent = null!;
                     foreach (var mapping in variant.PropertyMappings)
                     {
@@ -1290,16 +1545,29 @@ namespace POS.BackOffice.UI.ViewModels
         {
             _isClearing = true;
             _loadedItemWasDeactivated = false;
+            _loadedItemHasHistory = false;
 
             CurrentItem = new ItemParent
             {
+                ItemType = ItemTypeCodes.StockItem,
                 HasBatchTracking = true,
                 HasExpiryTracking = false,
                 HasBatchExpiry = false,
                 AllowCashierDiscount = true,
                 IsTaxInclusive = true,
-                TaxCode = AvailableTaxes.FirstOrDefault()?.TaxCode ?? "TAX-FREE"
+                IsPurchaseLocked = false
             };
+
+            SelectedItemType =
+                ItemTypes.FirstOrDefault(t =>
+                    t.Code == ItemTypeCodes.StockItem);
+
+            SelectedTaxCategory =
+                TaxCategories.FirstOrDefault(t =>
+                    t.CategoryCode == TaxCategoryCodes.Standard)
+                ?? TaxCategories.FirstOrDefault();
+
+            ApplyTaxCategoryToCurrentItem();
 
             ItemPrefix = string.Empty;
             ItemSuffix = string.Empty;
@@ -1418,7 +1686,151 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnMasterSearchTextChanged(string value) { if (_isInitialized) StatusMessage = "Type search text and click SEARCH."; }
         partial void OnIncludeDeactivatedItemsChanged(bool value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
         partial void OnItemSuffixChanged(string value) { GenerateVariantsCommand.NotifyCanExecuteChanged(); SaveCommand.NotifyCanExecuteChanged(); }
-        partial void OnSelectedUomChanged(UnitOfMeasure? value) => SaveCommand.NotifyCanExecuteChanged();
+        partial void OnSelectedUomChanged(UnitOfMeasure? value) =>
+            SaveCommand.NotifyCanExecuteChanged();
+
+        partial void OnSelectedItemTypeChanged(ItemTypeOption? value)
+        {
+            if (_isApplyingItemType || value == null)
+                return;
+
+            if (_isLoadingItem)
+            {
+                CurrentItem.ItemType = value.Code;
+                RaiseItemStateProperties();
+                return;
+            }
+
+            _isApplyingItemType = true;
+
+            try
+            {
+                if (!_isLoadingItem &&
+                    HasItemHistory &&
+                    !string.Equals(
+                        value.Code,
+                        CurrentItem.ItemType,
+                        StringComparison.Ordinal))
+                {
+                    SelectedItemType =
+                        ItemTypes.FirstOrDefault(t =>
+                            string.Equals(
+                                t.Code,
+                                CurrentItem.ItemType,
+                                StringComparison.Ordinal));
+
+                    StatusMessage =
+                        "Item type is locked because stock or transaction history exists.";
+
+                    return;
+                }
+
+                CurrentItem.ItemType = value.Code;
+
+                if (string.Equals(
+                        value.Code,
+                        ItemTypeCodes.Service,
+                        StringComparison.Ordinal))
+                {
+                    BulkHasBatchTracking = false;
+                    BulkHasExpiryTracking = false;
+                    BulkHasBatchExpiry = false;
+                    BulkIsScaleItem = false;
+                    BulkIsSerialized = false;
+                    BulkReorderLevel = 0;
+                    CurrentItem.IsPurchaseLocked = true;
+
+                    foreach (var variant in GeneratedVariants)
+                    {
+                        variant.ReorderLevel = 0;
+                        variant.ItemSuppliers.Clear();
+                        variant.IsSelectedForSupplierAssignment = false;
+                    }
+
+                    SelectedVariantSuppliers.Clear();
+                    SelectedSupplierAssignmentCount = 0;
+                    SelectAllVariantsForSupplierAssignment = false;
+                }
+                else if (!HasItemHistory)
+                {
+                    CurrentItem.IsPurchaseLocked = false;
+                    BulkHasBatchTracking = true;
+                }
+
+                StatusMessage =
+                    string.Equals(value.Code, ItemTypeCodes.Service, StringComparison.Ordinal)
+                        ? "Service selected. Stock, batch, GRN, and supplier-inventory controls are disabled."
+                        : "Stock Item selected. Choose the required stock-tracking method.";
+            }
+            finally
+            {
+                _isApplyingItemType = false;
+                RaiseItemStateProperties();
+                NotifyCommandStates();
+            }
+        }
+
+        partial void OnSelectedTaxCategoryChanged(TaxCategory? value)
+        {
+            ApplyTaxCategoryToCurrentItem();
+            OnPropertyChanged(nameof(SelectedTaxCategoryText));
+            OnPropertyChanged(nameof(TaxCategoryHelpText));
+            SaveCommand.NotifyCanExecuteChanged();
+        }
+
+        private void ApplyTaxCategoryToCurrentItem()
+        {
+            CurrentItem.TaxCategoryId = SelectedTaxCategory?.Id;
+            CurrentItem.TaxCode = ResolveLegacyTaxCode();
+            CurrentItem.IsTaxInclusive = true;
+        }
+
+        private string ResolveLegacyTaxCode()
+        {
+            if (SelectedTaxCategory == null)
+                return string.Empty;
+
+            if (string.Equals(
+                    SelectedTaxCategory.CategoryCode,
+                    TaxCategoryCodes.Standard,
+                    StringComparison.Ordinal))
+            {
+                return GetCurrentStandardRate()?.TaxCode ?? "VAT-STD";
+            }
+
+            return "TAX-FREE";
+        }
+
+        private TaxCategory? ResolveUnambiguousLegacyTaxCategory(
+            string? taxCode)
+        {
+            string code = NormalizeCode(taxCode);
+
+            if (code.StartsWith("VAT-STD", StringComparison.Ordinal))
+            {
+                return TaxCategories.FirstOrDefault(t =>
+                    t.CategoryCode == TaxCategoryCodes.Standard);
+            }
+
+            return null;
+        }
+
+        private TaxRate? GetCurrentStandardRate()
+        {
+            DateTime today = DateTime.Today;
+
+            return AvailableTaxes
+                .Where(t =>
+                    t.IsActive &&
+                    t.TaxCategory != null &&
+                    t.TaxCategory.CategoryCode == TaxCategoryCodes.Standard &&
+                    t.EffectiveFrom.HasValue &&
+                    t.EffectiveFrom.Value.Date <= today &&
+                    (!t.EffectiveTo.HasValue ||
+                     t.EffectiveTo.Value.Date >= today))
+                .OrderByDescending(t => t.EffectiveFrom)
+                .FirstOrDefault();
+        }
 
         partial void OnIsBusyChanged(bool value)
         {
@@ -1447,11 +1859,35 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanInitialize() => !IsBusy && !_isInitialized;
         private bool CanRunCommand() => !IsBusy;
-        private bool CanAddProperty() => !IsBusy && IsSetupEditable && SelectedPropertyKey != null && PropertyValueInput != null;
-        private bool CanGenerateVariants() => !IsBusy && IsSetupEditable;
-        private bool CanAssignSupplierToSelectedVariants() => !IsBusy && GeneratedVariants.Any(v => v.IsSelectedForSupplierAssignment);
-        private bool CanAddSupplierToVariant() => !IsBusy && SelectedVariantForSupplierEdit != null && SupplierToAdd != null && SupplierCostInput >= 0 && SupplierMinimumOrderQuantityInput > 0;
-        private bool CanApplySupplierToAllVariants() => !IsBusy && GeneratedVariants.Any() && BulkSupplierToAssign != null && BulkSupplierCostInput >= 0 && BulkSupplierMinimumOrderQuantityInput > 0;
+        private bool CanAddProperty() =>
+            !IsBusy &&
+            IsSetupEditable &&
+            SelectedPropertyKey != null &&
+            PropertyValueInput != null;
+
+        private bool CanGenerateVariants() =>
+            !IsBusy && IsSetupEditable;
+
+        private bool CanAssignSupplierToSelectedVariants() =>
+            !IsBusy &&
+            IsStockItem &&
+            GeneratedVariants.Any(v => v.IsSelectedForSupplierAssignment);
+
+        private bool CanAddSupplierToVariant() =>
+            !IsBusy &&
+            IsStockItem &&
+            SelectedVariantForSupplierEdit != null &&
+            SupplierToAdd != null &&
+            SupplierCostInput >= 0 &&
+            SupplierMinimumOrderQuantityInput > 0;
+
+        private bool CanApplySupplierToAllVariants() =>
+            !IsBusy &&
+            IsStockItem &&
+            GeneratedVariants.Any() &&
+            BulkSupplierToAssign != null &&
+            BulkSupplierCostInput >= 0 &&
+            BulkSupplierMinimumOrderQuantityInput > 0;
         private bool CanSave() => !IsBusy;
         private bool CanDeleteUnusedItem() => !IsBusy && IsExistingItem;
         private bool CanDeactivateItem() => !IsBusy && IsExistingItem && !_loadedItemWasDeactivated;
@@ -1462,20 +1898,91 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool ValidateBeforeVariantGeneration(string itemCode)
         {
-            if (SelectedCategory == null) return false;
-            if (SelectedSubCategory == null) return false;
+            if (SelectedItemType == null ||
+                !ItemTypeCodes.IsValid(SelectedItemType.Code))
+            {
+                _messageBoxService.ShowWarning(
+                    "Select Stock Item or Service.",
+                    "Validation Error");
+                return false;
+            }
+
+            if (SelectedCategory == null)
+            {
+                _messageBoxService.ShowWarning(
+                    "Select a category.",
+                    "Validation Error");
+                return false;
+            }
+
+            if (SelectedUom == null)
+            {
+                _messageBoxService.ShowWarning(
+                    "Select a Unit of Measure.",
+                    "Validation Error");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(itemCode))
+            {
+                _messageBoxService.ShowWarning(
+                    "Enter the item-code suffix.",
+                    "Validation Error");
+                return false;
+            }
+
+            if (!CodeRegex.IsMatch(itemCode))
+            {
+                _messageBoxService.ShowWarning(
+                    "Item code may contain only letters, numbers, underscore, and hyphen.",
+                    "Validation Error");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(CurrentItem.ItemName))
+            {
+                _messageBoxService.ShowWarning(
+                    "Enter the item name.",
+                    "Validation Error");
+                return false;
+            }
+
             return true;
         }
 
         private bool ValidateBeforeSave(string itemCode)
         {
-            if (!ValidateBeforeVariantGeneration(itemCode)) return false;
-            if (string.IsNullOrWhiteSpace(CurrentItem.TaxCode))
+            if (!ValidateBeforeVariantGeneration(itemCode))
+                return false;
+
+            if (SelectedTaxCategory == null)
             {
-                _messageBoxService.ShowWarning("Please select a valid tax profile.", "Validation Error");
+                _messageBoxService.ShowWarning(
+                    "Select Standard VAT, Zero Rated, Exempt, or Out of Scope.",
+                    "Validation Error");
                 return false;
             }
-            if (!GeneratedVariants.Any()) return false;
+
+            if (string.Equals(
+                    SelectedTaxCategory.CategoryCode,
+                    TaxCategoryCodes.Standard,
+                    StringComparison.Ordinal) &&
+                GetCurrentStandardRate() == null)
+            {
+                _messageBoxService.ShowWarning(
+                    "No Standard VAT rate is effective today. Correct Tax Rate Management first.",
+                    "Tax Setup Required");
+                return false;
+            }
+
+            if (!GeneratedVariants.Any())
+            {
+                _messageBoxService.ShowWarning(
+                    "Generate at least one variant. Leave matrix values empty to create one Standard variant.",
+                    "Validation Error");
+                return false;
+            }
+
             return true;
         }
 

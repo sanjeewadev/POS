@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
@@ -35,7 +36,8 @@ namespace POS.Core.Repositories
                 .AsNoTracking()
                 .Where(v =>
                     !v.IsDeactivated &&
-                    !v.ItemParent.IsDeactivated);
+                    !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -130,7 +132,8 @@ namespace POS.Core.Repositories
                 .Include(v => v.ItemParent)
                 .Where(v =>
                     !v.IsDeactivated &&
-                    !v.ItemParent.IsDeactivated)
+                    !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem)
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -433,7 +436,8 @@ namespace POS.Core.Repositories
                 .AnyAsync(v =>
                     v.Id == itemVariantId &&
                     !v.IsDeactivated &&
-                    !v.ItemParent.IsDeactivated);
+                    !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem);
 
             if (!exists)
                 throw new InvalidOperationException("Selected item is inactive or does not exist.");

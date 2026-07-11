@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 
@@ -83,6 +84,7 @@ namespace POS.Core.Repositories
                     !b.IsDeactivated &&
                     !b.ItemVariant.IsDeactivated &&
                     !b.ItemVariant.ItemParent.IsDeactivated &&
+                    b.ItemVariant.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     (
                         ((b.InternalBatchBarcode ?? string.Empty) != string.Empty &&
                          (b.InternalBatchBarcode ?? string.Empty).ToUpper() == upperSearch) ||
@@ -100,6 +102,7 @@ namespace POS.Core.Repositories
                 .Where(v =>
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     (
                         ((v.Barcode ?? string.Empty).ToUpper() == upperSearch) ||
                         v.SkuCode.ToUpper() == upperSearch ||
@@ -150,7 +153,8 @@ namespace POS.Core.Repositories
                 .Where(b =>
                     !b.IsDeactivated &&
                     !b.ItemVariant.IsDeactivated &&
-                    !b.ItemVariant.ItemParent.IsDeactivated)
+                    !b.ItemVariant.ItemParent.IsDeactivated &&
+                    b.ItemVariant.ItemParent.ItemType == ItemTypeCodes.StockItem)
                 .OrderBy(b => b.ItemVariant.ItemParent.ItemCode)
                 .ThenBy(b => b.ItemVariant.VariantDescription)
                 .ThenBy(b => b.ExpiryDate ?? DateTime.MaxValue)
@@ -380,6 +384,15 @@ namespace POS.Core.Repositories
 
                 if (batch.ItemVariant.IsDeactivated || batch.ItemVariant.ItemParent.IsDeactivated)
                     throw new InvalidOperationException($"Item linked to stock row '{BuildBatchDisplayName(batch)}' is deactivated.");
+
+                if (!string.Equals(
+                        batch.ItemVariant.ItemParent.ItemType,
+                        ItemTypeCodes.StockItem,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Service linked to stock row '{BuildBatchDisplayName(batch)}' cannot be adjusted as inventory.");
+                }
 
                 bool isGeneral = IsGeneralBatch(batch.BatchNo);
                 bool isBatchTracked = batch.ItemVariant.ItemParent.HasBatchTracking;

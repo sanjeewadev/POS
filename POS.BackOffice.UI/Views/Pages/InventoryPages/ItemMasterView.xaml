@@ -235,8 +235,12 @@
                         <DataGridTextColumn Header="Name"
                                             Binding="{Binding ItemName, Mode=OneWay}"
                                             Width="*"
-                                            MinWidth="140"
+                                            MinWidth="120"
                                             FontWeight="SemiBold"/>
+
+                        <DataGridTextColumn Header="Type"
+                                            Binding="{Binding ItemTypeText, Mode=OneWay}"
+                                            Width="78"/>
 
                         <DataGridTextColumn Header="Vars"
                                             Binding="{Binding VariantCount, Mode=OneWay}"
@@ -373,7 +377,7 @@
                                   Style="{StaticResource ClassicCombo}"/>
 
                         <TextBlock Grid.Column="3"
-                                   Text="Sub-Cat *"
+                                   Text="Sub-Cat"
                                    Style="{StaticResource InlineLabel}"
                                    Foreground="{DynamicResource HeaderTextBrush}"/>
 
@@ -387,6 +391,51 @@
                                   IsEnabled="{Binding IsSetupEditable}"
                                   Style="{StaticResource ClassicCombo}"/>
                     </Grid>
+
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="190"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Item Type *"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="{DynamicResource HeaderTextBrush}"/>
+
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding ItemTypes}"
+                                  SelectedItem="{Binding SelectedItemType, Mode=TwoWay}"
+                                  DisplayMemberPath="Name"
+                                  IsEditable="False"
+                                  IsEnabled="{Binding IsSetupEditable}"
+                                  Style="{StaticResource ClassicCombo}"/>
+
+                        <TextBlock Grid.Column="3"
+                                   Text="Setup Safety"
+                                   Style="{StaticResource InlineLabel}"/>
+
+                        <TextBlock Grid.Column="4"
+                                   Text="{Binding StructureSafetyText, Mode=OneWay}"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   FontSize="10"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Border Background="{DynamicResource HighlightBackgroundBrush}"
+                            BorderBrush="{DynamicResource LightBorderBrush}"
+                            BorderThickness="1"
+                            Padding="6"
+                            Margin="0,0,0,6">
+                        <TextBlock Text="{Binding SelectedItemTypeDescription, Mode=OneWay}"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   FontSize="10"
+                                   TextWrapping="Wrap"/>
+                    </Border>
 
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
@@ -492,6 +541,7 @@
                                   IsEditable="False"
                                   IsTextSearchEnabled="True"
                                   TextSearch.TextPath="UomCode"
+                                  IsEnabled="{Binding IsSetupEditable}"
                                   Style="{StaticResource ClassicCombo}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -505,15 +555,30 @@
                         </ComboBox>
 
                         <TextBlock Grid.Column="6"
-                                   Text="Tax Group *"
+                                   Text="Tax Category *"
                                    Style="{StaticResource InlineLabel}"
                                    Foreground="{DynamicResource HeaderTextBrush}"/>
 
                         <ComboBox Grid.Column="7"
-                                  ItemsSource="{Binding TaxCodes}"
-                                  SelectedItem="{Binding SelectedTaxCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  ItemsSource="{Binding TaxCategories}"
+                                  SelectedItem="{Binding SelectedTaxCategory, Mode=TwoWay}"
+                                  IsEditable="False"
+                                  IsEnabled="{Binding IsTaxCategoryEditable}"
                                   Style="{StaticResource ClassicCombo}"
-                                  ToolTip="Tax group for this item. Final values should be TAX-FREE, VAT-STD, and VAT-RED."/>
+                                  ToolTip="Authoritative tax treatment for this item.">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding CategoryName}"
+                                                   FontWeight="Bold"/>
+                                        <TextBlock Text="  "/>
+                                        <TextBlock Text="{Binding CategoryCode}"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                                   FontSize="10"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </Grid>
 
                     <Border Background="#FFF8D8"
@@ -523,7 +588,7 @@
                             Margin="0,5,0,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="115"/>
+                                <ColumnDefinition Width="125"/>
                                 <ColumnDefinition Width="190"/>
                                 <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="230"/>
@@ -531,35 +596,28 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Column="0"
-                                       Text="Price Entry Mode:"
+                                       Text="Selling Price Rule:"
                                        Style="{StaticResource InlineLabel}"
                                        Foreground="{DynamicResource HeaderTextBrush}"
                                        FontWeight="Bold"/>
 
-                            <StackPanel Grid.Column="1"
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="Tax Group: "
-                                           FontSize="11"
-                                           Foreground="{DynamicResource SecondaryTextBrush}"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding SelectedTaxCode, Mode=OneWay, FallbackValue='TAX-FREE'}"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding SelectedTaxCategoryText, Mode=OneWay}"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource PrimaryTextBrush}"
+                                       VerticalAlignment="Center"/>
 
-                            <CheckBox Grid.Column="3"
-                                      Content="Prices are Tax Inclusive"
-                                      IsChecked="{Binding CurrentItem.IsTaxInclusive, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      IsEnabled="{Binding IsSetupEditable}"
-                                      Margin="0,2,0,0"
-                                      FontWeight="SemiBold"
-                                      ToolTip="Tick for MRP/shelf-price products where entered prices already include VAT. Untick for tax-exclusive pricing."/>
+                            <TextBlock Grid.Column="3"
+                                       Text="Retail, wholesale, minimum, and maximum prices are stored VAT inclusive."
+                                       Foreground="{DynamicResource HeaderTextBrush}"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Column="4"
-                                       Text="Unticked = Tax Exclusive. TAX-FREE items always calculate VAT as 0. This setting becomes the default for PO/GRN and future cashier VAT calculations."
+                                       Text="{Binding TaxCategoryHelpText, Mode=OneWay}"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        FontSize="10"
                                        FontStyle="Italic"
@@ -571,68 +629,119 @@
                     <Border Background="{DynamicResource WhiteBackgroundBrush}"
                             BorderBrush="{DynamicResource LightBorderBrush}"
                             BorderThickness="1"
-                            Padding="5"
+                            Padding="7"
                             Margin="0,5,0,0">
 
-                        <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="POS / Stock Flags:"
-                                       Style="{StaticResource InlineLabel}"
-                                       Margin="0,0,10,0"
-                                       Foreground="{DynamicResource SecondaryTextBrush}"/>
-
-                            <CheckBox Content="Batch Tracking"
-                                      IsChecked="{Binding BulkHasBatchTracking, Mode=TwoWay}"
-                                      IsEnabled="{Binding IsSetupEditable}"
-                                      Margin="0,0,15,0"
-                                      FontWeight="Bold"/>
-
-                            <CheckBox Content="Expiry Tracking"
-                                      IsChecked="{Binding BulkHasExpiryTracking, Mode=TwoWay}"
-                                      Margin="0,0,15,0"
-                                      FontWeight="SemiBold">
-                                <CheckBox.Style>
-                                    <Style TargetType="CheckBox">
-                                        <Setter Property="IsEnabled" Value="True"/>
+                        <StackPanel>
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSetupEditable}" Value="False">
-                                                <Setter Property="IsEnabled" Value="False"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding BulkHasBatchTracking}" Value="False">
-                                                <Setter Property="IsEnabled" Value="False"/>
+                                            <DataTrigger Binding="{Binding IsStockItem}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </CheckBox.Style>
-                            </CheckBox>
+                                </StackPanel.Style>
 
-                            <CheckBox Content="Scale Item"
-                                      IsChecked="{Binding BulkIsScaleItem, Mode=TwoWay}"
-                                      IsEnabled="{Binding IsSetupEditable}"
-                                      Margin="0,0,15,0"
-                                      FontWeight="SemiBold"/>
+                                <WrapPanel Orientation="Horizontal"
+                                           VerticalAlignment="Center">
+                                    <TextBlock Text="Stock Controls:"
+                                               Style="{StaticResource InlineLabel}"
+                                               Margin="0,0,10,0"
+                                               Foreground="{DynamicResource HeaderTextBrush}"/>
 
-                            <CheckBox Content="Allow Cashier Discount"
-                                      IsChecked="{Binding CurrentItem.AllowCashierDiscount, Mode=TwoWay}"
-                                      Margin="0,0,15,0"
-                                      FontWeight="SemiBold"/>
+                                    <CheckBox Content="Batch Tracking"
+                                              IsChecked="{Binding BulkHasBatchTracking, Mode=TwoWay}"
+                                              IsEnabled="{Binding IsSetupEditable}"
+                                              Margin="0,0,15,0"
+                                              FontWeight="Bold"/>
 
-                            <CheckBox Content="Lock Purchase"
-                                      IsChecked="{Binding CurrentItem.IsPurchaseLocked, Mode=TwoWay}"
-                                      Margin="0,0,15,0"
-                                      FontWeight="SemiBold"
-                                      Foreground="{DynamicResource WarningTextBrush}"/>
+                                    <CheckBox Content="Expiry Tracking"
+                                              IsChecked="{Binding BulkHasExpiryTracking, Mode=TwoWay}"
+                                              Margin="0,0,15,0"
+                                              FontWeight="SemiBold">
+                                        <CheckBox.Style>
+                                            <Style TargetType="CheckBox">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSetupEditable}" Value="False">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding BulkHasBatchTracking}" Value="False">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </CheckBox.Style>
+                                    </CheckBox>
 
-                            <CheckBox Content="Lock Sale"
-                                      IsChecked="{Binding CurrentItem.IsSaleLocked, Mode=TwoWay}"
-                                      Margin="0,0,15,0"
-                                      FontWeight="SemiBold"
-                                      Foreground="{DynamicResource WarningTextBrush}"/>
+                                    <CheckBox Content="Scale Item"
+                                              IsChecked="{Binding BulkIsScaleItem, Mode=TwoWay}"
+                                              IsEnabled="{Binding IsSetupEditable}"
+                                              Margin="0,0,15,0"
+                                              FontWeight="SemiBold"/>
 
-                            <TextBlock Text="Use the Delete / Deactivate / Reactivate buttons above for item status."
-                                       Foreground="{DynamicResource SecondaryTextBrush}"
-                                       FontStyle="Italic"
-                                       VerticalAlignment="Center"/>
-                        </WrapPanel>
+                                    <CheckBox Content="Allow Cashier Discount"
+                                              IsChecked="{Binding CurrentItem.AllowCashierDiscount, Mode=TwoWay}"
+                                              Margin="0,0,15,0"
+                                              FontWeight="SemiBold"/>
+
+                                    <CheckBox Content="Lock Purchase"
+                                              IsChecked="{Binding CurrentItem.IsPurchaseLocked, Mode=TwoWay}"
+                                              Margin="0,0,15,0"
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource WarningTextBrush}"/>
+
+                                    <CheckBox Content="Lock Sale"
+                                              IsChecked="{Binding CurrentItem.IsSaleLocked, Mode=TwoWay}"
+                                              Margin="0,0,15,0"
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource WarningTextBrush}"/>
+                                </WrapPanel>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsServiceItem}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0"
+                                               Text="Service: no stock, batch, expiry, GRN, stock count, stock adjustment, or inventory movement. Standard cost remains optional for profit reporting."
+                                               Foreground="{DynamicResource HeaderTextBrush}"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+
+                                    <CheckBox Grid.Column="1"
+                                              Content="Allow Cashier Discount"
+                                              IsChecked="{Binding CurrentItem.AllowCashierDiscount, Mode=TwoWay}"
+                                              Margin="15,0,15,0"
+                                              FontWeight="SemiBold"/>
+
+                                    <CheckBox Grid.Column="2"
+                                              Content="Lock Sale"
+                                              IsChecked="{Binding CurrentItem.IsSaleLocked, Mode=TwoWay}"
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource WarningTextBrush}"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </Border>
@@ -665,7 +774,7 @@
                                     <TextBlock Text="2. MATRIX VARIANT BUILDER"
                                                Style="{StaticResource HeaderLabel}"/>
 
-                                    <TextBlock Text="For simple/no-variant items such as carrot, loose rice, sugar, or basic stationery, leave matrix values empty and click Generate Variants. The system will create one internal Standard variant, but Standard will not print in the final product name."
+                                    <TextBlock Text="{Binding VariantBuilderHelpText, Mode=OneWay}"
                                                Foreground="{DynamicResource SecondaryTextBrush}"
                                                FontSize="11"
                                                TextWrapping="Wrap"
@@ -918,6 +1027,16 @@
                                 </Grid>
 
                                 <Grid Margin="0,0,0,8">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStockItem}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="95"/>
                                         <ColumnDefinition Width="90"/>
@@ -953,7 +1072,7 @@
                                         BorderThickness="1"
                                         Padding="8">
 
-                                    <TextBlock Text="For average-cost items, untick Batch Tracking before first save. After saving, tracking/category/matrix setup is locked. If setup is wrong and the item is unused, delete it safely and create again."
+                                    <TextBlock Text="{Binding StructureSafetyText, Mode=OneWay}"
                                                TextWrapping="Wrap"
                                                FontSize="11"
                                                Foreground="{DynamicResource SecondaryTextBrush}"/>
@@ -973,10 +1092,20 @@
 
                         <!-- SUPPLIER ASSIGN TOOLBAR -->
                         <Border Grid.Row="0"
-                Background="{DynamicResource HighlightBackgroundBrush}"
-                BorderBrush="{DynamicResource LightBorderBrush}"
-                BorderThickness="1"
-                Padding="8">
+                                Background="{DynamicResource HighlightBackgroundBrush}"
+                                BorderBrush="{DynamicResource LightBorderBrush}"
+                                BorderThickness="1"
+                                Padding="8">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStockItem}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -1049,6 +1178,7 @@
                                         <DataTemplate>
                                             <CheckBox IsChecked="{Binding IsSelectedForSupplierAssignment, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                       Command="{Binding DataContext.RefreshSupplierAssignmentSelectionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      IsEnabled="{Binding DataContext.IsSupplierManagementEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"/>
                                         </DataTemplate>
@@ -1082,32 +1212,48 @@
                                     Binding="{Binding Barcode, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                     Width="135"/>
 
-                                <DataGridTextColumn Header="Cost"
+                                <DataGridTextColumn Header="Cost / Std Cost"
                                     Binding="{Binding CostPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                     Width="80"/>
 
-                                <DataGridTextColumn Header="Retail Rs."
+                                <DataGridTextColumn Header="Retail Inc VAT"
                                     Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                     Width="90"
                                     FontWeight="Bold"
                                     Foreground="{DynamicResource SuccessBorderBrush}"
                                     CellStyle="{StaticResource RetailCell}"/>
 
-                                <DataGridTextColumn Header="Wholesale"
+                                <DataGridTextColumn Header="W/S Inc VAT"
                                     Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                     Width="90"/>
 
-                                <DataGridTextColumn Header="Min"
+                                <DataGridTextColumn Header="Min Inc VAT"
                                     Binding="{Binding MinimumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                     Width="70"/>
 
-                                <DataGridTextColumn Header="Max"
+                                <DataGridTextColumn Header="Max Inc VAT"
                                     Binding="{Binding MaximumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                     Width="70"/>
 
-                                <DataGridTextColumn Header="Reorder"
-                                    Binding="{Binding ReorderLevel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                    Width="75"/>
+                                <DataGridTemplateColumn Header="Reorder"
+                                                        Width="75">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding ReorderLevel, Mode=OneWay}"
+                                                       HorizontalAlignment="Right"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,4,0"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding ReorderLevel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     IsEnabled="{Binding DataContext.IsStockItem, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     HorizontalContentAlignment="Right"
+                                                     Style="{StaticResource ClassicInput}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
 
                                 <DataGridCheckBoxColumn Header="Inactive"
                                         Binding="{Binding IsDeactivated, Mode=TwoWay}"
@@ -1117,7 +1263,18 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem Header="Approved Suppliers" Style="{StaticResource ClassicTab}">
+                <TabItem Header="Approved Suppliers">
+                    <TabItem.Style>
+                        <Style TargetType="TabItem" BasedOn="{StaticResource ClassicTab}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsStockItem}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TabItem.Style>
+
                     <Grid Margin="10">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
