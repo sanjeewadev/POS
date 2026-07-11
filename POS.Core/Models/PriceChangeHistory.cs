@@ -38,6 +38,22 @@ namespace POS.Core.Models
         public ItemBatch? ItemBatch { get; set; }
 
         // =========================================================
+        // SOURCE DOCUMENT AUDIT
+        // Populated when a price change originates from a document
+        // such as a posted GRN. Existing/manual history remains blank.
+        // =========================================================
+
+        [MaxLength(30)]
+        public string SourceDocumentType { get; set; } = string.Empty;
+
+        public int? SourceDocumentId { get; set; }
+
+        public int? SourceDocumentLineId { get; set; }
+
+        [MaxLength(50)]
+        public string SourceDocumentNo { get; set; } = string.Empty;
+
+        // =========================================================
         // SNAPSHOT FIELDS
         // Keep these even if item/batch names change later.
         // =========================================================

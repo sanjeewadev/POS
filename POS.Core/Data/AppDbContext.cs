@@ -714,6 +714,16 @@ namespace POS.Core.Data
                     .HasMaxLength(50)
                     .UseCollation("NOCASE");
 
+                entity.Property(p => p.SourceDocumentType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.SourceDocumentNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
                 entity.Property(p => p.ItemCode)
                     .HasMaxLength(50)
                     .UseCollation("NOCASE");
@@ -793,6 +803,23 @@ namespace POS.Core.Data
                 entity.HasIndex(p => p.PriceLevel);
 
                 entity.HasIndex(p => p.ChangeSource);
+
+                entity.HasIndex(p => p.SourceDocumentType);
+
+                entity.HasIndex(p => p.SourceDocumentNo);
+
+                entity.HasIndex(p => new
+                {
+                    p.SourceDocumentType,
+                    p.SourceDocumentId
+                });
+
+                entity.HasIndex(p => new
+                {
+                    p.SourceDocumentType,
+                    p.SourceDocumentId,
+                    p.SourceDocumentLineId
+                });
 
                 entity.HasIndex(p => p.ItemVariantId);
 

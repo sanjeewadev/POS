@@ -3405,6 +3405,24 @@ namespace POS.Core.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("SourceDocumentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SourceDocumentLineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceDocumentNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("SourceDocumentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -3439,6 +3457,14 @@ namespace POS.Core.Migrations
                     b.HasIndex("PriceLevel");
 
                     b.HasIndex("SkuCode");
+
+                    b.HasIndex("SourceDocumentNo");
+
+                    b.HasIndex("SourceDocumentType");
+
+                    b.HasIndex("SourceDocumentType", "SourceDocumentId");
+
+                    b.HasIndex("SourceDocumentType", "SourceDocumentId", "SourceDocumentLineId");
 
                     b.HasIndex("ItemVariantId", "ChangedAt");
 
