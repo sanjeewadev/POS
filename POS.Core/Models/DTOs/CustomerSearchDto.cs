@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace POS.Core.Models.DTOs
 {
@@ -33,6 +33,8 @@ namespace POS.Core.Models.DTOs
         public decimal CreditLimit { get; set; } = 0m;
 
         public decimal CurrentBalance { get; set; } = 0m;
+
+        public int CreditDays { get; set; } = 0;
 
         public bool IsCreditLocked { get; set; } = false;
 

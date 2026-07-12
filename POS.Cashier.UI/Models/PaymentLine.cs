@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace POS.Cashier.UI.Models
@@ -9,7 +9,7 @@ namespace POS.Cashier.UI.Models
         private int _lineNo;
 
         // Cash, Card, Cheque
-        // Later: Customer Credit, Gift Voucher, Credit Note
+        // Customer Credit, Gift Voucher and future Credit Note are also supported.
         [ObservableProperty]
         private string _paymentType = "Cash";
 
@@ -73,8 +73,11 @@ namespace POS.Cashier.UI.Models
                 if (PaymentType.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
                     return "Cheque";
 
+                if (IsCustomerCredit)
+                    return "Customer Credit";
+
                 if (PaymentType.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase) ||
-    PaymentType.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase))
+                    PaymentType.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase))
                 {
                     return "Gift Voucher";
                 }
@@ -140,6 +143,10 @@ namespace POS.Cashier.UI.Models
         public bool IsCheque =>
             PaymentType.Equals("Cheque", StringComparison.OrdinalIgnoreCase);
 
+        public bool IsCustomerCredit =>
+            PaymentType.Equals("CustomerCredit", StringComparison.OrdinalIgnoreCase) ||
+            PaymentType.Equals("Customer Credit", StringComparison.OrdinalIgnoreCase);
+
         partial void OnPaymentTypeChanged(string value)
         {
             NotifyDisplayProperties();
@@ -147,6 +154,7 @@ namespace POS.Cashier.UI.Models
             OnPropertyChanged(nameof(IsCard));
             OnPropertyChanged(nameof(IsCheque));
             OnPropertyChanged(nameof(IsGiftVoucher));
+            OnPropertyChanged(nameof(IsCustomerCredit));
         }
 
         partial void OnCardTypeChanged(string value)

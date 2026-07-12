@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -46,6 +46,12 @@ namespace POS.Core.Models
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalRefundAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal AccountCreditAmount { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal CashRefundAmount { get; set; }
 
         [Required]
         [MaxLength(30)]

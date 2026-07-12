@@ -54,6 +54,7 @@ namespace POS.Cashier.UI
             services.AddTransient<CustomerReturnRepository>();
             services.AddTransient<TillRepository>();
             services.AddTransient<CustomerRepository>();
+            services.AddTransient<CustomerCreditRepository>();
             services.AddTransient<TerminalSettingsRepository>();
             services.AddTransient<StoreSettingsRepository>();
 

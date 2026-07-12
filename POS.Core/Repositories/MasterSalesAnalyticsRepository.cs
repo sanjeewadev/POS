@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
+using POS.Core.Configuration;
 using POS.Core.Models.DTOs;
 using System;
 using System.Collections.Generic;
@@ -164,7 +165,9 @@ namespace POS.Core.Repositories
 
                 Payments = sale.SalesPayments.Select(p => new SaleReceiptPaymentDto
                 {
-                    PaymentType = p.PaymentType,
+                    PaymentType = CustomerCreditCodes.IsCustomerCreditPayment(p.PaymentType)
+                        ? CustomerCreditCodes.PaymentDisplayName
+                        : p.PaymentType,
                     Amount = p.Amount,
                     TenderedAmount = p.TenderedAmount,
                     ChangeAmount = p.ChangeAmount,

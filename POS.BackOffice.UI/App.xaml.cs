@@ -76,6 +76,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<SupplierReturnRepository>();
             services.AddTransient<ExpressItemRepository>();
             services.AddTransient<CustomerRepository>();
+            services.AddTransient<CustomerCreditRepository>();
             services.AddTransient<SupplierLedgerRepository>();
             services.AddTransient<SupplierReportRepository>();
             services.AddTransient<FreeItemClaimRepository>();
@@ -102,6 +103,7 @@ namespace POS.BackOffice.UI
             // ==========================================
             services.AddTransient<POS.Core.Services.IBarcodePrintService, WpfBarcodePrintService>();
             services.AddTransient<BackupService>();
+            services.AddSingleton<CustomerStatementTextFormatter>();
             services.AddSingleton<
                 ITerminalHardwareService,
                 TerminalHardwareService>();

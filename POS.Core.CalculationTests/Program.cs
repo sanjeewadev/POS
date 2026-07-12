@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
@@ -148,7 +148,35 @@ namespace POS.Core.CalculationTests
                 ("Cash variance requires manager authorization", CashVarianceRequiresManagerAuthorization),
                 ("Duplicate shift close is idempotent", DuplicateShiftCloseIsIdempotent),
                 ("Closed shift rejects new checkout", ClosedShiftRejectsNewCheckout),
-                ("Drawer success and failure events persist", DrawerSuccessAndFailureEventsPersist)
+                ("Drawer success and failure events persist", DrawerSuccessAndFailureEventsPersist),
+                ("Credit-enabled customer can use credit", CreditEnabledCustomerCanUseCredit),
+                ("Credit-disabled customer is rejected", CreditDisabledCustomerIsRejected),
+                ("Inactive credit customer is rejected", InactiveCreditCustomerIsRejected),
+                ("Credit-hold customer is rejected", CreditHoldCustomerIsRejected),
+                ("Credit-locked customer is rejected", CreditLockedCustomerIsRejected),
+                ("Customer credit limit is enforced", CustomerCreditLimitIsEnforced),
+                ("Full credit sale posts receivable", FullCreditSalePostsReceivable),
+                ("Split sale posts only credit portion", SplitSalePostsOnlyCreditPortion),
+                ("Credit sale due date uses credit days", CreditSaleDueDateUsesCreditDays),
+                ("Credit checkout is idempotent", CreditCheckoutIsIdempotent),
+                ("Credit sale updates available credit", CreditSaleUpdatesAvailableCredit),
+                ("Customer Credit payment line persists", CustomerCreditPaymentLinePersists),
+                ("Customer payment allocates oldest invoice", CustomerPaymentAllocatesOldestInvoice),
+                ("Partial customer payment leaves Part Paid", PartialCustomerPaymentLeavesPartPaid),
+                ("Full customer payment marks invoice Paid", FullCustomerPaymentMarksInvoicePaid),
+                ("Customer overpayment is rejected", CustomerOverpaymentIsRejected),
+                ("Customer payment receipt is idempotent", CustomerPaymentReceiptIsIdempotent),
+                ("Card customer payment requires reference", CardCustomerPaymentRequiresReference),
+                ("Cheque customer payment reference persists", ChequeCustomerPaymentReferencePersists),
+                ("Bank transfer reference persists", BankTransferReferencePersists),
+                ("Cash customer payment creates Paid In", CashCustomerPaymentCreatesPaidIn),
+                ("Non-cash customer payment does not affect drawer", NonCashCustomerPaymentDoesNotAffectDrawer),
+                ("BackOffice customer payment requires destination", BackOfficeCustomerPaymentRequiresDestination),
+                ("Credit return reduces customer balance", CreditReturnReducesCustomerBalance),
+                ("Credit return cash-refunds only paid excess", CreditReturnCashRefundsOnlyPaidExcess),
+                ("Return credit cannot reduce balance twice", ReturnCreditCannotReduceBalanceTwice),
+                ("Customer aging buckets are calculated", CustomerAgingBucketsAreCalculated),
+                ("Customer statement running balance reconciles", CustomerStatementRunningBalanceReconciles)
             };
 
             try
@@ -160,7 +188,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer and reconciliation checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit and customer ledger checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -5807,6 +5835,711 @@ namespace POS.Core.CalculationTests
             AssertFalse(events[1].Succeeded, "failed drawer event");
             AssertContains(events[1].FailureMessage, "unavailable", "drawer failure audit");
         }
+
+        private static void CreditEnabledCustomerCanUseCredit()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerCreditValidationDto result = repository.ValidateCreditAsync(customer.Id, 500m)
+                .GetAwaiter().GetResult();
+
+            AssertTrue(result.CanUseCredit, "credit-enabled customer validation");
+            AssertMoney(5000m, result.AvailableCredit, "available customer credit");
+            AssertEqual(30, result.CreditDays, "customer credit days");
+        }
+
+        private static void CreditDisabledCustomerIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, isCreditEnabled: false);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerCreditValidationDto result = repository.ValidateCreditAsync(customer.Id, 100m)
+                .GetAwaiter().GetResult();
+
+            AssertFalse(result.CanUseCredit, "credit-disabled customer validation");
+            AssertContains(result.Message, "not enabled", "credit-disabled warning");
+        }
+
+        private static void InactiveCreditCustomerIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, isActive: false);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerCreditValidationDto result = repository.ValidateCreditAsync(customer.Id, 100m)
+                .GetAwaiter().GetResult();
+
+            AssertFalse(result.CanUseCredit, "inactive credit customer validation");
+            AssertContains(result.Message, "inactive", "inactive customer warning");
+        }
+
+        private static void CreditHoldCustomerIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, creditStatus: "Hold");
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerCreditValidationDto result = repository.ValidateCreditAsync(customer.Id, 100m)
+                .GetAwaiter().GetResult();
+
+            AssertFalse(result.CanUseCredit, "credit-hold customer validation");
+            AssertContains(result.Message, "Hold", "credit-hold warning");
+        }
+
+        private static void CreditLockedCustomerIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, isCreditLocked: true);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerCreditValidationDto result = repository.ValidateCreditAsync(customer.Id, 100m)
+                .GetAwaiter().GetResult();
+
+            AssertFalse(result.CanUseCredit, "credit-locked customer validation");
+            AssertContains(result.Message, "locked", "credit-locked warning");
+        }
+
+        private static void CustomerCreditLimitIsEnforced()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, creditLimit: 1000m, currentBalance: 900m);
+
+            AssertThrows(
+                () => CompleteCustomerCreditSale(factory, scenario, customer, creditAmount: 1180m),
+                "available credit");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(0, context.SalesHeaders.Count(), "rejected credit sale count");
+            AssertEqual(0, context.CustomerLedgers.Count(), "rejected credit ledger count");
+        }
+
+        private static void FullCreditSalePostsReceivable()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, creditAmount: 1180m);
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerLedger ledger = context.CustomerLedgers.AsNoTracking().Single();
+            CustomerMaster savedCustomer = context.CustomerMasters.AsNoTracking().Single(row => row.Id == customer.Id);
+            AssertEqual(sale.Id, ledger.SalesHeaderId.GetValueOrDefault(), "credit ledger sale link");
+            AssertMoney(1180m, ledger.DebitAmount, "credit ledger debit");
+            AssertMoney(1180m, ledger.OutstandingAmount, "credit ledger outstanding");
+            AssertEqual(CustomerCreditCodes.Open, ledger.Status, "credit ledger status");
+            AssertMoney(1180m, savedCustomer.CurrentBalance, "customer current balance");
+        }
+
+        private static void SplitSalePostsOnlyCreditPortion()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+
+            CompleteCustomerCreditSale(factory, scenario, customer, creditAmount: 680m, cashAmount: 500m);
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerLedger ledger = context.CustomerLedgers.AsNoTracking().Single();
+            AssertMoney(680m, ledger.DebitAmount, "split-sale credit ledger debit");
+            AssertMoney(680m, context.CustomerMasters.AsNoTracking().Single(row => row.Id == customer.Id).CurrentBalance, "split-sale customer balance");
+            AssertEqual(2, context.SalesPayments.Count(), "split-sale payment line count");
+            AssertMoney(
+                500m,
+                context.SalesPayments
+                    .Where(row => row.PaymentType == "Cash")
+                    .AsEnumerable()
+                    .Sum(row => row.Amount),
+                "split-sale Cash portion");
+        }
+
+        private static void CreditSaleDueDateUsesCreditDays()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, creditDays: 45);
+
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, creditAmount: 1180m);
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerLedger ledger = context.CustomerLedgers.AsNoTracking().Single();
+            AssertEqual(sale.TransactionDate.Date.AddDays(45), ledger.DueDate.GetValueOrDefault().Date, "credit invoice due date");
+        }
+
+        private static void CreditCheckoutIsIdempotent()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            Guid token = Guid.NewGuid();
+            var cartRepository = new CashierCartRepository(factory);
+            cartRepository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateServiceCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            SalesHeader first = CompleteCustomerCreditSale(factory, scenario, customer, 1180m, checkoutToken: token);
+            SalesHeader second = CompleteCustomerCreditSale(factory, scenario, customer, 1180m, checkoutToken: token);
+
+            AssertEqual(first.Id, second.Id, "idempotent credit sale id");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.SalesHeaders.Count(), "idempotent credit sale count");
+            AssertEqual(1, context.CustomerLedgers.Count(), "idempotent credit ledger count");
+            AssertMoney(1180m, context.CustomerMasters.Single(row => row.Id == customer.Id).CurrentBalance, "idempotent customer balance");
+        }
+
+        private static void CreditSaleUpdatesAvailableCredit()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, creditLimit: 5000m);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerCreditValidationDto result = repository.ValidateCreditAsync(customer.Id, 100m)
+                .GetAwaiter().GetResult();
+
+            AssertTrue(result.CanUseCredit, "remaining credit remains usable");
+            AssertMoney(1180m, result.CurrentBalance, "credit validation current balance");
+            AssertMoney(3820m, result.AvailableCredit, "credit validation available balance");
+        }
+
+        private static void CustomerCreditPaymentLinePersists()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+
+            using AppDbContext context = factory.CreateDbContext();
+            SalesPayment payment = context.SalesPayments.AsNoTracking().Single();
+            AssertEqual(CustomerCreditCodes.PaymentType, payment.PaymentType, "saved Customer Credit payment type");
+            AssertMoney(1180m, payment.Amount, "saved Customer Credit payment amount");
+            AssertEqual(customer.CustomerCode, payment.ReferenceNo, "saved customer account reference");
+
+            string receipt = new SalesDocumentTextFormatter().FormatReceipt(
+                sale,
+                CreateFormatterStoreSettings(),
+                80,
+                SalesDocumentCopyLabels.Original);
+            AssertContains(receipt, "Customer Credit", "receipt Customer Credit label");
+        }
+
+        private static void CustomerPaymentAllocatesOldestInvoice()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, creditLimit: 10000m);
+            SalesHeader firstSale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            SalesHeader secondSale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                CustomerLedger first = context.CustomerLedgers.Single(row => row.SalesHeaderId == firstSale.Id);
+                CustomerLedger second = context.CustomerLedgers.Single(row => row.SalesHeaderId == secondSale.Id);
+                first.DueDate = DateTime.Today.AddDays(-10);
+                second.DueDate = DateTime.Today.AddDays(10);
+                context.SaveChanges();
+            }
+
+            var repository = new CustomerCreditRepository(factory);
+            CustomerPaymentResultDto result = repository.ReceivePaymentAsync(
+                    CreateCustomerPaymentRequest(customer.Id, 1300m, "Cash", destination: "Main Counter"))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext verify = factory.CreateDbContext();
+            CustomerLedger firstLedger = verify.CustomerLedgers.Single(row => row.SalesHeaderId == firstSale.Id);
+            CustomerLedger secondLedger = verify.CustomerLedgers.Single(row => row.SalesHeaderId == secondSale.Id);
+            AssertMoney(0m, firstLedger.OutstandingAmount, "oldest invoice outstanding");
+            AssertMoney(1060m, secondLedger.OutstandingAmount, "newer invoice outstanding");
+            AssertEqual(2, result.Allocations.Count, "oldest-first allocation count");
+        }
+
+        private static void PartialCustomerPaymentLeavesPartPaid()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            repository.ReceivePaymentAsync(CreateCustomerPaymentRequest(customer.Id, 500m, "Cash", destination: "Main Counter"))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerLedger debit = context.CustomerLedgers.Single(row => row.SalesHeaderId == sale.Id);
+            AssertMoney(680m, debit.OutstandingAmount, "partial payment outstanding");
+            AssertMoney(500m, debit.AllocatedAmount, "partial payment allocated");
+            AssertEqual(CustomerCreditCodes.PartPaid, debit.Status, "partial payment status");
+        }
+
+        private static void FullCustomerPaymentMarksInvoicePaid()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerPaymentResultDto result = repository.ReceivePaymentAsync(
+                    CreateCustomerPaymentRequest(customer.Id, 1180m, "Cash", destination: "Main Counter"))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerLedger debit = context.CustomerLedgers.Single(row => row.SalesHeaderId == sale.Id);
+            AssertMoney(0m, debit.OutstandingAmount, "full payment outstanding");
+            AssertEqual(CustomerCreditCodes.Paid, debit.Status, "full payment status");
+            AssertMoney(0m, result.RemainingBalance, "full payment remaining customer balance");
+        }
+
+        private static void CustomerOverpaymentIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            AssertThrows(
+                () => repository.ReceivePaymentAsync(
+                        CreateCustomerPaymentRequest(customer.Id, 1180.01m, "Cash", destination: "Main Counter"))
+                    .GetAwaiter().GetResult(),
+                "cannot exceed");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(0, context.CustomerPaymentReceipts.Count(), "rejected overpayment receipt count");
+            AssertMoney(1180m, context.CustomerMasters.Single(row => row.Id == customer.Id).CurrentBalance, "rejected overpayment balance");
+        }
+
+        private static void CustomerPaymentReceiptIsIdempotent()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+            Guid token = Guid.NewGuid();
+            CustomerPaymentRequest request = CreateCustomerPaymentRequest(customer.Id, 400m, "Cash", destination: "Main Counter", token: token);
+
+            CustomerPaymentResultDto first = repository.ReceivePaymentAsync(request).GetAwaiter().GetResult();
+            CustomerPaymentResultDto second = repository.ReceivePaymentAsync(request).GetAwaiter().GetResult();
+
+            AssertEqual(first.ReceiptId, second.ReceiptId, "idempotent customer receipt id");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.CustomerPaymentReceipts.Count(), "idempotent customer receipt count");
+            AssertEqual(1, context.CustomerLedgerAllocations.Count(), "idempotent allocation count");
+            AssertMoney(780m, context.CustomerMasters.Single(row => row.Id == customer.Id).CurrentBalance, "idempotent payment customer balance");
+        }
+
+        private static void CardCustomerPaymentRequiresReference()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            AssertThrows(
+                () => repository.ReceivePaymentAsync(
+                        CreateCustomerPaymentRequest(customer.Id, 100m, "Card", reference: string.Empty, destination: "Card Clearing"))
+                    .GetAwaiter().GetResult(),
+                "reference is required");
+        }
+
+        private static void ChequeCustomerPaymentReferencePersists()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerPaymentResultDto result = repository.ReceivePaymentAsync(
+                    CreateCustomerPaymentRequest(customer.Id, 200m, "Cheque", reference: "CHQ-7788", destination: "Cheque Clearing"))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerPaymentReceipt receipt = context.CustomerPaymentReceipts.AsNoTracking().Single(row => row.Id == result.ReceiptId);
+            AssertEqual("Cheque", receipt.PaymentMethod, "cheque receipt method");
+            AssertEqual("CHQ-7788", receipt.ReferenceNo, "cheque receipt reference");
+        }
+
+        private static void BankTransferReferencePersists()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerPaymentResultDto result = repository.ReceivePaymentAsync(
+                    CreateCustomerPaymentRequest(customer.Id, 300m, "Bank Transfer", reference: "BANK-9911", destination: "Commercial Bank"))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerPaymentReceipt receipt = context.CustomerPaymentReceipts.AsNoTracking().Single(row => row.Id == result.ReceiptId);
+            AssertEqual("Bank Transfer", receipt.PaymentMethod, "bank transfer receipt method");
+            AssertEqual("BANK-9911", receipt.ReferenceNo, "bank transfer reference");
+            AssertEqual("Commercial Bank", receipt.DestinationAccount, "bank transfer destination");
+        }
+
+        private static void CashCustomerPaymentCreatesPaidIn()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            CustomerPaymentResultDto result = repository.ReceivePaymentAsync(
+                    CreateCustomerPaymentRequest(customer.Id, 250m, "Cash", scenario.ShiftSessionId, "T01", "Cashier Terminal"))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerPaymentReceipt receipt = context.CustomerPaymentReceipts.AsNoTracking().Single(row => row.Id == result.ReceiptId);
+            CashMovement movement = context.CashMovements.AsNoTracking().Single(row => row.ReferenceVoucherNo == result.ReceiptNo);
+            AssertEqual(CashMovementTypeCodes.PaidIn, movement.MovementType, "customer Cash payment movement type");
+            AssertMoney(250m, movement.Amount, "customer Cash payment movement amount");
+            AssertEqual(movement.Id, receipt.CashMovementId.GetValueOrDefault(), "customer receipt cash movement link");
+        }
+
+        private static void NonCashCustomerPaymentDoesNotAffectDrawer()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            repository.ReceivePaymentAsync(
+                    CreateCustomerPaymentRequest(customer.Id, 250m, "Card", scenario.ShiftSessionId, "T01", "Card Clearing", "CARD-123"))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(0, context.CashMovements.Count(row => row.ReasonCategory == "Customer Payment"), "non-Cash customer drawer movement count");
+        }
+
+        private static void BackOfficeCustomerPaymentRequiresDestination()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = new CustomerCreditRepository(factory);
+
+            AssertThrows(
+                () => repository.ReceivePaymentAsync(
+                        CreateCustomerPaymentRequest(customer.Id, 100m, "Cash", destination: string.Empty))
+                    .GetAwaiter().GetResult(),
+                "destination account");
+        }
+
+        private static void CreditReturnReducesCustomerBalance()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var returnRepository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = returnRepository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertMoney(1180m, result.AccountCreditAmount, "credit return account reduction");
+            AssertMoney(0m, result.CashRefundAmount, "credit return Cash refund");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertMoney(0m, context.CustomerMasters.Single(row => row.Id == customer.Id).CurrentBalance, "credit return customer balance");
+            AssertEqual(0, context.CashMovements.Count(row => row.ReasonCategory == CustomerReturnCashMovementCodes.ReasonCategory), "credit return Cash movement count");
+        }
+
+        private static void CreditReturnCashRefundsOnlyPaidExcess()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var creditRepository = new CustomerCreditRepository(factory);
+            creditRepository.ReceivePaymentAsync(
+                    CreateCustomerPaymentRequest(customer.Id, 500m, "Cash", scenario.ShiftSessionId, "T01", "Cashier Terminal"))
+                .GetAwaiter().GetResult();
+            var returnRepository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = returnRepository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertMoney(680m, result.AccountCreditAmount, "part-paid return account credit");
+            AssertMoney(500m, result.CashRefundAmount, "part-paid return Cash refund");
+            using AppDbContext context = factory.CreateDbContext();
+            CashMovement refund = context.CashMovements.AsNoTracking()
+                .Single(row => row.ReasonCategory == CustomerReturnCashMovementCodes.ReasonCategory);
+            AssertMoney(500m, refund.Amount, "part-paid return Cash movement");
+            AssertMoney(0m, context.CustomerMasters.Single(row => row.Id == customer.Id).CurrentBalance, "part-paid return customer balance");
+        }
+
+        private static void ReturnCreditCannotReduceBalanceTwice()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory);
+            SalesHeader sale = CompleteCustomerCreditSale(factory, scenario, customer, 1180m);
+            var repository = CreateCustomerReturnRepository(factory);
+            CustomerReturnRequest request = CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m));
+
+            repository.ProcessReturnAsync(request).GetAwaiter().GetResult();
+            AssertThrows(
+                () => repository.ProcessReturnAsync(request).GetAwaiter().GetResult(),
+                "fully returned");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertMoney(0m, context.CustomerMasters.Single(row => row.Id == customer.Id).CurrentBalance, "duplicate return customer balance");
+            AssertEqual(1, context.CustomerLedgers.Count(row => row.TransactionType == CustomerCreditCodes.ReturnCredit), "duplicate return credit ledger count");
+        }
+
+        private static void CustomerAgingBucketsAreCalculated()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, creditLimit: 10000m, currentBalance: 1500m);
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                AddOpenCustomerLedger(context, customer.Id, "INV-CURRENT", 100m, DateTime.Today.AddDays(10));
+                AddOpenCustomerLedger(context, customer.Id, "INV-10", 200m, DateTime.Today.AddDays(-10));
+                AddOpenCustomerLedger(context, customer.Id, "INV-40", 300m, DateTime.Today.AddDays(-40));
+                AddOpenCustomerLedger(context, customer.Id, "INV-70", 400m, DateTime.Today.AddDays(-70));
+                AddOpenCustomerLedger(context, customer.Id, "INV-100", 500m, DateTime.Today.AddDays(-100));
+                context.SaveChanges();
+            }
+
+            var repository = new CustomerCreditRepository(factory);
+            CustomerAccountSummaryDto summary = repository.GetAccountSummaryAsync(customer.Id)
+                .GetAwaiter().GetResult();
+
+            AssertMoney(100m, summary.AgingCurrent, "current aging bucket");
+            AssertMoney(200m, summary.Aging1To30, "1-30 aging bucket");
+            AssertMoney(300m, summary.Aging31To60, "31-60 aging bucket");
+            AssertMoney(400m, summary.Aging61To90, "61-90 aging bucket");
+            AssertMoney(500m, summary.AgingOver90, "over-90 aging bucket");
+            AssertMoney(1400m, summary.OverdueAmount, "overdue customer amount");
+        }
+
+        private static void CustomerStatementRunningBalanceReconciles()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            CustomerMaster customer = CreateCreditCustomer(factory, currentBalance: 600m);
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                context.CustomerLedgers.Add(new CustomerLedger
+                {
+                    CustomerMasterId = customer.Id,
+                    TransactionDate = DateTime.Today.AddDays(-2),
+                    DocumentRef = "INV-STMT",
+                    TransactionType = CustomerCreditCodes.CreditSale,
+                    DebitAmount = 1000m,
+                    OriginalAmount = 1000m,
+                    AllocatedAmount = 400m,
+                    OutstandingAmount = 600m,
+                    DueDate = DateTime.Today.AddDays(28),
+                    Status = CustomerCreditCodes.PartPaid,
+                    ProcessedBy = "Test"
+                });
+                context.CustomerLedgers.Add(new CustomerLedger
+                {
+                    CustomerMasterId = customer.Id,
+                    TransactionDate = DateTime.Today.AddDays(-1),
+                    DocumentRef = "CPR-STMT",
+                    TransactionType = CustomerCreditCodes.PaymentReceived,
+                    CreditAmount = 400m,
+                    OriginalAmount = 400m,
+                    AllocatedAmount = 400m,
+                    OutstandingAmount = 0m,
+                    Status = CustomerCreditCodes.Paid,
+                    ProcessedBy = "Test"
+                });
+                context.SaveChanges();
+            }
+
+            var repository = new CustomerCreditRepository(factory);
+            CustomerAccountSummaryDto summary = repository.GetAccountSummaryAsync(customer.Id)
+                .GetAwaiter().GetResult();
+
+            AssertMoney(600m, summary.CurrentBalance, "statement current balance");
+            AssertMoney(1000m, summary.StatementRows.Single(row => row.DocumentRef == "INV-STMT").RunningBalance, "invoice running balance");
+            AssertMoney(600m, summary.StatementRows.Single(row => row.DocumentRef == "CPR-STMT").RunningBalance, "payment running balance");
+
+            string statement = new CustomerStatementTextFormatter().Format(
+                summary,
+                DateTime.Today.AddDays(-30),
+                DateTime.Today);
+            AssertContains(statement, "CUSTOMER ACCOUNT STATEMENT", "statement heading");
+            AssertContains(statement, "INV-STMT", "statement invoice reference");
+            AssertContains(statement, "Closing Balance: Rs. 600.00", "statement closing balance");
+        }
+
+
+        private static CustomerMaster CreateCreditCustomer(
+            RepositoryTestDbContextFactory factory,
+            decimal creditLimit = 5000m,
+            decimal currentBalance = 0m,
+            int creditDays = 30,
+            bool isCreditEnabled = true,
+            string creditStatus = "Active",
+            bool isCreditLocked = false,
+            bool isActive = true)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            var customer = new CustomerMaster
+            {
+                CustomerCode = "CUST-CREDIT",
+                FullName = "Credit Test Customer",
+                Phone = "0770000000",
+                Email = "credit@example.test",
+                CompanyName = "Credit Test Company",
+                CustomerType = "Wholesale",
+                IsCreditEnabled = isCreditEnabled,
+                CreditStatus = creditStatus,
+                CreditLimit = creditLimit,
+                CreditDays = creditDays,
+                CurrentBalance = currentBalance,
+                IsCreditLocked = isCreditLocked,
+                IsActive = isActive,
+                CreatedBy = "Test"
+            };
+            context.CustomerMasters.Add(customer);
+            context.SaveChanges();
+            return customer;
+        }
+
+        private static SalesHeader CompleteCustomerCreditSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario,
+            CustomerMaster customer,
+            decimal creditAmount,
+            decimal cashAmount = 0m,
+            Guid? checkoutToken = null)
+        {
+            const decimal invoiceTotal = 1180m;
+            creditAmount = Math.Round(creditAmount, 2);
+            cashAmount = Math.Round(cashAmount, 2);
+            if (creditAmount + cashAmount != invoiceTotal)
+                throw new InvalidOperationException("Phase 8C test payments must total Rs. 1,180.00.");
+
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(
+                scenario.ShiftSessionId,
+                cashAmount);
+            header.CustomerMasterId = customer.Id;
+            header.PaymentMethod = cashAmount > 0m
+                ? "Split"
+                : CustomerCreditCodes.PaymentType;
+
+            var lines = new List<SalesLine>
+            {
+                CreateRepositoryTestLine(
+                    scenario.ServiceVariantId,
+                    null,
+                    scenario.ServiceSku,
+                    "Installation Service",
+                    1m,
+                    invoiceTotal)
+            };
+
+            var payments = new List<SalesPayment>();
+            if (cashAmount > 0m)
+            {
+                SalesPayment cash = CreateCashPayment(cashAmount);
+                cash.TenderedAmount = cashAmount;
+                payments.Add(cash);
+            }
+
+            if (creditAmount > 0m)
+            {
+                payments.Add(new SalesPayment
+                {
+                    PaymentType = CustomerCreditCodes.PaymentType,
+                    Amount = creditAmount,
+                    TenderedAmount = creditAmount,
+                    ChangeAmount = 0m,
+                    ReferenceNo = customer.CustomerCode,
+                    BankOrCardType = "Customer Account",
+                    EnteredBy = "Test Cashier",
+                    TerminalNo = "T01"
+                });
+            }
+
+            return repository.ProcessCheckoutAsync(
+                    header,
+                    lines,
+                    payments,
+                    checkoutToken)
+                .GetAwaiter().GetResult();
+        }
+
+        private static CustomerPaymentRequest CreateCustomerPaymentRequest(
+            int customerId,
+            decimal amount,
+            string paymentMethod,
+            int? shiftSessionId = null,
+            string terminalNo = "",
+            string destination = "",
+            string reference = "",
+            Guid? token = null)
+        {
+            return new CustomerPaymentRequest
+            {
+                ReceiptToken = token ?? Guid.NewGuid(),
+                CustomerId = customerId,
+                Amount = amount,
+                PaymentMethod = paymentMethod,
+                PaymentDate = DateTime.Now,
+                ReferenceNo = reference,
+                BankOrCardType = paymentMethod,
+                DestinationAccount = destination,
+                ProcessedBy = "Test Cashier",
+                TerminalNo = terminalNo,
+                ShiftSessionId = shiftSessionId,
+                Remarks = "Phase 8C automated test"
+            };
+        }
+
+        private static void AddOpenCustomerLedger(
+            AppDbContext context,
+            int customerId,
+            string documentRef,
+            decimal amount,
+            DateTime dueDate)
+        {
+            context.CustomerLedgers.Add(new CustomerLedger
+            {
+                CustomerMasterId = customerId,
+                TransactionDate = dueDate.AddDays(-30),
+                DocumentRef = documentRef,
+                TransactionType = CustomerCreditCodes.CreditSale,
+                DebitAmount = amount,
+                CreditAmount = 0m,
+                DueDate = dueDate,
+                OriginalAmount = amount,
+                AllocatedAmount = 0m,
+                OutstandingAmount = amount,
+                Status = dueDate.Date < DateTime.Today
+                    ? CustomerCreditCodes.Overdue
+                    : CustomerCreditCodes.Open,
+                ProcessedBy = "Test"
+            });
+        }
+
 
         private static void SetShiftOpeningCash(
             RepositoryTestDbContextFactory factory,

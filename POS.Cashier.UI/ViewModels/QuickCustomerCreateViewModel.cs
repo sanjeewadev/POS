@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -275,6 +275,7 @@ namespace POS.Cashier.UI.ViewModels
                 CreditStatus = customer.CreditStatus,
                 CreditLimit = customer.CreditLimit,
                 CurrentBalance = customer.CurrentBalance,
+                CreditDays = customer.CreditDays,
                 IsCreditLocked = customer.IsCreditLocked,
                 IsActive = customer.IsActive,
                 LoyaltyDiscountProfileId = null,

@@ -1011,7 +1011,7 @@
                         <Button Background="{StaticResource PaymentDarkOrangeBrush}"
                                 Foreground="Black"
                                 Content="Cust Credit"
-                                Click="UnsupportedPaymentBtn_Click"/>
+                                Click="PayBtn_Click"/>
 
                         <Button Background="#F8FAFC"
                                 Foreground="#B91C1C"

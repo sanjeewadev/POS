@@ -664,10 +664,19 @@ namespace POS.Core.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("AllocatedAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("CreditAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("CustomerMasterId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CustomerPaymentReceiptId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CustomerReturnHeaderId")
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("DebitAmount")
@@ -679,6 +688,15 @@ namespace POS.Core.Migrations
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OutstandingAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("ProcessedBy")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -688,6 +706,17 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("SalesHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Open")
+                        .UseCollation("NOCASE");
 
                     b.Property<DateTime>("TransactionDate")
                         .HasColumnType("TEXT");
@@ -702,13 +731,165 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("CustomerMasterId");
 
+                    b.HasIndex("CustomerPaymentReceiptId")
+                        .IsUnique()
+                        .HasFilter("CustomerPaymentReceiptId IS NOT NULL");
+
+                    b.HasIndex("CustomerReturnHeaderId")
+                        .IsUnique()
+                        .HasFilter("CustomerReturnHeaderId IS NOT NULL");
+
                     b.HasIndex("DocumentRef");
+
+                    b.HasIndex("DueDate");
+
+                    b.HasIndex("SalesHeaderId")
+                        .IsUnique()
+                        .HasFilter("SalesHeaderId IS NOT NULL");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("TransactionDate");
 
                     b.HasIndex("TransactionType");
 
                     b.ToTable("CustomerLedgers");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerLedgerAllocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreditLedgerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CustomerMasterId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("CustomerPaymentReceiptId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DebitLedgerId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreditLedgerId");
+
+                    b.HasIndex("CustomerMasterId");
+
+                    b.HasIndex("CustomerPaymentReceiptId");
+
+                    b.HasIndex("DebitLedgerId", "CreditLedgerId")
+                        .IsUnique();
+
+                    b.ToTable("CustomerLedgerAllocations");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerPaymentReceipt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BankOrCardType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<int?>("CashMovementId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomerMasterId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DestinationAccount")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("ProcessedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReceiptNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<Guid>("ReceiptToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ShiftSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashMovementId");
+
+                    b.HasIndex("CustomerMasterId");
+
+                    b.HasIndex("PaymentDate");
+
+                    b.HasIndex("PaymentMethod");
+
+                    b.HasIndex("ReceiptNo")
+                        .IsUnique();
+
+                    b.HasIndex("ReceiptToken")
+                        .IsUnique();
+
+                    b.HasIndex("ShiftSessionId");
+
+                    b.ToTable("CustomerPaymentReceipts");
                 });
 
             modelBuilder.Entity("POS.Core.Models.CustomerMaster", b =>
@@ -887,6 +1068,12 @@ namespace POS.Core.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("AccountCreditAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CashRefundAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("AuthorizedBy")
                         .IsRequired()
@@ -6575,6 +6762,60 @@ namespace POS.Core.Migrations
                     b.Navigation("CustomerMaster");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CustomerLedgerAllocation", b =>
+                {
+                    b.HasOne("POS.Core.Models.CustomerLedger", "CreditLedger")
+                        .WithMany()
+                        .HasForeignKey("CreditLedgerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("POS.Core.Models.CustomerMaster", "CustomerMaster")
+                        .WithMany()
+                        .HasForeignKey("CustomerMasterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("POS.Core.Models.CustomerPaymentReceipt", "CustomerPaymentReceipt")
+                        .WithMany("Allocations")
+                        .HasForeignKey("CustomerPaymentReceiptId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.CustomerLedger", "DebitLedger")
+                        .WithMany()
+                        .HasForeignKey("DebitLedgerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreditLedger");
+                    b.Navigation("CustomerMaster");
+                    b.Navigation("CustomerPaymentReceipt");
+                    b.Navigation("DebitLedger");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerPaymentReceipt", b =>
+                {
+                    b.HasOne("POS.Core.Models.CashMovement", "CashMovement")
+                        .WithMany()
+                        .HasForeignKey("CashMovementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.CustomerMaster", "CustomerMaster")
+                        .WithMany()
+                        .HasForeignKey("CustomerMasterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
+                        .WithMany()
+                        .HasForeignKey("ShiftSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CashMovement");
+                    b.Navigation("CustomerMaster");
+                    b.Navigation("ShiftSession");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CustomerReturnLine", b =>
                 {
                     b.HasOne("POS.Core.Models.CustomerReturnHeader", "CustomerReturnHeader")
@@ -7217,6 +7458,11 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.CustomerMaster", b =>
                 {
                     b.Navigation("LedgerEntries");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerPaymentReceipt", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 
             modelBuilder.Entity("POS.Core.Models.CustomerReturnHeader", b =>

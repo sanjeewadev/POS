@@ -75,6 +75,8 @@ namespace POS.Core.Models.DTOs
         public CustomerReturnHeader ReturnHeader { get; init; } = null!;
         public string CreditNoteNo { get; init; } = string.Empty;
         public decimal TotalRefundAmount { get; init; }
+        public decimal AccountCreditAmount { get; init; }
+        public decimal CashRefundAmount { get; init; }
     }
 
     public sealed class CustomerReturnAllocationInput

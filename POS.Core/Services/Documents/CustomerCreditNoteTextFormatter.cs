@@ -114,7 +114,11 @@ namespace POS.Core.Services.Documents
                 lineNo++;
             }
 
-            AppendTwoColumns(text, "CASH REFUND", FormatMoney(returnHeader.TotalRefundAmount, settings), columns);
+            AppendTwoColumns(text, "TOTAL CREDIT NOTE", FormatMoney(returnHeader.TotalRefundAmount, settings), columns);
+            if (returnHeader.AccountCreditAmount > 0m)
+                AppendTwoColumns(text, "ACCOUNT CREDIT", FormatMoney(returnHeader.AccountCreditAmount, settings), columns);
+            if (returnHeader.CashRefundAmount > 0m)
+                AppendTwoColumns(text, "CASH REFUND", FormatMoney(returnHeader.CashRefundAmount, settings), columns);
             AppendSeparator(text, columns);
 
             if (string.Equals(

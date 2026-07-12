@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
@@ -372,6 +372,7 @@ namespace POS.Core.Repositories
                 CreditStatus = string.IsNullOrWhiteSpace(c.CreditStatus) ? "None" : c.CreditStatus,
                 CreditLimit = c.CreditLimit,
                 CurrentBalance = c.CurrentBalance,
+                CreditDays = c.CreditDays,
                 IsCreditLocked = c.IsCreditLocked,
                 IsActive = c.IsActive,
 

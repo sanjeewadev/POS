@@ -165,6 +165,27 @@ namespace POS.Cashier.UI.Dialogs
             }
         }
 
+        private void CustomerPaymentBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                CustomerCreditRepository repository = App.Services!.GetRequiredService<CustomerCreditRepository>();
+                var dialog = new CustomerAccountPaymentDialog(
+                    repository,
+                    _viewModel.CurrentShiftId,
+                    _viewModel.TerminalNo,
+                    _viewModel.CashierName)
+                {
+                    Owner = this
+                };
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Customer Payment", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void LockTerminalBtn_Click(object sender, RoutedEventArgs e)
         {
             if (Owner is not SalesView salesWindow)

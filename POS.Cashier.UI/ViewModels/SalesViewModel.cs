@@ -1129,6 +1129,72 @@ namespace POS.Cashier.UI.ViewModels
             _ = ShowNotificationAsync(BalanceDue <= 0m ? "Cheque payment added. Press Enter to complete sale." : $"Cheque payment added. Balance due Rs. {BalanceDue:N2}.", BalanceDue <= 0m ? "#10B981" : "#D97706");
         }
 
+        public void AddConfirmedCustomerCreditPayment(decimal amount)
+        {
+            if (!EnsurePaymentModeReady())
+                return;
+
+            CustomerSearchDto? customer = ActiveB2BCustomer;
+            if (customer == null)
+            {
+                _ = ShowNotificationAsync("Customer Credit requires a selected customer.", "#EF4444");
+                return;
+            }
+
+            amount = Math.Round(amount, 2);
+            if (amount <= 0m || amount > BalanceDue)
+            {
+                _ = ShowNotificationAsync("Invalid Customer Credit amount.", "#EF4444");
+                return;
+            }
+
+            if (!customer.CanUseCredit)
+            {
+                _ = ShowNotificationAsync(customer.CreditWarningText, "#EF4444");
+                return;
+            }
+
+            decimal alreadyAdded = Math.Round(
+                PaymentLines
+                    .Where(line => line.IsCustomerCredit)
+                    .Sum(line => line.Amount),
+                2);
+
+            decimal available = Math.Round(
+                Math.Max(0m, customer.RemainingCredit - alreadyAdded),
+                2);
+
+            if (amount > available)
+            {
+                _ = ShowNotificationAsync(
+                    $"Available customer credit is Rs. {available:N2}.",
+                    "#EF4444");
+                return;
+            }
+
+            PaymentLines.Add(new PaymentLine
+            {
+                PaymentType = "CustomerCredit",
+                BankOrCardType = "Customer Account",
+                ReferenceNo = customer.CustomerCode,
+                Amount = amount,
+                TenderedAmount = amount,
+                ChangeAmount = 0m,
+                PaymentDate = DateTime.Now,
+                CreatedAt = DateTime.Now
+            });
+
+            SelectedPaymentLine = PaymentLines.LastOrDefault();
+            TerminalInput = string.Empty;
+            RecalculatePaymentTotals();
+
+            _ = ShowNotificationAsync(
+                BalanceDue <= 0m
+                    ? $"Customer Credit added. Due in {Math.Max(0, customer.CreditDays)} day(s). Press Enter to complete sale."
+                    : $"Customer Credit added. Balance due Rs. {BalanceDue:N2}.",
+                BalanceDue <= 0m ? "#10B981" : "#D97706");
+        }
+
         public void AddConfirmedGiftVoucherPayment(int giftVoucherId, string voucherNo, string voucherBarcode, decimal voucherAmount, decimal amountToApply, decimal forfeitedAmount)
         {
             if (!EnsurePaymentModeReady())

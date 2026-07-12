@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -249,7 +249,9 @@ namespace POS.Core.Services.Documents
                 foreach (SalesPayment payment in
                          sale.SalesPayments.OrderBy(row => row.Id))
                 {
-                    string label = FirstNonEmpty(payment.PaymentType, "Payment");
+                    string label = CustomerCreditCodes.IsCustomerCreditPayment(payment.PaymentType)
+                        ? CustomerCreditCodes.PaymentDisplayName
+                        : FirstNonEmpty(payment.PaymentType, "Payment");
 
                     if (!string.IsNullOrWhiteSpace(payment.ReferenceNo))
                         label += $" ({payment.ReferenceNo.Trim()})";

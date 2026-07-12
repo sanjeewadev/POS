@@ -120,6 +120,11 @@ namespace POS.Core.Repositories
 
                 ValidatePaymentTotals(header, payments);
                 ValidateCashTendering(header, payments);
+                CustomerCreditPlan? customerCreditPlan =
+                    await ValidateCustomerCreditAsync(
+                        context,
+                        header,
+                        payments);
 
                 DocumentSequence sequence =
                     await GetOrCreateInvoiceSequenceAsync(context);
@@ -273,6 +278,15 @@ namespace POS.Core.Repositories
 
                 await context.SaveChangesAsync();
 
+                if (customerCreditPlan != null)
+                {
+                    await PostCustomerCreditAsync(
+                        context,
+                        header,
+                        customerCreditPlan,
+                        now);
+                }
+
                 await ProcessSoldGiftVoucherLinesAsync(
                     context,
                     header,
@@ -372,6 +386,89 @@ namespace POS.Core.Repositories
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        private static async Task<CustomerCreditPlan?> ValidateCustomerCreditAsync(
+            AppDbContext context,
+            SalesHeader header,
+            IReadOnlyCollection<SalesPayment> payments)
+        {
+            decimal creditAmount = Money(payments
+                .Where(payment => CustomerCreditCodes.IsCustomerCreditPayment(payment.PaymentType))
+                .Sum(payment => payment.Amount));
+
+            if (creditAmount <= 0m)
+                return null;
+
+            if (!header.CustomerMasterId.HasValue || header.CustomerMasterId.Value <= 0)
+                throw new InvalidOperationException("Customer Credit requires a selected customer account.");
+
+            CustomerMaster customer = await context.CustomerMasters
+                .FirstOrDefaultAsync(row => row.Id == header.CustomerMasterId.Value)
+                ?? throw new InvalidOperationException("Selected customer account was not found.");
+
+            if (!customer.IsActive)
+                throw new InvalidOperationException("Selected customer account is inactive.");
+            if (!customer.IsCreditEnabled)
+                throw new InvalidOperationException("Credit is not enabled for the selected customer.");
+            if (!string.Equals(customer.CreditStatus, "Active", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Customer credit status is {customer.CreditStatus}.");
+            if (customer.IsCreditLocked)
+                throw new InvalidOperationException("Customer credit account is locked.");
+            if (customer.CreditLimit <= 0m)
+                throw new InvalidOperationException("Customer credit limit is not configured.");
+
+            decimal available = Money(Math.Max(0m, customer.CreditLimit - customer.CurrentBalance));
+            if (creditAmount > available)
+            {
+                throw new InvalidOperationException(
+                    $"Customer Credit amount exceeds available credit of Rs. {available:N2}.");
+            }
+
+            return new CustomerCreditPlan
+            {
+                Customer = customer,
+                Amount = creditAmount,
+                DueDate = header.TransactionDate.Date.AddDays(Math.Max(0, customer.CreditDays))
+            };
+        }
+
+        private static async Task PostCustomerCreditAsync(
+            AppDbContext context,
+            SalesHeader header,
+            CustomerCreditPlan plan,
+            DateTime now)
+        {
+            bool alreadyPosted = await context.CustomerLedgers
+                .AnyAsync(row => row.SalesHeaderId == header.Id);
+            if (alreadyPosted)
+                return;
+
+            context.CustomerLedgers.Add(new CustomerLedger
+            {
+                CustomerMasterId = plan.Customer.Id,
+                SalesHeaderId = header.Id,
+                TransactionDate = header.TransactionDate,
+                DocumentRef = header.InvoiceNo,
+                TransactionType = CustomerCreditCodes.CreditSale,
+                DebitAmount = plan.Amount,
+                CreditAmount = 0m,
+                DueDate = plan.DueDate,
+                OriginalAmount = plan.Amount,
+                AllocatedAmount = 0m,
+                OutstandingAmount = plan.Amount,
+                Status = plan.DueDate.Date < now.Date
+                    ? CustomerCreditCodes.Overdue
+                    : CustomerCreditCodes.Open,
+                ProcessedBy = header.CashierName,
+                Remarks = $"Customer Credit portion of invoice {header.InvoiceNo}"
+            });
+
+            plan.Customer.CurrentBalance = Money(plan.Customer.CurrentBalance + plan.Amount);
+            plan.Customer.UpdatedAt = now;
+            plan.Customer.UpdatedBy = header.CashierName;
+
+            await context.SaveChangesAsync();
         }
 
         // =========================================================
@@ -941,6 +1038,13 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException(
                     "Cart service variant does not match the selected Service.");
             }
+        }
+
+        private sealed class CustomerCreditPlan
+        {
+            public CustomerMaster Customer { get; init; } = null!;
+            public decimal Amount { get; init; }
+            public DateTime DueDate { get; init; }
         }
 
         // =========================================================
@@ -2049,6 +2153,9 @@ namespace POS.Core.Repositories
             return 0m;
         }
 
+
+        private static decimal Money(decimal value) =>
+            decimal.Round(value, 2, MidpointRounding.AwayFromZero);
 
         private static string NormalizeCardLastDigits(string? value)
         {

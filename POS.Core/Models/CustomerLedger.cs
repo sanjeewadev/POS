@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -33,6 +33,27 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal CreditAmount { get; set; } = 0m; // Money the customer paid YOU (Reduces Debt)
 
+        public int? SalesHeaderId { get; set; }
+
+        public int? CustomerReturnHeaderId { get; set; }
+
+        public int? CustomerPaymentReceiptId { get; set; }
+
+        public DateTime? DueDate { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal OriginalAmount { get; set; } = 0m;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal AllocatedAmount { get; set; } = 0m;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal OutstandingAmount { get; set; } = 0m;
+
+        [Required]
+        [MaxLength(30)]
+        public string Status { get; set; } = "Open";
+
         // ==========================================
         // AUDIT TRAIL
         // ==========================================
@@ -45,5 +66,6 @@ namespace POS.Core.Models
         // Navigation Property
         [ForeignKey("CustomerMasterId")]
         public virtual CustomerMaster? CustomerMaster { get; set; }
+
     }
 }

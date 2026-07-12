@@ -1,0 +1,105 @@
+<Window x:Class="POS.BackOffice.UI.Views.Dialogs.CustomerPaymentDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Receive Customer Payment"
+        Height="560" Width="760"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#F3F4F6"
+        FontFamily="Segoe UI">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#003366" Padding="14" CornerRadius="4" Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock Text="RECEIVE CUSTOMER PAYMENT" Foreground="White" FontSize="17" FontWeight="Bold"/>
+                <TextBlock x:Name="CustomerText" Foreground="#DCEEFF" FontSize="13" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Outstanding" Foreground="#64748B"/>
+                    <TextBlock x:Name="OutstandingText" FontSize="20" FontWeight="Bold" Foreground="#991B1B"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Credit Limit" Foreground="#64748B"/>
+                    <TextBlock x:Name="CreditLimitText" FontSize="20" FontWeight="Bold" Foreground="#1E3A8A"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10">
+                <StackPanel>
+                    <TextBlock Text="Available Credit" Foreground="#64748B"/>
+                    <TextBlock x:Name="AvailableText" FontSize="20" FontWeight="Bold" Foreground="#047857"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <GroupBox Grid.Row="2" Header="Open invoices — payment is allocated oldest due first" Padding="8" Margin="0,0,0,12">
+            <DataGrid x:Name="InvoiceGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" ItemsSource="{Binding OpenInvoices}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Invoice" Binding="{Binding InvoiceNo}" Width="140"/>
+                    <DataGridTextColumn Header="Date" Binding="{Binding InvoiceDate, StringFormat=yyyy-MM-dd}" Width="100"/>
+                    <DataGridTextColumn Header="Due" Binding="{Binding DueDate, StringFormat=yyyy-MM-dd}" Width="100"/>
+                    <DataGridTextColumn Header="Original" Binding="{Binding OriginalAmount, StringFormat=N2}" Width="110"/>
+                    <DataGridTextColumn Header="Outstanding" Binding="{Binding OutstandingAmount, StringFormat=N2}" Width="120"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
+
+        <Grid Grid.Row="3" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="34"/>
+                <RowDefinition Height="34"/>
+                <RowDefinition Height="34"/>
+                <RowDefinition Height="34"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Amount" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <TextBox x:Name="AmountBox" Grid.Row="0" Grid.Column="1" Height="26" VerticalContentAlignment="Center"/>
+
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="Method" VerticalAlignment="Center" FontWeight="SemiBold" Margin="14,0,0,0"/>
+            <ComboBox x:Name="MethodBox" Grid.Row="0" Grid.Column="3" Height="26" SelectedIndex="0">
+                <ComboBoxItem Content="Cash"/>
+                <ComboBoxItem Content="Card"/>
+                <ComboBoxItem Content="Cheque"/>
+                <ComboBoxItem Content="Bank Transfer"/>
+            </ComboBox>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Reference" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <TextBox x:Name="ReferenceBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="26" VerticalContentAlignment="Center"/>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Bank / Card" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <TextBox x:Name="BankBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Height="26" VerticalContentAlignment="Center"/>
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Destination" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <TextBox x:Name="DestinationBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Height="26" VerticalContentAlignment="Center" Text="BackOffice Counter"/>
+        </Grid>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="CANCEL" Width="100" Height="34" Margin="0,0,10,0" Click="Cancel_Click"/>
+            <Button Content="RECEIVE PAYMENT" Width="160" Height="34" Background="#059669" Foreground="White" FontWeight="Bold" Click="Receive_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.CustomerLedgerView"
+<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.CustomerLedgerView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
@@ -101,7 +101,7 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="TOTAL OUTSTANDING BALANCE" FontSize="11" FontWeight="Bold" Foreground="#555" HorizontalAlignment="Center"/>
 
-                        <TextBlock Text="{Binding SelectedCustomer.CurrentBalance, StringFormat=Rs. \{0:N2\}}" FontSize="26" FontWeight="Heavy" HorizontalAlignment="Center" Margin="0,5,0,0">
+                        <TextBlock Text="{Binding CurrentBalance, StringFormat=Rs. \{0:N2\}}" FontSize="26" FontWeight="Heavy" HorizontalAlignment="Center" Margin="0,5,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#8B0000"/>
@@ -140,7 +140,8 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date &amp; Time" Binding="{Binding TransactionDate, StringFormat=yyyy-MM-dd HH:mm}" Width="130"/>
                 <DataGridTextColumn Header="Ref No." Binding="{Binding DocumentRef}" Width="120" FontWeight="Bold"/>
-                <DataGridTextColumn Header="Transaction Type" Binding="{Binding TransactionType}" Width="150" FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="Transaction Type" Binding="{Binding TransactionType}" Width="125" FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="Due Date" Binding="{Binding DueDate, StringFormat=yyyy-MM-dd}" Width="95"/>
 
                 <DataGridTextColumn Header="Debit (+ Debt) Rs." Binding="{Binding DebitAmount, StringFormat=N2}" Width="130" Foreground="#8B0000" FontWeight="Bold">
                     <DataGridTextColumn.ElementStyle>
@@ -162,8 +163,11 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
+                <DataGridTextColumn Header="Balance Rs." Binding="{Binding RunningBalance, StringFormat=N2}" Width="105" FontWeight="Bold"/>
+                <DataGridTextColumn Header="Outstanding Rs." Binding="{Binding OutstandingAmount, StringFormat=N2}" Width="110"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85"/>
                 <DataGridTextColumn Header="Remarks / Notes" Binding="{Binding Remarks}" Width="*"/>
-                <DataGridTextColumn Header="User" Binding="{Binding ProcessedBy}" Width="100" Foreground="#666"/>
+                <DataGridTextColumn Header="User" Binding="{Binding ProcessedBy}" Width="90" Foreground="#666"/>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -188,7 +192,7 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 
-                    <Button Command="{Binding PrintStatementCommand}" Content="🖨️ PRINT PDF STATEMENT" Style="{StaticResource ClassicBtn}" Height="35" Margin="0,0,15,0" Padding="20,0"/>
+                    <Button Command="{Binding PrintStatementCommand}" Content="🖨️ PRINT / PDF STATEMENT" Style="{StaticResource ClassicBtn}" Height="35" Margin="0,0,15,0" Padding="20,0"/>
 
                     <Button Command="{Binding OpenReceivePaymentDialogCommand}" Content="💵 RECEIVE PAYMENT" Foreground="White" FontWeight="Heavy" FontSize="13" BorderThickness="0" Height="35" Padding="25,0" Cursor="Hand">
                         <Button.Style>

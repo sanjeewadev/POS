@@ -233,6 +233,36 @@ namespace POS.Core.Repositories
                     plan.Allocation.VatAmount.HasValue &&
                     plan.Allocation.TaxInclusiveAmount.HasValue);
 
+                decimal totalReturnAmount = Money(
+                    plans.Sum(plan => plan.Allocation.RefundAmount));
+
+                CustomerLedger? originalCreditLedger = null;
+                CustomerMaster? creditCustomer = null;
+                decimal accountCreditAmount = 0m;
+
+                if (sale.CustomerMasterId.HasValue)
+                {
+                    originalCreditLedger = await context.CustomerLedgers
+                        .FirstOrDefaultAsync(row =>
+                            row.SalesHeaderId == sale.Id &&
+                            row.OutstandingAmount > 0m);
+
+                    if (originalCreditLedger != null)
+                    {
+                        accountCreditAmount = Money(
+                            Math.Min(
+                                totalReturnAmount,
+                                originalCreditLedger.OutstandingAmount));
+
+                        creditCustomer = await context.CustomerMasters
+                            .FirstOrDefaultAsync(row =>
+                                row.Id == sale.CustomerMasterId.Value);
+                    }
+                }
+
+                decimal cashRefundAmount = Money(
+                    totalReturnAmount - accountCreditAmount);
+
                 var returnHeader = new CustomerReturnHeader
                 {
                     ReturnNo = creditNoteNo,
@@ -243,8 +273,14 @@ namespace POS.Core.Repositories
                     CashierName = Truncate(Normalize(request.CashierName), 100),
                     AuthorizedBy = Truncate(Normalize(request.AuthorizedBy), 100),
                     ReturnDate = DateTime.Now,
-                    TotalRefundAmount = Money(plans.Sum(plan => plan.Allocation.RefundAmount)),
-                    RefundMethod = CustomerReturnRefundMethods.Cash,
+                    TotalRefundAmount = totalReturnAmount,
+                    AccountCreditAmount = accountCreditAmount,
+                    CashRefundAmount = cashRefundAmount,
+                    RefundMethod = accountCreditAmount > 0m && cashRefundAmount > 0m
+                        ? "Split"
+                        : accountCreditAmount > 0m
+                            ? "Account Credit"
+                            : CustomerReturnRefundMethods.Cash,
                     DocumentType = CustomerReturnDocumentTypes.CreditNote,
                     CreditNoteNo = creditNoteNo,
                     TaxSnapshotStatus = completeTax
@@ -369,21 +405,72 @@ namespace POS.Core.Repositories
                         source.Quantity - newReturnedQuantity <= QuantityTolerance;
                 }
 
-                context.CashMovements.Add(
-                    new CashMovement
+                if (accountCreditAmount > 0m &&
+                    originalCreditLedger != null &&
+                    creditCustomer != null)
+                {
+                    originalCreditLedger.AllocatedAmount = Money(
+                        originalCreditLedger.AllocatedAmount + accountCreditAmount);
+                    originalCreditLedger.OutstandingAmount = Money(
+                        originalCreditLedger.OutstandingAmount - accountCreditAmount);
+                    originalCreditLedger.Status = originalCreditLedger.OutstandingAmount <= 0m
+                        ? CustomerCreditCodes.Paid
+                        : CustomerCreditCodes.PartPaid;
+
+                    var returnCreditLedger = new CustomerLedger
                     {
-                        ShiftSessionId = shift.Id,
-                        MovementType = CustomerReturnCashMovementCodes.MovementType,
-                        Amount = returnHeader.TotalRefundAmount,
-                        ReasonCategory = CustomerReturnCashMovementCodes.ReasonCategory,
-                        Remarks = Truncate(
-                            $"Cash refund for {sale.InvoiceNo}",
-                            255),
-                        CashierName = Truncate(Normalize(request.CashierName), 100),
-                        AuthorizedBy = Truncate(Normalize(request.AuthorizedBy), 100),
-                        Timestamp = returnHeader.ReturnDate,
-                        ReferenceVoucherNo = creditNoteNo
-                    });
+                        CustomerMasterId = creditCustomer.Id,
+                        CustomerReturnHeaderId = returnHeader.Id,
+                        TransactionDate = returnHeader.ReturnDate,
+                        DocumentRef = creditNoteNo,
+                        TransactionType = CustomerCreditCodes.ReturnCredit,
+                        DebitAmount = 0m,
+                        CreditAmount = accountCreditAmount,
+                        OriginalAmount = accountCreditAmount,
+                        AllocatedAmount = accountCreditAmount,
+                        OutstandingAmount = 0m,
+                        Status = CustomerCreditCodes.Paid,
+                        ProcessedBy = Truncate(Normalize(request.CashierName), 100),
+                        Remarks = Truncate($"Credit Note against {sale.InvoiceNo}", 255)
+                    };
+                    context.CustomerLedgers.Add(returnCreditLedger);
+                    await context.SaveChangesAsync();
+
+                    context.CustomerLedgerAllocations.Add(
+                        new CustomerLedgerAllocation
+                        {
+                            CustomerMasterId = creditCustomer.Id,
+                            DebitLedgerId = originalCreditLedger.Id,
+                            CreditLedgerId = returnCreditLedger.Id,
+                            Amount = accountCreditAmount,
+                            CreatedAt = returnHeader.ReturnDate,
+                            CreatedBy = Truncate(Normalize(request.CashierName), 100)
+                        });
+
+                    creditCustomer.CurrentBalance = Money(
+                        Math.Max(0m, creditCustomer.CurrentBalance - accountCreditAmount));
+                    creditCustomer.UpdatedAt = returnHeader.ReturnDate;
+                    creditCustomer.UpdatedBy = Truncate(Normalize(request.CashierName), 100);
+                }
+
+                if (cashRefundAmount > 0m)
+                {
+                    context.CashMovements.Add(
+                        new CashMovement
+                        {
+                            ShiftSessionId = shift.Id,
+                            MovementType = CustomerReturnCashMovementCodes.MovementType,
+                            Amount = cashRefundAmount,
+                            ReasonCategory = CustomerReturnCashMovementCodes.ReasonCategory,
+                            Remarks = Truncate(
+                                $"Cash refund for {sale.InvoiceNo}",
+                                255),
+                            CashierName = Truncate(Normalize(request.CashierName), 100),
+                            AuthorizedBy = Truncate(Normalize(request.AuthorizedBy), 100),
+                            Timestamp = returnHeader.ReturnDate,
+                            ReferenceVoucherNo = creditNoteNo
+                        });
+                }
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -395,7 +482,9 @@ namespace POS.Core.Repositories
                 {
                     ReturnHeader = savedReturn,
                     CreditNoteNo = creditNoteNo,
-                    TotalRefundAmount = savedReturn.TotalRefundAmount
+                    TotalRefundAmount = savedReturn.TotalRefundAmount,
+                    AccountCreditAmount = savedReturn.AccountCreditAmount,
+                    CashRefundAmount = savedReturn.CashRefundAmount
                 };
             }
             catch

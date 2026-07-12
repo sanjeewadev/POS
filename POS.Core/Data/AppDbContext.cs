@@ -52,6 +52,8 @@ namespace POS.Core.Data
         // --- CRM & CUSTOMER FINANCE ---
         public DbSet<CustomerMaster> CustomerMasters { get; set; } = null!;
         public DbSet<CustomerLedger> CustomerLedgers { get; set; } = null!;
+        public DbSet<CustomerPaymentReceipt> CustomerPaymentReceipts { get; set; } = null!;
+        public DbSet<CustomerLedgerAllocation> CustomerLedgerAllocations { get; set; } = null!;
 
         // --- EXPRESS ITEM LAYOUT ---
         public DbSet<ExpressItemLayout> ExpressItemLayouts { get; set; } = null!;
@@ -2072,6 +2074,21 @@ namespace POS.Core.Data
                 entity.Property(l => l.CreditAmount)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(l => l.OriginalAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.AllocatedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.OutstandingAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(l => l.Status)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("Open")
+                    .UseCollation("NOCASE");
+
                 entity.Property(l => l.ProcessedBy)
                     .HasMaxLength(100);
 
@@ -2090,6 +2107,83 @@ namespace POS.Core.Data
                 entity.HasIndex(l => l.DocumentRef);
 
                 entity.HasIndex(l => l.TransactionType);
+                entity.HasIndex(l => l.DueDate);
+                entity.HasIndex(l => l.Status);
+                entity.HasIndex(l => l.SalesHeaderId)
+                    .IsUnique()
+                    .HasFilter("SalesHeaderId IS NOT NULL");
+                entity.HasIndex(l => l.CustomerReturnHeaderId)
+                    .IsUnique()
+                    .HasFilter("CustomerReturnHeaderId IS NOT NULL");
+                entity.HasIndex(l => l.CustomerPaymentReceiptId)
+                    .IsUnique()
+                    .HasFilter("CustomerPaymentReceiptId IS NOT NULL");
+            });
+
+            modelBuilder.Entity<CustomerPaymentReceipt>(entity =>
+            {
+                entity.Property(row => row.ReceiptNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+                entity.Property(row => row.PaymentMethod)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+                entity.Property(row => row.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(row => row.ReferenceNo).HasMaxLength(100).UseCollation("NOCASE");
+                entity.Property(row => row.BankOrCardType).HasMaxLength(100).UseCollation("NOCASE");
+                entity.Property(row => row.DestinationAccount).HasMaxLength(100);
+                entity.Property(row => row.ProcessedBy).HasMaxLength(100);
+                entity.Property(row => row.TerminalNo).HasMaxLength(20).UseCollation("NOCASE");
+                entity.Property(row => row.Remarks).HasMaxLength(255);
+
+                entity.HasOne(row => row.CustomerMaster)
+                    .WithMany()
+                    .HasForeignKey(row => row.CustomerMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(row => row.ShiftSession)
+                    .WithMany()
+                    .HasForeignKey(row => row.ShiftSessionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(row => row.CashMovement)
+                    .WithMany()
+                    .HasForeignKey(row => row.CashMovementId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(row => row.ReceiptNo).IsUnique();
+                entity.HasIndex(row => row.ReceiptToken).IsUnique();
+                entity.HasIndex(row => row.CustomerMasterId);
+                entity.HasIndex(row => row.PaymentDate);
+                entity.HasIndex(row => row.PaymentMethod);
+                entity.HasIndex(row => row.ShiftSessionId);
+            });
+
+            modelBuilder.Entity<CustomerLedgerAllocation>(entity =>
+            {
+                entity.Property(row => row.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(row => row.CreatedBy).HasMaxLength(100);
+
+                entity.HasOne(row => row.CustomerMaster)
+                    .WithMany()
+                    .HasForeignKey(row => row.CustomerMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(row => row.DebitLedger)
+                    .WithMany()
+                    .HasForeignKey(row => row.DebitLedgerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(row => row.CreditLedger)
+                    .WithMany()
+                    .HasForeignKey(row => row.CreditLedgerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(row => row.CustomerPaymentReceipt)
+                    .WithMany(row => row.Allocations)
+                    .HasForeignKey(row => row.CustomerPaymentReceiptId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(row => new { row.DebitLedgerId, row.CreditLedgerId }).IsUnique();
+                entity.HasIndex(row => row.CustomerMasterId);
+                entity.HasIndex(row => row.CustomerPaymentReceiptId);
             });
 
             // =========================================================

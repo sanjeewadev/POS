@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Models;
 using POS.Cashier.UI.Services;
@@ -927,6 +927,18 @@ namespace POS.Cashier.UI.Views
 
             if (string.IsNullOrWhiteSpace(buttonText))
                 return;
+
+            if (buttonText.Equals("Cust Credit", StringComparison.OrdinalIgnoreCase) ||
+                buttonText.Equals("Customer Credit", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsurePaymentModeStarted();
+                decimal amount = GetTerminalInputAmountOrZero();
+                if (amount <= 0m)
+                    amount = ViewModel.BalanceDue;
+                ViewModel.AddConfirmedCustomerCreditPayment(amount);
+                ReturnFocusToTerminalInput();
+                return;
+            }
 
             if (buttonText.Equals("Cash", StringComparison.OrdinalIgnoreCase))
             {
