@@ -557,7 +557,8 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (!SelectedCartItem.IsGiftVoucherSale && qty > SelectedCartItem.AvailableBatchStock)
+            if (SelectedCartItem.RequiresStockBatch &&
+                qty > SelectedCartItem.AvailableBatchStock)
             {
                 _ = ShowNotificationAsync(
                     $"Only {SelectedCartItem.AvailableBatchStock:N3} available in selected stock.",
@@ -852,9 +853,9 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (Cart.Any(c => !c.IsGiftVoucherSale && c.ItemBatchId <= 0))
+            if (Cart.Any(c => c.RequiresStockBatch && c.ItemBatchId <= 0))
             {
-                _ = ShowNotificationAsync("Cannot pay: one or more cart lines has no selected stock reference.", "#EF4444");
+                _ = ShowNotificationAsync("Cannot pay: one or more Stock Item lines has no selected stock reference.", "#EF4444");
                 return;
             }
 
@@ -1458,6 +1459,12 @@ namespace POS.Cashier.UI.ViewModels
                     return;
                 }
 
+                if (item.IsService)
+                {
+                    AddServiceToCart(item, quantity);
+                    return;
+                }
+
                 if (item.HasBatchTracking)
                 {
                     _ = ShowNotificationAsync("Batch item. Scan GRN batch barcode.", "#F59E0B");
@@ -1482,6 +1489,12 @@ namespace POS.Cashier.UI.ViewModels
 
         private void AddSelectedBatchToCart(CashierSellableItemDto item, CashierBatchDto selectedBatch, decimal quantity)
         {
+            if (!item.IsStockItem)
+            {
+                _ = ShowNotificationAsync("Only Stock Items can be added from a stock batch.", "#EF4444");
+                return;
+            }
+
             if (selectedBatch.AvailableQty <= 0m)
             {
                 _ = ShowNotificationAsync("Selected stock has no available quantity.", "#F59E0B");
@@ -1533,6 +1546,7 @@ namespace POS.Cashier.UI.ViewModels
                 Description = item.DisplayDescription,
                 VariantDescription = item.VariantDescription,
                 Uom = item.Uom,
+                ItemType = item.ItemType,
                 BatchNo = selectedBatch.BatchNo,
                 ExpiryDate = selectedBatch.ExpiryDate,
                 ReceivedDate = selectedBatch.ReceivedDate,
@@ -1566,6 +1580,96 @@ namespace POS.Cashier.UI.ViewModels
             _ = ShowNotificationAsync($"Added: {item.DisplayDescription} / {batchText}", "#10B981");
         }
 
+        private void AddServiceToCart(
+            CashierSellableItemDto item,
+            decimal quantity)
+        {
+            if (!item.IsService)
+            {
+                _ = ShowNotificationAsync(
+                    "Selected item is not configured as a Service.",
+                    "#EF4444");
+                return;
+            }
+
+            if (quantity <= 0m)
+                quantity = 1m;
+
+            var existingItem = Cart.FirstOrDefault(c =>
+                !c.IsGiftVoucherSale &&
+                !c.IsFreeItem &&
+                c.IsService &&
+                !c.IsManualDiscount &&
+                !c.IsPriceOverridden &&
+                c.DiscountAmount <= 0m &&
+                c.ItemVariantId == item.VariantId);
+
+            if (existingItem != null)
+            {
+                existingItem.Quantity += quantity;
+                SelectedCartItem = existingItem;
+                RecalculateTotals();
+
+                _ = ShowNotificationAsync(
+                    $"{item.DisplayDescription} quantity updated.",
+                    "#10B981");
+                return;
+            }
+
+            decimal sellingPrice =
+                IsWholesaleMode && item.WholesalePrice > 0m
+                    ? item.WholesalePrice
+                    : item.RetailPrice;
+
+            decimal serviceCost =
+                item.CostPrice > 0m
+                    ? item.CostPrice
+                    : item.AverageCost;
+
+            var cartItem = new CartItem
+            {
+                ItemVariantId = item.VariantId,
+                ItemBatchId = 0,
+                ItemCode = item.ItemCode,
+                SkuCode = item.SkuCode,
+                Barcode = string.IsNullOrWhiteSpace(item.Barcode)
+                    ? item.SkuCode
+                    : item.Barcode,
+                Description = item.DisplayDescription,
+                VariantDescription = item.VariantDescription,
+                Uom = item.Uom,
+                ItemType = item.ItemType,
+                BatchNo = string.Empty,
+                ExpiryDate = null,
+                ReceivedDate = null,
+                CostPrice = serviceCost,
+                RetailPrice = item.RetailPrice,
+                WholesalePrice = item.WholesalePrice,
+                MinimumPrice = item.MinimumPrice,
+                MaximumPrice = item.MaximumPrice,
+                UnitPrice = sellingPrice,
+                OriginalUnitPrice = sellingPrice,
+                Quantity = quantity,
+                DiscountPercentage = 0m,
+                ManualDiscountAmount = 0m,
+                DiscountMode = "None",
+                IsManualDiscount = false,
+                IsPriceOverridden = false,
+                PriceOverrideAmount = 0m,
+                PriceOverrideApprovedBy = string.Empty,
+                PriceOverrideApprovedAt = null,
+                AvailableBatchStock = 0m
+            };
+
+            Cart.Add(cartItem);
+            SelectedCartItem = cartItem;
+            RecalculateTotals();
+
+            _ = ShowNotificationAsync(
+                $"Added Service: {item.DisplayDescription}",
+                "#10B981");
+        }
+
         public async Task<bool> AddSpecificItemToCartAsync(string barcode, int quantity)
         {
             if (string.IsNullOrWhiteSpace(barcode) || quantity <= 0)
@@ -1578,11 +1682,31 @@ namespace POS.Cashier.UI.ViewModels
             {
                 decimal beforeQty = Cart.Sum(c => c.Quantity);
 
-                var batch = await _itemRepository.GetSellableBatchByInternalBarcodeAsync(barcode.Trim());
+                string term = barcode.Trim();
+
+                var batch =
+                    await _itemRepository
+                        .GetSellableBatchByInternalBarcodeAsync(term);
+
                 if (batch != null)
-                    await AddBatchToCartAsync(batch.ItemBatchId, quantity);
+                {
+                    await AddBatchToCartAsync(
+                        batch.ItemBatchId,
+                        quantity);
+                }
                 else
-                    await ProcessBarcodeAsync(barcode.Trim());
+                {
+                    var item =
+                        await _itemRepository
+                            .GetSellableItemByBarcodeOrSkuAsync(term);
+
+                    if (item == null)
+                        return false;
+
+                    await AddVariantToCartAsync(
+                        item.VariantId,
+                        quantity);
+                }
 
                 decimal afterQty = Cart.Sum(c => c.Quantity);
                 return afterQty > beforeQty;
@@ -1639,6 +1763,7 @@ namespace POS.Cashier.UI.ViewModels
                 Description = $"{description} / {safeVoucherNo}",
                 VariantDescription = "Gift Voucher",
                 Uom = "VOU",
+                ItemType = string.Empty,
                 BatchNo = string.Empty,
                 ExpiryDate = null,
                 ReceivedDate = null,
@@ -1678,6 +1803,14 @@ namespace POS.Cashier.UI.ViewModels
             if (IsPaymentModeActive)
             {
                 _ = ShowNotificationAsync("Cancel payment mode before applying free issue.", "#F59E0B");
+                return;
+            }
+
+            if (cartItem.IsService)
+            {
+                _ = ShowNotificationAsync(
+                    "Free issue cannot be applied to a Service.",
+                    "#EF4444");
                 return;
             }
 
@@ -1828,9 +1961,9 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
 
-            if (Cart.Any(c => !c.IsGiftVoucherSale && c.ItemBatchId <= 0))
+            if (Cart.Any(c => c.RequiresStockBatch && c.ItemBatchId <= 0))
             {
-                _ = ShowNotificationAsync("One or more cart lines has no selected stock reference.", "#EF4444");
+                _ = ShowNotificationAsync("One or more Stock Item lines has no selected stock reference.", "#EF4444");
                 return false;
             }
 
@@ -1916,7 +2049,10 @@ namespace POS.Cashier.UI.ViewModels
                 var lines = Cart.Select(c => new SalesLine
                 {
                     ItemVariantId = c.IsGiftVoucherSale ? null : c.ItemVariantId,
-                    ItemBatchId = c.IsGiftVoucherSale ? null : c.ItemBatchId,
+                    ItemBatchId =
+                        c.IsGiftVoucherSale || c.IsService
+                            ? null
+                            : c.ItemBatchId,
                     SkuCode = c.IsGiftVoucherSale ? "GV-SALE" : c.SkuCode,
                     Barcode = c.Barcode,
                     ItemDescription = c.Description,

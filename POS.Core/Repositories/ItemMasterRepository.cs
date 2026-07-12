@@ -67,6 +67,11 @@ namespace POS.Core.Repositories
 
         public string CategoryName { get; set; } = string.Empty;
 
+        public string ItemType { get; set; } = ItemTypeCodes.StockItem;
+
+        public bool IsService =>
+            string.Equals(ItemType, ItemTypeCodes.Service, StringComparison.Ordinal);
+
         public int ActiveVariantsCount { get; set; }
 
         public bool HasBatchTracking { get; set; }
@@ -77,6 +82,9 @@ namespace POS.Core.Repositories
         {
             get
             {
+                if (IsService)
+                    return "Service / No Stock";
+
                 if (!HasBatchTracking)
                     return "Average Cost";
 
@@ -97,6 +105,11 @@ namespace POS.Core.Repositories
 
         public string VariantDescription { get; set; } = string.Empty;
 
+        public string ItemType { get; set; } = ItemTypeCodes.StockItem;
+
+        public bool IsService =>
+            string.Equals(ItemType, ItemTypeCodes.Service, StringComparison.Ordinal);
+
         public decimal RetailPrice { get; set; }
 
         public decimal StockOnHand { get; set; }
@@ -105,12 +118,15 @@ namespace POS.Core.Repositories
 
         public bool HasExpiryTracking { get; set; }
 
-        public bool HasStock => StockOnHand > 0m;
+        public bool HasStock => IsService || StockOnHand > 0m;
 
         public string TrackingText
         {
             get
             {
+                if (IsService)
+                    return "Service / No Stock";
+
                 if (!HasBatchTracking)
                     return "Average Cost";
 
@@ -198,7 +214,17 @@ namespace POS.Core.Repositories
 
         public string Uom { get; set; } = "PCS";
 
+        public string ItemType { get; set; } = ItemTypeCodes.StockItem;
+
+        public bool IsService =>
+            string.Equals(ItemType, ItemTypeCodes.Service, StringComparison.Ordinal);
+
+        public bool IsStockItem =>
+            string.Equals(ItemType, ItemTypeCodes.StockItem, StringComparison.Ordinal);
+
         public decimal AverageCost { get; set; }
+
+        public decimal CostPrice { get; set; }
 
         public decimal RetailPrice { get; set; }
 
@@ -214,7 +240,7 @@ namespace POS.Core.Repositories
 
         public bool HasExpiryTracking { get; set; }
 
-        public bool HasStock => StockOnHand > 0;
+        public bool HasStock => IsService || StockOnHand > 0m;
 
         public string DisplayDescription
         {
@@ -1528,7 +1554,10 @@ namespace POS.Core.Repositories
                 .AsNoTracking()
                 .Where(p =>
                     !p.IsDeactivated &&
-                    p.ItemType == ItemTypeCodes.StockItem &&
+                    (
+                        p.ItemType == ItemTypeCodes.StockItem ||
+                        p.ItemType == ItemTypeCodes.Service
+                    ) &&
                     !p.IsSaleLocked);
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -1561,9 +1590,14 @@ namespace POS.Core.Repositories
                     ItemCode = p.ItemCode,
                     ItemName = p.ItemName,
                     CategoryName = p.Category.CategoryName,
+                    ItemType = p.ItemType,
                     ActiveVariantsCount = p.Variants.Count(v => !v.IsDeactivated),
-                    HasBatchTracking = p.HasBatchTracking,
-                    HasExpiryTracking = p.HasExpiryTracking || p.HasBatchExpiry
+                    HasBatchTracking =
+                        p.ItemType == ItemTypeCodes.StockItem &&
+                        p.HasBatchTracking,
+                    HasExpiryTracking =
+                        p.ItemType == ItemTypeCodes.StockItem &&
+                        (p.HasExpiryTracking || p.HasBatchExpiry)
                 })
                 .Take(100)
                 .ToListAsync();
@@ -1581,7 +1615,10 @@ namespace POS.Core.Repositories
                     v.ItemParentId == parentId &&
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
-                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
+                    (
+                        v.ItemParent.ItemType == ItemTypeCodes.StockItem ||
+                        v.ItemParent.ItemType == ItemTypeCodes.Service
+                    ) &&
                     !v.ItemParent.IsSaleLocked)
                 .Select(v => new
                 {
@@ -1591,8 +1628,13 @@ namespace POS.Core.Repositories
                     v.Barcode,
                     v.VariantDescription,
                     v.RetailPrice,
-                    HasBatchTracking = v.ItemParent.HasBatchTracking,
-                    HasExpiryTracking = v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry
+                    ItemType = v.ItemParent.ItemType,
+                    HasBatchTracking =
+                        v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
+                        v.ItemParent.HasBatchTracking,
+                    HasExpiryTracking =
+                        v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
+                        (v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry)
                 })
                 .AsNoTracking()
                 .ToListAsync();
@@ -1626,9 +1668,14 @@ namespace POS.Core.Repositories
 
             foreach (var variant in variants)
             {
-                decimal stock = stockData.TryGetValue(variant.Id, out decimal stockOnHand)
-                    ? stockOnHand
-                    : 0m;
+                decimal stock =
+                    variant.ItemType == ItemTypeCodes.Service
+                        ? 0m
+                        : stockData.TryGetValue(
+                            variant.Id,
+                            out decimal stockOnHand)
+                            ? stockOnHand
+                            : 0m;
 
                 results.Add(new VariantSeekDto
                 {
@@ -1640,6 +1687,7 @@ namespace POS.Core.Repositories
                         ? "Standard"
                         : variant.VariantDescription,
                     RetailPrice = variant.RetailPrice,
+                    ItemType = variant.ItemType,
                     StockOnHand = stock,
                     HasBatchTracking = variant.HasBatchTracking,
                     HasExpiryTracking = variant.HasExpiryTracking
@@ -1873,7 +1921,10 @@ namespace POS.Core.Repositories
                     v.Id == variantId &&
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
-                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
+                    (
+                        v.ItemParent.ItemType == ItemTypeCodes.StockItem ||
+                        v.ItemParent.ItemType == ItemTypeCodes.Service
+                    ) &&
                     !v.ItemParent.IsSaleLocked);
 
             if (variant == null)
@@ -1901,7 +1952,10 @@ namespace POS.Core.Repositories
                 .FirstOrDefaultAsync(v =>
                     !v.IsDeactivated &&
                     !v.ItemParent.IsDeactivated &&
-                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
+                    (
+                        v.ItemParent.ItemType == ItemTypeCodes.StockItem ||
+                        v.ItemParent.ItemType == ItemTypeCodes.Service
+                    ) &&
                     !v.ItemParent.IsSaleLocked &&
                     (
                         v.SkuCode.ToUpper() == upperTerm ||
@@ -1916,9 +1970,21 @@ namespace POS.Core.Repositories
 
         private static CashierSellableItemDto BuildCashierSellableItemDto(ItemVariant variant)
         {
-            decimal stockOnHand = variant.ItemBatches?
-                .Where(b => !b.IsDeactivated)
-                .Sum(b => b.CurrentStock) ?? 0m;
+            string itemType =
+                variant.ItemParent?.ItemType ??
+                ItemTypeCodes.StockItem;
+
+            bool isService =
+                string.Equals(
+                    itemType,
+                    ItemTypeCodes.Service,
+                    StringComparison.Ordinal);
+
+            decimal stockOnHand = isService
+                ? 0m
+                : variant.ItemBatches?
+                    .Where(b => !b.IsDeactivated)
+                    .Sum(b => b.CurrentStock) ?? 0m;
 
             return new CashierSellableItemDto
             {
@@ -1937,7 +2003,10 @@ namespace POS.Core.Repositories
                     ?? variant.ItemParent?.BaseUom
                     ?? "PCS",
 
+                ItemType = itemType,
+
                 AverageCost = variant.AverageCost,
+                CostPrice = variant.CostPrice,
 
                 RetailPrice = variant.RetailPrice,
                 WholesalePrice = variant.WholesalePrice,
@@ -1946,10 +2015,15 @@ namespace POS.Core.Repositories
 
                 StockOnHand = stockOnHand,
 
-                HasBatchTracking = variant.ItemParent?.HasBatchTracking ?? true,
+                HasBatchTracking =
+                    !isService &&
+                    (variant.ItemParent?.HasBatchTracking ?? true),
                 HasExpiryTracking =
-                    variant.ItemParent?.HasExpiryTracking == true ||
-                    variant.ItemParent?.HasBatchExpiry == true
+                    !isService &&
+                    (
+                        variant.ItemParent?.HasExpiryTracking == true ||
+                        variant.ItemParent?.HasBatchExpiry == true
+                    )
             };
         }
 

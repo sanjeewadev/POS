@@ -90,6 +90,14 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
+            if (value.IsService)
+            {
+                CanAddVariant = true;
+                StatusText = $"Service selected: {value.VariantDescription}. Press Add or Enter.";
+                StatusColorHex = "#10B981";
+                return;
+            }
+
             if (value.StockOnHand <= 0m)
             {
                 StatusText = "OUT OF STOCK. This variant cannot be added.";
@@ -233,7 +241,7 @@ namespace POS.Cashier.UI.ViewModels
 
                 if (VariantResults.Count == 0)
                 {
-                    StatusText = "No sellable stock found for this item.";
+                    StatusText = "No sellable variants found for this item.";
                     StatusColorHex = "#D97706";
                     return;
                 }
@@ -303,7 +311,8 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (SelectedVariant.StockOnHand <= 0m)
+            if (!SelectedVariant.IsService &&
+                SelectedVariant.StockOnHand <= 0m)
             {
                 StatusText = "Cannot add out-of-stock item.";
                 StatusColorHex = "#DC3545";
@@ -311,7 +320,8 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (SelectedVariant.HasBatchTracking)
+            if (!SelectedVariant.IsService &&
+                SelectedVariant.HasBatchTracking)
             {
                 IsBatchSelectionVisible = true;
                 CanAddVariant = false;

@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using POS.Core.Configuration;
 
 namespace POS.Cashier.UI.Models
 {
@@ -33,6 +34,25 @@ namespace POS.Cashier.UI.Models
 
         [ObservableProperty]
         private string _uom = "PCS";
+
+        [ObservableProperty]
+        private string _itemType = ItemTypeCodes.StockItem;
+
+        public bool IsService =>
+            string.Equals(
+                ItemType,
+                ItemTypeCodes.Service,
+                StringComparison.Ordinal);
+
+        public bool IsStockItem =>
+            string.Equals(
+                ItemType,
+                ItemTypeCodes.StockItem,
+                StringComparison.Ordinal);
+
+        public bool RequiresStockBatch =>
+            !IsGiftVoucherSale &&
+            IsStockItem;
 
         // Backward compatibility for old XAML/code.
         public int ItemId => ItemBatchId;
@@ -104,6 +124,15 @@ namespace POS.Cashier.UI.Models
                 }
 
                 var parts = new List<string>();
+
+                if (IsService)
+                {
+                    if (!string.IsNullOrWhiteSpace(SkuCode))
+                        parts.Add($"SKU: {SkuCode.Trim()}");
+
+                    parts.Add("Service / No stock");
+                    return string.Join(" | ", parts);
+                }
 
                 if (!string.IsNullOrWhiteSpace(SkuCode))
                     parts.Add($"SKU: {SkuCode.Trim()}");
@@ -584,6 +613,16 @@ namespace POS.Cashier.UI.Models
             OnPropertyChanged(nameof(QuantityUomDisplay));
         }
 
+        partial void OnItemTypeChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsService));
+            OnPropertyChanged(nameof(IsStockItem));
+            OnPropertyChanged(nameof(RequiresStockBatch));
+            OnPropertyChanged(nameof(CashierBatchInfoDisplay));
+            OnPropertyChanged(nameof(CashierLineStatusDisplay));
+            OnPropertyChanged(nameof(HasCashierLineStatus));
+        }
+
         partial void OnBatchNoChanged(string value)
         {
             OnPropertyChanged(nameof(BatchDisplayText));
@@ -723,6 +762,7 @@ namespace POS.Cashier.UI.Models
             NotifyCashierStatusDisplayChanges();
             OnPropertyChanged(nameof(CashierBatchInfoDisplay));
             OnPropertyChanged(nameof(DiscountDisplayText));
+            OnPropertyChanged(nameof(RequiresStockBatch));
         }
 
         partial void OnGiftVoucherNoChanged(string value)
