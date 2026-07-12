@@ -766,7 +766,7 @@
 
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Float Cash" Click="FloatCashBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="% Disc" Click="PercentDiscountBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Drawer"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Drawer" Click="DrawerBtn_Click"/>
 
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Seek" Click="SeekBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Remove" Click="RemoveBtn_Click"/>
@@ -983,7 +983,8 @@
                     </Button>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
-                            Content="No Sale"/>
+                            Content="No Sale"
+                            Click="NoSaleBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
                             Content="New Price"

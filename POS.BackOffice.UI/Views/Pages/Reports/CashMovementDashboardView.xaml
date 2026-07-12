@@ -94,6 +94,8 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date &amp; Time" Binding="{Binding Timestamp, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
                 <DataGridTextColumn Header="Voucher No." Binding="{Binding ReferenceVoucherNo}" Width="120"/>
+                <DataGridTextColumn Header="Shift" Binding="{Binding ShiftSessionId}" Width="70"/>
+                <DataGridTextColumn Header="Terminal" Binding="{Binding ShiftSession.TerminalNo}" Width="90"/>
 
                 <DataGridTextColumn Header="Type" Binding="{Binding MovementType}" Width="100">
                     <DataGridTextColumn.ElementStyle>

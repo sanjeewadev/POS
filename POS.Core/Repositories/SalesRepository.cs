@@ -67,7 +67,12 @@ namespace POS.Core.Repositories
                         await transaction.RollbackAsync();
                         return await LoadSavedReceiptAsync(context, existingSale.Id);
                     }
+                }
 
+                await ValidateShiftAsync(context, header.ShiftSessionId);
+
+                if (header.CheckoutToken.HasValue && header.CheckoutToken.Value != Guid.Empty)
+                {
                     cartSession = await context.CashierCartSessions
                         .Include(c => c.Lines)
                         .FirstOrDefaultAsync(c => c.CartToken == header.CheckoutToken.Value);
@@ -90,7 +95,6 @@ namespace POS.Core.Repositories
                 header.Status = "Completed";
                 header.IsVoided = false;
 
-                await ValidateShiftAsync(context, header.ShiftSessionId);
                 await ApplyCustomerSnapshotAsync(context, header);
                 await ApplyStoreTaxSnapshotAsync(context, header);
 
@@ -794,10 +798,21 @@ namespace POS.Core.Repositories
             if (shiftSessionId <= 0)
                 throw new InvalidOperationException("No active shift found.");
 
-            bool exists = await context.ShiftSessions.AnyAsync(s => s.Id == shiftSessionId);
+            ShiftSession? shift = await context.ShiftSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == shiftSessionId);
 
-            if (!exists)
+            if (shift == null)
                 throw new InvalidOperationException("Active shift session was not found.");
+
+            if (!string.Equals(
+                    shift.Status,
+                    ShiftStatusCodes.Open,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Shift {shift.Id} is {shift.Status} and cannot accept new sales.");
+            }
         }
 
         private static async Task<DocumentSequence> GetOrCreateInvoiceSequenceAsync(AppDbContext context)

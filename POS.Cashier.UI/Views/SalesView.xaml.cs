@@ -5,6 +5,7 @@ using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
+using POS.Core.Configuration;
 using POS.Core.Services;
 using System;
 using System.Globalization;
@@ -1882,6 +1883,81 @@ namespace POS.Cashier.UI.Views
                 if (DimmingCurtain != null)
                     DimmingCurtain.Visibility = Visibility.Collapsed;
 
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
+            }
+        }
+
+        private async void DrawerBtn_Click(object sender, RoutedEventArgs e)
+        {
+            await OpenManualDrawerAsync(
+                CashDrawerEventTypeCodes.ManualOpen,
+                "MANUAL DRAWER OPEN",
+                new[] { "Cash Count", "Drawer Check", "Hardware Test", "Other" },
+                requireEmptyCart: false);
+        }
+
+        private async void NoSaleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            await OpenManualDrawerAsync(
+                CashDrawerEventTypeCodes.NoSale,
+                "NO SALE DRAWER OPEN",
+                new[] { "Make Change", "Cash Count", "Customer Request", "Other" },
+                requireEmptyCart: true);
+        }
+
+        private async Task OpenManualDrawerAsync(
+            string eventType,
+            string title,
+            string[] reasons,
+            bool requireEmptyCart)
+        {
+            if (ViewModel == null || _isDialogOpen)
+                return;
+
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync("Cancel payment mode before opening the drawer.", "#F59E0B");
+                return;
+            }
+
+            if (requireEmptyCart && ViewModel.Cart.Any())
+            {
+                _ = ViewModel.ShowNotificationAsync("Cancel or suspend the current cart before No Sale.", "#F59E0B");
+                return;
+            }
+
+            _isDialogOpen = true;
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var reasonDialog = new DrawerReasonDialog(title, reasons) { Owner = this };
+                if (reasonDialog.ShowDialog() != true)
+                    return;
+
+                ManagerAuthViewModel authViewModel = App.Services!.GetRequiredService<ManagerAuthViewModel>();
+                var authDialog = new ManagerAuthDialogView(authViewModel) { Owner = this };
+                if (authDialog.ShowDialog() != true)
+                    return;
+
+                await ViewModel.OpenAuditedDrawerAsync(
+                    eventType,
+                    reasonDialog.SelectedReason,
+                    reasonDialog.Note,
+                    authViewModel.AuthorizedUsername);
+
+                _ = ViewModel.ShowNotificationAsync("Cash drawer opened and audited.", "#10B981");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Cash Drawer", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
                 _isDialogOpen = false;
                 ReturnFocusToTerminalInput();
             }

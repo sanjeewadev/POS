@@ -420,6 +420,79 @@ namespace POS.Core.Migrations
                     b.ToTable("CashierCartSessions");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashDrawerEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AuthorizedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CashMovementId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("FailureMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SalesHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashMovementId");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("SalesHeaderId");
+
+                    b.HasIndex("ShiftSessionId", "RequestedAtUtc");
+
+                    b.HasIndex("TerminalNo", "RequestedAtUtc");
+
+                    b.ToTable("CashDrawerEvents");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
                 {
                     b.Property<int>("Id")
@@ -467,12 +540,18 @@ namespace POS.Core.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MovementType");
+
+                    b.HasIndex("ReasonCategory");
+
                     b.HasIndex("ReferenceVoucherNo")
                         .IsUnique();
 
                     b.HasIndex("ShiftSessionId");
 
                     b.HasIndex("Timestamp");
+
+                    b.HasIndex("ShiftSessionId", "Timestamp");
 
                     b.ToTable("CashMovements");
                 });
@@ -1378,6 +1457,30 @@ namespace POS.Core.Migrations
                             NextSequenceNumber = 1,
                             PaddingLength = 5,
                             Prefix = "PCH-",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            DocumentType = "PAIDIN",
+                            NextSequenceNumber = 1,
+                            PaddingLength = 6,
+                            Prefix = "PI-",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            DocumentType = "PAIDOUT",
+                            NextSequenceNumber = 1,
+                            PaddingLength = 6,
+                            Prefix = "POT-",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            DocumentType = "ZREPORT",
+                            NextSequenceNumber = 1,
+                            PaddingLength = 6,
+                            Prefix = "Z-",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
                         });
                 });
@@ -4695,6 +4798,138 @@ namespace POS.Core.Migrations
                     b.ToTable("SalesPayments");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.ShiftCloseSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AuthorizedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CardTenderTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CashRefundTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CashTenderTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ChequeTenderTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("CloseToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ClosedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClosedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CompletedSaleCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CountedCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CustomerReturnCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("CustomerCreditTenderTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ExpectedCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("FloatInTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("FloatOutTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GiftVoucherTenderTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GrossSales")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("NetSales")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("OpeningCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OtherTenderTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PaidInTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PaidOutTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal>("TotalDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Variance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("VarianceNote")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("VatTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ZReportNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CloseToken")
+                        .IsUnique();
+
+                    b.HasIndex("ShiftSessionId")
+                        .IsUnique();
+
+                    b.HasIndex("ZReportNo")
+                        .IsUnique();
+
+                    b.HasIndex("TerminalNo", "ClosedAt");
+
+                    b.ToTable("ShiftCloseSnapshots");
+                });
+
             modelBuilder.Entity("POS.Core.Models.ShiftSession", b =>
                 {
                     b.Property<int>("Id")
@@ -4738,6 +4973,17 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EndTime");
+
+                    b.HasIndex("StartTime");
+
+                    b.HasIndex("TerminalNo")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ShiftSessions_OneOpenPerTerminal")
+                        .HasFilter("\"Status\" IN ('Open', 'Closing')");
+
+                    b.HasIndex("TerminalNo", "Status");
 
                     b.ToTable("ShiftSessions");
                 });
@@ -6267,6 +6513,27 @@ namespace POS.Core.Migrations
                     b.Navigation("ShiftSession");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashDrawerEvent", b =>
+                {
+                    b.HasOne("POS.Core.Models.CashMovement", null)
+                        .WithMany()
+                        .HasForeignKey("CashMovementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.SalesHeader", null)
+                        .WithMany()
+                        .HasForeignKey("SalesHeaderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
+                        .WithMany()
+                        .HasForeignKey("ShiftSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ShiftSession");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
                 {
                     b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
@@ -6788,6 +7055,17 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("SalesHeader");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.ShiftCloseSnapshot", b =>
+                {
+                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
+                        .WithMany()
+                        .HasForeignKey("ShiftSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ShiftSession");
                 });
 
             modelBuilder.Entity("POS.Core.Models.StockAdjustmentLine", b =>

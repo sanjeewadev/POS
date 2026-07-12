@@ -17,6 +17,7 @@ using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Services.Documents;
 using POS.Core.Services.Tax;
 
 namespace POS.Cashier.UI.ViewModels
@@ -28,6 +29,7 @@ namespace POS.Cashier.UI.ViewModels
         private readonly SalesDocumentRepository _salesDocumentRepository;
         private readonly TillRepository _tillRepository;
         private readonly IReceiptPrintService _printService;
+        private readonly CashDrawerAuditService _drawerAuditService;
         private readonly SalesTaxService _salesTaxService = new();
 
         private bool _isVatRegisteredStore;
@@ -116,7 +118,8 @@ namespace POS.Cashier.UI.ViewModels
             SalesDocumentRepository salesDocumentRepository,
             CashierCartRepository cashierCartRepository,
             TillRepository tillRepository,
-            IReceiptPrintService printService)
+            IReceiptPrintService printService,
+            CashDrawerAuditService drawerAuditService)
         {
             _itemRepository = itemRepository;
             _salesRepository = salesRepository;
@@ -124,6 +127,7 @@ namespace POS.Cashier.UI.ViewModels
             _cashierCartRepository = cashierCartRepository;
             _tillRepository = tillRepository;
             _printService = printService;
+            _drawerAuditService = drawerAuditService;
 
             Cart.CollectionChanged += (_, e) =>
             {
@@ -1372,17 +1376,18 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (!VerifyActionPermission())
-            {
-                var authVM = App.Services!.GetRequiredService<ManagerAuthViewModel>();
-                var authDialog = new POS.Cashier.UI.Dialogs.ManagerAuthDialogView(authVM);
+            string authorizedBy = CashierName;
 
-                if (authDialog.ShowDialog() != true)
-                    return;
-            }
+            var authVM = App.Services!.GetRequiredService<ManagerAuthViewModel>();
+            var authDialog = new POS.Cashier.UI.Dialogs.ManagerAuthDialogView(authVM);
+
+            if (authDialog.ShowDialog() != true)
+                return;
+
+            authorizedBy = authVM.AuthorizedUsername;
 
             var floatVM = App.Services!.GetRequiredService<FloatCashViewModel>();
-            floatVM.Initialize(_currentShiftId);
+            floatVM.Initialize(_currentShiftId, authorizedBy);
 
             var floatDialog = new POS.Cashier.UI.Dialogs.FloatCashDialog(floatVM);
             floatDialog.ShowDialog();
@@ -1393,20 +1398,22 @@ namespace POS.Cashier.UI.ViewModels
         [RelayCommand]
         public async Task PrintXReportAsync()
         {
-            var summary = await _tillRepository.GetShiftSummaryAsync(_currentShiftId);
+            ShiftCashSummaryDto summary = await _tillRepository
+                .GetShiftCashSummaryAsync(_currentShiftId, false)
+                ?? throw new InvalidOperationException("The active shift summary could not be loaded.");
 
-            if (summary != null)
-            {
-                MessageBox.Show(
-                    $"Expected Cash in Drawer: Rs. {summary.ExpectedCash:N2}\n\nPrinting X-Report...",
-                    "X-Report",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
+            if (string.IsNullOrWhiteSpace(_receiptPrinterName))
+                throw new InvalidOperationException("No receipt printer is configured in Terminal Settings.");
+
+            string reportText = App.Services!
+                .GetRequiredService<ShiftReportTextFormatter>()
+                .FormatXReport(summary, _receiptPaperWidth);
+
+            await _printService.PrintTextAsync(
+                reportText,
+                _receiptPrinterName,
+                "POS X Report");
         }
-
-        [RelayCommand]
-        public Task ProcessZReportAsync() => Task.CompletedTask;
 
         private async Task AddToCartFromMessageAsync(AddToCartRequest request)
         {
@@ -2782,13 +2789,7 @@ namespace POS.Cashier.UI.ViewModels
                             StringComparison
                                 .OrdinalIgnoreCase));
 
-            bool printerIsNeeded =
-                _autoPrintReceipt ||
-                (_enableCashDrawer &&
-                 _openDrawerAfterCashSale &&
-                 cashWasAccepted);
-
-            if (printerIsNeeded &&
+            if (_autoPrintReceipt &&
                 string.IsNullOrWhiteSpace(
                     _receiptPrinterName))
             {
@@ -2821,10 +2822,49 @@ namespace POS.Cashier.UI.ViewModels
                 _openDrawerAfterCashSale &&
                 cashWasAccepted)
             {
-                await _printService
-                    .OpenCashDrawerAsync(
-                        _receiptPrinterName);
+                try
+                {
+                    await _drawerAuditService.OpenAsync(
+                        _currentShiftId,
+                        TerminalNo,
+                        CashierName,
+                        CashDrawerEventTypeCodes.CashSale,
+                        "Automatic cash-sale drawer open",
+                        savedReceipt.InvoiceNo,
+                        string.Empty,
+                        salesHeaderId: savedReceipt.Id);
+                }
+                catch (Exception ex)
+                {
+                    LocalLogService.WriteException(
+                        "Cashier",
+                        "Automatic cash drawer open",
+                        ex);
+
+                    _ = ShowNotificationAsync(
+                        "Sale completed, but the cash drawer did not open.",
+                        "#F59E0B");
+                }
             }
+        }
+
+        public async Task OpenAuditedDrawerAsync(
+            string eventType,
+            string reason,
+            string note,
+            string authorizedBy)
+        {
+            if (_currentShiftId <= 0)
+                throw new InvalidOperationException("No active shift found.");
+
+            await _drawerAuditService.OpenAsync(
+                _currentShiftId,
+                TerminalNo,
+                CashierName,
+                eventType,
+                reason,
+                note,
+                authorizedBy);
         }
 
         private static string FirstNonEmpty(

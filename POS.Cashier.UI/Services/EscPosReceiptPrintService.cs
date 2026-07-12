@@ -420,6 +420,24 @@ namespace POS.Cashier.UI.Services
             });
         }
 
+        public Task PrintTextAsync(
+            string documentText,
+            string printerName,
+            string documentName)
+        {
+            ValidatePrinterName(printerName);
+
+            if (string.IsNullOrWhiteSpace(documentText))
+                throw new InvalidOperationException("The report is empty.");
+
+            return PrintTextDocumentAsync(
+                documentText,
+                printerName,
+                string.IsNullOrWhiteSpace(documentName)
+                    ? "POS Report"
+                    : documentName.Trim());
+        }
+
         public Task OpenCashDrawerAsync(
             string printerName)
         {

@@ -62,11 +62,13 @@ namespace POS.Cashier.UI
 
             services.AddSingleton<SalesDocumentTextFormatter>();
             services.AddSingleton<CustomerCreditNoteTextFormatter>();
+            services.AddSingleton<ShiftReportTextFormatter>();
             services.AddSingleton<CustomerReturnAllocationCalculator>();
 
             services.AddTransient<
                 IReceiptPrintService,
                 EscPosReceiptPrintService>();
+            services.AddTransient<CashDrawerAuditService>();
 
             // Offline licensing.
             services.AddTransient<LicenseRepository>();

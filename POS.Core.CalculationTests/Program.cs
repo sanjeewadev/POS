@@ -124,7 +124,31 @@ namespace POS.Core.CalculationTests
                 ("Failed checkout leaves cart recoverable", FailedCheckoutLeavesCartRecoverable),
                 ("Successful checkout completes cart", SuccessfulCheckoutCompletesCart),
                 ("Manager approval preserves cashier session", ManagerApprovalPreservesCashierSession),
-                ("Completed payment audit details persist", CompletedPaymentAuditDetailsPersist)
+                ("Completed payment audit details persist", CompletedPaymentAuditDetailsPersist),
+                ("One open shift per terminal is enforced", OneOpenShiftPerTerminalIsEnforced),
+                ("Opening cash persists in shift summary", OpeningCashPersistsInShiftSummary),
+                ("Negative opening cash is rejected", NegativeOpeningCashIsRejected),
+                ("Float In does not rewrite opening cash", FloatInDoesNotRewriteOpeningCash),
+                ("Float Out is not deducted twice", FloatOutIsNotDeductedTwice),
+                ("Paid In voucher numbers are unique", PaidInVoucherNumbersAreUnique),
+                ("Paid Out voucher numbers are unique", PaidOutVoucherNumbersAreUnique),
+                ("Cash sale increases expected cash", CashSaleIncreasesExpectedCash),
+                ("Card sale is excluded from expected cash", CardSaleIsExcludedFromExpectedCash),
+                ("Cheque sale is excluded from expected cash", ChequeSaleIsExcludedFromExpectedCash),
+                ("Split payment counts Cash exactly once", SplitPaymentCountsCashExactlyOnce),
+                ("Cash tendered and change do not inflate drawer", CashTenderedAndChangeDoNotInflateDrawer),
+                ("Paid In increases expected cash", PaidInIncreasesExpectedCash),
+                ("Paid Out decreases expected cash", PaidOutDecreasesExpectedCash),
+                ("Cash refund decreases expected cash", CashRefundDecreasesExpectedCash),
+                ("Paid Out cannot exceed drawer cash", PaidOutCannotExceedDrawerCash),
+                ("X report summary leaves shift open", XReportSummaryLeavesShiftOpen),
+                ("Active cart blocks shift close", ActiveCartBlocksShiftClose),
+                ("Held cart blocks shift close", HeldCartBlocksShiftClose),
+                ("Zero-variance close creates immutable Z snapshot", ZeroVarianceCloseCreatesImmutableZSnapshot),
+                ("Cash variance requires manager authorization", CashVarianceRequiresManagerAuthorization),
+                ("Duplicate shift close is idempotent", DuplicateShiftCloseIsIdempotent),
+                ("Closed shift rejects new checkout", ClosedShiftRejectsNewCheckout),
+                ("Drawer success and failure events persist", DrawerSuccessAndFailureEventsPersist)
             };
 
             try
@@ -136,7 +160,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, and cashier cart safety checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer and reconciliation checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -5356,6 +5380,531 @@ namespace POS.Core.CalculationTests
             SaleReceiptPaymentDto visiblePayment = detail.Payments.Single();
             AssertEqual("123456", visiblePayment.CardLastDigits, "Sales Explorer card digits");
             AssertContains(visiblePayment.Details, "AUTH-778899", "Sales Explorer payment reference");
+        }
+
+        private static void OneOpenShiftPerTerminalIsEnforced()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new TillRepository(factory);
+
+            AssertThrows(
+                () => repository.CreateNewShiftAsync("t01", "Second Cashier", 100m)
+                    .GetAwaiter().GetResult(),
+                "already has an open shift");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.ShiftSessions.Count(), "one open shift remains");
+        }
+
+        private static void OpeningCashPersistsInShiftSummary()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            var repository = new TillRepository(factory);
+            ShiftSession shift = repository.CreateNewShiftAsync("T55", "Opening Cashier", 750m)
+                .GetAwaiter().GetResult();
+
+            ShiftCashSummaryDto summary = repository.GetShiftCashSummaryAsync(shift.Id)
+                .GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Shift summary was not loaded.");
+
+            AssertMoney(750m, summary.OpeningCash, "opening cash");
+            AssertMoney(750m, summary.ExpectedCash, "opening expected cash");
+            AssertEqual(ShiftStatusCodes.Open, summary.Status, "new shift status");
+        }
+
+        private static void NegativeOpeningCashIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            var repository = new TillRepository(factory);
+
+            AssertThrows(
+                () => repository.CreateNewShiftAsync("T56", "Opening Cashier", -0.01m)
+                    .GetAwaiter().GetResult(),
+                "cannot be negative");
+        }
+
+        private static void FloatInDoesNotRewriteOpeningCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 500m);
+            var repository = new TillRepository(factory);
+
+            repository.InjectFloatAsync(scenario.ShiftSessionId, 125m, "Manager One")
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            ShiftSession shift = context.ShiftSessions.AsNoTracking().Single(s => s.Id == scenario.ShiftSessionId);
+            ShiftCashSummaryDto summary = repository.GetShiftCashSummaryAsync(scenario.ShiftSessionId)
+                .GetAwaiter().GetResult()!;
+            AssertMoney(500m, shift.OpeningCash, "immutable opening cash after Float In");
+            AssertMoney(125m, summary.FloatInTotal, "Float In total");
+            AssertMoney(625m, summary.ExpectedCash, "expected cash after Float In");
+        }
+
+        private static void FloatOutIsNotDeductedTwice()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 500m);
+            var repository = new TillRepository(factory);
+
+            repository.WithdrawFloatAsync(scenario.ShiftSessionId, 125m, "Manager One")
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            ShiftSession shift = context.ShiftSessions.AsNoTracking().Single(s => s.Id == scenario.ShiftSessionId);
+            ShiftCashSummaryDto summary = repository.GetShiftCashSummaryAsync(scenario.ShiftSessionId)
+                .GetAwaiter().GetResult()!;
+            AssertMoney(500m, shift.OpeningCash, "immutable opening cash after Float Out");
+            AssertMoney(125m, summary.FloatOutTotal, "Float Out total");
+            AssertMoney(375m, summary.ExpectedCash, "Float Out deducted once");
+        }
+
+        private static void PaidInVoucherNumbersAreUnique()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new TillRepository(factory);
+
+            CashMovement first = RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidIn, 10m, "Change Fund");
+            CashMovement second = RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidIn, 20m, "Change Fund");
+
+            AssertTrue(first.ReferenceVoucherNo.StartsWith("PI-", StringComparison.Ordinal), "Paid In prefix");
+            AssertFalse(first.ReferenceVoucherNo == second.ReferenceVoucherNo, "Paid In voucher uniqueness");
+        }
+
+        private static void PaidOutVoucherNumbersAreUnique()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 500m);
+            var repository = new TillRepository(factory);
+
+            CashMovement first = RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidOut, 10m, CashMovementReasonCodes.StoreExpense);
+            CashMovement second = RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidOut, 20m, CashMovementReasonCodes.StoreExpense);
+
+            AssertTrue(first.ReferenceVoucherNo.StartsWith("POT-", StringComparison.Ordinal), "Paid Out prefix");
+            AssertFalse(first.ReferenceVoucherNo == second.ReferenceVoucherNo, "Paid Out voucher uniqueness");
+        }
+
+        private static void CashSaleIncreasesExpectedCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 100m);
+            AddShiftSummarySale(factory, scenario.ShiftSessionId, 1180m,
+                SummaryPayment(PaymentTypeCodes.Cash, 1180m));
+
+            ShiftCashSummaryDto summary = new TillRepository(factory)
+                .GetShiftCashSummaryAsync(scenario.ShiftSessionId).GetAwaiter().GetResult()!;
+            AssertMoney(1180m, summary.CashTenderTotal, "cash tender total");
+            AssertMoney(1280m, summary.ExpectedCash, "expected cash after cash sale");
+        }
+
+        private static void CardSaleIsExcludedFromExpectedCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 100m);
+            AddShiftSummarySale(factory, scenario.ShiftSessionId, 1180m,
+                SummaryPayment(PaymentTypeCodes.Card, 1180m));
+
+            ShiftCashSummaryDto summary = new TillRepository(factory)
+                .GetShiftCashSummaryAsync(scenario.ShiftSessionId).GetAwaiter().GetResult()!;
+            AssertMoney(1180m, summary.CardTenderTotal, "card tender total");
+            AssertMoney(100m, summary.ExpectedCash, "card excluded from drawer cash");
+        }
+
+        private static void ChequeSaleIsExcludedFromExpectedCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 100m);
+            AddShiftSummarySale(factory, scenario.ShiftSessionId, 1180m,
+                SummaryPayment(PaymentTypeCodes.Cheque, 1180m));
+
+            ShiftCashSummaryDto summary = new TillRepository(factory)
+                .GetShiftCashSummaryAsync(scenario.ShiftSessionId).GetAwaiter().GetResult()!;
+            AssertMoney(1180m, summary.ChequeTenderTotal, "cheque tender total");
+            AssertMoney(100m, summary.ExpectedCash, "cheque excluded from drawer cash");
+        }
+
+        private static void SplitPaymentCountsCashExactlyOnce()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            AddShiftSummarySale(factory, scenario.ShiftSessionId, 1000m,
+                SummaryPayment(PaymentTypeCodes.Cash, 400m),
+                SummaryPayment(PaymentTypeCodes.Card, 600m));
+
+            ShiftCashSummaryDto summary = new TillRepository(factory)
+                .GetShiftCashSummaryAsync(scenario.ShiftSessionId).GetAwaiter().GetResult()!;
+            AssertMoney(400m, summary.CashTenderTotal, "split Cash component");
+            AssertMoney(600m, summary.CardTenderTotal, "split Card component");
+            AssertMoney(400m, summary.ExpectedCash, "only split Cash affects drawer");
+        }
+
+        private static void CashTenderedAndChangeDoNotInflateDrawer()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesPayment cash = SummaryPayment(PaymentTypeCodes.Cash, 1000m);
+            cash.TenderedAmount = 1500m;
+            cash.ChangeAmount = 500m;
+            AddShiftSummarySale(factory, scenario.ShiftSessionId, 1000m, cash);
+
+            ShiftCashSummaryDto summary = new TillRepository(factory)
+                .GetShiftCashSummaryAsync(scenario.ShiftSessionId).GetAwaiter().GetResult()!;
+            AssertMoney(1000m, summary.CashTenderTotal, "net Cash payment amount");
+            AssertMoney(1000m, summary.ExpectedCash, "tendered and change are not double counted");
+        }
+
+        private static void PaidInIncreasesExpectedCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 100m);
+            var repository = new TillRepository(factory);
+            RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidIn, 75m, "Change Fund");
+
+            ShiftCashSummaryDto summary = repository.GetShiftCashSummaryAsync(scenario.ShiftSessionId)
+                .GetAwaiter().GetResult()!;
+            AssertMoney(75m, summary.PaidInTotal, "Paid In total");
+            AssertMoney(175m, summary.ExpectedCash, "Paid In expected cash");
+        }
+
+        private static void PaidOutDecreasesExpectedCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 300m);
+            var repository = new TillRepository(factory);
+            RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidOut, 75m, CashMovementReasonCodes.StoreExpense);
+
+            ShiftCashSummaryDto summary = repository.GetShiftCashSummaryAsync(scenario.ShiftSessionId)
+                .GetAwaiter().GetResult()!;
+            AssertMoney(75m, summary.PaidOutTotal, "Paid Out total");
+            AssertMoney(225m, summary.ExpectedCash, "Paid Out expected cash");
+        }
+
+        private static void CashRefundDecreasesExpectedCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 300m);
+            var repository = new TillRepository(factory);
+            RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidOut, 80m, CashMovementReasonCodes.CustomerRefund);
+
+            ShiftCashSummaryDto summary = repository.GetShiftCashSummaryAsync(scenario.ShiftSessionId)
+                .GetAwaiter().GetResult()!;
+            AssertMoney(80m, summary.CashRefundTotal, "cash refund total");
+            AssertMoney(0m, summary.PaidOutTotal, "refund excluded from generic Paid Out");
+            AssertMoney(220m, summary.ExpectedCash, "cash refund expected cash");
+        }
+
+        private static void PaidOutCannotExceedDrawerCash()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 50m);
+            var repository = new TillRepository(factory);
+
+            AssertThrows(
+                () => RegisterMovement(repository, scenario, CashMovementTypeCodes.PaidOut, 50.01m, CashMovementReasonCodes.StoreExpense),
+                "only Rs.");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(0, context.CashMovements.Count(), "invalid Paid Out creates no movement");
+        }
+
+        private static void XReportSummaryLeavesShiftOpen()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 200m);
+            AddShiftSummarySale(factory, scenario.ShiftSessionId, 500m,
+                SummaryPayment(PaymentTypeCodes.Cash, 200m),
+                SummaryPayment(PaymentTypeCodes.Card, 300m));
+            var repository = new TillRepository(factory);
+
+            ShiftCashSummaryDto summary = repository.GetShiftCashSummaryAsync(scenario.ShiftSessionId, false)
+                .GetAwaiter().GetResult()!;
+            string report = new ShiftReportTextFormatter().FormatXReport(summary, 80);
+
+            AssertContains(report, "X REPORT", "X report title");
+            AssertContains(report, "SHIFT REMAINS OPEN", "X report open marker");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(ShiftStatusCodes.Open, context.ShiftSessions.Single().Status, "X report does not close shift");
+            AssertEqual(0, context.ShiftCloseSnapshots.Count(), "X report creates no close snapshot");
+        }
+
+        private static void ActiveCartBlocksShiftClose()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var carts = new CashierCartRepository(factory);
+            carts.SaveActiveAsync(CreateCartRequest(scenario, Guid.NewGuid(), CreateStockCartSnapshot(scenario, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertThrows(
+                () => CloseShift(new TillRepository(factory), scenario, 0m),
+                "active and suspended carts");
+        }
+
+        private static void HeldCartBlocksShiftClose()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var carts = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            carts.SaveActiveAsync(CreateCartRequest(scenario, token, CreateStockCartSnapshot(scenario, 1m)))
+                .GetAwaiter().GetResult();
+            carts.SuspendAsync(token, CreateCartOwner(scenario)).GetAwaiter().GetResult();
+
+            AssertThrows(
+                () => CloseShift(new TillRepository(factory), scenario, 0m),
+                "active and suspended carts");
+        }
+
+        private static void ZeroVarianceCloseCreatesImmutableZSnapshot()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 250m);
+            AddShiftSummarySale(factory, scenario.ShiftSessionId, 500m,
+                SummaryPayment(PaymentTypeCodes.Cash, 500m));
+            var repository = new TillRepository(factory);
+
+            ShiftCashSummaryDto closed = CloseShift(repository, scenario, 750m);
+            AssertTrue(closed.IsSnapshot, "closed summary is immutable snapshot");
+            AssertEqual(ShiftStatusCodes.Closed, closed.Status, "closed summary status");
+            AssertMoney(750m, closed.ExpectedCash, "Z expected cash");
+            AssertMoney(750m, closed.CountedCash, "Z counted cash");
+            AssertMoney(0m, closed.Variance, "Z variance");
+            AssertTrue(closed.ZReportNo.StartsWith("Z-", StringComparison.Ordinal), "Z report number");
+            string report = new ShiftReportTextFormatter().FormatZReport(closed, 80);
+            AssertContains(report, "Z REPORT", "Z report title");
+            AssertContains(report, closed.ZReportNo, "Z report number output");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.ShiftCloseSnapshots.Count(), "one Z snapshot");
+            AssertEqual(ShiftStatusCodes.Closed, context.ShiftSessions.Single().Status, "database shift closed");
+        }
+
+        private static void CashVarianceRequiresManagerAuthorization()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetShiftOpeningCash(factory, scenario.ShiftSessionId, 500m);
+            var repository = new TillRepository(factory);
+
+            AssertThrows(
+                () => repository.CloseShiftSafelyAsync(new ShiftCloseRequest
+                {
+                    ShiftSessionId = scenario.ShiftSessionId,
+                    TerminalNo = "T01",
+                    CashierName = "Test Cashier",
+                    CountedCash = 450m,
+                    ClosedBy = "Test Cashier",
+                    CloseToken = Guid.NewGuid()
+                }).GetAwaiter().GetResult(),
+                "Manager authorization");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(ShiftStatusCodes.Open, context.ShiftSessions.Single().Status, "failed variance close rolls back status");
+            AssertEqual(0, context.ShiftCloseSnapshots.Count(), "failed variance close creates no snapshot");
+        }
+
+        private static void DuplicateShiftCloseIsIdempotent()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new TillRepository(factory);
+            Guid token = Guid.NewGuid();
+            var request = new ShiftCloseRequest
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                CountedCash = 0m,
+                ClosedBy = "Test Cashier",
+                CloseToken = token
+            };
+
+            ShiftCashSummaryDto first = repository.CloseShiftSafelyAsync(request).GetAwaiter().GetResult();
+            request.CloseToken = Guid.NewGuid();
+            ShiftCashSummaryDto second = repository.CloseShiftSafelyAsync(request).GetAwaiter().GetResult();
+
+            AssertEqual(first.ZReportNo, second.ZReportNo, "idempotent Z report number");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.ShiftCloseSnapshots.Count(), "duplicate close creates one snapshot");
+        }
+
+        private static void ClosedShiftRejectsNewCheckout()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            CloseShift(new TillRepository(factory), scenario, 0m);
+            var sales = new SalesRepository(factory);
+
+            AssertThrows(
+                () => sales.ProcessCheckoutAsync(
+                    CreateRepositoryTestHeader(scenario.ShiftSessionId, 1180m),
+                    new List<SalesLine>
+                    {
+                        CreateRepositoryTestLine(
+                            scenario.StockVariantId,
+                            scenario.StockBatchId,
+                            scenario.StockSku,
+                            "Test Stock Item",
+                            1m,
+                            1180m)
+                    },
+                    new List<SalesPayment> { CreateCashPayment(1180m) },
+                    Guid.NewGuid()).GetAwaiter().GetResult(),
+                "cannot accept new sales");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(0, context.SalesHeaders.Count(), "closed shift creates no sale");
+        }
+
+        private static void DrawerSuccessAndFailureEventsPersist()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new TillRepository(factory);
+
+            repository.RecordCashDrawerEventAsync(new CashDrawerEventRequest
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                EventType = CashDrawerEventTypeCodes.NoSale,
+                Reason = "Change requested",
+                AuthorizedBy = "Manager One",
+                Succeeded = true
+            }).GetAwaiter().GetResult();
+
+            repository.RecordCashDrawerEventAsync(new CashDrawerEventRequest
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                EventType = CashDrawerEventTypeCodes.ManualOpen,
+                Reason = "Hardware test",
+                AuthorizedBy = "Manager One",
+                Succeeded = false,
+                FailureMessage = "Drawer port unavailable"
+            }).GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            List<CashDrawerEvent> events = context.CashDrawerEvents.AsNoTracking()
+                .OrderBy(row => row.Id).ToList();
+            AssertEqual(2, events.Count, "drawer event count");
+            AssertTrue(events[0].Succeeded, "successful drawer event");
+            AssertFalse(events[1].Succeeded, "failed drawer event");
+            AssertContains(events[1].FailureMessage, "unavailable", "drawer failure audit");
+        }
+
+        private static void SetShiftOpeningCash(
+            RepositoryTestDbContextFactory factory,
+            int shiftSessionId,
+            decimal openingCash)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            ShiftSession shift = context.ShiftSessions.Single(row => row.Id == shiftSessionId);
+            shift.OpeningCash = openingCash;
+            shift.ExpectedCash = openingCash;
+            context.SaveChanges();
+        }
+
+        private static CashMovement RegisterMovement(
+            TillRepository repository,
+            RepositoryTestScenario scenario,
+            string movementType,
+            decimal amount,
+            string reason)
+        {
+            return repository.RegisterCashMovementDetailedAsync(new CashMovementRegistrationRequest
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                MovementType = movementType,
+                Amount = amount,
+                ReasonCategory = reason,
+                Remarks = "Phase 8B automated test",
+                CashierName = "Test Cashier",
+                AuthorizedBy = "Manager One"
+            }).GetAwaiter().GetResult();
+        }
+
+        private static SalesPayment SummaryPayment(string type, decimal amount)
+        {
+            return new SalesPayment
+            {
+                PaymentType = type,
+                Amount = amount,
+                TenderedAmount = amount,
+                ChangeAmount = 0m,
+                ReferenceNo = string.Empty,
+                BankOrCardType = string.Empty,
+                EnteredBy = "Test Cashier",
+                TerminalNo = "T01"
+            };
+        }
+
+        private static void AddShiftSummarySale(
+            RepositoryTestDbContextFactory factory,
+            int shiftSessionId,
+            decimal netTotal,
+            params SalesPayment[] payments)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            var header = new SalesHeader
+            {
+                ShiftSessionId = shiftSessionId,
+                InvoiceNo = $"SHIFT-{Guid.NewGuid():N}",
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                CustomerName = "Walk-In",
+                CustomerType = "Walk-In",
+                GrossTotal = netTotal,
+                TotalDiscount = 0m,
+                NetTotal = netTotal,
+                TotalVatAmount = decimal.Round(netTotal * 18m / 118m, 2),
+                AmountTendered = payments.Sum(row => row.TenderedAmount > 0m ? row.TenderedAmount : row.Amount),
+                BalanceReturned = payments.Sum(row => row.ChangeAmount),
+                PaymentMethod = payments.Length == 1 ? payments[0].PaymentType : "Split",
+                Status = "Completed",
+                TransactionDate = DateTime.Now
+            };
+            context.SalesHeaders.Add(header);
+            context.SaveChanges();
+            foreach (SalesPayment payment in payments)
+            {
+                payment.SalesHeaderId = header.Id;
+                payment.PaymentDate ??= DateTime.Now;
+            }
+            context.SalesPayments.AddRange(payments);
+            context.SaveChanges();
+        }
+
+        private static ShiftCashSummaryDto CloseShift(
+            TillRepository repository,
+            RepositoryTestScenario scenario,
+            decimal countedCash)
+        {
+            return repository.CloseShiftSafelyAsync(new ShiftCloseRequest
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                CountedCash = countedCash,
+                ClosedBy = "Test Cashier",
+                AuthorizedBy = string.Empty,
+                CloseToken = Guid.NewGuid()
+            }).GetAwaiter().GetResult();
         }
 
         private static CashierCartOwnerDto CreateCartOwner(RepositoryTestScenario scenario)

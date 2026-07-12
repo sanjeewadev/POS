@@ -200,18 +200,21 @@
                     <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                 </DataGrid.Resources>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Shift ID" Binding="{Binding ShiftId}" Width="80" ElementStyle="{StaticResource RightBoldElement}" Foreground="#005555"/>
-                    <DataGridTextColumn Header="Terminal" Binding="{Binding TerminalNo}" Width="120" FontWeight="SemiBold"/>
-                    <DataGridTextColumn Header="Cashier Name" Binding="{Binding CashierName}" Width="200" FontWeight="Bold"/>
-
-                    <DataGridTextColumn Header="Opened At" Binding="{Binding OpenTime, StringFormat=dd-MMM-yyyy HH:mm}" Width="150" Foreground="#555"/>
-                    <DataGridTextColumn Header="Closed At" Binding="{Binding CloseTime, StringFormat=dd-MMM-yyyy HH:mm}" Width="150" Foreground="#555"/>
-                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" FontWeight="Bold"/>
-
-                    <DataGridTextColumn Header="Expected Cash" Binding="{Binding ExpectedCash, StringFormat=N2}" Width="130" ElementStyle="{StaticResource RightBoldElement}" Foreground="#003366"/>
-                    <DataGridTextColumn Header="Actual Counted" Binding="{Binding ActualCash, StringFormat=N2}" Width="130" ElementStyle="{StaticResource RightBoldElement}" Foreground="#555"/>
-
-                    <DataGridTextColumn Header="Variance" Binding="{Binding Variance, StringFormat=N2}" Width="*" ElementStyle="{StaticResource DangerElement}"/>
+                    <DataGridTextColumn Header="Shift ID" Binding="{Binding ShiftId}" Width="75" ElementStyle="{StaticResource RightBoldElement}" Foreground="#005555"/>
+                    <DataGridTextColumn Header="Z Report" Binding="{Binding ZReportNo}" Width="105"/>
+                    <DataGridTextColumn Header="Terminal" Binding="{Binding TerminalNo}" Width="90" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Cashier Name" Binding="{Binding CashierName}" Width="150" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Opened At" Binding="{Binding OpenTime, StringFormat=dd-MMM-yyyy HH:mm}" Width="145" Foreground="#555"/>
+                    <DataGridTextColumn Header="Closed At" Binding="{Binding CloseTime, StringFormat=dd-MMM-yyyy HH:mm}" Width="145" Foreground="#555"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Cash Tender" Binding="{Binding CashTenderTotal, StringFormat=N2}" Width="105" ElementStyle="{StaticResource RightBoldElement}"/>
+                    <DataGridTextColumn Header="Card" Binding="{Binding CardTenderTotal, StringFormat=N2}" Width="95" ElementStyle="{StaticResource RightElement}"/>
+                    <DataGridTextColumn Header="Cheque" Binding="{Binding ChequeTenderTotal, StringFormat=N2}" Width="95" ElementStyle="{StaticResource RightElement}"/>
+                    <DataGridTextColumn Header="Cash In" Binding="{Binding TotalCashIn, StringFormat=N2}" Width="100" ElementStyle="{StaticResource RightElement}"/>
+                    <DataGridTextColumn Header="Cash Out" Binding="{Binding TotalCashOut, StringFormat=N2}" Width="100" ElementStyle="{StaticResource RightElement}"/>
+                    <DataGridTextColumn Header="Expected Cash" Binding="{Binding ExpectedCash, StringFormat=N2}" Width="120" ElementStyle="{StaticResource RightBoldElement}" Foreground="#003366"/>
+                    <DataGridTextColumn Header="Actual Counted" Binding="{Binding ActualCash, StringFormat=N2}" Width="120" ElementStyle="{StaticResource RightBoldElement}" Foreground="#555"/>
+                    <DataGridTextColumn Header="Variance" Binding="{Binding Variance, StringFormat=N2}" Width="100" ElementStyle="{StaticResource DangerElement}"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

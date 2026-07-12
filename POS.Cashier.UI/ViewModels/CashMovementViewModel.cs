@@ -1,11 +1,17 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Messages;
+using POS.Cashier.UI.Services;
+using POS.Core.Configuration;
+using POS.Core.Models;
+using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -14,86 +20,128 @@ namespace POS.Cashier.UI.ViewModels
     public partial class CashMovementViewModel : ObservableObject
     {
         private readonly TillRepository _tillRepository;
+        private readonly CashDrawerAuditService _drawerAuditService;
         private int _shiftId;
         private string _cashierName = string.Empty;
 
         [ObservableProperty] private string _movementType = string.Empty;
-        [ObservableProperty] private decimal _amount = 0m;
-
-        // --- DYNAMIC UI PROPERTIES ---
+        [ObservableProperty] private decimal _amount;
         [ObservableProperty] private string _headerTitle = string.Empty;
         [ObservableProperty] private string _themeColorHex = "#003366";
         [ObservableProperty] private string _buttonText = string.Empty;
-
         [ObservableProperty] private string _selectedReason = string.Empty;
         [ObservableProperty] private string _remarks = string.Empty;
 
         public ObservableCollection<string> ReasonCategories { get; } = new();
-
         public event Action<bool>? ActionCompleted;
 
-        public CashMovementViewModel(TillRepository tillRepository)
+        public CashMovementViewModel(
+            TillRepository tillRepository,
+            CashDrawerAuditService drawerAuditService)
         {
             _tillRepository = tillRepository;
+            _drawerAuditService = drawerAuditService;
         }
 
         public void Initialize(string movementType, decimal amount, int shiftId, string cashierName)
         {
             _shiftId = shiftId;
-            _cashierName = cashierName;
+            _cashierName = (cashierName ?? string.Empty).Trim();
             MovementType = movementType;
-            Amount = amount;
-
+            Amount = decimal.Round(amount, 2, MidpointRounding.AwayFromZero);
             ReasonCategories.Clear();
 
-            // DYNAMIC THEME ENGINE
-            if (movementType == "Paid In")
+            if (string.Equals(movementType, CashMovementTypeCodes.PaidIn, StringComparison.OrdinalIgnoreCase))
             {
                 HeaderTitle = "PAID IN — RECEIVE CASH";
-                ThemeColorHex = "#10B981"; // Emerald Green
+                ThemeColorHex = "#10B981";
                 ButtonText = "CONFIRM PAID IN";
-
-                ReasonCategories.Add("Change / Coin Exchange");
-                ReasonCategories.Add("Customer Account Payment");
-                ReasonCategories.Add("Other Income");
+                ReasonCategories.Add(CashMovementReasonCodes.ChangeFundAdjustment);
+                ReasonCategories.Add(CashMovementReasonCodes.Other);
             }
             else
             {
                 HeaderTitle = "PAID OUT — REMOVE CASH";
-                ThemeColorHex = "#EF4444"; // Ruby Red
+                ThemeColorHex = "#EF4444";
                 ButtonText = "CONFIRM PAID OUT";
-
-                ReasonCategories.Add("Vendor / Supplier Payment");
-                ReasonCategories.Add("Store Expenses");
-                ReasonCategories.Add("Petty Cash");
-                ReasonCategories.Add("Owner Draw");
+                ReasonCategories.Add(CashMovementReasonCodes.StoreExpense);
+                ReasonCategories.Add(CashMovementReasonCodes.FloatOut);
+                ReasonCategories.Add(CashMovementReasonCodes.Other);
             }
+
+            SelectedReason = ReasonCategories.FirstOrDefault() ?? string.Empty;
         }
 
         [RelayCommand]
         private async Task ConfirmAsync()
         {
+            if (Amount <= 0m)
+            {
+                MessageBox.Show("Amount must be greater than zero.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
             if (string.IsNullOrWhiteSpace(SelectedReason))
             {
                 MessageBox.Show("Please select a reason for this cash movement.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+            if (SelectedReason.Equals(CashMovementReasonCodes.Other, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(Remarks))
+            {
+                MessageBox.Show("Remarks are required when the reason is Other.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            bool isPaidOut = string.Equals(MovementType, CashMovementTypeCodes.PaidOut, StringComparison.OrdinalIgnoreCase);
+            ManagerAuthViewModel authViewModel = App.Services!.GetRequiredService<ManagerAuthViewModel>();
+            var authDialog = new ManagerAuthDialogView(authViewModel);
+            if (authDialog.ShowDialog() != true)
+                return;
+            string authorizedBy = authViewModel.AuthorizedUsername;
 
             try
             {
-                await _tillRepository.RegisterCashMovementAsync(_shiftId, MovementType, Amount, SelectedReason, Remarks, _cashierName);
+                ShiftCashSummaryDto summary = await _tillRepository.GetShiftCashSummaryAsync(_shiftId, false)
+                    ?? throw new InvalidOperationException("The active shift was not found.");
 
-                // Send silent Walkie-Talkie notification to the top bar
-                WeakReferenceMessenger.Default.Send(new TopBarNotificationMessage(
-                    ($"{MovementType}: Rs. {Amount:N2}", ThemeColorHex)));
+                CashMovement movement = await _tillRepository.RegisterCashMovementDetailedAsync(
+                    new CashMovementRegistrationRequest
+                    {
+                        ShiftSessionId = _shiftId,
+                        MovementType = MovementType,
+                        Amount = Amount,
+                        ReasonCategory = SelectedReason,
+                        Remarks = Remarks,
+                        CashierName = _cashierName,
+                        AuthorizedBy = authorizedBy
+                    });
 
-                // Open Cash Drawer Trigger can go here later!
+                try
+                {
+                    await _drawerAuditService.OpenAsync(
+                        _shiftId,
+                        summary.TerminalNo,
+                        summary.CashierName,
+                        isPaidOut ? CashDrawerEventTypeCodes.PaidOut : CashDrawerEventTypeCodes.PaidIn,
+                        movement.ReasonCategory,
+                        movement.Remarks,
+                        authorizedBy,
+                        cashMovementId: movement.Id);
+                }
+                catch (Exception drawerEx)
+                {
+                    MessageBox.Show(
+                        $"The movement was saved, but the drawer did not open: {drawerEx.Message}",
+                        "Drawer Warning",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
 
+                WeakReferenceMessenger.Default.Send(new TopBarNotificationMessage(($"{MovementType}: Rs. {Amount:N2}", ThemeColorHex)));
                 ActionCompleted?.Invoke(true);
             }
             catch (InvalidOperationException ex)
             {
-                MessageBox.Show(ex.Message, "Overdraft Prevented", MessageBoxButton.OK, MessageBoxImage.Stop);
+                MessageBox.Show(ex.Message, "Cash Movement Blocked", MessageBoxButton.OK, MessageBoxImage.Stop);
             }
             catch (Exception ex)
             {

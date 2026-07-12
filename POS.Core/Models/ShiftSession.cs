@@ -25,19 +25,19 @@ namespace POS.Core.Models
 
         [Required]
         [MaxLength(20)]
-        public string Status { get; set; } = "Open"; // "Open" or "Closed"
+        public string Status { get; set; } = "Open"; // Open / Closing / Closed
 
         // ==========================================
         // Z-REPORT MATH (THE BLIND CLOSE LOGIC)
         // ==========================================
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal OpeningCash { get; set; } = 0m; // The float injected by the manager
+        public decimal OpeningCash { get; set; } = 0m; // Immutable physical cash counted when the shift opens
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalCashSales { get; set; } = 0m; // Sum of all cash receipts
 
-        // ExpectedCash is calculated by the system before closing: (OpeningCash + TotalCashSales +/- CashMovements)
+        // ExpectedCash is calculated from completed Cash tenders and drawer movements.
         [Column(TypeName = "decimal(18,2)")]
         public decimal ExpectedCash { get; set; } = 0m;
 

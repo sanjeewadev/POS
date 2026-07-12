@@ -75,6 +75,8 @@ namespace POS.Core.Data
         // --- SHIFT & SECURITY ---
         public DbSet<ShiftSession> ShiftSessions { get; set; } = null!;
         public DbSet<CashMovement> CashMovements { get; set; } = null!;
+        public DbSet<ShiftCloseSnapshot> ShiftCloseSnapshots { get; set; } = null!;
+        public DbSet<CashDrawerEvent> CashDrawerEvents { get; set; } = null!;
 
         // --- SETTINGS / VOUCHERS / CLAIMS ---
         public DbSet<StoreSettings> StoreSettings { get; set; } = null!;
@@ -1762,20 +1764,170 @@ namespace POS.Core.Data
                         NextSequenceNumber = 1,
                         PaddingLength = 5,
                         UpdatedAt = seedDate
+                    },
+                    new DocumentSequence
+                    {
+                        DocumentType = ShiftDocumentSequenceCodes.PaidIn,
+                        Prefix = "PI-",
+                        NextSequenceNumber = 1,
+                        PaddingLength = 6,
+                        UpdatedAt = seedDate
+                    },
+                    new DocumentSequence
+                    {
+                        DocumentType = ShiftDocumentSequenceCodes.PaidOut,
+                        Prefix = "POT-",
+                        NextSequenceNumber = 1,
+                        PaddingLength = 6,
+                        UpdatedAt = seedDate
+                    },
+                    new DocumentSequence
+                    {
+                        DocumentType = ShiftDocumentSequenceCodes.ZReport,
+                        Prefix = "Z-",
+                        NextSequenceNumber = 1,
+                        PaddingLength = 6,
+                        UpdatedAt = seedDate
                     }
 
                 );
             });
 
             // =========================================================
-            // CASH MOVEMENTS
+            // SHIFT, CASH MOVEMENTS, Z SNAPSHOTS AND DRAWER AUDIT
             // =========================================================
-            modelBuilder.Entity<CashMovement>()
-                .HasIndex(c => c.ReferenceVoucherNo)
-                .IsUnique();
+            modelBuilder.Entity<ShiftSession>(entity =>
+            {
+                entity.Property(s => s.TerminalNo)
+                    .IsRequired()
+                    .HasMaxLength(20);
 
-            modelBuilder.Entity<CashMovement>()
-                .HasIndex(c => c.Timestamp);
+                entity.Property(s => s.CashierName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(s => s.Status)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(s => s.OpeningCash).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.TotalCashSales).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.ExpectedCash).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.ActualCash).HasColumnType("decimal(18,2)");
+                entity.Property(s => s.Variance).HasColumnType("decimal(18,2)");
+
+                entity.HasIndex(s => new { s.TerminalNo, s.Status });
+                entity.HasIndex(s => s.StartTime);
+                entity.HasIndex(s => s.EndTime);
+                entity.HasIndex(s => s.TerminalNo)
+                    .IsUnique()
+                    .HasDatabaseName("IX_ShiftSessions_OneOpenPerTerminal")
+                    .HasFilter("\"Status\" IN ('Open', 'Closing')");
+            });
+
+            modelBuilder.Entity<CashMovement>(entity =>
+            {
+                entity.Property(c => c.MovementType)
+                    .IsRequired()
+                    .HasMaxLength(20);
+                entity.Property(c => c.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(c => c.ReasonCategory).IsRequired().HasMaxLength(100);
+                entity.Property(c => c.Remarks).HasMaxLength(255);
+                entity.Property(c => c.CashierName).IsRequired().HasMaxLength(100);
+                entity.Property(c => c.AuthorizedBy).IsRequired().HasMaxLength(100);
+                entity.Property(c => c.ReferenceVoucherNo).HasMaxLength(50);
+
+                entity.HasOne(c => c.ShiftSession)
+                    .WithMany(s => s.CashMovements)
+                    .HasForeignKey(c => c.ShiftSessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(c => c.ReferenceVoucherNo).IsUnique();
+                entity.HasIndex(c => c.Timestamp);
+                entity.HasIndex(c => new { c.ShiftSessionId, c.Timestamp });
+                entity.HasIndex(c => c.MovementType);
+                entity.HasIndex(c => c.ReasonCategory);
+            });
+
+            modelBuilder.Entity<ShiftCloseSnapshot>(entity =>
+            {
+                entity.ToTable("ShiftCloseSnapshots");
+                entity.HasKey(s => s.Id);
+                entity.Property(s => s.ZReportNo).IsRequired().HasMaxLength(50).UseCollation("NOCASE");
+                entity.Property(s => s.TerminalNo).IsRequired().HasMaxLength(20).UseCollation("NOCASE");
+                entity.Property(s => s.CashierName).IsRequired().HasMaxLength(100);
+                entity.Property(s => s.ClosedBy).IsRequired().HasMaxLength(100);
+                entity.Property(s => s.AuthorizedBy).HasMaxLength(100);
+                entity.Property(s => s.VarianceNote).HasMaxLength(500);
+
+                foreach (string propertyName in new[]
+                {
+                    nameof(ShiftCloseSnapshot.GrossSales),
+                    nameof(ShiftCloseSnapshot.TotalDiscount),
+                    nameof(ShiftCloseSnapshot.NetSales),
+                    nameof(ShiftCloseSnapshot.VatTotal),
+                    nameof(ShiftCloseSnapshot.CashTenderTotal),
+                    nameof(ShiftCloseSnapshot.CardTenderTotal),
+                    nameof(ShiftCloseSnapshot.ChequeTenderTotal),
+                    nameof(ShiftCloseSnapshot.GiftVoucherTenderTotal),
+                    nameof(ShiftCloseSnapshot.CustomerCreditTenderTotal),
+                    nameof(ShiftCloseSnapshot.OtherTenderTotal),
+                    nameof(ShiftCloseSnapshot.OpeningCash),
+                    nameof(ShiftCloseSnapshot.PaidInTotal),
+                    nameof(ShiftCloseSnapshot.FloatInTotal),
+                    nameof(ShiftCloseSnapshot.PaidOutTotal),
+                    nameof(ShiftCloseSnapshot.FloatOutTotal),
+                    nameof(ShiftCloseSnapshot.CashRefundTotal),
+                    nameof(ShiftCloseSnapshot.ExpectedCash),
+                    nameof(ShiftCloseSnapshot.CountedCash),
+                    nameof(ShiftCloseSnapshot.Variance)
+                })
+                {
+                    entity.Property<decimal>(propertyName).HasColumnType("decimal(18,2)");
+                }
+
+                entity.HasOne(s => s.ShiftSession)
+                    .WithMany()
+                    .HasForeignKey(s => s.ShiftSessionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(s => s.ShiftSessionId).IsUnique();
+                entity.HasIndex(s => s.CloseToken).IsUnique();
+                entity.HasIndex(s => s.ZReportNo).IsUnique();
+                entity.HasIndex(s => new { s.TerminalNo, s.ClosedAt });
+            });
+
+            modelBuilder.Entity<CashDrawerEvent>(entity =>
+            {
+                entity.ToTable("CashDrawerEvents");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TerminalNo).IsRequired().HasMaxLength(20).UseCollation("NOCASE");
+                entity.Property(e => e.CashierName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.EventType).IsRequired().HasMaxLength(30).UseCollation("NOCASE");
+                entity.Property(e => e.Reason).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Note).HasMaxLength(500);
+                entity.Property(e => e.AuthorizedBy).HasMaxLength(100);
+                entity.Property(e => e.FailureMessage).HasMaxLength(500);
+
+                entity.HasOne(e => e.ShiftSession)
+                    .WithMany()
+                    .HasForeignKey(e => e.ShiftSessionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<SalesHeader>()
+                    .WithMany()
+                    .HasForeignKey(e => e.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<CashMovement>()
+                    .WithMany()
+                    .HasForeignKey(e => e.CashMovementId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => new { e.ShiftSessionId, e.RequestedAtUtc });
+                entity.HasIndex(e => new { e.TerminalNo, e.RequestedAtUtc });
+                entity.HasIndex(e => e.EventType);
+                entity.HasIndex(e => e.SalesHeaderId);
+                entity.HasIndex(e => e.CashMovementId);
+            });
 
             // =========================================================
             // CUSTOMER MASTER / CRM

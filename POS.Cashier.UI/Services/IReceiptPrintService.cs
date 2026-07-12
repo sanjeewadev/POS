@@ -48,6 +48,11 @@ namespace POS.Cashier.UI.Services
             string printerName,
             int paperWidth);
 
+        Task PrintTextAsync(
+            string documentText,
+            string printerName,
+            string documentName);
+
         Task OpenCashDrawerAsync(
             string printerName);
     }
