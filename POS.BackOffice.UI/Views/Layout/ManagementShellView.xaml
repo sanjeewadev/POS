@@ -131,6 +131,8 @@
                           Command="{Binding NavigateToFloatCashLogCommand}"/>
                 <MenuItem Header="Supplier Report"
                           Command="{Binding NavigateToSupplierReportCommand}"/>
+                <MenuItem Header="VAT Reports &amp; Reconciliation"
+                          Command="{Binding NavigateToVatReportCommand}"/>
                 <MenuItem Header="Suspended Transactions"
                           Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}"/>
             </MenuItem>

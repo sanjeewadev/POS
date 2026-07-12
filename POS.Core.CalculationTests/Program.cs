@@ -76,7 +76,29 @@ namespace POS.Core.CalculationTests
                 ("Deactivated historical supplier return remains available", DeactivatedHistoricalSupplierReturnRemainsAvailable),
                 ("Supplier debit note formatter uses saved snapshots", SupplierDebitNoteFormatterUsesSavedSnapshots),
                 ("Supplier return lookup uses financial snapshots", SupplierReturnLookupUsesFinancialSnapshots),
-                ("Prior legacy supplier return prevents invented VAT", PriorLegacySupplierReturnPreventsInventedVat)
+                ("Prior legacy supplier return prevents invented VAT", PriorLegacySupplierReturnPreventsInventedVat),
+                ("VAT report includes completed sales", VatReportIncludesCompletedSales),
+                ("VAT report excludes voided sales", VatReportExcludesVoidedSales),
+                ("Customer-return VAT is deducted", VatReportDeductsCustomerReturnVat),
+                ("Posted GRN product VAT is included", VatReportIncludesPostedGrnVat),
+                ("Cancelled GRNs are excluded", VatReportExcludesCancelledGrns),
+                ("Posted supplier-return VAT is deducted", VatReportDeductsPostedSupplierReturnVat),
+                ("Cancelled supplier returns are excluded", VatReportExcludesCancelledSupplierReturns),
+                ("VAT report Standard totals are correct", VatReportStandardTotalsAreCorrect),
+                ("VAT report Zero Rated totals are correct", VatReportZeroRatedTotalsAreCorrect),
+                ("VAT report Exempt totals are correct", VatReportExemptTotalsAreCorrect),
+                ("VAT report Out of Scope totals are correct", VatReportOutOfScopeTotalsAreCorrect),
+                ("VAT-inclusive and exclusive GRNs aggregate", VatReportAggregatesInclusiveAndExclusiveGrns),
+                ("Historical VAT rates remain separate", VatReportGroupsHistoricalRates),
+                ("Current Tax Rate changes do not alter VAT reports", VatReportIgnoresCurrentTaxRateChanges),
+                ("Non-VAT sales remain Out of Scope", VatReportKeepsNonVatSalesOutOfScope),
+                ("Sales snapshot discrepancy is detected", VatReportDetectsSalesDiscrepancy),
+                ("GRN snapshot discrepancy is detected", VatReportDetectsGrnDiscrepancy),
+                ("Customer-return discrepancy is detected", VatReportDetectsCustomerReturnDiscrepancy),
+                ("Supplier-return discrepancy is detected", VatReportDetectsSupplierReturnDiscrepancy),
+                ("LegacyUnknown documents are separated", VatReportSeparatesLegacyUnknown),
+                ("Unknown freight VAT is separated", VatReportSeparatesUnknownFreight),
+                ("VAT date boundaries and position reconcile", VatReportDateBoundariesAndPositionReconcile)
             };
 
             try
@@ -88,7 +110,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, and supplier return checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, and VAT report checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -3249,6 +3271,911 @@ namespace POS.Core.CalculationTests
                 CurrencySymbol = "Rs.",
                 ReceiptFooter = "Thank You"
             };
+        }
+
+        private static void VatReportIncludesCompletedSales()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            if (!report.Documents.Any(row => row.DocumentNumber == scenario.StandardSaleNumber) ||
+                report.Summary.CompleteDocumentCount != 11)
+            {
+                throw new InvalidOperationException("Completed VAT sales were not included in the report.");
+            }
+        }
+
+        private static void VatReportExcludesVoidedSales()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            if (report.Documents.Any(row => row.DocumentNumber == scenario.VoidedSaleNumber))
+                throw new InvalidOperationException("Voided sale was included in VAT reporting.");
+        }
+
+        private static void VatReportDeductsCustomerReturnVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            AssertMoney(246m, report.Summary.GrossOutputVat, "gross output VAT");
+            AssertMoney(36m, report.Summary.CustomerReturnVat, "customer-return VAT");
+            AssertMoney(210m, report.Summary.NetOutputVat, "net output VAT");
+        }
+
+        private static void VatReportIncludesPostedGrnVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            AssertMoney(300m, report.Summary.GrossInputVat, "gross input VAT");
+            if (!report.Documents.Any(row => row.DocumentNumber == scenario.MainGrnNumber))
+                throw new InvalidOperationException("Posted GRN was not included in VAT reporting.");
+        }
+
+        private static void VatReportExcludesCancelledGrns()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            if (report.Documents.Any(row => row.DocumentNumber == scenario.CancelledGrnNumber))
+                throw new InvalidOperationException("Cancelled GRN was included in VAT reporting.");
+        }
+
+        private static void VatReportDeductsPostedSupplierReturnVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            AssertMoney(18m, report.Summary.SupplierReturnVat, "supplier-return VAT");
+            AssertMoney(282m, report.Summary.NetInputVat, "net input VAT");
+        }
+
+        private static void VatReportExcludesCancelledSupplierReturns()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            if (report.Documents.Any(row => row.DocumentNumber == scenario.CancelledSupplierReturnNumber))
+                throw new InvalidOperationException("Cancelled supplier return was included in VAT reporting.");
+        }
+
+        private static void VatReportStandardTotalsAreCorrect()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            decimal salesStandard = report.CategoryRateRows
+                .Where(row => row.SourceType == "Sale" && row.TaxCategoryCode == TaxCategoryCodes.Standard)
+                .Sum(row => row.TaxableAmount);
+            decimal returnedStandard = report.CategoryRateRows
+                .Where(row => row.SourceType == "Customer Credit Note" && row.TaxCategoryCode == TaxCategoryCodes.Standard)
+                .Sum(row => row.TaxableAmount);
+
+            AssertMoney(1400m, salesStandard, "sales Standard taxable");
+            AssertMoney(200m, returnedStandard, "customer-return Standard taxable");
+        }
+
+        private static void VatReportZeroRatedTotalsAreCorrect()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            AssertMoney(100m, report.Summary.SalesZeroRatedAmount, "net sales Zero Rated");
+            AssertMoney(200m, report.Summary.PurchaseZeroRatedAmount, "net purchase Zero Rated");
+        }
+
+        private static void VatReportExemptTotalsAreCorrect()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            AssertMoney(200m, report.Summary.SalesExemptAmount, "net sales Exempt");
+            AssertMoney(300m, report.Summary.PurchaseExemptAmount, "net purchase Exempt");
+        }
+
+        private static void VatReportOutOfScopeTotalsAreCorrect()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            AssertMoney(800m, report.Summary.SalesOutOfScopeAmount, "net sales Out of Scope");
+            AssertMoney(400m, report.Summary.PurchaseOutOfScopeAmount, "net purchase Out of Scope");
+        }
+
+        private static void VatReportAggregatesInclusiveAndExclusiveGrns()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            VatCategoryRateRowDto standard18 = report.CategoryRateRows.Single(row =>
+                row.SourceType == "GRN Purchase" &&
+                row.TaxCategoryCode == TaxCategoryCodes.Standard &&
+                row.VatRatePercent == 18m);
+
+            AssertMoney(1500m, standard18.TaxableAmount, "inclusive and exclusive GRN taxable");
+            AssertMoney(270m, standard18.VatAmount, "inclusive and exclusive GRN VAT");
+        }
+
+        private static void VatReportGroupsHistoricalRates()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            if (!report.CategoryRateRows.Any(row =>
+                    row.SourceType == "Sale" &&
+                    row.TaxCategoryCode == TaxCategoryCodes.Standard &&
+                    row.VatRatePercent == 15m) ||
+                !report.CategoryRateRows.Any(row =>
+                    row.SourceType == "GRN Purchase" &&
+                    row.TaxCategoryCode == TaxCategoryCodes.Standard &&
+                    row.VatRatePercent == 15m))
+            {
+                throw new InvalidOperationException("Historical VAT rates were not grouped separately.");
+            }
+        }
+
+        private static void VatReportIgnoresCurrentTaxRateChanges()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            if (report.CategoryRateRows.Any(row => row.VatRatePercent == 25m))
+                throw new InvalidOperationException("VAT report used the current Tax Rate instead of saved snapshots.");
+
+            AssertMoney(246m, report.Summary.GrossOutputVat, "historical output VAT after rate change");
+            AssertMoney(300m, report.Summary.GrossInputVat, "historical input VAT after rate change");
+        }
+
+        private static void VatReportKeepsNonVatSalesOutOfScope()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            VatReportDocumentRowDto row = report.Documents.Single(document =>
+                document.DocumentNumber == scenario.NonVatSaleNumber);
+            AssertMoney(0m, row.VatAmount, "non-VAT sale VAT");
+            AssertMoney(500m, row.OutOfScopeAmount, "non-VAT sale Out of Scope");
+        }
+
+        private static void VatReportDetectsSalesDiscrepancy()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                context.SalesHeaders.Single(row => row.Id == scenario.StandardSaleId).TotalVatAmount = 181m;
+                context.SaveChanges();
+            }
+
+            VatReportResultDto report = GetVatReport(factory);
+            AssertHasDiscrepancy(report, "Sale", scenario.StandardSaleNumber, "VAT total");
+        }
+
+        private static void VatReportDetectsGrnDiscrepancy()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                context.GrnHeaders.Single(row => row.Id == scenario.MainGrnId).TotalVatAmount = 181m;
+                context.SaveChanges();
+            }
+
+            VatReportResultDto report = GetVatReport(factory);
+            AssertHasDiscrepancy(report, "GRN Purchase", scenario.MainGrnNumber, "VAT total");
+        }
+
+        private static void VatReportDetectsCustomerReturnDiscrepancy()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                context.CustomerReturnHeaders.Single(row => row.Id == scenario.CustomerReturnId).TotalVatAmount = 37m;
+                context.SaveChanges();
+            }
+
+            VatReportResultDto report = GetVatReport(factory);
+            AssertHasDiscrepancy(report, "Customer Credit Note", scenario.CustomerReturnNumber, "VAT total");
+        }
+
+        private static void VatReportDetectsSupplierReturnDiscrepancy()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                context.SupplierReturnHeaders.Single(row => row.Id == scenario.SupplierReturnId).TotalVatAmount = 19m;
+                context.SaveChanges();
+            }
+
+            VatReportResultDto report = GetVatReport(factory);
+            AssertHasDiscrepancy(report, "Supplier Debit Note", scenario.SupplierReturnNumber, "VAT total");
+        }
+
+        private static void VatReportSeparatesLegacyUnknown()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            if (report.Documents.Any(row =>
+                    row.DocumentNumber == scenario.LegacySaleNumber ||
+                    row.DocumentNumber == scenario.LegacyGrnNumber ||
+                    row.DocumentNumber == scenario.LegacyCustomerReturnNumber ||
+                    row.DocumentNumber == scenario.LegacySupplierReturnNumber) ||
+                report.LegacyUnknownRows.Count != 5)
+            {
+                throw new InvalidOperationException("LegacyUnknown documents were not fully separated from VAT totals.");
+            }
+        }
+
+        private static void VatReportSeparatesUnknownFreight()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto report = GetVatReport(factory);
+
+            VatLegacyUnknownRowDto freight = report.LegacyUnknownRows.Single(row =>
+                row.SourceType == "GRN Freight" &&
+                row.DocumentNumber == scenario.MainGrnNumber);
+            AssertMoney(50m, freight.FinancialAmount, "unknown GRN freight");
+            AssertMoney(300m, report.Summary.GrossInputVat, "input VAT excluding freight");
+        }
+
+        private static void VatReportDateBoundariesAndPositionReconcile()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            VatReportTestScenario scenario = SeedVatReportScenario(factory);
+            VatReportResultDto full = GetVatReport(factory);
+
+            if (!full.Documents.Any(row => row.DocumentNumber == scenario.StartBoundarySaleNumber) ||
+                !full.Documents.Any(row => row.DocumentNumber == scenario.EndBoundarySaleNumber))
+            {
+                throw new InvalidOperationException("Inclusive VAT report date boundaries were not applied.");
+            }
+
+            AssertMoney(-72m, full.Summary.OperationalVatPosition, "operational VAT position");
+
+            VatReportResultDto middle = new VatReportRepository(factory)
+                .GetReportAsync(new DateTime(2026, 7, 2), new DateTime(2026, 7, 30))
+                .GetAwaiter()
+                .GetResult();
+
+            if (middle.Documents.Any(row =>
+                row.DocumentNumber == scenario.StartBoundarySaleNumber ||
+                row.DocumentNumber == scenario.EndBoundarySaleNumber))
+            {
+                throw new InvalidOperationException("VAT date filter included documents outside the requested period.");
+            }
+        }
+
+        private static VatReportResultDto GetVatReport(
+            RepositoryTestDbContextFactory factory) =>
+            new VatReportRepository(factory)
+                .GetReportAsync(
+                    new DateTime(2026, 7, 1),
+                    new DateTime(2026, 7, 31))
+                .GetAwaiter()
+                .GetResult();
+
+        private static void AssertHasDiscrepancy(
+            VatReportResultDto report,
+            string sourceType,
+            string documentNumber,
+            string field)
+        {
+            if (!report.ReconciliationRows.Any(row =>
+                row.SourceType == sourceType &&
+                row.DocumentNumber == documentNumber &&
+                row.FieldChecked == field))
+            {
+                throw new InvalidOperationException(
+                    $"Expected {sourceType} discrepancy '{field}' was not detected.");
+            }
+        }
+
+        private static VatReportTestScenario SeedVatReportScenario(
+            RepositoryTestDbContextFactory factory)
+        {
+            RepositoryTestScenario baseScenario = SeedRepositoryTestScenario(factory);
+            using AppDbContext context = factory.CreateDbContext();
+
+            TaxCategory standard = context.TaxCategories.Single(row =>
+                row.CategoryCode == TaxCategoryCodes.Standard);
+            TaxRate standardRate = context.TaxRates.Single(row =>
+                row.TaxCategoryId == standard.Id);
+
+            TaxCategory zero = CreateVatReportTaxCategory(
+                TaxCategoryCodes.ZeroRated, "Zero Rated", TaxTreatmentTypes.ZeroRated, false, 20);
+            TaxCategory exempt = CreateVatReportTaxCategory(
+                TaxCategoryCodes.Exempt, "Exempt", TaxTreatmentTypes.Exempt, false, 30);
+            TaxCategory outOfScope = CreateVatReportTaxCategory(
+                TaxCategoryCodes.OutOfScope, "Out of Scope", TaxTreatmentTypes.OutOfScope, false, 40);
+            var supplier = new Supplier
+            {
+                SupplierCode = "VAT-REPORT-SUP",
+                SupplierName = "VAT Report Supplier",
+                CompanyName = "VAT Report Supplier (Pvt) Ltd",
+                Phone1 = "0110000000",
+                Address = "Colombo",
+                HasVat = true,
+                VatNumber = "SUP-VAT-REPORT",
+                CurrentBalance = 5000m
+            };
+
+            context.AddRange(zero, exempt, outOfScope, supplier);
+            context.SaveChanges();
+
+            SalesHeader standardSale = CreateVatReportSale(
+                baseScenario, "VAT-SALE-STD", new DateTime(2026, 7, 10, 10, 0, 0), true,
+                taxable: 1000m, vat: 180m, inclusive: 1180m,
+                standard: 1000m, zero: 0m, exempt: 0m, outOfScope: 0m,
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, standard.Id, standardRate.Id,
+                    TaxCategoryCodes.Standard, 18m, 1000m, 180m, 1180m));
+
+            SalesHeader mixedSale = CreateVatReportSale(
+                baseScenario, "VAT-SALE-MIX", new DateTime(2026, 7, 11, 11, 0, 0), true,
+                taxable: 600m, vat: 0m, inclusive: 600m,
+                standard: 0m, zero: 100m, exempt: 200m, outOfScope: 300m,
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, zero.Id, null,
+                    TaxCategoryCodes.ZeroRated, 0m, 100m, 0m, 100m),
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, exempt.Id, null,
+                    TaxCategoryCodes.Exempt, 0m, 200m, 0m, 200m),
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, outOfScope.Id, null,
+                    TaxCategoryCodes.OutOfScope, 0m, 300m, 0m, 300m));
+
+            SalesHeader historicalSale = CreateVatReportSale(
+                baseScenario, "VAT-SALE-HIST", new DateTime(2026, 7, 12, 12, 0, 0), true,
+                taxable: 200m, vat: 30m, inclusive: 230m,
+                standard: 200m, zero: 0m, exempt: 0m, outOfScope: 0m,
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, standard.Id, standardRate.Id,
+                    TaxCategoryCodes.Standard, 15m, 200m, 30m, 230m));
+
+            SalesHeader nonVatSale = CreateVatReportSale(
+                baseScenario, "VAT-SALE-NONVAT", new DateTime(2026, 7, 13, 13, 0, 0), false,
+                taxable: 500m, vat: 0m, inclusive: 500m,
+                standard: 0m, zero: 0m, exempt: 0m, outOfScope: 500m,
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, outOfScope.Id, null,
+                    TaxCategoryCodes.OutOfScope, 0m, 500m, 0m, 500m));
+
+            SalesHeader startBoundarySale = CreateVatReportSale(
+                baseScenario, "VAT-SALE-START", new DateTime(2026, 7, 1, 0, 0, 0), true,
+                taxable: 100m, vat: 18m, inclusive: 118m,
+                standard: 100m, zero: 0m, exempt: 0m, outOfScope: 0m,
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, standard.Id, standardRate.Id,
+                    TaxCategoryCodes.Standard, 18m, 100m, 18m, 118m));
+
+            SalesHeader endBoundarySale = CreateVatReportSale(
+                baseScenario, "VAT-SALE-END", new DateTime(2026, 7, 31, 23, 59, 59), true,
+                taxable: 100m, vat: 18m, inclusive: 118m,
+                standard: 100m, zero: 0m, exempt: 0m, outOfScope: 0m,
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, standard.Id, standardRate.Id,
+                    TaxCategoryCodes.Standard, 18m, 100m, 18m, 118m));
+
+            SalesHeader voidedSale = CreateVatReportSale(
+                baseScenario, "VAT-SALE-VOID", new DateTime(2026, 7, 14), true,
+                taxable: 1000m, vat: 180m, inclusive: 1180m,
+                standard: 1000m, zero: 0m, exempt: 0m, outOfScope: 0m,
+                CreateVatReportSalesLine(baseScenario.ServiceVariantId, standard.Id, standardRate.Id,
+                    TaxCategoryCodes.Standard, 18m, 1000m, 180m, 1180m));
+            voidedSale.IsVoided = true;
+
+            SalesHeader legacySale = new()
+            {
+                ShiftSessionId = baseScenario.ShiftSessionId,
+                InvoiceNo = "VAT-SALE-LEGACY",
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                CustomerName = "Walk-In",
+                TransactionDate = new DateTime(2026, 7, 15),
+                NetTotal = 400m,
+                GrossTotal = 400m,
+                Status = "Completed",
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+            };
+            legacySale.SalesLines.Add(new SalesLine
+            {
+                ItemVariantId = baseScenario.ServiceVariantId,
+                ItemDescription = "Legacy report line",
+                Quantity = 1m,
+                UnitPrice = 400m,
+                GrossAmount = 400m,
+                LineTotal = 400m,
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+            });
+
+            context.SalesHeaders.AddRange(
+                standardSale, mixedSale, historicalSale, nonVatSale,
+                startBoundarySale, endBoundarySale, voidedSale, legacySale);
+            context.SaveChanges();
+
+            SalesLine originalStandardLine = standardSale.SalesLines.Single();
+            var customerReturn = new CustomerReturnHeader
+            {
+                ReturnNo = "VAT-CR-001",
+                CreditNoteNo = "VAT-CR-001",
+                OriginalInvoiceNo = standardSale.InvoiceNo,
+                OriginalSalesHeaderId = standardSale.Id,
+                ShiftSessionId = baseScenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                AuthorizedBy = "Test Manager",
+                ReturnDate = new DateTime(2026, 7, 16),
+                TotalRefundAmount = 236m,
+                RefundMethod = "Cash",
+                DocumentType = "CreditNote",
+                TaxableAmountTotal = 200m,
+                TotalVatAmount = 36m,
+                StandardRatedAmount = 200m,
+                ZeroRatedAmount = 0m,
+                ExemptAmount = 0m,
+                OutOfScopeAmount = 0m,
+                TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+            };
+            customerReturn.Lines.Add(new CustomerReturnLine
+            {
+                SalesLineId = originalStandardLine.Id,
+                ItemVariantId = baseScenario.ServiceVariantId,
+                ItemDescription = "Returned standard service",
+                QuantityReturned = 0.2m,
+                RefundValue = 1180m,
+                LineTotalRefund = 236m,
+                ReturnReason = "Test",
+                InventoryAction = "None",
+                ItemTypeSnapshot = ItemTypeCodes.Service,
+                TaxCategoryId = standard.Id,
+                TaxRateId = standardRate.Id,
+                TaxCategoryCodeSnapshot = TaxCategoryCodes.Standard,
+                TaxCodeSnapshot = "VAT-18",
+                TaxNameSnapshot = "Standard VAT",
+                TaxRatePercentSnapshot = 18m,
+                IsTaxInclusiveSnapshot = true,
+                TaxableAmountSnapshot = 200m,
+                VatAmountSnapshot = 36m,
+                TaxInclusiveAmountSnapshot = 236m,
+                OriginalTaxableAmount = 1000m,
+                OriginalVatAmount = 180m,
+                OriginalTaxInclusiveAmount = 1180m,
+                TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+            });
+
+            var legacyCustomerReturn = new CustomerReturnHeader
+            {
+                ReturnNo = "VAT-CR-LEGACY",
+                CreditNoteNo = "VAT-CR-LEGACY",
+                OriginalInvoiceNo = legacySale.InvoiceNo,
+                OriginalSalesHeaderId = legacySale.Id,
+                ShiftSessionId = baseScenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                AuthorizedBy = "Test Manager",
+                ReturnDate = new DateTime(2026, 7, 17),
+                TotalRefundAmount = 50m,
+                RefundMethod = "Cash",
+                DocumentType = "CreditNote",
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+            };
+            legacyCustomerReturn.Lines.Add(new CustomerReturnLine
+            {
+                SalesLineId = legacySale.SalesLines.Single().Id,
+                ItemVariantId = baseScenario.ServiceVariantId,
+                ItemDescription = "Legacy return",
+                QuantityReturned = 0.125m,
+                RefundValue = 400m,
+                LineTotalRefund = 50m,
+                ReturnReason = "Test",
+                InventoryAction = "None",
+                ItemTypeSnapshot = ItemTypeCodes.Service,
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+            });
+
+            context.CustomerReturnHeaders.AddRange(customerReturn, legacyCustomerReturn);
+            context.SaveChanges();
+
+            GrnHeader mainGrn = CreateVatReportGrn(
+                supplier.Id, "VAT-GRN-MAIN", "VAT-SUP-INV-1", new DateTime(2026, 7, 18),
+                taxable: 1900m, vat: 180m, productInclusive: 2080m, freight: 50m,
+                standard: 1000m, zero: 200m, exempt: 300m, outOfScope: 400m);
+            mainGrn.GrnLines.Add(CreateVatReportGrnLine(baseScenario.StockVariantId, baseScenario.StockBatchId,
+                standard.Id, standardRate.Id, TaxCategoryCodes.Standard, 18m, true, 1m, 1000m, 180m, 1180m));
+            mainGrn.GrnLines.Add(CreateVatReportGrnLine(baseScenario.StockVariantId, baseScenario.StockBatchId,
+                zero.Id, null, TaxCategoryCodes.ZeroRated, 0m, true, 1m, 200m, 0m, 200m));
+            mainGrn.GrnLines.Add(CreateVatReportGrnLine(baseScenario.StockVariantId, baseScenario.StockBatchId,
+                exempt.Id, null, TaxCategoryCodes.Exempt, 0m, true, 1m, 300m, 0m, 300m));
+            mainGrn.GrnLines.Add(CreateVatReportGrnLine(baseScenario.StockVariantId, baseScenario.StockBatchId,
+                outOfScope.Id, null, TaxCategoryCodes.OutOfScope, 0m, true, 1m, 400m, 0m, 400m));
+
+            GrnHeader exclusiveGrn = CreateVatReportGrn(
+                supplier.Id, "VAT-GRN-EX", "VAT-SUP-INV-2", new DateTime(2026, 7, 19),
+                taxable: 500m, vat: 90m, productInclusive: 590m, freight: 0m,
+                standard: 500m, zero: 0m, exempt: 0m, outOfScope: 0m);
+            exclusiveGrn.IsTaxInclusive = false;
+            exclusiveGrn.GrnLines.Add(CreateVatReportGrnLine(baseScenario.StockVariantId, baseScenario.StockBatchId,
+                standard.Id, standardRate.Id, TaxCategoryCodes.Standard, 18m, false, 1m, 500m, 90m, 590m));
+
+            GrnHeader historicalGrn = CreateVatReportGrn(
+                supplier.Id, "VAT-GRN-HIST", "VAT-SUP-INV-3", new DateTime(2026, 7, 20),
+                taxable: 200m, vat: 30m, productInclusive: 230m, freight: 0m,
+                standard: 200m, zero: 0m, exempt: 0m, outOfScope: 0m);
+            historicalGrn.GrnLines.Add(CreateVatReportGrnLine(baseScenario.StockVariantId, baseScenario.StockBatchId,
+                standard.Id, standardRate.Id, TaxCategoryCodes.Standard, 15m, true, 1m, 200m, 30m, 230m));
+
+            GrnHeader cancelledGrn = CreateVatReportGrn(
+                supplier.Id, "VAT-GRN-CANCEL", "VAT-SUP-INV-C", new DateTime(2026, 7, 21),
+                taxable: 1000m, vat: 180m, productInclusive: 1180m, freight: 0m,
+                standard: 1000m, zero: 0m, exempt: 0m, outOfScope: 0m);
+            cancelledGrn.Status = "Cancelled";
+            cancelledGrn.GrnLines.Add(CreateVatReportGrnLine(baseScenario.StockVariantId, baseScenario.StockBatchId,
+                standard.Id, standardRate.Id, TaxCategoryCodes.Standard, 18m, true, 1m, 1000m, 180m, 1180m));
+
+            GrnHeader legacyGrn = new()
+            {
+                GrnNumber = "VAT-GRN-LEGACY",
+                SupplierId = supplier.Id,
+                SupplierInvoiceNo = "VAT-SUP-INV-LEG",
+                InvoiceDate = new DateTime(2026, 7, 22),
+                ReceivedDate = new DateTime(2026, 7, 22),
+                NetPayable = 700m,
+                Status = "Posted",
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown,
+                FreightTaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+            };
+            legacyGrn.GrnLines.Add(new GrnLine
+            {
+                ItemVariantId = baseScenario.StockVariantId,
+                ItemBatchId = baseScenario.StockBatchId,
+                BatchNo = "TEST-BATCH",
+                Uom = "PCS",
+                ReceivedQty = 1m,
+                UnitCost = 700m,
+                LandedCost = 700m,
+                LineTotal = 700m,
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown,
+                LineStatus = "Posted"
+            });
+
+            context.GrnHeaders.AddRange(mainGrn, exclusiveGrn, historicalGrn, cancelledGrn, legacyGrn);
+            context.SaveChanges();
+
+            GrnLine mainStandardLine = mainGrn.GrnLines.Single(line =>
+                line.TaxCategoryCodeSnapshot == TaxCategoryCodes.Standard);
+            var supplierReturn = CreateVatReportSupplierReturn(
+                supplier.Id, mainGrn.Id, "VAT-SDN-001", mainGrn.SupplierInvoiceNo,
+                new DateTime(2026, 7, 23), 100m, 18m, 118m);
+            supplierReturn.ReturnLines.Add(CreateVatReportSupplierReturnLine(
+                mainStandardLine, baseScenario.StockVariantId, baseScenario.StockBatchId,
+                standard.Id, standardRate.Id, TaxCategoryCodes.Standard, 18m,
+                0.1m, 100m, 18m, 118m, TaxSnapshotStatuses.Complete));
+
+            var cancelledSupplierReturn = CreateVatReportSupplierReturn(
+                supplier.Id, mainGrn.Id, "VAT-SDN-CANCEL", mainGrn.SupplierInvoiceNo,
+                new DateTime(2026, 7, 24), 500m, 90m, 590m);
+            cancelledSupplierReturn.Status = "Cancelled";
+            cancelledSupplierReturn.ReturnLines.Add(CreateVatReportSupplierReturnLine(
+                mainStandardLine, baseScenario.StockVariantId, baseScenario.StockBatchId,
+                standard.Id, standardRate.Id, TaxCategoryCodes.Standard, 18m,
+                0.5m, 500m, 90m, 590m, TaxSnapshotStatuses.Complete));
+
+            var legacySupplierReturn = new SupplierReturnHeader
+            {
+                ReturnNumber = "VAT-SDN-LEGACY",
+                SupplierId = supplier.Id,
+                GrnHeaderId = legacyGrn.Id,
+                OriginalInvoiceNo = legacyGrn.SupplierInvoiceNo,
+                ReturnDate = new DateTime(2026, 7, 25),
+                GrossCredit = 60m,
+                NetCredit = 60m,
+                Status = "Posted",
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown,
+                CreatedBy = "Test",
+                PostedBy = "Test"
+            };
+            legacySupplierReturn.ReturnLines.Add(CreateVatReportSupplierReturnLine(
+                legacyGrn.GrnLines.Single(), baseScenario.StockVariantId, baseScenario.StockBatchId,
+                null, null, null, null, 0.1m, null, null, null,
+                TaxSnapshotStatuses.LegacyUnknown, creditValue: 60m));
+
+            context.SupplierReturnHeaders.AddRange(
+                supplierReturn, cancelledSupplierReturn, legacySupplierReturn);
+
+            standardRate.RatePercent = 25m;
+            context.SaveChanges();
+
+            return new VatReportTestScenario
+            {
+                StandardSaleId = standardSale.Id,
+                StandardSaleNumber = standardSale.InvoiceNo,
+                VoidedSaleNumber = voidedSale.InvoiceNo,
+                NonVatSaleNumber = nonVatSale.InvoiceNo,
+                StartBoundarySaleNumber = startBoundarySale.InvoiceNo,
+                EndBoundarySaleNumber = endBoundarySale.InvoiceNo,
+                LegacySaleNumber = legacySale.InvoiceNo,
+                MainGrnId = mainGrn.Id,
+                MainGrnNumber = mainGrn.GrnNumber,
+                CancelledGrnNumber = cancelledGrn.GrnNumber,
+                LegacyGrnNumber = legacyGrn.GrnNumber,
+                CustomerReturnId = customerReturn.Id,
+                CustomerReturnNumber = customerReturn.CreditNoteNo!,
+                LegacyCustomerReturnNumber = legacyCustomerReturn.CreditNoteNo!,
+                SupplierReturnId = supplierReturn.Id,
+                SupplierReturnNumber = supplierReturn.ReturnNumber,
+                CancelledSupplierReturnNumber = cancelledSupplierReturn.ReturnNumber,
+                LegacySupplierReturnNumber = legacySupplierReturn.ReturnNumber
+            };
+        }
+
+        private static TaxCategory CreateVatReportTaxCategory(
+            string code,
+            string name,
+            string treatment,
+            bool isRateBased,
+            int order) => new()
+        {
+            CategoryCode = code,
+            CategoryName = name,
+            TreatmentType = treatment,
+            IsRateBased = isRateBased,
+            IsActive = true,
+            DisplayOrder = order
+        };
+
+        private static SalesHeader CreateVatReportSale(
+            RepositoryTestScenario scenario,
+            string invoiceNumber,
+            DateTime date,
+            bool isVatRegistered,
+            decimal taxable,
+            decimal vat,
+            decimal inclusive,
+            decimal standard,
+            decimal zero,
+            decimal exempt,
+            decimal outOfScope,
+            params SalesLine[] lines)
+        {
+            var header = new SalesHeader
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                InvoiceNo = invoiceNumber,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                CustomerName = "Walk-In",
+                TransactionDate = date,
+                DocumentType = SalesDocumentTypes.Receipt,
+                IsVatRegisteredSale = isVatRegistered,
+                GrossTotal = inclusive,
+                NetTotal = inclusive,
+                AmountTendered = inclusive,
+                PaymentMethod = "Cash",
+                Status = "Completed",
+                TaxableAmountTotal = taxable,
+                TotalVatAmount = vat,
+                StandardRatedAmount = standard,
+                ZeroRatedAmount = zero,
+                ExemptAmount = exempt,
+                OutOfScopeAmount = outOfScope,
+                TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+            };
+            foreach (SalesLine line in lines)
+                header.SalesLines.Add(line);
+            return header;
+        }
+
+        private static SalesLine CreateVatReportSalesLine(
+            int variantId,
+            int? taxCategoryId,
+            int? taxRateId,
+            string categoryCode,
+            decimal rate,
+            decimal taxable,
+            decimal vat,
+            decimal inclusive) => new()
+        {
+            ItemVariantId = variantId,
+            ItemDescription = $"VAT report {categoryCode}",
+            Uom = "JOB",
+            ItemTypeSnapshot = ItemTypeCodes.Service,
+            Quantity = 1m,
+            UnitPrice = inclusive,
+            OriginalUnitPrice = inclusive,
+            GrossAmount = inclusive,
+            LineTotal = inclusive,
+            TaxCategoryId = taxCategoryId,
+            TaxRateId = taxRateId,
+            TaxCategoryCodeSnapshot = categoryCode,
+            TaxCodeSnapshot = categoryCode,
+            TaxNameSnapshot = categoryCode,
+            TaxRatePercentSnapshot = rate,
+            IsTaxInclusiveSnapshot = true,
+            TaxableAmountSnapshot = taxable,
+            VatAmountSnapshot = vat,
+            TaxInclusiveAmountSnapshot = inclusive,
+            TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+        };
+
+        private static GrnHeader CreateVatReportGrn(
+            int supplierId,
+            string grnNumber,
+            string supplierInvoice,
+            DateTime date,
+            decimal taxable,
+            decimal vat,
+            decimal productInclusive,
+            decimal freight,
+            decimal standard,
+            decimal zero,
+            decimal exempt,
+            decimal outOfScope) => new()
+        {
+            GrnNumber = grnNumber,
+            SupplierId = supplierId,
+            SupplierInvoiceNo = supplierInvoice,
+            InvoiceDate = date,
+            ReceivedDate = date,
+            DueDate = date.AddDays(30),
+            Subtotal = productInclusive,
+            FreightAmount = freight,
+            TotalVatAmount = vat,
+            NetPayable = productInclusive + freight,
+            IsTaxInclusive = true,
+            TaxableAmountTotal = taxable,
+            StandardRatedAmount = standard,
+            ZeroRatedAmount = zero,
+            ExemptAmount = exempt,
+            OutOfScopeAmount = outOfScope,
+            FreightTaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown,
+            TaxSnapshotStatus = TaxSnapshotStatuses.Complete,
+            Status = "Posted",
+            CreatedBy = "Test",
+            PostedBy = "Test"
+        };
+
+        private static GrnLine CreateVatReportGrnLine(
+            int variantId,
+            int batchId,
+            int? taxCategoryId,
+            int? taxRateId,
+            string? categoryCode,
+            decimal? rate,
+            bool? inclusive,
+            decimal quantity,
+            decimal taxable,
+            decimal vat,
+            decimal taxInclusive) => new()
+        {
+            ItemVariantId = variantId,
+            ItemBatchId = batchId,
+            ItemCode = "VAT-REPORT-ITEM",
+            SkuCode = "VAT-REPORT-SKU",
+            Description = "VAT Report Item",
+            BatchNo = $"TEST-{categoryCode ?? "LEGACY"}",
+            Uom = "PCS",
+            ReceivedQty = quantity,
+            UnitCost = taxInclusive / quantity,
+            LandedCost = taxInclusive / quantity,
+            LineTotal = taxInclusive,
+            TaxCategoryId = taxCategoryId,
+            TaxRateId = taxRateId,
+            TaxCategoryCodeSnapshot = categoryCode,
+            TaxCodeSnapshot = categoryCode,
+            TaxNameSnapshot = categoryCode,
+            TaxRatePercentSnapshot = rate,
+            IsTaxInclusiveSnapshot = inclusive,
+            TaxableAmountSnapshot = taxable,
+            VatAmountSnapshot = vat,
+            TaxInclusiveAmountSnapshot = taxInclusive,
+            TaxSnapshotStatus = TaxSnapshotStatuses.Complete,
+            LineStatus = "Posted"
+        };
+
+        private static SupplierReturnHeader CreateVatReportSupplierReturn(
+            int supplierId,
+            int grnHeaderId,
+            string number,
+            string originalInvoice,
+            DateTime date,
+            decimal taxable,
+            decimal vat,
+            decimal inclusive) => new()
+        {
+            ReturnNumber = number,
+            SupplierId = supplierId,
+            GrnHeaderId = grnHeaderId,
+            OriginalInvoiceNo = originalInvoice,
+            ReturnDate = date,
+            AuthorizedBy = "Test Manager",
+            GrossCredit = inclusive,
+            NetCredit = inclusive,
+            TaxableAmountTotal = taxable,
+            TotalVatAmount = vat,
+            StandardRatedAmount = taxable,
+            ZeroRatedAmount = 0m,
+            ExemptAmount = 0m,
+            OutOfScopeAmount = 0m,
+            TaxSnapshotStatus = TaxSnapshotStatuses.Complete,
+            Status = "Posted",
+            CreatedBy = "Test",
+            PostedBy = "Test"
+        };
+
+        private static SupplierReturnLine CreateVatReportSupplierReturnLine(
+            GrnLine source,
+            int variantId,
+            int batchId,
+            int? taxCategoryId,
+            int? taxRateId,
+            string? categoryCode,
+            decimal? rate,
+            decimal quantity,
+            decimal? taxable,
+            decimal? vat,
+            decimal? inclusive,
+            string status,
+            decimal? creditValue = null) => new()
+        {
+            GrnLineId = source.Id,
+            ItemVariantId = variantId,
+            ItemBatchId = batchId,
+            BatchNo = "TEST-BATCH",
+            ReturnQty = quantity,
+            HistoricalCost = source.LandedCost,
+            CreditValue = creditValue ?? inclusive ?? 0m,
+            TaxCategoryId = taxCategoryId,
+            TaxRateId = taxRateId,
+            TaxCategoryCodeSnapshot = categoryCode,
+            TaxCodeSnapshot = categoryCode,
+            TaxNameSnapshot = categoryCode,
+            TaxRatePercentSnapshot = rate,
+            IsTaxInclusiveSnapshot = source.IsTaxInclusiveSnapshot,
+            TaxableAmountSnapshot = taxable,
+            VatAmountSnapshot = vat,
+            TaxInclusiveAmountSnapshot = inclusive,
+            OriginalTaxableAmount = source.TaxableAmountSnapshot,
+            OriginalVatAmount = source.VatAmountSnapshot,
+            OriginalTaxInclusiveAmount = source.TaxInclusiveAmountSnapshot,
+            TaxSnapshotStatus = status,
+            ReasonCode = "TEST",
+            LineStatus = "Posted"
+        };
+
+        private sealed class VatReportTestScenario
+        {
+            public int StandardSaleId { get; init; }
+            public string StandardSaleNumber { get; init; } = string.Empty;
+            public string VoidedSaleNumber { get; init; } = string.Empty;
+            public string NonVatSaleNumber { get; init; } = string.Empty;
+            public string StartBoundarySaleNumber { get; init; } = string.Empty;
+            public string EndBoundarySaleNumber { get; init; } = string.Empty;
+            public string LegacySaleNumber { get; init; } = string.Empty;
+            public int MainGrnId { get; init; }
+            public string MainGrnNumber { get; init; } = string.Empty;
+            public string CancelledGrnNumber { get; init; } = string.Empty;
+            public string LegacyGrnNumber { get; init; } = string.Empty;
+            public int CustomerReturnId { get; init; }
+            public string CustomerReturnNumber { get; init; } = string.Empty;
+            public string LegacyCustomerReturnNumber { get; init; } = string.Empty;
+            public int SupplierReturnId { get; init; }
+            public string SupplierReturnNumber { get; init; } = string.Empty;
+            public string CancelledSupplierReturnNumber { get; init; } = string.Empty;
+            public string LegacySupplierReturnNumber { get; init; } = string.Empty;
         }
 
         private static void AssertContains(

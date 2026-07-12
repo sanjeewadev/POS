@@ -95,6 +95,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<BackupRepository>();
             services.AddTransient<LicenseRepository>();
             services.AddTransient<TaxRateRepository>();
+            services.AddTransient<VatReportRepository>();
 
             // ==========================================
             // CORE SERVICES
@@ -175,6 +176,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<CashMovementDashboardViewModel>();
             services.AddTransient<CustomerReturnsAuditViewModel>();
             services.AddTransient<ReceiptLedgerViewModel>();
+            services.AddTransient<VatReportViewModel>();
 
             // ==========================================
             // CRM VIEWMODELS

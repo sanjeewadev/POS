@@ -400,5 +400,11 @@ namespace POS.BackOffice.UI.ViewModels
                 _serviceProvider
                     .GetRequiredService<
                         CashMovementDashboardViewModel>();
+
+        [RelayCommand]
+        private void NavigateToVatReport() =>
+            CurrentPage =
+                _serviceProvider
+                    .GetRequiredService<VatReportViewModel>();
     }
 }
