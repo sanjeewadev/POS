@@ -1466,20 +1466,47 @@ namespace POS.Cashier.UI.Views
             if (BlockDialogIfPaymentMode("processing return"))
                 return;
 
-            if (_isDialogOpen)
+            if (_isDialogOpen || ViewModel == null || App.Services == null)
                 return;
 
             _isDialogOpen = true;
 
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
             try
             {
-                new ReturnInvoiceDialog
+                CustomerReturnViewModel returnViewModel =
+                    App.Services.GetRequiredService<CustomerReturnViewModel>();
+
+                returnViewModel.InitializeContext(
+                    ViewModel.CurrentShiftId,
+                    ViewModel.TerminalNo,
+                    ViewModel.CashierName,
+                    ViewModel.ReceiptPrinterName,
+                    ViewModel.ReceiptPaperWidth);
+
+                new ReturnInvoiceDialog(returnViewModel)
                 {
                     Owner = this
                 }.ShowDialog();
             }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Customer return workflow",
+                    ex);
+
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Return failed: {ex.Message}",
+                    "#EF4444");
+            }
             finally
             {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+
                 _isDialogOpen = false;
                 ReturnFocusToTerminalInput();
             }

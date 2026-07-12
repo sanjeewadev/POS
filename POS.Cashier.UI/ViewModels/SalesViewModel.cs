@@ -98,6 +98,10 @@ namespace POS.Cashier.UI.ViewModels
 
         private int _receiptPaperWidth = 80;
 
+        public string ReceiptPrinterName => _receiptPrinterName;
+
+        public int ReceiptPaperWidth => _receiptPaperWidth;
+
         private bool _autoPrintReceipt;
 
         private int _receiptCopies = 1;

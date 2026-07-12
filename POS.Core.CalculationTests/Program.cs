@@ -8,6 +8,7 @@ using POS.Core.Repositories;
 using POS.Core.Services.Tax;
 using POS.Core.Services.Pricing;
 using POS.Core.Services.Documents;
+using POS.Core.Services.Returns;
 
 namespace POS.Core.CalculationTests
 {
@@ -49,7 +50,19 @@ namespace POS.Core.CalculationTests
                 ("Tax Invoice issue is unique and idempotent", TaxInvoiceIssueIsUniqueAndIdempotent),
                 ("Legacy and non-VAT Tax Invoice issue is blocked", InvalidTaxInvoiceIssueIsBlocked),
                 ("Sales document print audits track original reprint and failure", SalesDocumentPrintAuditsTrackResults),
-                ("Last completed receipt reload is terminal scoped", LastCompletedReceiptReloadIsTerminalScoped)
+                ("Last completed receipt reload is terminal scoped", LastCompletedReceiptReloadIsTerminalScoped),
+                ("Customer return final residual reconciles", CustomerReturnFinalResidualReconciles),
+                ("Full Stock Item return restores original batch", FullStockItemReturnRestoresOriginalBatch),
+                ("Partial returns prevent over-return", PartialReturnsPreventOverReturn),
+                ("Service return creates no inventory", ServiceReturnCreatesNoInventory),
+                ("Mixed return reverses stock and service safely", MixedReturnReversesStockAndServiceSafely),
+                ("Customer return reverses invoice discount", CustomerReturnReversesInvoiceDiscount),
+                ("Customer return preserves all tax categories", CustomerReturnPreservesAllTaxCategories),
+                ("Historical VAT return uses saved snapshot", HistoricalVatReturnUsesSavedSnapshot),
+                ("Legacy return invents no VAT", LegacyReturnInventsNoVat),
+                ("Invalid multi-line return changes nothing", InvalidMultiLineReturnChangesNothing),
+                ("Return lookup reports remaining quantity", ReturnLookupReportsRemainingQuantity),
+                ("Credit Note formatter uses saved return snapshots", CreditNoteFormatterUsesSavedReturnSnapshots)
             };
 
             try
@@ -61,7 +74,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, and sales document checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, and customer return checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -1770,6 +1783,520 @@ namespace POS.Core.CalculationTests
                 throw new InvalidOperationException(
                     "Last completed receipt lookup was not terminal scoped or fully loaded.");
             }
+        }
+
+
+        private static void CustomerReturnFinalResidualReconciles()
+        {
+            var calculator = new CustomerReturnAllocationCalculator();
+
+            CustomerReturnAllocationResult first = calculator.Calculate(
+                new CustomerReturnAllocationInput
+                {
+                    SoldQuantity = 3m,
+                    PreviouslyReturnedQuantity = 0m,
+                    RequestedQuantity = 1m,
+                    OriginalGrossAmount = 1000m,
+                    OriginalDiscountAmount = 100m,
+                    OriginalRefundAmount = 900m,
+                    PreviouslyRefundedAmount = 0m,
+                    OriginalTaxableAmount = 762.71m,
+                    OriginalVatAmount = 137.29m,
+                    OriginalTaxInclusiveAmount = 900m,
+                    PreviouslyReturnedTaxableAmount = 0m,
+                    PreviouslyReturnedVatAmount = 0m,
+                    PreviouslyReturnedTaxInclusiveAmount = 0m,
+                    TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+                });
+
+            CustomerReturnAllocationResult second = calculator.Calculate(
+                new CustomerReturnAllocationInput
+                {
+                    SoldQuantity = 3m,
+                    PreviouslyReturnedQuantity = 1m,
+                    RequestedQuantity = 1m,
+                    OriginalGrossAmount = 1000m,
+                    OriginalDiscountAmount = 100m,
+                    OriginalRefundAmount = 900m,
+                    PreviouslyRefundedAmount = first.RefundAmount,
+                    OriginalTaxableAmount = 762.71m,
+                    OriginalVatAmount = 137.29m,
+                    OriginalTaxInclusiveAmount = 900m,
+                    PreviouslyReturnedTaxableAmount = first.TaxableAmount ?? 0m,
+                    PreviouslyReturnedVatAmount = first.VatAmount ?? 0m,
+                    PreviouslyReturnedTaxInclusiveAmount = first.TaxInclusiveAmount ?? 0m,
+                    TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+                });
+
+            CustomerReturnAllocationResult final = calculator.Calculate(
+                new CustomerReturnAllocationInput
+                {
+                    SoldQuantity = 3m,
+                    PreviouslyReturnedQuantity = 2m,
+                    RequestedQuantity = 1m,
+                    OriginalGrossAmount = 1000m,
+                    OriginalDiscountAmount = 100m,
+                    OriginalRefundAmount = 900m,
+                    PreviouslyRefundedAmount = first.RefundAmount + second.RefundAmount,
+                    OriginalTaxableAmount = 762.71m,
+                    OriginalVatAmount = 137.29m,
+                    OriginalTaxInclusiveAmount = 900m,
+                    PreviouslyReturnedTaxableAmount = (first.TaxableAmount ?? 0m) + (second.TaxableAmount ?? 0m),
+                    PreviouslyReturnedVatAmount = (first.VatAmount ?? 0m) + (second.VatAmount ?? 0m),
+                    PreviouslyReturnedTaxInclusiveAmount = (first.TaxInclusiveAmount ?? 0m) + (second.TaxInclusiveAmount ?? 0m),
+                    TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+                });
+
+            AssertMoney(900m, first.RefundAmount + second.RefundAmount + final.RefundAmount, "return refund residual");
+            AssertMoney(762.71m, (first.TaxableAmount ?? 0m) + (second.TaxableAmount ?? 0m) + (final.TaxableAmount ?? 0m), "return taxable residual");
+            AssertMoney(137.29m, (first.VatAmount ?? 0m) + (second.VatAmount ?? 0m) + (final.VatAmount ?? 0m), "return VAT residual");
+        }
+
+        private static void FullStockItemReturnRestoresOriginalBatch()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 2m, serviceQuantity: 0m);
+            var repository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 2m)))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            ItemBatch batch = context.ItemBatches.Single(row => row.Id == scenario.StockBatchId);
+            SalesLine source = context.SalesLines.Single(row => row.Id == sale.SalesLines.Single().Id);
+
+            AssertMoney(5m, batch.CurrentStock, "restored original batch stock");
+            AssertMoney(2360m, result.TotalRefundAmount, "full Stock Item refund");
+
+            if (!source.IsReturned ||
+                context.InventoryTransactions.Count(row => row.TransactionType == "RETURN") != 1 ||
+                context.CashMovements.Count(row => row.ReasonCategory == CustomerReturnCashMovementCodes.ReasonCategory) != 1)
+            {
+                throw new InvalidOperationException("Full Stock Item return did not persist stock, cash, and completion state.");
+            }
+        }
+
+        private static void PartialReturnsPreventOverReturn()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 3m, serviceQuantity: 0m);
+            SalesLine line = sale.SalesLines.Single();
+            var repository = CreateCustomerReturnRepository(factory);
+
+            repository.ProcessReturnAsync(CreateReturnRequest(sale, scenario, (line.Id, 1m))).GetAwaiter().GetResult();
+            repository.ProcessReturnAsync(CreateReturnRequest(sale, scenario, (line.Id, 1m))).GetAwaiter().GetResult();
+
+            AssertThrows(
+                () => repository.ProcessReturnAsync(CreateReturnRequest(sale, scenario, (line.Id, 2m))).GetAwaiter().GetResult(),
+                "remaining quantity");
+
+            repository.ProcessReturnAsync(CreateReturnRequest(sale, scenario, (line.Id, 1m))).GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            decimal returned = context.CustomerReturnLines.Where(row => row.SalesLineId == line.Id).AsEnumerable().Sum(row => row.QuantityReturned);
+            decimal refunded = context.CustomerReturnLines.Where(row => row.SalesLineId == line.Id).AsEnumerable().Sum(row => row.LineTotalRefund);
+
+            AssertMoney(3m, returned, "partial returned quantity");
+            AssertMoney(3540m, refunded, "partial refund reconciliation");
+        }
+
+        private static void ServiceReturnCreatesNoInventory()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 0m, serviceQuantity: 2m);
+            SalesLine serviceLine = sale.SalesLines.Single();
+            var repository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (serviceLine.Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerReturnLine saved = context.CustomerReturnLines.Single();
+
+            if (saved.ItemBatchId.HasValue ||
+                saved.InventoryAction != CustomerReturnInventoryActions.NoInventory ||
+                context.InventoryTransactions.Any(row => row.TransactionType == "RETURN"))
+            {
+                throw new InvalidOperationException("Service return incorrectly created inventory activity.");
+            }
+
+            AssertMoney(1180m, result.TotalRefundAmount, "Service refund");
+        }
+
+        private static void MixedReturnReversesStockAndServiceSafely()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 1m, serviceQuantity: 1m);
+            SalesLine stock = sale.SalesLines.Single(row => row.ItemBatchId.HasValue);
+            SalesLine service = sale.SalesLines.Single(row => !row.ItemBatchId.HasValue);
+            var repository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (stock.Id, 1m), (service.Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertMoney(5m, context.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock, "mixed return batch stock");
+            AssertMoney(2360m, result.TotalRefundAmount, "mixed return refund");
+
+            if (context.CustomerReturnLines.Count() != 2 ||
+                context.InventoryTransactions.Count(row => row.TransactionType == "RETURN") != 1)
+            {
+                throw new InvalidOperationException("Mixed Stock Item and Service return created incorrect inventory rows.");
+            }
+        }
+
+        private static void CustomerReturnReversesInvoiceDiscount()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 1m, serviceQuantity: 1m, invoiceDiscount: 180m);
+            SalesLine stock = sale.SalesLines.Single(row => row.ItemBatchId.HasValue);
+            var repository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (stock.Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertMoney(stock.LineTotal, result.TotalRefundAmount, "invoice-discount return amount");
+
+            using AppDbContext context = factory.CreateDbContext();
+            CustomerReturnLine returned = context.CustomerReturnLines.Single();
+            AssertMoney(stock.TaxableAmountSnapshot ?? 0m, returned.TaxableAmountSnapshot ?? 0m, "invoice-discount returned taxable");
+            AssertMoney(stock.VatAmountSnapshot ?? 0m, returned.VatAmountSnapshot ?? 0m, "invoice-discount returned VAT");
+        }
+
+        private static void CustomerReturnPreservesAllTaxCategories()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateFourCategoryReturnSale(factory, scenario);
+            var repository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(
+                    CreateReturnRequest(
+                        sale,
+                        scenario,
+                        sale.SalesLines.Select(line => (line.Id, 1m)).ToArray()))
+                .GetAwaiter().GetResult();
+
+            CustomerReturnHeader header = result.ReturnHeader;
+            AssertMoney(1000m, header.StandardRatedAmount ?? 0m, "return Standard VAT total");
+            AssertMoney(100m, header.ZeroRatedAmount ?? 0m, "return Zero Rated total");
+            AssertMoney(200m, header.ExemptAmount ?? 0m, "return Exempt total");
+            AssertMoney(300m, header.OutOfScopeAmount ?? 0m, "return Out of Scope total");
+            AssertMoney(180m, header.TotalVatAmount ?? 0m, "return VAT total");
+        }
+
+        private static void HistoricalVatReturnUsesSavedSnapshot()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 0m, serviceQuantity: 1m);
+
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                TaxRate rate = context.TaxRates.Single();
+                rate.RatePercent = 99m;
+                context.SaveChanges();
+            }
+
+            var repository = CreateCustomerReturnRepository(factory);
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertMoney(180m, result.ReturnHeader.TotalVatAmount ?? 0m, "historical VAT reversal");
+        }
+
+        private static void LegacyReturnInventsNoVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateLegacyReturnSale(factory, scenario);
+            var repository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            if (result.ReturnHeader.TaxSnapshotStatus != TaxSnapshotStatuses.LegacyUnknown ||
+                result.ReturnHeader.TotalVatAmount.HasValue ||
+                result.ReturnHeader.Lines.Single().VatAmountSnapshot.HasValue)
+            {
+                throw new InvalidOperationException("Legacy customer return invented VAT values.");
+            }
+
+            AssertMoney(500m, result.TotalRefundAmount, "legacy financial refund");
+        }
+
+        private static void InvalidMultiLineReturnChangesNothing()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 1m, serviceQuantity: 1m);
+            SalesLine valid = sale.SalesLines.First();
+            var repository = CreateCustomerReturnRepository(factory);
+
+            using (AppDbContext before = factory.CreateDbContext())
+            {
+                AssertMoney(4m, before.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock, "pre-failure stock");
+            }
+
+            AssertThrows(
+                () => repository.ProcessReturnAsync(
+                        CreateReturnRequest(sale, scenario, (valid.Id, 1m), (999999, 1m)))
+                    .GetAwaiter().GetResult(),
+                "do not belong");
+
+            using AppDbContext after = factory.CreateDbContext();
+            AssertMoney(4m, after.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock, "post-failure stock");
+
+            if (after.CustomerReturnHeaders.Any() ||
+                after.CustomerReturnLines.Any() ||
+                after.CashMovements.Any(row => row.ReasonCategory == CustomerReturnCashMovementCodes.ReasonCategory))
+            {
+                throw new InvalidOperationException("Invalid multi-line return left partial records.");
+            }
+        }
+
+        private static void ReturnLookupReportsRemainingQuantity()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 2m, serviceQuantity: 0m);
+            SalesLine line = sale.SalesLines.Single();
+            var repository = CreateCustomerReturnRepository(factory);
+
+            repository.ProcessReturnAsync(CreateReturnRequest(sale, scenario, (line.Id, 1m))).GetAwaiter().GetResult();
+
+            CustomerReturnInvoiceDto invoice = repository.FindCompletedSaleAsync(sale.InvoiceNo).GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Return lookup failed.");
+
+            CustomerReturnableLineDto loaded = invoice.Lines.Single();
+            AssertMoney(1m, loaded.PreviouslyReturnedQuantity, "lookup previous returned quantity");
+            AssertMoney(1m, loaded.RemainingQuantity, "lookup remaining quantity");
+        }
+
+        private static void CreditNoteFormatterUsesSavedReturnSnapshots()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SalesHeader sale = CreateReturnTestSale(factory, scenario, stockQuantity: 0m, serviceQuantity: 1m);
+            var repository = CreateCustomerReturnRepository(factory);
+            CustomerReturnHeader returned = repository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m)))
+                .GetAwaiter().GetResult().ReturnHeader;
+
+            var formatter = new CustomerCreditNoteTextFormatter();
+            string document = formatter.FormatCreditNote(returned, CreateFormatterStoreSettings(), 80);
+
+            AssertContains(document, "CREDIT NOTE", "credit note title");
+            AssertContains(document, returned.ReturnNo, "credit note number");
+            AssertContains(document, sale.InvoiceNo, "original invoice reference");
+            AssertContains(document, "VAT reversed", "credit note VAT summary");
+            AssertContains(document, "Installation Service", "credit note Service line");
+        }
+
+        private static CustomerReturnRepository CreateCustomerReturnRepository(
+            RepositoryTestDbContextFactory factory)
+        {
+            return new CustomerReturnRepository(
+                factory,
+                new CustomerReturnAllocationCalculator());
+        }
+
+        private static SalesHeader CreateReturnTestSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario,
+            decimal stockQuantity,
+            decimal serviceQuantity,
+            decimal invoiceDiscount = 0m)
+        {
+            var lines = new List<SalesLine>();
+            decimal gross = 0m;
+
+            if (stockQuantity > 0m)
+            {
+                lines.Add(CreateRepositoryTestLine(
+                    scenario.StockVariantId,
+                    scenario.StockBatchId,
+                    scenario.StockSku,
+                    "Test Stock Item",
+                    stockQuantity,
+                    1180m));
+                gross += stockQuantity * 1180m;
+            }
+
+            if (serviceQuantity > 0m)
+            {
+                lines.Add(CreateRepositoryTestLine(
+                    scenario.ServiceVariantId,
+                    null,
+                    scenario.ServiceSku,
+                    "Installation Service",
+                    serviceQuantity,
+                    1180m));
+                gross += serviceQuantity * 1180m;
+            }
+
+            decimal payable = gross - invoiceDiscount;
+            var repository = new SalesRepository(factory);
+
+            return repository.ProcessCheckoutAsync(
+                    CreateRepositoryTestHeader(
+                        scenario.ShiftSessionId,
+                        payable,
+                        invoiceDiscount),
+                    lines,
+                    new List<SalesPayment> { CreateCashPayment(payable) })
+                .GetAwaiter().GetResult();
+        }
+
+        private static CustomerReturnRequest CreateReturnRequest(
+            SalesHeader sale,
+            RepositoryTestScenario scenario,
+            params (int SalesLineId, decimal Quantity)[] lines)
+        {
+            return new CustomerReturnRequest
+            {
+                SalesHeaderId = sale.Id,
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                AuthorizedBy = "Test Manager",
+                ReturnReason = "Test customer return",
+                Lines = lines.Select(line => new CustomerReturnRequestLine
+                {
+                    SalesLineId = line.SalesLineId,
+                    Quantity = line.Quantity
+                }).ToList()
+            };
+        }
+
+        private static SalesHeader CreateFourCategoryReturnSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+
+            var sale = new SalesHeader
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                InvoiceNo = ("INV-RET-" + Guid.NewGuid().ToString("N"))[..20],
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                CustomerName = "Walk-In",
+                TransactionDate = DateTime.Now,
+                DocumentType = SalesDocumentTypes.Receipt,
+                IsVatRegisteredSale = true,
+                GrossTotal = 1780m,
+                TotalDiscount = 0m,
+                NetTotal = 1780m,
+                AmountTendered = 1780m,
+                PaymentMethod = "Cash",
+                Status = "Completed",
+                TaxableAmountTotal = 1600m,
+                TotalVatAmount = 180m,
+                StandardRatedAmount = 1000m,
+                ZeroRatedAmount = 100m,
+                ExemptAmount = 200m,
+                OutOfScopeAmount = 300m,
+                TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+            };
+
+            sale.SalesLines.Add(CreateDirectReturnLine(scenario.ServiceVariantId, "Standard Service", TaxCategoryCodes.Standard, 1180m, 1000m, 180m, 18m));
+            sale.SalesLines.Add(CreateDirectReturnLine(scenario.ServiceVariantId, "Zero Service", TaxCategoryCodes.ZeroRated, 100m, 100m, 0m, 0m));
+            sale.SalesLines.Add(CreateDirectReturnLine(scenario.ServiceVariantId, "Exempt Service", TaxCategoryCodes.Exempt, 200m, 200m, 0m, 0m));
+            sale.SalesLines.Add(CreateDirectReturnLine(scenario.ServiceVariantId, "Out Service", TaxCategoryCodes.OutOfScope, 300m, 300m, 0m, 0m));
+
+            context.SalesHeaders.Add(sale);
+            context.SaveChanges();
+            return sale;
+        }
+
+        private static SalesLine CreateDirectReturnLine(
+            int variantId,
+            string description,
+            string categoryCode,
+            decimal inclusive,
+            decimal taxable,
+            decimal vat,
+            decimal rate)
+        {
+            return new SalesLine
+            {
+                ItemVariantId = variantId,
+                ItemBatchId = null,
+                SkuCode = description.Replace(" ", "-").ToUpperInvariant(),
+                ItemDescription = description,
+                Uom = "JOB",
+                ItemTypeSnapshot = ItemTypeCodes.Service,
+                Quantity = 1m,
+                UnitPrice = inclusive,
+                OriginalUnitPrice = inclusive,
+                GrossAmount = inclusive,
+                DiscountAmount = 0m,
+                LineTotal = inclusive,
+                TaxCategoryCodeSnapshot = categoryCode,
+                TaxCodeSnapshot = categoryCode,
+                TaxNameSnapshot = categoryCode,
+                TaxRatePercentSnapshot = rate,
+                IsTaxInclusiveSnapshot = true,
+                TaxableAmountSnapshot = taxable,
+                VatAmountSnapshot = vat,
+                TaxInclusiveAmountSnapshot = inclusive,
+                TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+            };
+        }
+
+        private static SalesHeader CreateLegacyReturnSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+
+            var sale = new SalesHeader
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                InvoiceNo = ("INV-LEG-" + Guid.NewGuid().ToString("N"))[..20],
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                CustomerName = "Walk-In",
+                TransactionDate = DateTime.Now,
+                GrossTotal = 500m,
+                NetTotal = 500m,
+                AmountTendered = 500m,
+                PaymentMethod = "Cash",
+                Status = "Completed",
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+            };
+
+            sale.SalesLines.Add(new SalesLine
+            {
+                ItemVariantId = scenario.ServiceVariantId,
+                ItemBatchId = null,
+                SkuCode = scenario.ServiceSku,
+                ItemDescription = "Legacy Service",
+                Uom = "JOB",
+                ItemTypeSnapshot = ItemTypeCodes.Service,
+                Quantity = 1m,
+                UnitPrice = 500m,
+                OriginalUnitPrice = 500m,
+                GrossAmount = 500m,
+                LineTotal = 500m,
+                TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+            });
+
+            context.SalesHeaders.Add(sale);
+            context.SaveChanges();
+            return sale;
         }
 
         private static SalesHeader CreateCompletedDocumentTestSale(

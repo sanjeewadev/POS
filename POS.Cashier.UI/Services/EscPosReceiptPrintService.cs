@@ -19,6 +19,9 @@ namespace POS.Cashier.UI.Services
         private readonly SalesDocumentTextFormatter
             _salesDocumentFormatter;
 
+        private readonly CustomerCreditNoteTextFormatter
+            _customerCreditNoteFormatter;
+
         private static readonly byte[] EscInitialize =
         {
             27, 64
@@ -61,12 +64,15 @@ namespace POS.Cashier.UI.Services
 
         public EscPosReceiptPrintService(
             StoreSettingsRepository storeSettingsRepository,
-            SalesDocumentTextFormatter salesDocumentFormatter)
+            SalesDocumentTextFormatter salesDocumentFormatter,
+            CustomerCreditNoteTextFormatter customerCreditNoteFormatter)
         {
             _storeSettingsRepository =
                 storeSettingsRepository;
             _salesDocumentFormatter =
                 salesDocumentFormatter;
+            _customerCreditNoteFormatter =
+                customerCreditNoteFormatter;
         }
 
         public async Task<string> BuildReceiptPreviewAsync(
@@ -149,6 +155,45 @@ namespace POS.Cashier.UI.Services
                 documentText,
                 printerName,
                 "POS Tax Invoice");
+        }
+
+        public async Task<string> BuildCreditNotePreviewAsync(
+            CustomerReturnHeader returnHeader,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original)
+        {
+            if (returnHeader == null)
+                throw new ArgumentNullException(nameof(returnHeader));
+
+            StoreSettings storeSettings =
+                await _storeSettingsRepository
+                    .GetOrCreateDefaultAsync();
+
+            return _customerCreditNoteFormatter.FormatCreditNote(
+                returnHeader,
+                storeSettings,
+                paperWidth,
+                copyLabel);
+        }
+
+        public async Task PrintCreditNoteAsync(
+            CustomerReturnHeader returnHeader,
+            string printerName,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original)
+        {
+            ValidatePrinterName(printerName);
+
+            string documentText =
+                await BuildCreditNotePreviewAsync(
+                    returnHeader,
+                    paperWidth,
+                    copyLabel);
+
+            await PrintTextDocumentAsync(
+                documentText,
+                printerName,
+                "POS Customer Credit Note");
         }
 
         private static Task PrintTextDocumentAsync(

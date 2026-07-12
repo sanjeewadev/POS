@@ -32,6 +32,17 @@ namespace POS.Cashier.UI.Services
             int paperWidth,
             string copyLabel = SalesDocumentCopyLabels.Original);
 
+        Task<string> BuildCreditNotePreviewAsync(
+            CustomerReturnHeader returnHeader,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original);
+
+        Task PrintCreditNoteAsync(
+            CustomerReturnHeader returnHeader,
+            string printerName,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original);
+
         Task PrintQuotationAsync(
             QuotationPrintRequest request,
             string printerName,
