@@ -130,6 +130,12 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalDiscount { get; set; } = 0m;
 
+        // Checkout-only request value. The database already preserves the full
+        // document discount in TotalDiscount and each line's exact allocation
+        // in SalesLine.DiscountAmount, so this helper is intentionally not mapped.
+        [NotMapped]
+        public decimal InvoiceDiscountAmount { get; set; } = 0m;
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal NetTotal { get; set; } = 0m;
 

@@ -120,8 +120,10 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal DiscountPercentage { get; set; } = 0m;
 
-        // Total discount value applied to this line.
-        // This includes percentage discount amount + fixed rupee discount.
+        // Total discount value persisted for this line.
+        // This includes the line discount plus any proportional invoice-discount
+        // allocation. The original line discount remains derivable from
+        // DiscountPercentage and ManualDiscountAmount.
         [Column(TypeName = "decimal(18,2)")]
         public decimal DiscountAmount { get; set; } = 0m;
 

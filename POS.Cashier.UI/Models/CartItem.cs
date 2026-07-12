@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using POS.Core.Configuration;
+using POS.Core.Services.Tax;
 
 namespace POS.Cashier.UI.Models
 {
@@ -37,6 +38,8 @@ namespace POS.Cashier.UI.Models
 
         [ObservableProperty]
         private string _itemType = ItemTypeCodes.StockItem;
+
+        public SalesTaxProfile TaxProfile { get; set; } = new();
 
         public bool IsService =>
             string.Equals(
@@ -478,11 +481,36 @@ namespace POS.Cashier.UI.Models
         public decimal LineAmount =>
             Math.Round(Math.Max(0m, GrossAmount - DiscountAmount), 2);
 
+        [ObservableProperty]
+        private decimal _invoiceDiscountAllocation = 0m;
+
+        [ObservableProperty]
+        private decimal _taxableAmount = 0m;
+
+        [ObservableProperty]
+        private decimal _vatAmount = 0m;
+
+        [ObservableProperty]
+        private decimal _taxInclusiveAmount = 0m;
+
+        public decimal FinalDiscountAmount =>
+            Math.Round(
+                DiscountAmount + InvoiceDiscountAllocation,
+                2);
+
+        public decimal FinalLineAmount =>
+            IsGiftVoucherSale || IsFreeItem
+                ? LineAmount
+                : Math.Round(TaxInclusiveAmount, 2);
+
         public decimal CostAmount =>
             Math.Round(CostPrice * Quantity, 2);
 
         public decimal ProfitAmount =>
             Math.Round(LineAmount - CostAmount, 2);
+
+        public decimal FinalProfitAmount =>
+            Math.Round(FinalLineAmount - CostAmount, 2);
 
         public bool IsBelowMinimumPrice =>
             MinimumPrice > 0 &&
@@ -791,14 +819,30 @@ namespace POS.Cashier.UI.Models
             NotifyCashierStatusDisplayChanges();
         }
 
+        partial void OnInvoiceDiscountAllocationChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(FinalDiscountAmount));
+            OnPropertyChanged(nameof(FinalLineAmount));
+            OnPropertyChanged(nameof(FinalProfitAmount));
+        }
+
+        partial void OnTaxInclusiveAmountChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(FinalLineAmount));
+            OnPropertyChanged(nameof(FinalProfitAmount));
+        }
+
         private void NotifyAmountChanges()
         {
             OnPropertyChanged(nameof(GrossAmount));
             OnPropertyChanged(nameof(PercentageDiscountAmount));
             OnPropertyChanged(nameof(DiscountAmount));
+            OnPropertyChanged(nameof(FinalDiscountAmount));
             OnPropertyChanged(nameof(LineAmount));
+            OnPropertyChanged(nameof(FinalLineAmount));
             OnPropertyChanged(nameof(CostAmount));
             OnPropertyChanged(nameof(ProfitAmount));
+            OnPropertyChanged(nameof(FinalProfitAmount));
             OnPropertyChanged(nameof(IsBelowMinimumPrice));
             OnPropertyChanged(nameof(DiscountDisplayText));
             OnPropertyChanged(nameof(DiscountRuleDisplayText));

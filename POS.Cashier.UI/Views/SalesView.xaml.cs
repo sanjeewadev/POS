@@ -693,6 +693,14 @@ namespace POS.Cashier.UI.Views
             FixedDiscountShortcut();
         }
 
+        private void InvoiceDiscountBtn_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            ViewModel?.ApplyTerminalInputAsInvoiceDiscount();
+            ReturnFocusToTerminalInput();
+        }
+
         private void PercentDiscountBtn_Click(object sender, RoutedEventArgs e)
         {
             PercentDiscountShortcut();

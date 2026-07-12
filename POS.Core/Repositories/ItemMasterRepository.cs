@@ -3,6 +3,7 @@ using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
+using POS.Core.Services.Tax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -242,6 +243,8 @@ namespace POS.Core.Repositories
 
         public bool HasStock => IsService || StockOnHand > 0m;
 
+        public SalesTaxProfile TaxProfile { get; set; } = new();
+
         public string DisplayDescription
         {
             get
@@ -290,6 +293,7 @@ namespace POS.Core.Repositories
         private const string GeneralBatchNo = "GENERAL";
 
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly SalesTaxService _salesTaxService = new();
 
         public ItemMasterRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
@@ -1930,7 +1934,15 @@ namespace POS.Core.Repositories
             if (variant == null)
                 return null;
 
-            return BuildCashierSellableItemDto(variant);
+            CashierSellableItemDto result =
+                BuildCashierSellableItemDto(variant);
+
+            result.TaxProfile =
+                await ResolveCashierTaxProfileAsync(
+                    context,
+                    variant.Id);
+
+            return result;
         }
 
         public async Task<CashierSellableItemDto?> GetSellableItemByBarcodeOrSkuAsync(string barcodeOrSku)
@@ -1965,7 +1977,36 @@ namespace POS.Core.Repositories
             if (variant == null)
                 return null;
 
-            return BuildCashierSellableItemDto(variant);
+            CashierSellableItemDto result =
+                BuildCashierSellableItemDto(variant);
+
+            result.TaxProfile =
+                await ResolveCashierTaxProfileAsync(
+                    context,
+                    variant.Id);
+
+            return result;
+        }
+
+        private async Task<SalesTaxProfile> ResolveCashierTaxProfileAsync(
+            AppDbContext context,
+            int itemVariantId)
+        {
+            Dictionary<int, SalesTaxProfile> profiles =
+                await _salesTaxService.ResolveProfilesAsync(
+                    context,
+                    new[] { itemVariantId },
+                    DateTime.Now);
+
+            if (!profiles.TryGetValue(
+                    itemVariantId,
+                    out SalesTaxProfile? profile))
+            {
+                throw new InvalidOperationException(
+                    $"Tax profile was not resolved for item variant {itemVariantId}.");
+            }
+
+            return profile;
         }
 
         private static CashierSellableItemDto BuildCashierSellableItemDto(ItemVariant variant)

@@ -434,6 +434,13 @@ namespace POS.Core.Repositories
                     line.IsGiftVoucherSale ||
                     line.IsFreeItem);
 
+            if (hasUnresolvedSpecialLine &&
+                header.InvoiceDiscountAmount != 0m)
+            {
+                throw new InvalidOperationException(
+                    "Invoice discount cannot be applied to a sale containing gift-voucher or free-issue lines.");
+            }
+
             foreach (SalesLine line in lines)
             {
                 if (line.IsGiftVoucherSale)
@@ -502,7 +509,8 @@ namespace POS.Core.Repositories
             SalesTaxDocumentResult result =
                 _salesTaxService.CalculateDocument(
                     calculationInputs,
-                    invoiceDiscount: 0m,
+                    invoiceDiscount:
+                        header.InvoiceDiscountAmount,
                     isVatRegisteredSale:
                         header.IsVatRegisteredSale);
 
@@ -511,13 +519,32 @@ namespace POS.Core.Repositories
                 SalesLine line =
                     lines[lineResult.LineKey];
 
-                if (Math.Abs(
+                decimal expectedFinalLineTotal =
+                    Math.Round(
                         line.LineTotal -
+                        lineResult.InvoiceDiscountAllocation,
+                        2);
+
+                if (Math.Abs(
+                        expectedFinalLineTotal -
                         lineResult.TaxInclusiveAmount) > 0.01m)
                 {
                     throw new InvalidOperationException(
                         $"Saved line total does not reconcile with VAT calculation for '{line.ItemDescription}'.");
                 }
+
+                line.DiscountAmount = Math.Round(
+                    lineResult.LineDiscountAmount +
+                    lineResult.InvoiceDiscountAllocation,
+                    2);
+
+                line.LineTotal =
+                    lineResult.TaxInclusiveAmount;
+
+                line.ProfitAmount = Math.Round(
+                    line.LineTotal -
+                    (line.CostPrice * line.Quantity),
+                    2);
 
                 ApplyCompleteTaxSnapshot(
                     line,
@@ -865,6 +892,16 @@ namespace POS.Core.Repositories
             header.PaymentMethod = string.IsNullOrWhiteSpace(header.PaymentMethod)
                 ? "Split"
                 : NormalizeText(header.PaymentMethod);
+
+            header.InvoiceDiscountAmount = Math.Round(
+                header.InvoiceDiscountAmount,
+                2);
+
+            if (header.InvoiceDiscountAmount < 0m)
+            {
+                throw new InvalidOperationException(
+                    "Invoice discount cannot be negative.");
+            }
 
             if (string.IsNullOrWhiteSpace(header.TerminalNo))
                 throw new InvalidOperationException("Terminal number is required.");
@@ -1223,8 +1260,7 @@ namespace POS.Core.Repositories
                 return;
             }
 
-            ValidateAndRecalculateNormalSaleLine(line);
-            ValidateMinimumPrice(
+            FinalizePreparedNormalSaleLine(
                 batch.ItemVariant,
                 line);
         }
@@ -1241,6 +1277,29 @@ namespace POS.Core.Repositories
                 variant.CostPrice > 0m
                     ? variant.CostPrice
                     : variant.AverageCost;
+
+            FinalizePreparedNormalSaleLine(
+                variant,
+                line);
+        }
+
+        private static void FinalizePreparedNormalSaleLine(
+            ItemVariant? variant,
+            SalesLine line)
+        {
+            if (line.TaxSnapshotStatus ==
+                TaxSnapshotStatuses.Complete)
+            {
+                line.ProfitAmount = Math.Round(
+                    line.LineTotal -
+                    (line.CostPrice * line.Quantity),
+                    2);
+
+                ValidateMinimumPrice(
+                    variant,
+                    line);
+                return;
+            }
 
             ValidateAndRecalculateNormalSaleLine(line);
             ValidateMinimumPrice(
@@ -1477,9 +1536,35 @@ namespace POS.Core.Repositories
 
         private static void RecalculateHeaderTotals(SalesHeader header, List<SalesLine> lines)
         {
-            header.GrossTotal = Math.Round(lines.Sum(l => l.GrossAmount), 2);
-            header.TotalDiscount = Math.Round(lines.Sum(l => l.DiscountAmount), 2);
-            header.NetTotal = Math.Round(lines.Sum(l => l.LineTotal), 2);
+            decimal grossTotal = Math.Round(
+                lines.Sum(line => line.GrossAmount),
+                2);
+
+            decimal lineDiscountTotal = Math.Round(
+                lines.Sum(line => line.DiscountAmount),
+                2);
+
+            decimal valueAfterLineDiscounts = Math.Round(
+                lines.Sum(line => line.LineTotal),
+                2);
+
+            decimal invoiceDiscount = Math.Round(
+                header.InvoiceDiscountAmount,
+                2);
+
+            if (invoiceDiscount > valueAfterLineDiscounts)
+            {
+                throw new InvalidOperationException(
+                    "Invoice discount cannot be greater than sale value.");
+            }
+
+            header.GrossTotal = grossTotal;
+            header.TotalDiscount = Math.Round(
+                lineDiscountTotal + invoiceDiscount,
+                2);
+            header.NetTotal = Math.Round(
+                valueAfterLineDiscounts - invoiceDiscount,
+                2);
 
             if (header.NetTotal < 0m)
                 header.NetTotal = 0m;
@@ -1584,6 +1669,15 @@ namespace POS.Core.Repositories
                 discountValue = Math.Round(line.DiscountPercentage, 2);
             }
 
+            decimal originalLineDiscount =
+                CalculateOriginalLineDiscount(line);
+
+            decimal lineTotalAfterOriginalDiscount =
+                Math.Round(
+                    line.GrossAmount -
+                    originalLineDiscount,
+                    2);
+
             return new SalesLineDiscountAudit
             {
                 SalesHeaderId = header.Id,
@@ -1603,14 +1697,18 @@ namespace POS.Core.Repositories
 
                 DiscountType = discountType,
                 DiscountValue = discountValue,
-                DiscountAmount = line.DiscountAmount,
+                DiscountAmount = originalLineDiscount,
 
                 OriginalUnitPrice = line.OriginalUnitPrice,
                 Quantity = line.Quantity,
                 GrossAmount = line.GrossAmount,
-                LineTotalAfterDiscount = line.LineTotal,
+                LineTotalAfterDiscount =
+                    lineTotalAfterOriginalDiscount,
                 CostPrice = line.CostPrice,
-                ProfitAfterDiscount = line.ProfitAmount,
+                ProfitAfterDiscount = Math.Round(
+                    lineTotalAfterOriginalDiscount -
+                    (line.CostPrice * line.Quantity),
+                    2),
 
                 ItemVariantId = line.ItemVariantId,
                 ItemBatchId = line.ItemBatchId,
@@ -1841,6 +1939,27 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Saved receipt could not be loaded.");
 
             return receipt;
+        }
+
+        private static decimal CalculateOriginalLineDiscount(
+            SalesLine line)
+        {
+            if (line.ManualDiscountAmount > 0m)
+            {
+                return Math.Round(
+                    line.ManualDiscountAmount,
+                    2);
+            }
+
+            if (line.DiscountPercentage > 0m)
+            {
+                return Math.Round(
+                    line.GrossAmount *
+                    (line.DiscountPercentage / 100m),
+                    2);
+            }
+
+            return 0m;
         }
 
         private static string NormalizeText(string? value)

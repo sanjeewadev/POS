@@ -459,7 +459,7 @@
                             </DataGridTextColumn>
 
                             <DataGridTextColumn Header="AMOUNT"
-                                                Binding="{Binding LineAmount, StringFormat={}{0:N2}}"
+                                                Binding="{Binding FinalLineAmount, StringFormat={}{0:N2}}"
                                                 Width="125"
                                                 IsReadOnly="True"
                                                 CellStyle="{StaticResource NativeCartCellStyle}">
@@ -480,6 +480,7 @@
 
                         <Grid>
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
@@ -680,6 +681,69 @@
                                                Margin="2,0"/>
                                 </StackPanel>
                             </Grid>
+
+                            <Grid Grid.Row="2" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Background="#EFF6FF" BorderBrush="#60A5FA" BorderThickness="1" Padding="4" Margin="0,0,5,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="TAXABLE" Foreground="#1E3A8A" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding TaxableAmountTotal, StringFormat={}{0:N2}}" Foreground="#1E3A8A" FontSize="11" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="1" Background="#FEF2F2" BorderBrush="#F87171" BorderThickness="1" Padding="4" Margin="0,0,5,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="VAT" Foreground="#991B1B" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding TotalVatAmount, StringFormat={}{0:N2}}" Foreground="#991B1B" FontSize="11" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="2" Background="#F0FDF4" BorderBrush="#4ADE80" BorderThickness="1" Padding="4" Margin="0,0,5,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="ZERO" Foreground="#166534" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding ZeroRatedAmount, StringFormat={}{0:N2}}" Foreground="#166534" FontSize="11" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="3" Background="#FFFBEB" BorderBrush="#FBBF24" BorderThickness="1" Padding="4" Margin="0,0,5,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="EXEMPT" Foreground="#92400E" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding ExemptAmount, StringFormat={}{0:N2}}" Foreground="#92400E" FontSize="11" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="4" Background="#F8FAFC" BorderBrush="#94A3B8" BorderThickness="1" Padding="4" Margin="0,0,5,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="O/S" Foreground="#334155" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding OutOfScopeAmount, StringFormat={}{0:N2}}" Foreground="#334155" FontSize="11" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="5" Background="#FAF5FF" BorderBrush="#C084FC" BorderThickness="1" Padding="4" Margin="0,0,8,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="INV DISC" Foreground="#6B21A8" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding InvoiceDiscountAmount, StringFormat={}{0:N2}}" Foreground="#6B21A8" FontSize="11" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Grid.Column="6"
+                                           Text="{Binding TaxSummaryStatusText}"
+                                           Foreground="White"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           MaxWidth="250"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Grid>
                         </Grid>
                     </Border>
                 </Grid>
@@ -693,7 +757,7 @@
 
                     <UniformGrid Grid.Row="0" Columns="3" Rows="4" Margin="0,0,0,1">
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Return" Click="ReturnBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Void" Click="RemoveBtn_Click"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Inv Disc" Click="InvoiceDiscountBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Rs Disc" Click="FixedDiscountBtn_Click"/>
 
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Suspend" Click="SuspendRecallBtn_Click"/>

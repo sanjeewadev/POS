@@ -36,9 +36,12 @@ namespace POS.Core.CalculationTests
                 ("Non-VAT sale is out of scope", NonVatSaleIsOutOfScope),
                 ("Service effective tax profile resolution", ServiceEffectiveTaxProfileResolution),
                 ("Sales invoice discount allocation reconciliation", SalesInvoiceDiscountAllocationReconciliation),
+                ("Sales category totals after invoice discount", SalesCategoryTotalsAfterInvoiceDiscount),
                 ("Cashier service search and exact lookup", CashierServiceSearchAndExactLookup),
+                ("Cashier retail and wholesale VAT-inclusive pricing", CashierRetailAndWholesaleVatInclusivePricing),
                 ("Service checkout saves tax without inventory", ServiceCheckoutSavesTaxWithoutInventory),
-                ("Mixed sale preserves Stock Item deduction", MixedSalePreservesStockItemDeduction)
+                ("Mixed sale preserves Stock Item deduction", MixedSalePreservesStockItemDeduction),
+                ("Invoice discount persists exact line allocations", InvoiceDiscountPersistsExactLineAllocations)
             };
 
             try
@@ -678,6 +681,101 @@ namespace POS.Core.CalculationTests
                 "sales line/document reconciliation");
         }
 
+        private static void SalesCategoryTotalsAfterInvoiceDiscount()
+        {
+            SalesTaxDocumentResult result =
+                SalesService.CalculateDocument(
+                    new[]
+                    {
+                        SalesLine(
+                            lineKey: 1,
+                            variantId: 1,
+                            quantity: 1m,
+                            vatInclusivePrice: 1180m,
+                            lineDiscount: 0m,
+                            profile: SalesStandardProfile(
+                                variantId: 1)),
+                        SalesLine(
+                            lineKey: 2,
+                            variantId: 2,
+                            quantity: 1m,
+                            vatInclusivePrice: 100m,
+                            lineDiscount: 0m,
+                            profile: SalesFixedProfile(
+                                variantId: 2,
+                                code: TaxCategoryCodes.ZeroRated,
+                                name: "Zero Rated",
+                                treatment: TaxTreatmentTypes.ZeroRated)),
+                        SalesLine(
+                            lineKey: 3,
+                            variantId: 3,
+                            quantity: 1m,
+                            vatInclusivePrice: 200m,
+                            lineDiscount: 0m,
+                            profile: SalesExemptProfile(
+                                variantId: 3)),
+                        SalesLine(
+                            lineKey: 4,
+                            variantId: 4,
+                            quantity: 1m,
+                            vatInclusivePrice: 300m,
+                            lineDiscount: 0m,
+                            profile: SalesFixedProfile(
+                                variantId: 4,
+                                code: TaxCategoryCodes.OutOfScope,
+                                name: "Out of Scope",
+                                treatment: TaxTreatmentTypes.OutOfScope))
+                    },
+                    invoiceDiscount: 178m,
+                    isVatRegisteredSale: true);
+
+            AssertMoney(
+                1780m,
+                result.GrossTotal,
+                "sales category gross total");
+
+            AssertMoney(
+                178m,
+                result.InvoiceDiscount,
+                "sales category invoice discount");
+
+            AssertMoney(
+                1602m,
+                result.NetTotal,
+                "sales category net total");
+
+            AssertMoney(
+                900m,
+                result.StandardRatedAmount,
+                "sales category Standard VAT amount");
+
+            AssertMoney(
+                162m,
+                result.TotalVat,
+                "sales category VAT amount");
+
+            AssertMoney(
+                90m,
+                result.ZeroRatedAmount,
+                "sales category Zero Rated amount");
+
+            AssertMoney(
+                180m,
+                result.ExemptAmount,
+                "sales category Exempt amount");
+
+            AssertMoney(
+                270m,
+                result.OutOfScopeAmount,
+                "sales category Out of Scope amount");
+
+            AssertMoney(
+                178m,
+                result.Lines.Sum(line =>
+                    line.InvoiceDiscountAllocation),
+                "sales category allocated invoice discount");
+        }
+
         private static void CashierServiceSearchAndExactLookup()
         {
             using var factory =
@@ -763,6 +861,116 @@ namespace POS.Core.CalculationTests
                     400m,
                     result.CostPrice,
                     "cashier Service cost");
+
+                if (result.TaxProfile.ItemType !=
+                        ItemTypeCodes.Service ||
+                    result.TaxProfile.TaxCategoryCode !=
+                        TaxCategoryCodes.Standard)
+                {
+                    throw new InvalidOperationException(
+                        "Cashier Service lookup did not load its effective tax profile.");
+                }
+
+                AssertMoney(
+                    18m,
+                    result.TaxProfile.RatePercent,
+                    "cashier Service effective VAT rate");
+            }
+        }
+
+        private static void CashierRetailAndWholesaleVatInclusivePricing()
+        {
+            using var factory =
+                new RepositoryTestDbContextFactory();
+
+            RepositoryTestScenario scenario =
+                SeedRepositoryTestScenario(factory);
+
+            var repository =
+                new ItemMasterRepository(factory);
+
+            CashierSellableItemDto stockItem =
+                repository
+                    .GetSellableItemByVariantIdAsync(
+                        scenario.StockVariantId)
+                    .GetAwaiter()
+                    .GetResult()
+                ?? throw new InvalidOperationException(
+                    "Stock Item lookup failed for pricing test.");
+
+            CashierSellableItemDto service =
+                repository
+                    .GetSellableItemByVariantIdAsync(
+                        scenario.ServiceVariantId)
+                    .GetAwaiter()
+                    .GetResult()
+                ?? throw new InvalidOperationException(
+                    "Service lookup failed for pricing test.");
+
+            foreach (CashierSellableItemDto result in
+                     new[] { stockItem, service })
+            {
+                AssertMoney(
+                    1180m,
+                    result.RetailPrice,
+                    "cashier VAT-inclusive retail price");
+
+                AssertMoney(
+                    1062m,
+                    result.WholesalePrice,
+                    "cashier VAT-inclusive wholesale price");
+
+                SalesTaxDocumentResult retail =
+                    SalesService.CalculateDocument(
+                        new[]
+                        {
+                            SalesLine(
+                                lineKey: 1,
+                                variantId: result.VariantId,
+                                quantity: 1m,
+                                vatInclusivePrice:
+                                    result.RetailPrice,
+                                lineDiscount: 0m,
+                                profile: result.TaxProfile)
+                        },
+                        invoiceDiscount: 0m,
+                        isVatRegisteredSale: true);
+
+                SalesTaxDocumentResult wholesale =
+                    SalesService.CalculateDocument(
+                        new[]
+                        {
+                            SalesLine(
+                                lineKey: 1,
+                                variantId: result.VariantId,
+                                quantity: 1m,
+                                vatInclusivePrice:
+                                    result.WholesalePrice,
+                                lineDiscount: 0m,
+                                profile: result.TaxProfile)
+                        },
+                        invoiceDiscount: 0m,
+                        isVatRegisteredSale: true);
+
+                AssertMoney(
+                    1000m,
+                    retail.StandardRatedAmount,
+                    "cashier retail taxable value");
+
+                AssertMoney(
+                    180m,
+                    retail.TotalVat,
+                    "cashier retail VAT value");
+
+                AssertMoney(
+                    900m,
+                    wholesale.StandardRatedAmount,
+                    "cashier wholesale taxable value");
+
+                AssertMoney(
+                    162m,
+                    wholesale.TotalVat,
+                    "cashier wholesale VAT value");
             }
         }
 
@@ -1036,6 +1244,202 @@ namespace POS.Core.CalculationTests
             }
         }
 
+        private static void InvoiceDiscountPersistsExactLineAllocations()
+        {
+            using var factory =
+                new RepositoryTestDbContextFactory();
+
+            RepositoryTestScenario scenario =
+                SeedRepositoryTestScenario(factory);
+
+            var repository =
+                new SalesRepository(factory);
+
+            SalesLine stockInput =
+                CreateRepositoryTestLine(
+                    scenario.StockVariantId,
+                    scenario.StockBatchId,
+                    scenario.StockSku,
+                    "Test Stock Item",
+                    quantity: 1m,
+                    unitPrice: 1180m);
+
+            stockInput.ManualDiscountAmount = 118m;
+            stockInput.DiscountAmount = 118m;
+            stockInput.DiscountMode = "Amount";
+            stockInput.IsManualDiscount = true;
+            stockInput.LineTotal = 1062m;
+
+            SalesHeader header =
+                CreateRepositoryTestHeader(
+                    scenario.ShiftSessionId,
+                    amountTendered: 2017.80m,
+                    invoiceDiscount: 224.20m);
+
+            SalesHeader saved =
+                repository.ProcessCheckoutAsync(
+                        header,
+                        new List<SalesLine>
+                        {
+                            stockInput,
+                            CreateRepositoryTestLine(
+                                scenario.ServiceVariantId,
+                                null,
+                                scenario.ServiceSku,
+                                "Installation Service",
+                                quantity: 1m,
+                                unitPrice: 1180m)
+                        },
+                        new List<SalesPayment>
+                        {
+                            CreateCashPayment(2017.80m)
+                        })
+                    .GetAwaiter()
+                    .GetResult();
+
+            using AppDbContext context =
+                factory.CreateDbContext();
+
+            SalesHeader storedHeader =
+                context.SalesHeaders
+                    .AsNoTracking()
+                    .Single(candidate =>
+                        candidate.Id == saved.Id);
+
+            List<SalesLine> storedLines =
+                context.SalesLines
+                    .AsNoTracking()
+                    .Where(line =>
+                        line.SalesHeaderId == saved.Id)
+                    .ToList();
+
+            SalesLine stockLine =
+                storedLines.Single(line =>
+                    line.ItemVariantId ==
+                    scenario.StockVariantId);
+
+            SalesLine serviceLine =
+                storedLines.Single(line =>
+                    line.ItemVariantId ==
+                    scenario.ServiceVariantId);
+
+            AssertMoney(
+                2360m,
+                storedHeader.GrossTotal,
+                "invoice-discount header gross total");
+
+            AssertMoney(
+                342.20m,
+                storedHeader.TotalDiscount,
+                "invoice-discount header total discount");
+
+            AssertMoney(
+                2017.80m,
+                storedHeader.NetTotal,
+                "invoice-discount header net total");
+
+            AssertMoney(
+                1710m,
+                storedHeader.StandardRatedAmount ?? -1m,
+                "invoice-discount header taxable amount");
+
+            AssertMoney(
+                307.80m,
+                storedHeader.TotalVatAmount ?? -1m,
+                "invoice-discount header VAT amount");
+
+            AssertMoney(
+                224.20m,
+                storedLines.Sum(line =>
+                    line.DiscountAmount) - 118m,
+                "persisted invoice-discount allocation total");
+
+            AssertMoney(
+                224.20m,
+                stockLine.DiscountAmount,
+                "Stock Item combined line discount");
+
+            AssertMoney(
+                118m,
+                serviceLine.DiscountAmount,
+                "Service invoice-discount allocation");
+
+            AssertMoney(
+                955.80m,
+                stockLine.LineTotal,
+                "Stock Item final inclusive line total");
+
+            AssertMoney(
+                1062m,
+                serviceLine.LineTotal,
+                "Service final inclusive line total");
+
+            AssertMoney(
+                810m,
+                stockLine.TaxableAmountSnapshot ?? -1m,
+                "Stock Item final taxable snapshot");
+
+            AssertMoney(
+                145.80m,
+                stockLine.VatAmountSnapshot ?? -1m,
+                "Stock Item final VAT snapshot");
+
+            AssertMoney(
+                900m,
+                serviceLine.TaxableAmountSnapshot ?? -1m,
+                "Service final taxable snapshot");
+
+            AssertMoney(
+                162m,
+                serviceLine.VatAmountSnapshot ?? -1m,
+                "Service final VAT snapshot");
+
+            AssertMoney(
+                355.80m,
+                stockLine.ProfitAmount,
+                "Stock Item final profit after invoice discount");
+
+            AssertMoney(
+                662m,
+                serviceLine.ProfitAmount,
+                "Service final profit after invoice discount");
+
+            decimal stockAfter =
+                context.ItemBatches
+                    .AsNoTracking()
+                    .Where(batch =>
+                        batch.Id == scenario.StockBatchId)
+                    .Select(batch =>
+                        batch.CurrentStock)
+                    .Single();
+
+            AssertMoney(
+                4m,
+                stockAfter,
+                "Stock Item quantity after invoice-discount sale");
+
+            int inventoryRows =
+                context.InventoryTransactions
+                    .AsNoTracking()
+                    .Count(transaction =>
+                        transaction.ReferenceDocument ==
+                        storedHeader.InvoiceNo);
+
+            if (inventoryRows != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Invoice-discount sale expected one inventory transaction, found {inventoryRows}.");
+            }
+
+            if (storedLines.Any(line =>
+                    line.TaxSnapshotStatus !=
+                    TaxSnapshotStatuses.Complete))
+            {
+                throw new InvalidOperationException(
+                    "Invoice-discount sale did not preserve complete line tax snapshots.");
+            }
+        }
+
         private static RepositoryTestScenario SeedRepositoryTestScenario(
             RepositoryTestDbContextFactory factory)
         {
@@ -1217,7 +1621,8 @@ namespace POS.Core.CalculationTests
 
         private static SalesHeader CreateRepositoryTestHeader(
             int shiftSessionId,
-            decimal amountTendered)
+            decimal amountTendered,
+            decimal invoiceDiscount = 0m)
         {
             return new SalesHeader
             {
@@ -1228,7 +1633,8 @@ namespace POS.Core.CalculationTests
                 CustomerType = "Walk-In",
                 PaymentMethod = "Cash",
                 AmountTendered = amountTendered,
-                BalanceReturned = 0m
+                BalanceReturned = 0m,
+                InvoiceDiscountAmount = invoiceDiscount
             };
         }
 
@@ -1427,6 +1833,28 @@ namespace POS.Core.CalculationTests
                 TaxCode =
                     TaxCategoryCodes.Exempt,
                 TaxName = "Exempt",
+                RatePercent = 0m
+            };
+        }
+
+        private static SalesTaxProfile SalesFixedProfile(
+            int variantId,
+            string code,
+            string name,
+            string treatment,
+            string itemType = ItemTypeCodes.StockItem)
+        {
+            return new SalesTaxProfile
+            {
+                ItemVariantId = variantId,
+                ItemType = itemType,
+                TaxCategoryId = variantId,
+                TaxCategoryCode = code,
+                TaxCategoryName = name,
+                TaxTreatmentType = treatment,
+                TaxRateId = null,
+                TaxCode = code,
+                TaxName = name,
                 RatePercent = 0m
             };
         }

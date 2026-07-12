@@ -12,10 +12,12 @@ using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Messages;
 using POS.Cashier.UI.Models;
 using POS.Cashier.UI.Services;
+using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Services.Tax;
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -25,6 +27,9 @@ namespace POS.Cashier.UI.ViewModels
         private readonly SalesRepository _salesRepository;
         private readonly TillRepository _tillRepository;
         private readonly IReceiptPrintService _printService;
+        private readonly SalesTaxService _salesTaxService = new();
+
+        private bool _isVatRegisteredStore;
 
         public ObservableCollection<CartItem> Cart { get; } = new();
         public ObservableCollection<PaymentLine> PaymentLines { get; } = new();
@@ -33,6 +38,15 @@ namespace POS.Cashier.UI.ViewModels
         [ObservableProperty] private decimal _grossValue = 0.00m;
         [ObservableProperty] private decimal _netValue = 0.00m;
         [ObservableProperty] private decimal _totalDiscount = 0.00m;
+        [ObservableProperty] private decimal _lineDiscountTotal = 0.00m;
+        [ObservableProperty] private decimal _invoiceDiscountAmount = 0.00m;
+        [ObservableProperty] private decimal _taxableAmountTotal = 0.00m;
+        [ObservableProperty] private decimal _totalVatAmount = 0.00m;
+        [ObservableProperty] private decimal _zeroRatedAmount = 0.00m;
+        [ObservableProperty] private decimal _exemptAmount = 0.00m;
+        [ObservableProperty] private decimal _outOfScopeAmount = 0.00m;
+        [ObservableProperty] private bool _isTaxCalculationReady = false;
+        [ObservableProperty] private string _taxSummaryStatusText = "VAT summary pending";
         [ObservableProperty] private int _totalItems = 0;
         [ObservableProperty] private decimal _totalPieces = 0m;
 
@@ -257,6 +271,9 @@ namespace POS.Cashier.UI.ViewModels
                     storeSettings.LegalName,
                     "My Store");
 
+            _isVatRegisteredStore =
+                storeSettings.IsVatRegistered;
+
             _currentShiftId = activeShift.Id;
             ShiftDisplayText =
                 $"Shift {activeShift.Id} - OPEN";
@@ -447,6 +464,73 @@ namespace POS.Cashier.UI.ViewModels
 
             TerminalInput = string.Empty;
             ApplyFixedDiscountToSelected(amount);
+        }
+
+        public void ApplyTerminalInputAsInvoiceDiscount()
+        {
+            if (IsPaymentModeActive)
+            {
+                _ = ShowNotificationAsync(
+                    "Cancel payment mode before changing invoice discount.",
+                    "#F59E0B");
+                TerminalInput = string.Empty;
+                return;
+            }
+
+            if (!Cart.Any())
+            {
+                _ = ShowNotificationAsync(
+                    "Add an item before applying invoice discount.",
+                    "#F59E0B");
+                TerminalInput = string.Empty;
+                return;
+            }
+
+            if (Cart.Any(item =>
+                    item.IsGiftVoucherSale ||
+                    item.IsFreeItem))
+            {
+                _ = ShowNotificationAsync(
+                    "Invoice discount is available only for normal Stock Item and Service lines.",
+                    "#F59E0B");
+                TerminalInput = string.Empty;
+                return;
+            }
+
+            if (!decimal.TryParse(
+                    TerminalInput,
+                    out decimal amount))
+            {
+                _ = ShowNotificationAsync(
+                    "Enter a valid invoice discount amount.",
+                    "#F59E0B");
+                TerminalInput = string.Empty;
+                return;
+            }
+
+            amount = Math.Round(amount, 2);
+            decimal availableValue = Math.Round(
+                Cart.Sum(item => item.LineAmount),
+                2);
+
+            if (amount < 0m || amount > availableValue)
+            {
+                _ = ShowNotificationAsync(
+                    $"Invoice discount must be between Rs. 0.00 and Rs. {availableValue:N2}.",
+                    "#EF4444");
+                TerminalInput = string.Empty;
+                return;
+            }
+
+            TerminalInput = string.Empty;
+            InvoiceDiscountAmount = amount;
+            RecalculateTotals();
+
+            _ = ShowNotificationAsync(
+                amount == 0m
+                    ? "Invoice discount cleared."
+                    : $"Invoice discount applied: Rs. {amount:N2}",
+                amount == 0m ? "#F59E0B" : "#10B981");
         }
 
         public void ApplyTerminalInputAsDiscountPercentToSelected()
@@ -850,6 +934,19 @@ namespace POS.Cashier.UI.ViewModels
             if (_currentShiftId == 0)
             {
                 _ = ShowNotificationAsync("No active shift found.", "#EF4444");
+                return;
+            }
+
+            RecalculateTotals();
+
+            if (Cart.All(item =>
+                    !item.IsGiftVoucherSale &&
+                    !item.IsFreeItem) &&
+                !IsTaxCalculationReady)
+            {
+                _ = ShowNotificationAsync(
+                    $"Cannot pay: {TaxSummaryStatusText}",
+                    "#EF4444");
                 return;
             }
 
@@ -1547,6 +1644,7 @@ namespace POS.Cashier.UI.ViewModels
                 VariantDescription = item.VariantDescription,
                 Uom = item.Uom,
                 ItemType = item.ItemType,
+                TaxProfile = item.TaxProfile,
                 BatchNo = selectedBatch.BatchNo,
                 ExpiryDate = selectedBatch.ExpiryDate,
                 ReceivedDate = selectedBatch.ReceivedDate,
@@ -1639,6 +1737,7 @@ namespace POS.Cashier.UI.ViewModels
                 VariantDescription = item.VariantDescription,
                 Uom = item.Uom,
                 ItemType = item.ItemType,
+                TaxProfile = item.TaxProfile,
                 BatchNo = string.Empty,
                 ExpiryDate = null,
                 ReceivedDate = null,
@@ -1906,6 +2005,7 @@ namespace POS.Cashier.UI.ViewModels
             CustomerName = "Walk-In";
             IsWholesaleMode = false;
             InvoiceNo = "PENDING...";
+            InvoiceDiscountAmount = 0m;
             RecalculateTotals();
             RecalculatePaymentTotals();
             PaymentStatusText = "Sale mode active.";
@@ -1914,13 +2014,25 @@ namespace POS.Cashier.UI.ViewModels
 
         public void RecalculateTotals()
         {
+            TotalItems = Cart.Count;
+            TotalPieces = Math.Round(
+                Cart.Sum(item => item.Quantity),
+                3);
+
             if (!Cart.Any())
             {
                 GrossValue = 0m;
                 NetValue = 0m;
+                LineDiscountTotal = 0m;
+                InvoiceDiscountAmount = 0m;
                 TotalDiscount = 0m;
-                TotalItems = 0;
-                TotalPieces = 0m;
+                TaxableAmountTotal = 0m;
+                TotalVatAmount = 0m;
+                ZeroRatedAmount = 0m;
+                ExemptAmount = 0m;
+                OutOfScopeAmount = 0m;
+                IsTaxCalculationReady = false;
+                TaxSummaryStatusText = "VAT summary pending";
 
                 if (IsPaymentModeActive)
                     RecalculatePaymentTotals();
@@ -1928,11 +2040,162 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            GrossValue = Math.Round(Cart.Sum(c => c.GrossAmount), 2);
-            NetValue = Math.Round(Cart.Sum(c => c.LineAmount), 2);
-            TotalDiscount = Math.Round(Cart.Sum(c => c.DiscountAmount), 2);
-            TotalItems = Cart.Count;
-            TotalPieces = Math.Round(Cart.Sum(c => c.Quantity), 3);
+            bool hasSpecialLine = Cart.Any(item =>
+                item.IsGiftVoucherSale ||
+                item.IsFreeItem);
+
+            if (hasSpecialLine)
+            {
+                if (InvoiceDiscountAmount != 0m)
+                {
+                    InvoiceDiscountAmount = 0m;
+                    _ = ShowNotificationAsync(
+                        "Invoice discount was cleared because the cart contains a voucher or free line.",
+                        "#F59E0B");
+                }
+
+                foreach (CartItem item in Cart)
+                {
+                    item.InvoiceDiscountAllocation = 0m;
+                    item.TaxableAmount = 0m;
+                    item.VatAmount = 0m;
+                    item.TaxInclusiveAmount = item.LineAmount;
+                }
+
+                GrossValue = Math.Round(
+                    Cart.Sum(item => item.GrossAmount),
+                    2);
+                LineDiscountTotal = Math.Round(
+                    Cart.Sum(item => item.DiscountAmount),
+                    2);
+                TotalDiscount = LineDiscountTotal;
+                NetValue = Math.Round(
+                    Cart.Sum(item => item.LineAmount),
+                    2);
+                TaxableAmountTotal = 0m;
+                TotalVatAmount = 0m;
+                ZeroRatedAmount = 0m;
+                ExemptAmount = 0m;
+                OutOfScopeAmount = 0m;
+                IsTaxCalculationReady = false;
+                TaxSummaryStatusText =
+                    "VAT summary unavailable for voucher/free lines";
+
+                if (IsPaymentModeActive)
+                    RecalculatePaymentTotals();
+
+                return;
+            }
+
+            decimal availableForInvoiceDiscount = Math.Round(
+                Cart.Sum(item => item.LineAmount),
+                2);
+
+            if (InvoiceDiscountAmount >
+                availableForInvoiceDiscount)
+            {
+                InvoiceDiscountAmount = 0m;
+                _ = ShowNotificationAsync(
+                    "Invoice discount was cleared because the cart value changed.",
+                    "#F59E0B");
+            }
+
+            try
+            {
+                List<SalesTaxLineInput> inputs = Cart
+                    .Select((item, index) =>
+                        new SalesTaxLineInput
+                        {
+                            LineKey = index,
+                            ItemVariantId =
+                                item.ItemVariantId,
+                            Quantity =
+                                item.Quantity,
+                            VatInclusiveUnitPrice =
+                                item.UnitPrice,
+                            LineDiscountAmount =
+                                item.DiscountAmount,
+                            TaxProfile =
+                                item.TaxProfile
+                        })
+                    .ToList();
+
+                SalesTaxDocumentResult result =
+                    _salesTaxService.CalculateDocument(
+                        inputs,
+                        InvoiceDiscountAmount,
+                        _isVatRegisteredStore);
+
+                foreach (SalesTaxLineResult lineResult in
+                         result.Lines)
+                {
+                    CartItem item =
+                        Cart[lineResult.LineKey];
+
+                    item.InvoiceDiscountAllocation =
+                        lineResult.InvoiceDiscountAllocation;
+                    item.TaxableAmount =
+                        lineResult.TaxableAmount;
+                    item.VatAmount =
+                        lineResult.VatAmount;
+                    item.TaxInclusiveAmount =
+                        lineResult.TaxInclusiveAmount;
+                }
+
+                GrossValue = result.GrossTotal;
+                LineDiscountTotal =
+                    result.LineDiscountTotal;
+                TotalDiscount = result.TotalDiscount;
+                NetValue = result.NetTotal;
+                TaxableAmountTotal =
+                    result.StandardRatedAmount;
+                TotalVatAmount = result.TotalVat;
+                ZeroRatedAmount =
+                    result.ZeroRatedAmount;
+                ExemptAmount = result.ExemptAmount;
+                OutOfScopeAmount =
+                    result.OutOfScopeAmount;
+                IsTaxCalculationReady = true;
+                TaxSummaryStatusText =
+                    _isVatRegisteredStore
+                        ? "VAT-inclusive totals"
+                        : "Non-VAT store / Out of Scope";
+            }
+            catch (Exception ex)
+            {
+                foreach (CartItem item in Cart)
+                {
+                    item.InvoiceDiscountAllocation = 0m;
+                    item.TaxableAmount = 0m;
+                    item.VatAmount = 0m;
+                    item.TaxInclusiveAmount =
+                        item.LineAmount;
+                }
+
+                GrossValue = Math.Round(
+                    Cart.Sum(item => item.GrossAmount),
+                    2);
+                LineDiscountTotal = Math.Round(
+                    Cart.Sum(item => item.DiscountAmount),
+                    2);
+                TotalDiscount = Math.Round(
+                    LineDiscountTotal +
+                    InvoiceDiscountAmount,
+                    2);
+                NetValue = Math.Round(
+                    Math.Max(
+                        0m,
+                        Cart.Sum(item => item.LineAmount) -
+                        InvoiceDiscountAmount),
+                    2);
+                TaxableAmountTotal = 0m;
+                TotalVatAmount = 0m;
+                ZeroRatedAmount = 0m;
+                ExemptAmount = 0m;
+                OutOfScopeAmount = 0m;
+                IsTaxCalculationReady = false;
+                TaxSummaryStatusText = ex.Message;
+            }
 
             if (IsPaymentModeActive)
                 RecalculatePaymentTotals();
@@ -1946,6 +2209,19 @@ namespace POS.Cashier.UI.ViewModels
             if (_currentShiftId == 0)
             {
                 _ = ShowNotificationAsync("No active shift found.", "#EF4444");
+                return false;
+            }
+
+            RecalculateTotals();
+
+            if (Cart.All(item =>
+                    !item.IsGiftVoucherSale &&
+                    !item.IsFreeItem) &&
+                !IsTaxCalculationReady)
+            {
+                _ = ShowNotificationAsync(
+                    $"Tax calculation failed: {TaxSummaryStatusText}",
+                    "#EF4444");
                 return false;
             }
 
@@ -2040,6 +2316,8 @@ namespace POS.Cashier.UI.ViewModels
                     IsWholesaleSale = activeCustomer?.IsWholesale ?? false,
                     GrossTotal = GrossValue,
                     TotalDiscount = TotalDiscount,
+                    InvoiceDiscountAmount =
+                        this.InvoiceDiscountAmount,
                     NetTotal = NetValue,
                     PaymentMethod = paymentMethod,
                     AmountTendered = CashTenderedTotal,
@@ -2214,8 +2492,8 @@ namespace POS.Cashier.UI.ViewModels
                         Uom = item.Uom,
                         Quantity = item.Quantity,
                         UnitPrice = item.UnitPrice,
-                        DiscountAmount = item.DiscountAmount,
-                        LineTotal = item.LineAmount
+                        DiscountAmount = item.FinalDiscountAmount,
+                        LineTotal = item.FinalLineAmount
                     }).ToList()
                 };
 
