@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services.Documents;
 
 namespace POS.Cashier.UI.Services
 {
@@ -13,6 +15,9 @@ namespace POS.Cashier.UI.Services
     {
         private readonly StoreSettingsRepository
             _storeSettingsRepository;
+
+        private readonly SalesDocumentTextFormatter
+            _salesDocumentFormatter;
 
         private static readonly byte[] EscInitialize =
         {
@@ -55,155 +60,121 @@ namespace POS.Cashier.UI.Services
         };
 
         public EscPosReceiptPrintService(
-            StoreSettingsRepository
-                storeSettingsRepository)
+            StoreSettingsRepository storeSettingsRepository,
+            SalesDocumentTextFormatter salesDocumentFormatter)
         {
             _storeSettingsRepository =
                 storeSettingsRepository;
+            _salesDocumentFormatter =
+                salesDocumentFormatter;
         }
 
-        public async Task PrintReceiptAsync(
+        public async Task<string> BuildReceiptPreviewAsync(
             SalesHeader transaction,
-            string printerName,
-            int paperWidth)
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original)
         {
             if (transaction == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(transaction));
-            }
-
-            ValidatePrinterName(printerName);
+                throw new ArgumentNullException(nameof(transaction));
 
             StoreSettings storeSettings =
                 await _storeSettingsRepository
                     .GetOrCreateDefaultAsync();
 
-            int columns =
-                GetColumns(paperWidth);
+            return _salesDocumentFormatter.FormatReceipt(
+                transaction,
+                storeSettings,
+                paperWidth,
+                copyLabel);
+        }
 
-            await Task.Run(() =>
+        public async Task<string> BuildTaxInvoicePreviewAsync(
+            SalesHeader transaction,
+            DateTime issuedAtUtc,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original)
+        {
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
+
+            StoreSettings storeSettings =
+                await _storeSettingsRepository
+                    .GetOrCreateDefaultAsync();
+
+            return _salesDocumentFormatter.FormatTaxInvoice(
+                transaction,
+                storeSettings,
+                issuedAtUtc,
+                paperWidth,
+                copyLabel);
+        }
+
+        public async Task PrintReceiptAsync(
+            SalesHeader transaction,
+            string printerName,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original)
+        {
+            ValidatePrinterName(printerName);
+
+            string documentText =
+                await BuildReceiptPreviewAsync(
+                    transaction,
+                    paperWidth,
+                    copyLabel);
+
+            await PrintTextDocumentAsync(
+                documentText,
+                printerName,
+                "POS Sales Receipt");
+        }
+
+        public async Task PrintTaxInvoiceAsync(
+            SalesHeader transaction,
+            DateTime issuedAtUtc,
+            string printerName,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original)
+        {
+            ValidatePrinterName(printerName);
+
+            string documentText =
+                await BuildTaxInvoicePreviewAsync(
+                    transaction,
+                    issuedAtUtc,
+                    paperWidth,
+                    copyLabel);
+
+            await PrintTextDocumentAsync(
+                documentText,
+                printerName,
+                "POS Tax Invoice");
+        }
+
+        private static Task PrintTextDocumentAsync(
+            string documentText,
+            string printerName,
+            string documentName)
+        {
+            return Task.Run(() =>
             {
                 var bytes = new List<byte>();
-
                 bytes.AddRange(EscInitialize);
-
-                AddStoreHeader(
-                    bytes,
-                    storeSettings,
-                    columns);
-
                 bytes.AddRange(AlignLeft);
-
-                AddText(
-                    bytes,
-                    $"Inv No : " +
-                    $"{SafeText(transaction.InvoiceNo, columns - 9)}\n");
-
-                AddText(
-                    bytes,
-                    $"Date   : " +
-                    $"{transaction.TransactionDate:yyyy-MM-dd HH:mm}\n");
-
-                AddText(
-                    bytes,
-                    $"Cashier: " +
-                    $"{SafeText(transaction.CashierName, columns - 9)}\n");
-
-                AddSeparator(
-                    bytes,
-                    columns);
-
-                if (transaction.SalesLines != null)
-                {
-                    foreach (SalesLine line in
-                             transaction.SalesLines)
-                    {
-                        AddText(
-                            bytes,
-                            SafeText(
-                                line.ItemDescription,
-                                columns) +
-                            "\n");
-
-                        string quantityAndPrice =
-                            $"{line.Quantity:0.###} x " +
-                            $"{FormatMoney(line.UnitPrice, storeSettings)}";
-
-                        string total =
-                            FormatMoney(
-                                line.LineTotal,
-                                storeSettings);
-
-                        AddText(
-                            bytes,
-                            BuildTwoColumnLine(
-                                quantityAndPrice,
-                                total,
-                                columns) +
-                            "\n");
-                    }
-                }
-
-                AddSeparator(
-                    bytes,
-                    columns);
-
-                bytes.AddRange(AlignRight);
-
-                AddText(
-                    bytes,
-                    $"Gross Total: " +
-                    $"{FormatMoney(transaction.GrossTotal, storeSettings)}\n");
-
-                if (transaction.TotalDiscount > 0m)
-                {
-                    AddText(
-                        bytes,
-                        $"Discount   : " +
-                        $"{FormatMoney(transaction.TotalDiscount, storeSettings)}\n");
-                }
-
-                bytes.AddRange(BoldOn);
-
-                AddText(
-                    bytes,
-                    $"NET TOTAL  : " +
-                    $"{FormatMoney(transaction.NetTotal, storeSettings)}\n");
-
-                bytes.AddRange(BoldOff);
-
-                AddText(
-                    bytes,
-                    $"Tendered (" +
-                    $"{SafeText(transaction.PaymentMethod, 10)}): " +
-                    $"{FormatMoney(transaction.AmountTendered, storeSettings)}\n");
-
-                AddText(
-                    bytes,
-                    $"Change     : " +
-                    $"{FormatMoney(transaction.BalanceReturned, storeSettings)}\n");
-
-                AddStoreFooter(
-                    bytes,
-                    storeSettings,
-                    columns);
-
+                AddText(bytes, documentText);
+                AddText(bytes, "\n");
                 bytes.AddRange(PaperCut);
 
                 bool printed =
-                    RawPrinterHelper
-                        .SendBytesToPrinter(
-                            printerName,
-                            bytes.ToArray(),
-                            "POS Receipt");
+                    RawPrinterHelper.SendBytesToPrinter(
+                        printerName,
+                        bytes.ToArray(),
+                        documentName);
 
                 if (!printed)
                 {
                     throw new InvalidOperationException(
-                        $"Receipt print failed. " +
-                        $"Printer not available: " +
-                        $"{printerName}");
+                        $"Print failed. Printer not available: {printerName}");
                 }
             });
         }

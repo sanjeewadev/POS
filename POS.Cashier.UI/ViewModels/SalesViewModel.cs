@@ -25,6 +25,7 @@ namespace POS.Cashier.UI.ViewModels
     {
         private readonly ItemMasterRepository _itemRepository;
         private readonly SalesRepository _salesRepository;
+        private readonly SalesDocumentRepository _salesDocumentRepository;
         private readonly TillRepository _tillRepository;
         private readonly IReceiptPrintService _printService;
         private readonly SalesTaxService _salesTaxService = new();
@@ -108,11 +109,13 @@ namespace POS.Cashier.UI.ViewModels
         public SalesViewModel(
             ItemMasterRepository itemRepository,
             SalesRepository salesRepository,
+            SalesDocumentRepository salesDocumentRepository,
             TillRepository tillRepository,
             IReceiptPrintService printService)
         {
             _itemRepository = itemRepository;
             _salesRepository = salesRepository;
+            _salesDocumentRepository = salesDocumentRepository;
             _tillRepository = tillRepository;
             _printService = printService;
 
@@ -2455,6 +2458,212 @@ namespace POS.Cashier.UI.ViewModels
             }
         }
 
+        public async Task<SalesHeader?> GetLastCompletedSaleAsync()
+        {
+            try
+            {
+                SalesHeader? sale =
+                    await _salesDocumentRepository
+                        .GetLastCompletedSaleAsync(TerminalNo);
+
+                if (sale == null)
+                {
+                    _ = ShowNotificationAsync(
+                        "No completed sale was found for this terminal.",
+                        "#F59E0B");
+                }
+
+                return sale;
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Load last completed sale",
+                    ex);
+
+                _ = ShowNotificationAsync(
+                    $"Last receipt could not be loaded: {ex.Message}",
+                    "#EF4444");
+
+                return null;
+            }
+        }
+
+        public async Task<PreparedSalesDocument?> PrepareLastReceiptAsync()
+        {
+            SalesHeader? sale = await GetLastCompletedSaleAsync();
+
+            if (sale == null)
+                return null;
+
+            return await _salesDocumentRepository
+                .PrepareReceiptAsync(sale.Id);
+        }
+
+        public async Task<PreparedSalesDocument?>
+            IssueOrPrepareTaxInvoiceAsync(
+                TaxInvoiceIssueRequest request)
+        {
+            try
+            {
+                return await _salesDocumentRepository
+                    .IssueOrPrepareTaxInvoiceAsync(request);
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Issue or prepare Tax Invoice",
+                    ex);
+
+                _ = ShowNotificationAsync(
+                    ex.Message,
+                    "#EF4444");
+
+                return null;
+            }
+        }
+
+        public Task<string> BuildDocumentPreviewAsync(
+            PreparedSalesDocument document)
+        {
+            if (document == null)
+                throw new ArgumentNullException(nameof(document));
+
+            if (string.Equals(
+                    document.DocumentType,
+                    SalesDocumentTypes.TaxInvoice,
+                    StringComparison.Ordinal))
+            {
+                if (!document.TaxInvoiceIssuedAtUtc.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        "Tax Invoice issue time is missing.");
+                }
+
+                return _printService.BuildTaxInvoicePreviewAsync(
+                    document.Sale,
+                    document.TaxInvoiceIssuedAtUtc.Value,
+                    _receiptPaperWidth,
+                    document.CopyLabel);
+            }
+
+            return _printService.BuildReceiptPreviewAsync(
+                document.Sale,
+                _receiptPaperWidth,
+                document.CopyLabel);
+        }
+
+        public async Task<bool> PrintPreparedDocumentAsync(
+            PreparedSalesDocument document)
+        {
+            if (document == null)
+                throw new ArgumentNullException(nameof(document));
+
+            if (string.IsNullOrWhiteSpace(_receiptPrinterName))
+            {
+                _ = ShowNotificationAsync(
+                    "Receipt printer is not configured.",
+                    "#EF4444");
+                return false;
+            }
+
+            try
+            {
+                if (string.Equals(
+                        document.DocumentType,
+                        SalesDocumentTypes.TaxInvoice,
+                        StringComparison.Ordinal))
+                {
+                    if (!document.TaxInvoiceIssuedAtUtc.HasValue)
+                    {
+                        throw new InvalidOperationException(
+                            "Tax Invoice issue time is missing.");
+                    }
+
+                    await _printService.PrintTaxInvoiceAsync(
+                        document.Sale,
+                        document.TaxInvoiceIssuedAtUtc.Value,
+                        _receiptPrinterName,
+                        _receiptPaperWidth,
+                        document.CopyLabel);
+                }
+                else
+                {
+                    await _printService.PrintReceiptAsync(
+                        document.Sale,
+                        _receiptPrinterName,
+                        _receiptPaperWidth,
+                        document.CopyLabel);
+                }
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Sales document printing",
+                    ex);
+
+                try
+                {
+                    await _salesDocumentRepository.RecordPrintResultAsync(
+                        document.Sale.Id,
+                        document.DocumentType,
+                        document.DocumentNumber,
+                        false,
+                        CashierName,
+                        TerminalNo,
+                        _receiptPrinterName,
+                        ex.Message);
+                }
+                catch (Exception auditException)
+                {
+                    LocalLogService.WriteException(
+                        "Cashier",
+                        "Sales document print-failure audit",
+                        auditException);
+                }
+
+                _ = ShowNotificationAsync(
+                    "Document could not be printed. The completed sale was not duplicated.",
+                    "#EF4444");
+
+                return false;
+            }
+
+            try
+            {
+                await _salesDocumentRepository.RecordPrintResultAsync(
+                    document.Sale.Id,
+                    document.DocumentType,
+                    document.DocumentNumber,
+                    true,
+                    CashierName,
+                    TerminalNo,
+                    _receiptPrinterName);
+            }
+            catch (Exception auditException)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Successful sales document print audit",
+                    auditException);
+
+                _ = ShowNotificationAsync(
+                    "Document printed, but its print audit could not be saved.",
+                    "#F59E0B");
+
+                return false;
+            }
+
+            _ = ShowNotificationAsync(
+                $"{document.CopyLabel} document printed.",
+                "#10B981");
+
+            return true;
+        }
+
         public async Task<bool> PrintCurrentCartQuotationAsync()
         {
             if (IsPaymentModeActive)
@@ -2562,11 +2771,18 @@ namespace POS.Cashier.UI.ViewModels
                      copy < _receiptCopies;
                      copy++)
                 {
-                    await _printService
-                        .PrintReceiptAsync(
-                            savedReceipt,
-                            _receiptPrinterName,
-                            _receiptPaperWidth);
+                    PreparedSalesDocument document =
+                        await _salesDocumentRepository
+                            .PrepareReceiptAsync(savedReceipt.Id);
+
+                    bool printed =
+                        await PrintPreparedDocumentAsync(document);
+
+                    if (!printed)
+                    {
+                        throw new InvalidOperationException(
+                            "Automatic receipt printing failed.");
+                    }
                 }
             }
 

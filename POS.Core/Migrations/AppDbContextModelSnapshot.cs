@@ -3704,7 +3704,9 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("TerminalNo");
 
-                    b.HasIndex("TaxInvoiceNo");
+                    b.HasIndex("TaxInvoiceNo")
+                        .IsUnique()
+                        .HasFilter("\"TaxInvoiceNo\" IS NOT NULL");
 
                     b.HasIndex("TaxSnapshotStatus");
 
@@ -4277,6 +4279,80 @@ namespace POS.Core.Migrations
                     b.HasIndex("TerminalNo");
 
                     b.ToTable("SalesLineDiscountAudits");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.SalesDocumentAudit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CopyNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<bool>("IsSuccessful")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrinterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SalesHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentNumber");
+
+                    b.HasIndex("DocumentType");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("SalesHeaderId");
+
+                    b.HasIndex("SalesHeaderId", "DocumentType", "IsSuccessful");
+
+                    b.ToTable("SalesDocumentAudits");
                 });
 
             modelBuilder.Entity("POS.Core.Models.SalesPayment", b =>
@@ -6294,6 +6370,17 @@ namespace POS.Core.Migrations
                     b.Navigation("ItemVariant");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.SalesDocumentAudit", b =>
+                {
+                    b.HasOne("POS.Core.Models.SalesHeader", "SalesHeader")
+                        .WithMany("SalesDocumentAudits")
+                        .HasForeignKey("SalesHeaderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalesHeader");
+                });
+
             modelBuilder.Entity("POS.Core.Models.SalesHeader", b =>
                 {
                     b.HasOne("POS.Core.Models.CustomerMaster", "CustomerMaster")
@@ -6604,6 +6691,8 @@ namespace POS.Core.Migrations
 
             modelBuilder.Entity("POS.Core.Models.SalesHeader", b =>
                 {
+                    b.Navigation("SalesDocumentAudits");
+
                     b.Navigation("SalesLines");
 
                     b.Navigation("SalesPayments");

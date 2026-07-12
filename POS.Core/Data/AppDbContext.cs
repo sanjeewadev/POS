@@ -65,6 +65,7 @@ namespace POS.Core.Data
         public DbSet<SalesHeader> SalesHeaders { get; set; } = null!;
         public DbSet<SalesLine> SalesLines { get; set; } = null!;
         public DbSet<SalesPayment> SalesPayments { get; set; } = null!;
+        public DbSet<SalesDocumentAudit> SalesDocumentAudits { get; set; } = null!;
         public DbSet<CustomerReturnHeader> CustomerReturnHeaders { get; set; } = null!;
         public DbSet<CustomerReturnLine> CustomerReturnLines { get; set; } = null!;
         public DbSet<ItemSupplier> ItemSuppliers { get; set; } = null!;
@@ -2948,13 +2949,66 @@ namespace POS.Core.Data
 
                 entity.HasIndex(s => s.DocumentType);
 
-                entity.HasIndex(s => s.TaxInvoiceNo);
+                entity.HasIndex(s => s.TaxInvoiceNo)
+                    .IsUnique()
+                    .HasFilter("\"TaxInvoiceNo\" IS NOT NULL");
 
                 entity.HasIndex(s => s.IsVatRegisteredSale);
 
                 entity.HasIndex(s => s.TaxSnapshotStatus);
             });
 
+
+            modelBuilder.Entity<SalesDocumentAudit>(entity =>
+            {
+                entity.ToTable("SalesDocumentAudits");
+
+                entity.HasKey(a => a.Id);
+
+                entity.Property(a => a.DocumentType)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.DocumentNumber)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.EventType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.PerformedBy)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.TerminalNo)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(a => a.PrinterName)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(a => a.ErrorMessage)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.HasOne(a => a.SalesHeader)
+                    .WithMany(h => h.SalesDocumentAudits)
+                    .HasForeignKey(a => a.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(a => a.SalesHeaderId);
+                entity.HasIndex(a => a.DocumentType);
+                entity.HasIndex(a => a.DocumentNumber);
+                entity.HasIndex(a => a.EventType);
+                entity.HasIndex(a => a.OccurredAtUtc);
+                entity.HasIndex(a => new { a.SalesHeaderId, a.DocumentType, a.IsSuccessful });
+            });
 
             // =========================================================
             // SALES LINE

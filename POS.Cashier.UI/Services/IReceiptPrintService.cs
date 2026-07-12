@@ -1,16 +1,36 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using POS.Core.Configuration;
 using POS.Core.Models;
 
 namespace POS.Cashier.UI.Services
 {
     public interface IReceiptPrintService
     {
+        Task<string> BuildReceiptPreviewAsync(
+            SalesHeader transaction,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original);
+
+        Task<string> BuildTaxInvoicePreviewAsync(
+            SalesHeader transaction,
+            DateTime issuedAtUtc,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original);
+
         Task PrintReceiptAsync(
             SalesHeader transaction,
             string printerName,
-            int paperWidth);
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original);
+
+        Task PrintTaxInvoiceAsync(
+            SalesHeader transaction,
+            DateTime issuedAtUtc,
+            string printerName,
+            int paperWidth,
+            string copyLabel = SalesDocumentCopyLabels.Original);
 
         Task PrintQuotationAsync(
             QuotationPrintRequest request,

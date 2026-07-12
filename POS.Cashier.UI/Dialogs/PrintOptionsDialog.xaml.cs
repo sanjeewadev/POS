@@ -19,6 +19,13 @@ namespace POS.Cashier.UI.Dialogs
             Close();
         }
 
+        private void TaxInvoice_Click(object sender, RoutedEventArgs e)
+        {
+            SelectedPrintOption = "TaxInvoice";
+            DialogResult = true;
+            Close();
+        }
+
         private void PrintQuotation_Click(object sender, RoutedEventArgs e)
         {
             SelectedPrintOption = "Quotation";

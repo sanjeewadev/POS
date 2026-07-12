@@ -9,6 +9,7 @@ using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Services.Documents;
 using POS.Core.Services.Licensing;
 using System;
 using System.Threading.Tasks;
@@ -47,6 +48,7 @@ namespace POS.Cashier.UI
             services.AddTransient<UserRepository>();
             services.AddTransient<ItemMasterRepository>();
             services.AddTransient<SalesRepository>();
+            services.AddTransient<SalesDocumentRepository>();
             services.AddTransient<TillRepository>();
             services.AddTransient<CustomerRepository>();
             services.AddTransient<TerminalSettingsRepository>();
@@ -54,6 +56,8 @@ namespace POS.Cashier.UI
 
             services.AddSingleton<AuthService>();
             services.AddSingleton<CashierLockService>();
+
+            services.AddSingleton<SalesDocumentTextFormatter>();
 
             services.AddTransient<
                 IReceiptPrintService,

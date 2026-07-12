@@ -1,11 +1,15 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Models;
 using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
+using POS.Core.Models;
+using POS.Core.Models.DTOs;
+using POS.Core.Services;
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -2021,7 +2025,9 @@ namespace POS.Cashier.UI.Views
         // PRINT
         // =========================================================
 
-        private void PrintBtn_Click(object sender, RoutedEventArgs e)
+        private async void PrintBtn_Click(
+            object sender,
+            RoutedEventArgs e)
         {
             if (_isDialogOpen)
                 return;
@@ -2045,15 +2051,25 @@ namespace POS.Cashier.UI.Views
 
                 if (dialog.SelectedPrintOption == "LastBill")
                 {
-                    PrintLastBillBtn_Click(sender, e);
+                    await ShowLastReceiptWorkflowAsync();
+                    return;
+                }
+
+                if (dialog.SelectedPrintOption == "TaxInvoice")
+                {
+                    await ShowTaxInvoiceWorkflowAsync();
                     return;
                 }
 
                 if (dialog.SelectedPrintOption == "Quotation")
                 {
-                    PrintQuotationBtn_Click(sender, e);
-                    return;
+                    if (ViewModel != null)
+                        await ViewModel.PrintCurrentCartQuotationAsync();
                 }
+            }
+            catch (Exception ex)
+            {
+                HandlePrintWorkflowException(ex);
             }
             finally
             {
@@ -2065,22 +2081,167 @@ namespace POS.Cashier.UI.Views
             }
         }
 
-        private void PrintLastBillBtn_Click(object sender, RoutedEventArgs e)
+        private async void PrintLastBillBtn_Click(
+            object sender,
+            RoutedEventArgs e)
         {
-            _ = ViewModel?.ShowNotificationAsync(
-                "Print Last Bill will be connected after receipt print service is finalized.",
-                "#F59E0B");
-
-            ReturnFocusToTerminalInput();
+            await RunStandalonePrintWorkflowAsync(
+                ShowLastReceiptWorkflowAsync);
         }
 
-        private async void PrintQuotationBtn_Click(object sender, RoutedEventArgs e)
+        private async void PrintQuotationBtn_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            await RunStandalonePrintWorkflowAsync(
+                async () =>
+                {
+                    if (ViewModel != null)
+                        await ViewModel.PrintCurrentCartQuotationAsync();
+                });
+        }
+
+        private async Task RunStandalonePrintWorkflowAsync(
+            Func<Task> workflow)
+        {
+            if (_isDialogOpen)
+                return;
+
+            _isDialogOpen = true;
+
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                await workflow();
+            }
+            catch (Exception ex)
+            {
+                HandlePrintWorkflowException(ex);
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
+            }
+        }
+
+
+        private void HandlePrintWorkflowException(Exception ex)
+        {
+            LocalLogService.WriteException(
+                "Cashier",
+                "Sales document preview or print workflow",
+                ex);
+
+            if (ViewModel != null)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Document workflow failed: {ex.Message}",
+                    "#EF4444");
+                return;
+            }
+
+            MessageBox.Show(
+                ex.Message,
+                "Document Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        private async Task ShowLastReceiptWorkflowAsync()
         {
             if (ViewModel == null)
                 return;
 
-            await ViewModel.PrintCurrentCartQuotationAsync();
-            ReturnFocusToTerminalInput();
+            PreparedSalesDocument? document =
+                await ViewModel.PrepareLastReceiptAsync();
+
+            if (document == null)
+                return;
+
+            string preview =
+                await ViewModel.BuildDocumentPreviewAsync(document);
+
+            var dialog = new SalesDocumentPreviewDialog(
+                "Sales Receipt Preview",
+                preview)
+            {
+                Owner = this
+            };
+
+            bool? result = dialog.ShowDialog();
+
+            if (result == true && dialog.PrintRequested)
+                await ViewModel.PrintPreparedDocumentAsync(document);
+        }
+
+        private async Task ShowTaxInvoiceWorkflowAsync()
+        {
+            if (ViewModel == null)
+                return;
+
+            SalesHeader? sale =
+                await ViewModel.GetLastCompletedSaleAsync();
+
+            if (sale == null)
+                return;
+
+            var request = new TaxInvoiceIssueRequest
+            {
+                SalesHeaderId = sale.Id,
+                CustomerName = sale.CustomerName,
+                CustomerTin = sale.CustomerTinSnapshot,
+                CustomerVatNo = sale.CustomerVatNoSnapshot,
+                CustomerAddress = sale.CustomerAddressSnapshot,
+                PerformedBy = ViewModel.CashierName,
+                TerminalNo = ViewModel.TerminalNo
+            };
+
+            if (string.IsNullOrWhiteSpace(sale.TaxInvoiceNo))
+            {
+                var issueDialog = new TaxInvoiceIssueDialog(sale)
+                {
+                    Owner = this
+                };
+
+                if (issueDialog.ShowDialog() != true)
+                    return;
+
+                request.CustomerName =
+                    issueDialog.CustomerNameValue;
+                request.CustomerTin =
+                    issueDialog.CustomerTinValue;
+                request.CustomerVatNo =
+                    issueDialog.CustomerVatNoValue;
+                request.CustomerAddress =
+                    issueDialog.CustomerAddressValue;
+            }
+
+            PreparedSalesDocument? document =
+                await ViewModel.IssueOrPrepareTaxInvoiceAsync(request);
+
+            if (document == null)
+                return;
+
+            string preview =
+                await ViewModel.BuildDocumentPreviewAsync(document);
+
+            var previewDialog = new SalesDocumentPreviewDialog(
+                "Tax Invoice Preview",
+                preview)
+            {
+                Owner = this
+            };
+
+            bool? result = previewDialog.ShowDialog();
+
+            if (result == true && previewDialog.PrintRequested)
+                await ViewModel.PrintPreparedDocumentAsync(document);
         }
     }
 }

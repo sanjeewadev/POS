@@ -167,5 +167,7 @@ namespace POS.Core.Models
         public virtual ICollection<SalesLine> SalesLines { get; set; } = new List<SalesLine>();
 
         public virtual ICollection<SalesPayment> SalesPayments { get; set; } = new List<SalesPayment>();
+
+        public virtual ICollection<SalesDocumentAudit> SalesDocumentAudits { get; set; } = new List<SalesDocumentAudit>();
     }
 }
