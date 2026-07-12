@@ -147,8 +147,9 @@ namespace POS.Cashier.UI.Dialogs
                 return;
             }
 
-            Close();
-            await app.ReturnToLoginAsync(salesWindow);
+            bool returned = await app.ReturnToLoginAsync(salesWindow);
+            if (returned)
+                Close();
         }
     }
 }

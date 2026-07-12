@@ -23,7 +23,8 @@ namespace POS.Core.Repositories
         public async Task<SalesHeader> ProcessCheckoutAsync(
             SalesHeader header,
             List<SalesLine> lines,
-            List<SalesPayment>? payments = null)
+            List<SalesPayment>? payments = null,
+            Guid? checkoutToken = null)
         {
             if (header == null)
                 throw new ArgumentNullException(nameof(header));
@@ -38,6 +39,9 @@ namespace POS.Core.Repositories
             NormalizeSalesLines(lines);
             NormalizePayments(payments);
 
+            if (checkoutToken.HasValue && checkoutToken.Value != Guid.Empty)
+                header.CheckoutToken = checkoutToken.Value;
+
             bool sellingGiftVoucher = lines.Any(line => line.IsGiftVoucherSale);
             bool payingByGiftVoucher = payments.Any(IsGiftVoucherPayment);
 
@@ -50,6 +54,37 @@ namespace POS.Core.Repositories
             try
             {
                 DateTime now = DateTime.Now;
+                CashierCartSession? cartSession = null;
+
+                if (header.CheckoutToken.HasValue && header.CheckoutToken.Value != Guid.Empty)
+                {
+                    SalesHeader? existingSale = await context.SalesHeaders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(s => s.CheckoutToken == header.CheckoutToken.Value);
+
+                    if (existingSale != null)
+                    {
+                        await transaction.RollbackAsync();
+                        return await LoadSavedReceiptAsync(context, existingSale.Id);
+                    }
+
+                    cartSession = await context.CashierCartSessions
+                        .Include(c => c.Lines)
+                        .FirstOrDefaultAsync(c => c.CartToken == header.CheckoutToken.Value);
+
+                    if (cartSession == null)
+                        throw new InvalidOperationException("The active cashier cart could not be found for checkout.");
+
+                    if (!cartSession.Status.Equals(CashierCartStatusCodes.Active, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException($"Cart {cartSession.ReferenceNo} is {cartSession.Status} and cannot be checked out.");
+
+                    if (cartSession.ShiftSessionId != header.ShiftSessionId ||
+                        !cartSession.TerminalNo.Equals(header.TerminalNo, StringComparison.OrdinalIgnoreCase) ||
+                        !cartSession.CashierName.Equals(header.CashierName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException("The checkout cart belongs to a different terminal, shift or cashier.");
+                    }
+                }
 
                 header.TransactionDate = now;
                 header.Status = "Completed";
@@ -217,6 +252,14 @@ namespace POS.Core.Repositories
                 {
                     payment.SalesHeaderId = header.Id;
                     payment.CreatedAt = now;
+                    payment.EnteredBy = header.CashierName;
+                    payment.TerminalNo = header.TerminalNo;
+
+                    if (payment.TenderedAmount <= 0m)
+                        payment.TenderedAmount = payment.Amount;
+
+                    if (payment.ChangeAmount < 0m)
+                        payment.ChangeAmount = 0m;
 
                     if (payment.PaymentDate == null)
                         payment.PaymentDate = now;
@@ -289,12 +332,36 @@ namespace POS.Core.Repositories
                         inventoryTransaction);
                 }
 
+                if (cartSession != null)
+                {
+                    cartSession.Status = CashierCartStatusCodes.Completed;
+                    cartSession.SalesHeaderId = header.Id;
+                    cartSession.CompletedAtUtc = DateTime.UtcNow;
+                    cartSession.UpdatedAtUtc = cartSession.CompletedAtUtc.Value;
+                    cartSession.UpdatedBy = header.CashierName;
+                    cartSession.Revision++;
+                }
+
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return await LoadSavedReceiptAsync(
                     context,
                     header.Id);
+            }
+            catch (DbUpdateException) when (header.CheckoutToken.HasValue && header.CheckoutToken.Value != Guid.Empty)
+            {
+                await transaction.RollbackAsync();
+
+                await using AppDbContext retryContext = await _contextFactory.CreateDbContextAsync();
+                SalesHeader? existingSale = await retryContext.SalesHeaders
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.CheckoutToken == header.CheckoutToken.Value);
+
+                if (existingSale != null)
+                    return await LoadSavedReceiptAsync(retryContext, existingSale.Id);
+
+                throw;
             }
             catch
             {
@@ -1516,6 +1583,11 @@ namespace POS.Core.Repositories
                 payment.PaymentType = NormalizeText(payment.PaymentType);
                 payment.ReferenceNo = NormalizeText(payment.ReferenceNo);
                 payment.BankOrCardType = NormalizeText(payment.BankOrCardType);
+                payment.CardLastDigits = NormalizeCardLastDigits(payment.CardLastDigits);
+                payment.EnteredBy = NormalizeText(payment.EnteredBy);
+                payment.TerminalNo = NormalizeText(payment.TerminalNo);
+                payment.TenderedAmount = Math.Round(payment.TenderedAmount, 2);
+                payment.ChangeAmount = Math.Round(payment.ChangeAmount, 2);
                 payment.GiftVoucherNo = NormalizeText(payment.GiftVoucherNo);
                 payment.GiftVoucherBarcode = NormalizeText(payment.GiftVoucherBarcode);
 
@@ -1960,6 +2032,17 @@ namespace POS.Core.Repositories
             }
 
             return 0m;
+        }
+
+
+        private static string NormalizeCardLastDigits(string? value)
+        {
+            string digits = new string((value ?? string.Empty)
+                .Where(char.IsDigit)
+                .TakeLast(6)
+                .ToArray());
+
+            return digits;
         }
 
         private static string NormalizeText(string? value)

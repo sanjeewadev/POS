@@ -20,6 +20,16 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; } = 0m;
 
+        // Permanent audit values captured from the completed tender line.
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TenderedAmount { get; set; } = 0m;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal ChangeAmount { get; set; } = 0m;
+
+        [MaxLength(6)]
+        public string CardLastDigits { get; set; } = string.Empty;
+
         [MaxLength(100)]
         public string ReferenceNo { get; set; } = string.Empty;
 
@@ -29,6 +39,12 @@ namespace POS.Core.Models
         public DateTime? PaymentDate { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [MaxLength(100)]
+        public string EnteredBy { get; set; } = string.Empty;
+
+        [MaxLength(20)]
+        public string TerminalNo { get; set; } = string.Empty;
 
         // =========================================================
         // GIFT VOUCHER PAYMENT

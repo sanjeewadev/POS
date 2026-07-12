@@ -75,7 +75,7 @@ namespace POS.Cashier.UI.Views
 
         private SalesViewModel? ViewModel => DataContext as SalesViewModel;
 
-        private void SalesView_Loaded(
+        private async void SalesView_Loaded(
             object sender,
             RoutedEventArgs e)
         {
@@ -83,7 +83,83 @@ namespace POS.Cashier.UI.Views
                 this,
                 _autoLockTimeoutMinutes);
 
+            await HandleActiveCartRecoveryAsync();
             ReturnFocusToTerminalInput();
+        }
+
+        private async Task HandleActiveCartRecoveryAsync()
+        {
+            if (ViewModel == null)
+                return;
+
+            try
+            {
+                CashierCartSessionDto? active =
+                    await ViewModel.GetActiveCartForRecoveryAsync();
+
+                if (active == null)
+                    return;
+
+                MessageBoxResult choice = MessageBox.Show(
+                    $"An unfinished cart was recovered.\n\n" +
+                    $"Reference: {active.ReferenceNo}\n" +
+                    $"Items: {active.ItemCount}\n" +
+                    $"Value: Rs. {active.NetTotal:N2}\n\n" +
+                    "Yes = Resume Cart\nNo = Cancel Cart\nCancel = Log Off",
+                    "Recover Cashier Cart",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Warning);
+
+                if (choice == MessageBoxResult.Yes)
+                {
+                    await ViewModel.RestoreActiveCartAsync(active);
+                    await ViewModel.ShowNotificationAsync(
+                        $"Recovered {active.ReferenceNo}. Payment must be entered again.",
+                        "#D97706");
+                    return;
+                }
+
+                if (choice == MessageBoxResult.No)
+                {
+                    var reasonDialog = new CartCancellationReasonDialog
+                    {
+                        Owner = this
+                    };
+
+                    if (reasonDialog.ShowDialog() == true)
+                    {
+                        await ViewModel.CancelRecoveredActiveCartAsync(
+                            active,
+                            reasonDialog.ReasonCode,
+                            reasonDialog.ReasonText);
+
+                        await ViewModel.ShowNotificationAsync(
+                            $"Cancelled recovered cart {active.ReferenceNo}.",
+                            "#F59E0B");
+                    }
+                    else
+                    {
+                        await ViewModel.RestoreActiveCartAsync(active);
+                    }
+
+                    return;
+                }
+
+                PerformLogOff();
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Recover active cart",
+                    ex);
+
+                MessageBox.Show(
+                    $"The saved cart could not be recovered.\n\n{ex.Message}",
+                    "Cart Recovery Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         private void SalesView_Closed(
@@ -777,7 +853,7 @@ namespace POS.Cashier.UI.Views
             ResetTerminalActionMode();
         }
 
-        private void CancelSaleBtn_Click(object sender, RoutedEventArgs e)
+        private async void CancelSaleBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel == null)
                 return;
@@ -798,16 +874,33 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            MessageBoxResult result = MessageBox.Show(
-                "Are you sure you want to clear this entire sale?",
-                "Cancel Sale",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
+            var dialog = new CartCancellationReasonDialog
             {
-                ViewModel.ClearCartCommand.Execute(null);
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
+            try
+            {
+                await ViewModel.CancelCurrentCartAsync(
+                    dialog.ReasonCode,
+                    dialog.ReasonText);
+
                 ResetTerminalActionMode();
+                await ViewModel.ShowNotificationAsync(
+                    "Cart cancelled and recorded for audit.",
+                    "#F59E0B");
+            }
+            catch (Exception ex)
+            {
+                await ViewModel.ShowNotificationAsync(
+                    $"Cart cancellation failed: {ex.Message}",
+                    "#EF4444");
             }
 
             ReturnFocusToTerminalInput();
@@ -1410,22 +1503,99 @@ namespace POS.Cashier.UI.Views
             return "Retail";
         }
 
-        private void SuspendRecallBtn_Click(object sender, RoutedEventArgs e)
+        private async void SuspendRecallBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (ViewModel == null)
+                return;
+
             if (BlockDialogIfPaymentMode("suspend/recall"))
                 return;
 
             if (_isDialogOpen)
                 return;
 
+            string action = GetButtonText(sender);
+
+            if (action.Equals("Suspend", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    CashierCartSessionDto held =
+                        await ViewModel.SuspendCurrentCartAsync();
+
+                    await ViewModel.ShowNotificationAsync(
+                        $"Cart suspended as {held.ReferenceNo}.",
+                        "#10B981");
+                }
+                catch (Exception ex)
+                {
+                    await ViewModel.ShowNotificationAsync(
+                        $"Suspend failed: {ex.Message}",
+                        "#EF4444");
+                }
+
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
             _isDialogOpen = true;
 
             try
             {
-                new HoldRecallDialog
+                var heldCarts = await ViewModel.GetHeldCartsAsync();
+
+                if (heldCarts.Count == 0)
+                {
+                    await ViewModel.ShowNotificationAsync(
+                        "There are no held carts for this cashier and shift.",
+                        "#F59E0B");
+                    return;
+                }
+
+                var dialog = new HoldRecallDialog(heldCarts)
                 {
                     Owner = this
-                }.ShowDialog();
+                };
+
+                if (dialog.ShowDialog() != true || dialog.SelectedCart == null)
+                    return;
+
+                if (dialog.RequestedAction == HoldRecallAction.Recall)
+                {
+                    CashierCartSessionDto recalled =
+                        await ViewModel.RecallHeldCartAsync(dialog.SelectedCart.Id);
+
+                    await ViewModel.ShowNotificationAsync(
+                        $"Recalled {recalled.ReferenceNo}. Payment must be entered again.",
+                        "#10B981");
+                    return;
+                }
+
+                if (dialog.RequestedAction == HoldRecallAction.Cancel)
+                {
+                    var reasonDialog = new CartCancellationReasonDialog
+                    {
+                        Owner = this
+                    };
+
+                    if (reasonDialog.ShowDialog() == true)
+                    {
+                        await ViewModel.CancelHeldCartAsync(
+                            dialog.SelectedCart.Id,
+                            reasonDialog.ReasonCode,
+                            reasonDialog.ReasonText);
+
+                        await ViewModel.ShowNotificationAsync(
+                            $"Cancelled held cart {dialog.SelectedCart.ReferenceNo}.",
+                            "#F59E0B");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await ViewModel.ShowNotificationAsync(
+                    $"Recall failed: {ex.Message}",
+                    "#EF4444");
             }
             finally
             {
@@ -1991,20 +2161,20 @@ namespace POS.Cashier.UI.Views
 
         private void LogOffBtn_Click(object sender, RoutedEventArgs e)
         {
+            string message = ViewModel?.Cart.Any() == true
+                ? "The active cart will be saved for recovery. Log off now?"
+                : "Are you sure you want to pause the register and log off?";
+
             MessageBoxResult result = MessageBox.Show(
-                "Are you sure you want to pause the register and log off?",
+                message,
                 "Log Off",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
-            {
                 PerformLogOff();
-            }
             else
-            {
                 ReturnFocusToTerminalInput();
-            }
         }
 
         private async void PerformLogOff()
@@ -2013,11 +2183,20 @@ namespace POS.Cashier.UI.Views
                 return;
 
             _isReturningToLogin = true;
-            _lockService.Stop();
 
             if (Application.Current is App app)
             {
-                await app.ReturnToLoginAsync(this);
+                bool returned = await app.ReturnToLoginAsync(this);
+                if (returned)
+                {
+                    _lockService.Stop();
+                }
+                else
+                {
+                    _isReturningToLogin = false;
+                    ReturnFocusToTerminalInput();
+                }
+
                 return;
             }
 

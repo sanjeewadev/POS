@@ -282,7 +282,7 @@
                                     </DataGrid.Resources>
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Binding="{Binding PaymentType}" Width="150" FontWeight="Bold"/>
-                                        <DataGridTextColumn Binding="{Binding ReferenceNo}" Width="*"/>
+                                        <DataGridTextColumn Binding="{Binding Details}" Width="*"/>
                                         <DataGridTextColumn Binding="{Binding Amount, StringFormat=Rs. \{0:N2\}}" Width="120" ElementStyle="{StaticResource RightElement}" Foreground="#005555" FontWeight="Bold"/>
                                     </DataGrid.Columns>
                                 </DataGrid>

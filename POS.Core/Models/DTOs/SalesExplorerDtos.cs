@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace POS.Core.Models.DTOs
 {
@@ -75,6 +76,53 @@ namespace POS.Core.Models.DTOs
     {
         public string PaymentType { get; set; } = string.Empty;
         public decimal Amount { get; set; }
+        public decimal TenderedAmount { get; set; }
+        public decimal ChangeAmount { get; set; }
         public string ReferenceNo { get; set; } = string.Empty;
+        public string BankOrCardType { get; set; } = string.Empty;
+        public string CardLastDigits { get; set; } = string.Empty;
+        public DateTime? PaymentDate { get; set; }
+        public string EnteredBy { get; set; } = string.Empty;
+        public string TerminalNo { get; set; } = string.Empty;
+        public string GiftVoucherNo { get; set; } = string.Empty;
+
+        public string Details
+        {
+            get
+            {
+                if (PaymentType.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+                {
+                    decimal tendered = TenderedAmount > 0m ? TenderedAmount : Amount;
+                    return ChangeAmount > 0m
+                        ? $"Tendered Rs. {tendered:N2} / Change Rs. {ChangeAmount:N2}"
+                        : $"Tendered Rs. {tendered:N2}";
+                }
+
+                if (PaymentType.Equals("Card", StringComparison.OrdinalIgnoreCase))
+                {
+                    string masked = string.IsNullOrWhiteSpace(CardLastDigits)
+                        ? string.Empty
+                        : $"******{CardLastDigits}";
+
+                    return string.Join(" / ", new[] { BankOrCardType, masked, ReferenceNo }
+                        .Where(value => !string.IsNullOrWhiteSpace(value)));
+                }
+
+                if (PaymentType.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
+                {
+                    string date = PaymentDate.HasValue ? PaymentDate.Value.ToString("yyyy-MM-dd") : string.Empty;
+                    return string.Join(" / ", new[] { ReferenceNo, BankOrCardType, date }
+                        .Where(value => !string.IsNullOrWhiteSpace(value)));
+                }
+
+                if (PaymentType.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase) ||
+                    PaymentType.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase))
+                {
+                    return string.IsNullOrWhiteSpace(GiftVoucherNo) ? ReferenceNo : GiftVoucherNo;
+                }
+
+                return ReferenceNo;
+            }
+        }
     }
 }

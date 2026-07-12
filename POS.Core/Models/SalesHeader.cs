@@ -81,6 +81,9 @@ namespace POS.Core.Models
         [MaxLength(50)]
         public string? TaxInvoiceNo { get; set; }
 
+        // Stable cart idempotency token. Historical sales remain null.
+        public Guid? CheckoutToken { get; set; }
+
         public bool IsVatRegisteredSale { get; set; } = false;
 
         [MaxLength(30)]
@@ -169,5 +172,7 @@ namespace POS.Core.Models
         public virtual ICollection<SalesPayment> SalesPayments { get; set; } = new List<SalesPayment>();
 
         public virtual ICollection<SalesDocumentAudit> SalesDocumentAudits { get; set; } = new List<SalesDocumentAudit>();
+
+        public virtual CashierCartSession? CashierCartSession { get; set; }
     }
 }

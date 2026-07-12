@@ -188,6 +188,238 @@ namespace POS.Core.Migrations
                     b.ToTable("BackupHistory", (string)null);
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashierCartLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CashierCartSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ItemBatchId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ItemVariantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LineNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LineType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemBatchId");
+
+                    b.HasIndex("ItemVariantId");
+
+                    b.HasIndex("CashierCartSessionId", "LineNumber")
+                        .IsUnique();
+
+                    b.ToTable("CashierCartLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CashierCartSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CancelledBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CancellationReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("CancellationReasonText")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<Guid>("CartToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerCodeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<int?>("CustomerMasterId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CustomerNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CustomerSnapshotJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("CustomerTypeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal>("GrossTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("HeldAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HeldBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("InvoiceDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsWholesaleMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("NetTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("RecallCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("RecalledAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RecalledBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SalesHeaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Active")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal>("TotalDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalQuantity")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CartToken")
+                        .IsUnique();
+
+                    b.HasIndex("CustomerMasterId");
+
+                    b.HasIndex("ReferenceNo")
+                        .IsUnique();
+
+                    b.HasIndex("SalesHeaderId")
+                        .IsUnique()
+                        .HasFilter("\"SalesHeaderId\" IS NOT NULL");
+
+                    b.HasIndex("ShiftSessionId");
+
+                    b.HasIndex("UpdatedAtUtc");
+
+                    b.HasIndex("CashierName", "Status");
+
+                    b.HasIndex("TerminalNo", "ShiftSessionId", "CashierName")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CashierCartSessions_ActiveOwner")
+                        .HasFilter("\"Status\" = 'Active'");
+
+                    b.HasIndex("TerminalNo", "ShiftSessionId", "Status");
+
+                    b.ToTable("CashierCartSessions");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
                 {
                     b.Property<int>("Id")
@@ -3490,6 +3722,9 @@ namespace POS.Core.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("CheckoutToken")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CustomerCode")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -3674,6 +3909,10 @@ namespace POS.Core.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CashierName");
+
+                    b.HasIndex("CheckoutToken")
+                        .IsUnique()
+                        .HasFilter("\"CheckoutToken\" IS NOT NULL");
 
                     b.HasIndex("CustomerCode");
 
@@ -4370,7 +4609,21 @@ namespace POS.Core.Migrations
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
+                    b.Property<string>("CardLastDigits")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<decimal>("ChangeAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnteredBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("GiftVoucherAmount")
@@ -4411,6 +4664,15 @@ namespace POS.Core.Migrations
 
                     b.Property<int>("SalesHeaderId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("TenderedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.HasKey("Id");
 
@@ -5969,6 +6231,42 @@ namespace POS.Core.Migrations
                     b.Navigation("AttributeGroup");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashierCartLine", b =>
+                {
+                    b.HasOne("POS.Core.Models.CashierCartSession", "CashierCartSession")
+                        .WithMany("Lines")
+                        .HasForeignKey("CashierCartSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CashierCartSession");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CashierCartSession", b =>
+                {
+                    b.HasOne("POS.Core.Models.CustomerMaster", "CustomerMaster")
+                        .WithMany()
+                        .HasForeignKey("CustomerMasterId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.SalesHeader", "SalesHeader")
+                        .WithOne("CashierCartSession")
+                        .HasForeignKey("POS.Core.Models.CashierCartSession", "SalesHeaderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
+                        .WithMany()
+                        .HasForeignKey("ShiftSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CustomerMaster");
+
+                    b.Navigation("SalesHeader");
+
+                    b.Navigation("ShiftSession");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
                 {
                     b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
@@ -6395,6 +6693,8 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("CustomerMaster");
+
+                    b.Navigation("CashierCartSession");
                 });
 
             modelBuilder.Entity("POS.Core.Models.SalesLine", b =>
@@ -6670,6 +6970,11 @@ namespace POS.Core.Migrations
                     b.Navigation("TaxRates");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashierCartSession", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("POS.Core.Models.ItemParent", b =>
                 {
                     b.Navigation("Variants");
@@ -6691,6 +6996,8 @@ namespace POS.Core.Migrations
 
             modelBuilder.Entity("POS.Core.Models.SalesHeader", b =>
                 {
+                    b.Navigation("CashierCartSession");
+
                     b.Navigation("SalesDocumentAudits");
 
                     b.Navigation("SalesLines");

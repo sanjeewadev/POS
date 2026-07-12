@@ -66,6 +66,8 @@ namespace POS.Core.Data
         public DbSet<SalesLine> SalesLines { get; set; } = null!;
         public DbSet<SalesPayment> SalesPayments { get; set; } = null!;
         public DbSet<SalesDocumentAudit> SalesDocumentAudits { get; set; } = null!;
+        public DbSet<CashierCartSession> CashierCartSessions { get; set; } = null!;
+        public DbSet<CashierCartLine> CashierCartLines { get; set; } = null!;
         public DbSet<CustomerReturnHeader> CustomerReturnHeaders { get; set; } = null!;
         public DbSet<CustomerReturnLine> CustomerReturnLines { get; set; } = null!;
         public DbSet<ItemSupplier> ItemSuppliers { get; set; } = null!;
@@ -2820,6 +2822,8 @@ namespace POS.Core.Data
                     .HasMaxLength(50)
                     .UseCollation("NOCASE");
 
+                entity.Property(s => s.CheckoutToken);
+
                 entity.Property(s => s.IsVatRegisteredSale)
                     .HasDefaultValue(false);
 
@@ -2953,9 +2957,143 @@ namespace POS.Core.Data
                     .IsUnique()
                     .HasFilter("\"TaxInvoiceNo\" IS NOT NULL");
 
+                entity.HasIndex(s => s.CheckoutToken)
+                    .IsUnique()
+                    .HasFilter("\"CheckoutToken\" IS NOT NULL");
+
                 entity.HasIndex(s => s.IsVatRegisteredSale);
 
                 entity.HasIndex(s => s.TaxSnapshotStatus);
+            });
+
+
+            // =========================================================
+            // CASHIER CART LIFECYCLE
+            // =========================================================
+            modelBuilder.Entity<CashierCartSession>(entity =>
+            {
+                entity.ToTable("CashierCartSessions");
+                entity.HasKey(c => c.Id);
+
+                entity.Property(c => c.CartToken)
+                    .IsRequired();
+
+                entity.Property(c => c.ReferenceNo)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.TerminalNo)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CashierName)
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CustomerCodeSnapshot)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CustomerNameSnapshot)
+                    .HasMaxLength(150);
+
+                entity.Property(c => c.CustomerTypeSnapshot)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CustomerSnapshotJson)
+                    .IsRequired()
+                    .HasDefaultValue("");
+
+                entity.Property(c => c.InvoiceDiscountAmount)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(c => c.GrossTotal)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(c => c.TotalDiscount)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(c => c.NetTotal)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(c => c.TotalQuantity)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(c => c.Status)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue(CashierCartStatusCodes.Active)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.CreatedBy).HasMaxLength(100);
+                entity.Property(c => c.UpdatedBy).HasMaxLength(100);
+                entity.Property(c => c.HeldBy).HasMaxLength(100);
+                entity.Property(c => c.RecalledBy).HasMaxLength(100);
+                entity.Property(c => c.CancelledBy).HasMaxLength(100);
+                entity.Property(c => c.CancellationReasonCode)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+                entity.Property(c => c.CancellationReasonText)
+                    .HasMaxLength(250);
+
+                entity.HasOne(c => c.ShiftSession)
+                    .WithMany()
+                    .HasForeignKey(c => c.ShiftSessionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.CustomerMaster)
+                    .WithMany()
+                    .HasForeignKey(c => c.CustomerMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(c => c.SalesHeader)
+                    .WithOne(h => h.CashierCartSession)
+                    .HasForeignKey<CashierCartSession>(c => c.SalesHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(c => c.Lines)
+                    .WithOne(l => l.CashierCartSession)
+                    .HasForeignKey(l => l.CashierCartSessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(c => c.CartToken).IsUnique();
+                entity.HasIndex(c => c.ReferenceNo).IsUnique();
+                entity.HasIndex(c => c.CustomerMasterId);
+                entity.HasIndex(c => c.SalesHeaderId)
+                    .IsUnique()
+                    .HasFilter("\"SalesHeaderId\" IS NOT NULL");
+                entity.HasIndex(c => new { c.TerminalNo, c.ShiftSessionId, c.CashierName })
+                    .IsUnique()
+                    .HasDatabaseName("IX_CashierCartSessions_ActiveOwner")
+                    .HasFilter("\"Status\" = 'Active'");
+                entity.HasIndex(c => new { c.TerminalNo, c.ShiftSessionId, c.Status });
+                entity.HasIndex(c => new { c.CashierName, c.Status });
+                entity.HasIndex(c => c.UpdatedAtUtc);
+            });
+
+            modelBuilder.Entity<CashierCartLine>(entity =>
+            {
+                entity.ToTable("CashierCartLines");
+                entity.HasKey(l => l.Id);
+                entity.Property(l => l.LineType)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+                entity.Property(l => l.Description)
+                    .IsRequired()
+                    .HasMaxLength(250);
+                entity.Property(l => l.Quantity)
+                    .HasColumnType("decimal(18,3)");
+                entity.Property(l => l.UnitPrice)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(l => l.LineTotal)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(l => l.SnapshotJson)
+                    .IsRequired();
+                entity.HasIndex(l => new { l.CashierCartSessionId, l.LineNumber })
+                    .IsUnique();
+                entity.HasIndex(l => l.ItemVariantId);
+                entity.HasIndex(l => l.ItemBatchId);
             });
 
 
@@ -3316,12 +3454,29 @@ namespace POS.Core.Data
                 entity.Property(p => p.Amount)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(p => p.TenderedAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.ChangeAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(p => p.CardLastDigits)
+                    .HasMaxLength(6)
+                    .UseCollation("NOCASE");
+
                 entity.Property(p => p.ReferenceNo)
                     .HasMaxLength(100)
                     .UseCollation("NOCASE");
 
                 entity.Property(p => p.BankOrCardType)
                     .HasMaxLength(100)
+                    .UseCollation("NOCASE");
+
+                entity.Property(p => p.EnteredBy)
+                    .HasMaxLength(100);
+
+                entity.Property(p => p.TerminalNo)
+                    .HasMaxLength(20)
                     .UseCollation("NOCASE");
 
                 entity.HasOne(p => p.SalesHeader)

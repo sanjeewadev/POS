@@ -9,6 +9,10 @@ using POS.Core.Services.Tax;
 using POS.Core.Services.Pricing;
 using POS.Core.Services.Documents;
 using POS.Core.Services.Returns;
+using POS.Core.Enums;
+using POS.Core.Services;
+using POS.Core.Utilities;
+
 
 namespace POS.Core.CalculationTests
 {
@@ -98,7 +102,29 @@ namespace POS.Core.CalculationTests
                 ("Supplier-return discrepancy is detected", VatReportDetectsSupplierReturnDiscrepancy),
                 ("LegacyUnknown documents are separated", VatReportSeparatesLegacyUnknown),
                 ("Unknown freight VAT is separated", VatReportSeparatesUnknownFreight),
-                ("VAT date boundaries and position reconcile", VatReportDateBoundariesAndPositionReconcile)
+                ("VAT date boundaries and position reconcile", VatReportDateBoundariesAndPositionReconcile),
+                ("Active Stock Item cart saves and restores", ActiveStockItemCartSavesAndRestores),
+                ("Service cart saves and restores", ServiceCartSavesAndRestores),
+                ("Mixed cart saves and restores", MixedCartSavesAndRestores),
+                ("Customer and Wholesale mode restore", CustomerAndWholesaleModeRestore),
+                ("Batch and selected pricing restore", BatchAndSelectedPricingRestore),
+                ("Manual line discount restores", ManualLineDiscountRestores),
+                ("Invoice discount restores", InvoiceDiscountRestores),
+                ("Price override audit restores", PriceOverrideAuditRestores),
+                ("Gift Voucher and Free Issue state restores", GiftVoucherAndFreeIssueStateRestores),
+                ("Cart persistence excludes payment drafts", CartPersistenceExcludesPaymentDrafts),
+                ("Active cart survives context restart", ActiveCartSurvivesContextRestart),
+                ("Suspend and Recall lifecycle works", SuspendAndRecallLifecycleWorks),
+                ("Cart ownership is isolated", CartOwnershipIsIsolated),
+                ("Held cart can be recalled only once", HeldCartCanBeRecalledOnlyOnce),
+                ("Cancelled cart audits without financial posting", CancelledCartAuditsWithoutFinancialPosting),
+                ("Completed and cancelled carts cannot be recalled", CompletedAndCancelledCartsCannotBeRecalled),
+                ("Checkout token is idempotent", CheckoutTokenIsIdempotent),
+                ("Duplicate checkout creates one stock and payment effect", DuplicateCheckoutCreatesOneStockAndPaymentEffect),
+                ("Failed checkout leaves cart recoverable", FailedCheckoutLeavesCartRecoverable),
+                ("Successful checkout completes cart", SuccessfulCheckoutCompletesCart),
+                ("Manager approval preserves cashier session", ManagerApprovalPreservesCashierSession),
+                ("Completed payment audit details persist", CompletedPaymentAuditDetailsPersist)
             };
 
             try
@@ -110,7 +136,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, and VAT report checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, and cashier cart safety checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -4719,6 +4745,763 @@ namespace POS.Core.CalculationTests
                 TaxName = name,
                 RatePercent = 0m
             };
+        }
+
+
+        private static void ActiveStockItemCartSavesAndRestores()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+
+            repository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            CashierCartSessionDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Saved Stock Item cart was not restored.");
+
+            AssertEqual(CashierCartStatusCodes.Active, restored.Status, "active cart status");
+            AssertEqual(1, restored.Lines.Count, "active cart line count");
+            AssertEqual(CashierCartLineTypeCodes.StockItem, restored.Lines[0].LineType, "Stock Item cart line type");
+            AssertMoney(2m, restored.Lines[0].Quantity, "Stock Item restored quantity");
+        }
+
+        private static void ServiceCartSavesAndRestores()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+
+            repository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateServiceCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            CashierCartSessionDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Saved Service cart was not restored.");
+
+            AssertEqual(CashierCartLineTypeCodes.Service, restored.Lines.Single().LineType, "Service cart line type");
+            AssertEqual(0, restored.Lines.Single().ItemBatchId, "Service has no batch");
+            AssertEqual(ItemTypeCodes.Service, restored.Lines.Single().ItemType, "Service Item Type");
+        }
+
+        private static void MixedCartSavesAndRestores()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+
+            repository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario),
+                    CreateServiceCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            CashierCartSessionDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Mixed cart was not restored.");
+
+            AssertEqual(2, restored.Lines.Count, "mixed cart line count");
+            AssertEqual(2, restored.ItemCount, "mixed cart item count");
+            AssertMoney(3m, restored.TotalQuantity, "mixed cart total quantity");
+        }
+
+        private static void CustomerAndWholesaleModeRestore()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            CustomerSearchDto customer = new()
+            {
+                CustomerCode = "WHO-001",
+                FullName = "Nimal Perera",
+                CompanyName = "Nimal Stores",
+                CustomerType = "Wholesale",
+                Phone = "0770000000",
+                IsDiscountEligible = true
+            };
+
+            CashierCartSaveRequest request = CreateCartRequest(
+                scenario,
+                token,
+                CreateStockCartSnapshot(scenario));
+            request = new CashierCartSaveRequest
+            {
+                CartToken = request.CartToken,
+                Owner = request.Owner,
+                Customer = customer,
+                IsWholesaleMode = true,
+                InvoiceDiscountAmount = request.InvoiceDiscountAmount,
+                GrossTotal = request.GrossTotal,
+                TotalDiscount = request.TotalDiscount,
+                NetTotal = request.NetTotal,
+                Lines = request.Lines
+            };
+
+            repository.SaveActiveAsync(request).GetAwaiter().GetResult();
+            CashierCartSessionDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Customer cart was not restored.");
+
+            AssertTrue(restored.IsWholesaleMode, "Wholesale mode should restore");
+            AssertEqual("WHO-001", restored.Customer?.CustomerCode ?? string.Empty, "customer code snapshot");
+            AssertEqual("Nimal Stores", restored.Customer?.DisplayName ?? string.Empty, "customer display snapshot");
+        }
+
+        private static void BatchAndSelectedPricingRestore()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            CashierCartLineSnapshotDto line = CreateStockCartSnapshot(scenario);
+            line.UnitPrice = 1062m;
+            line.WholesalePrice = 1062m;
+            line.BatchNo = "TEST-BATCH";
+
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, line))
+                .GetAwaiter().GetResult();
+
+            CashierCartLineSnapshotDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()!.Lines.Single();
+            AssertEqual(scenario.StockBatchId, restored.ItemBatchId, "restored batch ID");
+            AssertEqual("TEST-BATCH", restored.BatchNo, "restored batch number");
+            AssertMoney(1062m, restored.UnitPrice, "restored selected price");
+        }
+
+        private static void ManualLineDiscountRestores()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            CashierCartLineSnapshotDto line = CreateStockCartSnapshot(scenario);
+            line.IsManualDiscount = true;
+            line.DiscountMode = "Amount";
+            line.ManualDiscountAmount = 80m;
+            line.DiscountPercentage = 0m;
+            line.DiscountReasonCode = "CUSTOMER";
+            line.DiscountReasonName = "Customer Discount";
+
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, line))
+                .GetAwaiter().GetResult();
+
+            CashierCartLineSnapshotDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()!.Lines.Single();
+            AssertTrue(restored.IsManualDiscount, "manual discount flag");
+            AssertEqual("Amount", restored.DiscountMode, "manual discount mode");
+            AssertMoney(80m, restored.ManualDiscountAmount, "manual discount amount");
+            AssertEqual("CUSTOMER", restored.DiscountReasonCode, "discount reason snapshot");
+        }
+
+        private static void InvoiceDiscountRestores()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            CashierCartSaveRequest original = CreateCartRequest(
+                scenario,
+                token,
+                CreateStockCartSnapshot(scenario));
+            CashierCartSaveRequest request = new()
+            {
+                CartToken = original.CartToken,
+                Owner = original.Owner,
+                InvoiceDiscountAmount = 125.50m,
+                GrossTotal = original.GrossTotal,
+                TotalDiscount = 125.50m,
+                NetTotal = original.GrossTotal - 125.50m,
+                Lines = original.Lines
+            };
+
+            repository.SaveActiveAsync(request).GetAwaiter().GetResult();
+            CashierCartSessionDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()!;
+            AssertMoney(125.50m, restored.InvoiceDiscountAmount, "restored invoice discount");
+            AssertMoney(request.NetTotal, restored.NetTotal, "restored invoice net total");
+        }
+
+        private static void PriceOverrideAuditRestores()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            DateTime approvedAt = new(2026, 7, 12, 10, 30, 0, DateTimeKind.Utc);
+            CashierCartLineSnapshotDto line = CreateStockCartSnapshot(scenario);
+            line.IsPriceOverridden = true;
+            line.PriceOverrideAmount = 980m;
+            line.PriceOverrideApprovedBy = "Manager One";
+            line.PriceOverrideApprovedAt = approvedAt;
+
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, line))
+                .GetAwaiter().GetResult();
+
+            CashierCartLineSnapshotDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()!.Lines.Single();
+            AssertTrue(restored.IsPriceOverridden, "price override flag");
+            AssertMoney(980m, restored.PriceOverrideAmount, "price override amount");
+            AssertEqual("Manager One", restored.PriceOverrideApprovedBy, "price override approver");
+            AssertEqual<DateTime?>(approvedAt, restored.PriceOverrideApprovedAt, "price override approval time");
+        }
+
+        private static void GiftVoucherAndFreeIssueStateRestores()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            CashierCartLineSnapshotDto freeLine = CreateStockCartSnapshot(scenario);
+            freeLine.IsFreeItem = true;
+            freeLine.FreeIssueRuleId = 25;
+            freeLine.FreeIssueRuleName = "Buy One Get One";
+            freeLine.FreeApprovedBy = "Manager One";
+            freeLine.IsSupplierRecoverable = true;
+            freeLine.SupplierPromotionReference = "PROMO-2026";
+
+            CashierCartLineSnapshotDto voucherLine = new()
+            {
+                LineType = CashierCartLineTypeCodes.GiftVoucherSale,
+                Description = "Gift Voucher GV-001",
+                Quantity = 1m,
+                UnitPrice = 5000m,
+                TaxInclusiveAmount = 5000m,
+                IsGiftVoucherSale = true,
+                GiftVoucherId = 77,
+                GiftVoucherNo = "GV-001",
+                GiftVoucherBarcode = "GV-BAR-001"
+            };
+
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, freeLine, voucherLine))
+                .GetAwaiter().GetResult();
+
+            CashierCartSessionDto restored = repository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()!;
+            CashierCartLineSnapshotDto restoredFree = restored.Lines.Single(l => l.IsFreeItem);
+            CashierCartLineSnapshotDto restoredVoucher = restored.Lines.Single(l => l.IsGiftVoucherSale);
+            AssertEqual(25, restoredFree.FreeIssueRuleId, "Free Issue rule snapshot");
+            AssertEqual("PROMO-2026", restoredFree.SupplierPromotionReference, "supplier promotion snapshot");
+            AssertEqual(77, restoredVoucher.GiftVoucherId, "Gift Voucher ID snapshot");
+            AssertEqual("GV-BAR-001", restoredVoucher.GiftVoucherBarcode, "Gift Voucher barcode snapshot");
+        }
+
+        private static void CartPersistenceExcludesPaymentDrafts()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+
+            repository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            CashierCartLine storedLine = context.CashierCartLines.AsNoTracking().Single();
+            AssertFalse(storedLine.SnapshotJson.Contains("CardLastDigits", StringComparison.OrdinalIgnoreCase), "cart snapshot must not store card data");
+            AssertFalse(storedLine.SnapshotJson.Contains("Cheque", StringComparison.OrdinalIgnoreCase), "cart snapshot must not store cheque data");
+            AssertEqual(0, context.SalesPayments.Count(), "draft cart must not create SalesPayment rows");
+        }
+
+        private static void ActiveCartSurvivesContextRestart()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            Guid token = Guid.NewGuid();
+            new CashierCartRepository(factory)
+                .SaveActiveAsync(CreateCartRequest(scenario, token, CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            var reopenedRepository = new CashierCartRepository(factory);
+            CashierCartSessionDto restored = reopenedRepository.GetActiveAsync(CreateCartOwner(scenario))
+                .GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Active cart did not survive context restart.");
+
+            AssertEqual(token, restored.CartToken, "restarted active cart token");
+            AssertEqual(1, restored.Lines.Count, "restarted active cart lines");
+        }
+
+        private static void SuspendAndRecallLifecycleWorks()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            CashierCartOwnerDto owner = CreateCartOwner(scenario);
+
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+            CashierCartSessionDto held = repository.SuspendAsync(token, owner)
+                .GetAwaiter().GetResult();
+            AssertEqual(CashierCartStatusCodes.Held, held.Status, "held cart status");
+            AssertEqual(1, repository.ListHeldAsync(owner).GetAwaiter().GetResult().Count, "held cart list count");
+
+            CashierCartSessionDto recalled = repository.RecallAsync(held.Id, owner)
+                .GetAwaiter().GetResult();
+            AssertEqual(CashierCartStatusCodes.Active, recalled.Status, "recalled cart status");
+            AssertEqual(1, recalled.RecallCount, "recall count");
+        }
+
+        private static void CartOwnershipIsIsolated()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            CashierCartOwnerDto otherOwner = new()
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T02",
+                CashierName = "Other Cashier"
+            };
+
+            AssertEqual(0, repository.ListHeldAsync(otherOwner).GetAwaiter().GetResult().Count, "other owner held carts");
+            AssertThrows(
+                () => repository.SuspendAsync(token, otherOwner).GetAwaiter().GetResult(),
+                "different terminal, shift or cashier");
+        }
+
+        private static void HeldCartCanBeRecalledOnlyOnce()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            CashierCartOwnerDto owner = CreateCartOwner(scenario);
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+            CashierCartSessionDto held = repository.SuspendAsync(token, owner).GetAwaiter().GetResult();
+            repository.RecallAsync(held.Id, owner).GetAwaiter().GetResult();
+
+            AssertThrows(
+                () => repository.RecallAsync(held.Id, owner).GetAwaiter().GetResult(),
+                "current active cart");
+        }
+
+        private static void CancelledCartAuditsWithoutFinancialPosting()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new CashierCartRepository(factory);
+            Guid token = Guid.NewGuid();
+            repository.SaveActiveAsync(CreateCartRequest(scenario, token, CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            CashierCartSessionDto cancelled = repository.CancelAsync(
+                    token,
+                    CreateCartOwner(scenario),
+                    CashierCartCancellationReasons.CustomerChangedMind,
+                    "Customer cancelled before payment.")
+                .GetAwaiter().GetResult();
+
+            AssertEqual(CashierCartStatusCodes.Cancelled, cancelled.Status, "cancelled cart status");
+            AssertEqual(CashierCartCancellationReasons.CustomerChangedMind, cancelled.CancellationReasonCode, "cancellation reason code");
+            AssertContains(cancelled.CancellationReasonText, "before payment", "cancellation note");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(0, context.SalesHeaders.Count(), "cancelled cart invoices");
+            AssertEqual(0, context.SalesPayments.Count(), "cancelled cart payments");
+            AssertEqual(0, context.InventoryTransactions.Count(), "cancelled cart inventory movements");
+        }
+
+        private static void CompletedAndCancelledCartsCannotBeRecalled()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var cartRepository = new CashierCartRepository(factory);
+            var salesRepository = new SalesRepository(factory);
+            CashierCartOwnerDto owner = CreateCartOwner(scenario);
+
+            Guid cancelledToken = Guid.NewGuid();
+            CashierCartSessionDto cancelledSaved = cartRepository.SaveActiveAsync(
+                    CreateCartRequest(scenario, cancelledToken, CreateStockCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+            cartRepository.SuspendAsync(cancelledToken, owner).GetAwaiter().GetResult();
+            cartRepository.CancelHeldAsync(
+                    cancelledSaved.Id,
+                    owner,
+                    CashierCartCancellationReasons.WrongItems,
+                    "Wrong item selected.")
+                .GetAwaiter().GetResult();
+            AssertThrows(
+                () => cartRepository.RecallAsync(cancelledSaved.Id, owner).GetAwaiter().GetResult(),
+                "no longer held");
+
+            Guid completedToken = Guid.NewGuid();
+            CashierCartSessionDto completedSaved = cartRepository.SaveActiveAsync(
+                    CreateCartRequest(scenario, completedToken, CreateStockCartSnapshot(scenario, 1m)))
+                .GetAwaiter().GetResult();
+            CompleteStockSale(factory, salesRepository, scenario, completedToken, 1m);
+            AssertThrows(
+                () => cartRepository.RecallAsync(completedSaved.Id, owner).GetAwaiter().GetResult(),
+                "no longer held");
+        }
+
+        private static void CheckoutTokenIsIdempotent()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var cartRepository = new CashierCartRepository(factory);
+            var salesRepository = new SalesRepository(factory);
+            Guid token = Guid.NewGuid();
+            cartRepository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario, 1m)))
+                .GetAwaiter().GetResult();
+
+            SalesHeader first = CompleteStockSale(factory, salesRepository, scenario, token, 1m);
+            SalesHeader second = CompleteStockSale(factory, salesRepository, scenario, token, 1m);
+
+            AssertEqual(first.Id, second.Id, "idempotent SalesHeader ID");
+            AssertEqual(first.InvoiceNo, second.InvoiceNo, "idempotent invoice number");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.SalesHeaders.Count(), "idempotent sale count");
+        }
+
+        private static void DuplicateCheckoutCreatesOneStockAndPaymentEffect()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var cartRepository = new CashierCartRepository(factory);
+            var salesRepository = new SalesRepository(factory);
+            Guid token = Guid.NewGuid();
+            cartRepository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario, 1m)))
+                .GetAwaiter().GetResult();
+
+            CompleteStockSale(factory, salesRepository, scenario, token, 1m);
+            CompleteStockSale(factory, salesRepository, scenario, token, 1m);
+
+            using AppDbContext context = factory.CreateDbContext();
+            ItemBatch batch = context.ItemBatches.Single(b => b.Id == scenario.StockBatchId);
+            AssertMoney(4m, batch.CurrentStock, "single stock deduction after duplicate checkout");
+            AssertEqual(1, context.SalesPayments.Count(), "single payment after duplicate checkout");
+            AssertEqual(1, context.InventoryTransactions.Count(t => t.TransactionType == "SALE"), "single SALE inventory transaction");
+        }
+
+        private static void FailedCheckoutLeavesCartRecoverable()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var cartRepository = new CashierCartRepository(factory);
+            var salesRepository = new SalesRepository(factory);
+            Guid token = Guid.NewGuid();
+            cartRepository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario, 2m)))
+                .GetAwaiter().GetResult();
+
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                ItemBatch batch = context.ItemBatches.Single(b => b.Id == scenario.StockBatchId);
+                batch.CurrentStock = 1m;
+                context.SaveChanges();
+            }
+
+            AssertThrows(
+                () => CompleteStockSale(factory, salesRepository, scenario, token, 2m),
+                "stock");
+
+            CashierCartSessionDto restored = cartRepository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()!;
+            AssertEqual(CashierCartStatusCodes.Active, restored.Status, "failed checkout cart remains active");
+            AssertEqual(2m, restored.Lines.Single().Quantity, "failed checkout cart quantity remains recoverable");
+            using AppDbContext verify = factory.CreateDbContext();
+            AssertEqual(0, verify.SalesHeaders.Count(), "failed checkout creates no sale");
+        }
+
+        private static void SuccessfulCheckoutCompletesCart()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var cartRepository = new CashierCartRepository(factory);
+            var salesRepository = new SalesRepository(factory);
+            Guid token = Guid.NewGuid();
+            cartRepository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario, 1m)))
+                .GetAwaiter().GetResult();
+
+            SalesHeader sale = CompleteStockSale(factory, salesRepository, scenario, token, 1m);
+            CashierCartSessionDto completed = cartRepository.GetByTokenAsync(token)
+                .GetAwaiter().GetResult()!;
+            AssertEqual(CashierCartStatusCodes.Completed, completed.Status, "completed cart status");
+            AssertEqual(sale.Id, completed.SalesHeaderId.GetValueOrDefault(), "completed cart sale link");
+            AssertTrue(completed.CompletedAtUtc.HasValue, "completed cart timestamp");
+        }
+
+        private static void ManagerApprovalPreservesCashierSession()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            var users = new UserRepository(factory);
+            string cashierHash = SecurityHelper.HashData("cashier-pass", out string cashierSalt);
+            string managerHash = SecurityHelper.HashData("manager-pass", out string managerSalt);
+            users.AddAsync(new User
+            {
+                FirstName = "Test",
+                LastName = "Cashier",
+                Username = "cashier1",
+                PasswordHash = cashierHash,
+                PasswordSalt = cashierSalt,
+                Role = UserRole.Cashier,
+                IsActive = true
+            }).GetAwaiter().GetResult();
+            users.AddAsync(new User
+            {
+                FirstName = "Test",
+                LastName = "Manager",
+                Username = "manager1",
+                PasswordHash = managerHash,
+                PasswordSalt = managerSalt,
+                Role = UserRole.Manager,
+                IsActive = true
+            }).GetAwaiter().GetResult();
+
+            var auth = new AuthService(users);
+            var login = auth.LoginAsync("cashier1", "cashier-pass", "TEST")
+                .GetAwaiter().GetResult();
+            AssertTrue(login.Success, "cashier login");
+
+            ManagerAuthorizationResult approval = auth.ValidateManagerCredentialsAsync(
+                    "manager1",
+                    "manager-pass",
+                    "TEST-APPROVAL")
+                .GetAwaiter().GetResult();
+
+            AssertTrue(approval.Success, "manager approval result");
+            AssertEqual("manager1", approval.Username, "approving manager username");
+            AssertEqual("cashier1", auth.CurrentUser?.Username ?? string.Empty, "active cashier remains unchanged");
+        }
+
+        private static void CompletedPaymentAuditDetailsPersist()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var cartRepository = new CashierCartRepository(factory);
+            var salesRepository = new SalesRepository(factory);
+            Guid token = Guid.NewGuid();
+            cartRepository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateStockCartSnapshot(scenario, 1m)))
+                .GetAwaiter().GetResult();
+
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m);
+            List<SalesLine> lines = new()
+            {
+                CreateRepositoryTestLine(
+                    scenario.StockVariantId,
+                    scenario.StockBatchId,
+                    scenario.StockSku,
+                    "Test Stock Item",
+                    1m,
+                    1180m)
+            };
+            List<SalesPayment> payments = new()
+            {
+                new SalesPayment
+                {
+                    PaymentType = "Card",
+                    Amount = 1180m,
+                    TenderedAmount = 1180m,
+                    ChangeAmount = 0m,
+                    CardLastDigits = "123456",
+                    BankOrCardType = "Visa",
+                    ReferenceNo = "AUTH-778899",
+                    EnteredBy = "Test Cashier",
+                    TerminalNo = "T01"
+                }
+            };
+
+            salesRepository.ProcessCheckoutAsync(header, lines, payments, token)
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            SalesPayment saved = context.SalesPayments.AsNoTracking().Single();
+            AssertEqual("Card", saved.PaymentType, "saved card payment type");
+            AssertMoney(1180m, saved.TenderedAmount, "saved card tendered amount");
+            AssertMoney(0m, saved.ChangeAmount, "saved card change");
+            AssertEqual("123456", saved.CardLastDigits, "saved card last six digits");
+            AssertEqual("AUTH-778899", saved.ReferenceNo, "saved card reference");
+            AssertEqual("Visa", saved.BankOrCardType, "saved card provider");
+            AssertEqual("Test Cashier", saved.EnteredBy, "saved payment cashier");
+            AssertEqual("T01", saved.TerminalNo, "saved payment terminal");
+
+            var explorer = new MasterSalesAnalyticsRepository(factory);
+            SaleReceiptDetailsDto detail = explorer.GetSaleReceiptDetailsAsync(saved.SalesHeaderId)
+                .GetAwaiter().GetResult()
+                ?? throw new InvalidOperationException("Sales Explorer payment detail was not loaded.");
+            SaleReceiptPaymentDto visiblePayment = detail.Payments.Single();
+            AssertEqual("123456", visiblePayment.CardLastDigits, "Sales Explorer card digits");
+            AssertContains(visiblePayment.Details, "AUTH-778899", "Sales Explorer payment reference");
+        }
+
+        private static CashierCartOwnerDto CreateCartOwner(RepositoryTestScenario scenario)
+        {
+            return new CashierCartOwnerDto
+            {
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier"
+            };
+        }
+
+        private static CashierCartSaveRequest CreateCartRequest(
+            RepositoryTestScenario scenario,
+            Guid token,
+            params CashierCartLineSnapshotDto[] lines)
+        {
+            decimal gross = Math.Round(lines.Sum(l => l.UnitPrice * l.Quantity), 2);
+            decimal net = Math.Round(lines.Sum(l => l.TaxInclusiveAmount > 0m
+                ? l.TaxInclusiveAmount
+                : l.UnitPrice * l.Quantity), 2);
+
+            return new CashierCartSaveRequest
+            {
+                CartToken = token,
+                Owner = CreateCartOwner(scenario),
+                GrossTotal = gross,
+                TotalDiscount = Math.Max(0m, gross - net),
+                NetTotal = net,
+                Lines = lines
+            };
+        }
+
+        private static CashierCartLineSnapshotDto CreateStockCartSnapshot(
+            RepositoryTestScenario scenario,
+            decimal quantity = 2m)
+        {
+            return new CashierCartLineSnapshotDto
+            {
+                LineType = CashierCartLineTypeCodes.StockItem,
+                ItemVariantId = scenario.StockVariantId,
+                ItemBatchId = scenario.StockBatchId,
+                ItemCode = "TEST-STOCK",
+                SkuCode = scenario.StockSku,
+                Barcode = "TEST-STOCK-BARCODE",
+                Description = "Test Stock Item",
+                VariantDescription = "Standard",
+                Uom = "PCS",
+                ItemType = ItemTypeCodes.StockItem,
+                TaxProfile = SalesStandardProfile(),
+                BatchNo = "TEST-BATCH",
+                AvailableBatchStock = 5m,
+                CostPrice = 600m,
+                RetailPrice = 1180m,
+                WholesalePrice = 1062m,
+                MinimumPrice = 600m,
+                UnitPrice = 1180m,
+                Quantity = quantity,
+                OriginalUnitPrice = 1180m,
+                TaxableAmount = Math.Round((1180m * quantity) / 1.18m, 2),
+                VatAmount = Math.Round((1180m * quantity) - ((1180m * quantity) / 1.18m), 2),
+                TaxInclusiveAmount = Math.Round(1180m * quantity, 2)
+            };
+        }
+
+        private static CashierCartLineSnapshotDto CreateServiceCartSnapshot(
+            RepositoryTestScenario scenario)
+        {
+            return new CashierCartLineSnapshotDto
+            {
+                LineType = CashierCartLineTypeCodes.Service,
+                ItemVariantId = scenario.ServiceVariantId,
+                ItemBatchId = 0,
+                ItemCode = "TEST-SERVICE",
+                SkuCode = scenario.ServiceSku,
+                Barcode = scenario.ServiceBarcode,
+                Description = "Installation Service",
+                VariantDescription = "Standard",
+                Uom = "JOB",
+                ItemType = ItemTypeCodes.Service,
+                TaxProfile = SalesStandardProfile(),
+                CostPrice = 400m,
+                RetailPrice = 1180m,
+                WholesalePrice = 1062m,
+                MinimumPrice = 400m,
+                UnitPrice = 1180m,
+                Quantity = 1m,
+                OriginalUnitPrice = 1180m,
+                TaxableAmount = 1000m,
+                VatAmount = 180m,
+                TaxInclusiveAmount = 1180m
+            };
+        }
+
+        private static SalesHeader CompleteStockSale(
+            RepositoryTestDbContextFactory factory,
+            SalesRepository repository,
+            RepositoryTestScenario scenario,
+            Guid token,
+            decimal quantity)
+        {
+            decimal payable = Math.Round(quantity * 1180m, 2);
+            SalesHeader header = CreateRepositoryTestHeader(
+                scenario.ShiftSessionId,
+                payable);
+            List<SalesLine> lines = new()
+            {
+                CreateRepositoryTestLine(
+                    scenario.StockVariantId,
+                    scenario.StockBatchId,
+                    scenario.StockSku,
+                    "Test Stock Item",
+                    quantity,
+                    1180m)
+            };
+            List<SalesPayment> payments = new()
+            {
+                CreateCashPayment(payable)
+            };
+
+            return repository.ProcessCheckoutAsync(header, lines, payments, token)
+                .GetAwaiter().GetResult();
+        }
+
+        private static void AssertEqual<T>(
+            T expected,
+            T actual,
+            string label)
+        {
+            if (!EqualityComparer<T>.Default.Equals(expected, actual))
+            {
+                throw new InvalidOperationException(
+                    $"{label}: expected {expected}, actual {actual}.");
+            }
+        }
+
+        private static void AssertTrue(bool condition, string label)
+        {
+            if (!condition)
+                throw new InvalidOperationException($"{label}: expected true.");
+        }
+
+        private static void AssertFalse(bool condition, string label)
+        {
+            if (condition)
+                throw new InvalidOperationException($"{label}: expected false.");
         }
 
         private static void AssertMoney(

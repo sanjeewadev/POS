@@ -114,12 +114,14 @@ namespace POS.Cashier.UI.ViewModels
             ItemMasterRepository itemRepository,
             SalesRepository salesRepository,
             SalesDocumentRepository salesDocumentRepository,
+            CashierCartRepository cashierCartRepository,
             TillRepository tillRepository,
             IReceiptPrintService printService)
         {
             _itemRepository = itemRepository;
             _salesRepository = salesRepository;
             _salesDocumentRepository = salesDocumentRepository;
+            _cashierCartRepository = cashierCartRepository;
             _tillRepository = tillRepository;
             _printService = printService;
 
@@ -138,6 +140,7 @@ namespace POS.Cashier.UI.ViewModels
                 }
 
                 RecalculateTotals();
+                ScheduleCartAutosave();
             };
 
             PaymentLines.CollectionChanged += (_, e) =>
@@ -190,6 +193,8 @@ namespace POS.Cashier.UI.ViewModels
 
                 if (IsPaymentModeActive)
                     RecalculatePaymentTotals();
+
+                ScheduleCartAutosave();
             }
         }
 
@@ -1067,6 +1072,7 @@ namespace POS.Cashier.UI.ViewModels
                 PaymentType = "Card",
                 CardType = safeCardType,
                 BankOrCardType = safeCardType,
+                CardLastDigits = safeLastSix,
                 ReferenceNo = safeReference,
                 Amount = amount,
                 TenderedAmount = amount,
@@ -2210,6 +2216,12 @@ namespace POS.Cashier.UI.ViewModels
 
         public async Task<bool> FinalizeCheckoutAsync()
         {
+            if (_isCheckoutInProgress)
+            {
+                _ = ShowNotificationAsync("Checkout is already processing.", "#F59E0B");
+                return false;
+            }
+
             if (!Cart.Any())
                 return false;
 
@@ -2289,8 +2301,12 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
 
+            _isCheckoutInProgress = true;
+
             try
             {
+                await FlushCartPersistenceAsync();
+
                 string paymentMethod = PaymentLines.Count == 1 ? PaymentLines.First().DisplayPaymentType : "Split";
                 CustomerSearchDto? activeCustomer = ActiveB2BCustomer;
                 string customerName = activeCustomer == null ? "Walk-In" : activeCustomer.DisplayName;
@@ -2328,7 +2344,8 @@ namespace POS.Cashier.UI.ViewModels
                     NetTotal = NetValue,
                     PaymentMethod = paymentMethod,
                     AmountTendered = CashTenderedTotal,
-                    BalanceReturned = BalanceReturned
+                    BalanceReturned = BalanceReturned,
+                    CheckoutToken = _cartToken
                 };
 
                 var lines = Cart.Select(c => new SalesLine
@@ -2398,9 +2415,14 @@ namespace POS.Cashier.UI.ViewModels
                 {
                     PaymentType = p.PaymentType,
                     Amount = p.Amount,
+                    TenderedAmount = p.TenderedAmount > 0m ? p.TenderedAmount : p.Amount,
+                    ChangeAmount = p.ChangeAmount,
+                    CardLastDigits = p.IsCard ? p.CardLastDigits : string.Empty,
                     ReferenceNo = p.ReferenceNo,
                     BankOrCardType = string.IsNullOrWhiteSpace(p.BankOrCardType) ? p.CardType : p.BankOrCardType,
                     PaymentDate = p.PaymentDate ?? p.CreatedAt,
+                    EnteredBy = CashierName,
+                    TerminalNo = TerminalNo,
                     GiftVoucherId = p.IsGiftVoucher ? p.GiftVoucherId : null,
                     GiftVoucherNo = p.IsGiftVoucher ? p.GiftVoucherNo : string.Empty,
                     GiftVoucherBarcode = p.IsGiftVoucher ? p.GiftVoucherBarcode : string.Empty,
@@ -2413,7 +2435,8 @@ namespace POS.Cashier.UI.ViewModels
                         .ProcessCheckoutAsync(
                             header,
                             lines,
-                            payments);
+                            payments,
+                            _cartToken);
 
                 InvoiceNo =
                     savedReceipt.InvoiceNo;
@@ -2446,7 +2469,7 @@ namespace POS.Cashier.UI.ViewModels
                         "#F59E0B";
                 }
 
-                ClearCart();
+                CompleteCartUiReset();
                 SetManagerMode(false);
 
                 _ = ShowNotificationAsync(
@@ -2459,6 +2482,10 @@ namespace POS.Cashier.UI.ViewModels
             {
                 _ = ShowNotificationAsync($"Transaction failed: {ex.Message}", "#EF4444");
                 return false;
+            }
+            finally
+            {
+                _isCheckoutInProgress = false;
             }
         }
 

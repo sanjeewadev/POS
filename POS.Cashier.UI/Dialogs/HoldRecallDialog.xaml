@@ -41,9 +41,9 @@
             <TextBlock Text="SUSPENDED TRANSACTIONS" Foreground="{StaticResource TextLightBrush}" FontSize="20" FontWeight="Heavy" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
 
-        <DataGrid x:Name="dgSuspended" Grid.Row="1" ItemsSource="{Binding SuspendedCarts}" SelectedItem="{Binding SelectedCart}" 
+        <DataGrid x:Name="dgSuspended" Grid.Row="1" ItemsSource="{Binding SuspendedCarts}" SelectedItem="{Binding SelectedCart, Mode=TwoWay}"
                   AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                  HeadersVisibility="Column" Background="White" RowHeight="45" FontSize="16" 
+                  HeadersVisibility="Column" Background="White" RowHeight="45" FontSize="16"
                   BorderThickness="0" SelectionMode="Single" AlternatingRowBackground="#F8FAFC" Margin="15">
             <DataGrid.Resources>
                 <Style TargetType="DataGridColumnHeader">
@@ -78,7 +78,7 @@
                 <ColumnDefinition Width="1.5*"/>
             </Grid.ColumnDefinitions>
             <Button Click="CancelBtn_Click" Grid.Column="0" Background="{StaticResource NumpadBtnBrush}" Content="CLOSE" FontSize="20" Margin="10,10,5,10"/>
-            <Button Grid.Column="1" Background="{StaticResource CancelBtnBrush}" Content="DELETE CART" FontSize="20" Margin="5,10,5,10"/>
+            <Button Click="DeleteBtn_Click" Grid.Column="1" Background="{StaticResource CancelBtnBrush}" Content="CANCEL CART" FontSize="20" Margin="5,10,5,10"/>
             <Button Click="ConfirmBtn_Click" Grid.Column="2" Background="{StaticResource ExpressBtnBrush}" Content="RECALL TO POS" FontSize="20" Margin="5,10,10,10"/>
         </Grid>
     </Grid>

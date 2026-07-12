@@ -25,8 +25,12 @@ namespace POS.Cashier.UI.Models
         [ObservableProperty]
         private string _bankOrCardType = string.Empty;
 
-        // Card: last 6 digits or approval/reference
-        // Cheque: cheque number
+        // Permanent masked card digits captured for the completed payment audit.
+        [ObservableProperty]
+        private string _cardLastDigits = string.Empty;
+
+        // Card: payment-terminal approval/reference number.
+        // Cheque: cheque number.
         [ObservableProperty]
         private string _referenceNo = string.Empty;
 

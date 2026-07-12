@@ -50,6 +50,7 @@ namespace POS.Cashier.UI
             services.AddTransient<ItemMasterRepository>();
             services.AddTransient<SalesRepository>();
             services.AddTransient<SalesDocumentRepository>();
+            services.AddTransient<CashierCartRepository>();
             services.AddTransient<CustomerReturnRepository>();
             services.AddTransient<TillRepository>();
             services.AddTransient<CustomerRepository>();
@@ -147,11 +148,17 @@ namespace POS.Cashier.UI
             }
         }
 
-        public async Task ReturnToLoginAsync(
+        public async Task<bool> ReturnToLoginAsync(
             Window currentWindow)
         {
             if (Services == null)
-                return;
+                return false;
+
+            if (currentWindow.DataContext is SalesViewModel salesViewModel &&
+                !await salesViewModel.FlushCartBeforeLogoffAsync())
+            {
+                return false;
+            }
 
             Services
                 .GetRequiredService<CashierLockService>()
@@ -162,6 +169,7 @@ namespace POS.Cashier.UI
                 .Logout();
 
             await ShowLoginWindowAsync(currentWindow);
+            return true;
         }
 
         private async Task InitializeDatabaseAsync()

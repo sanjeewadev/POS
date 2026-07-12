@@ -166,7 +166,15 @@ namespace POS.Core.Repositories
                 {
                     PaymentType = p.PaymentType,
                     Amount = p.Amount,
-                    ReferenceNo = p.ReferenceNo
+                    TenderedAmount = p.TenderedAmount,
+                    ChangeAmount = p.ChangeAmount,
+                    ReferenceNo = p.ReferenceNo,
+                    BankOrCardType = p.BankOrCardType,
+                    CardLastDigits = p.CardLastDigits,
+                    PaymentDate = p.PaymentDate,
+                    EnteredBy = p.EnteredBy,
+                    TerminalNo = p.TerminalNo,
+                    GiftVoucherNo = p.GiftVoucherNo
                 }).ToList()
             };
 

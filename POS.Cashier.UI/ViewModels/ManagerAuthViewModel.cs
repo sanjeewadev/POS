@@ -22,6 +22,9 @@ namespace POS.Cashier.UI.ViewModels
         [NotifyCanExecuteChangedFor(nameof(AuthenticateCommand))]
         private bool _isProcessing;
 
+        [ObservableProperty]
+        private string _authorizedUsername = string.Empty;
+
         // The View (Window) will listen to this event so it knows when to close
         public event Action<bool>? AuthenticationCompleted;
 
@@ -40,27 +43,20 @@ namespace POS.Cashier.UI.ViewModels
 
             try
             {
-                // 1. Send the credentials to your central Auth Service
-                var (success, message) = await _authService.LoginAsync(Username, passwordBox.Password);
+                ManagerAuthorizationResult result =
+                    await _authService.ValidateManagerCredentialsAsync(
+                        Username,
+                        passwordBox.Password);
 
-                if (success)
+                if (result.Success)
                 {
-                    // 2. THE VAULT DOOR: Check if the user is actually a Manager or Admin
-                    if (_authService.IsManager)
-                    {
-                        // Success! Send the green light to close the popup
-                        AuthenticationCompleted?.Invoke(true);
-                    }
-                    else
-                    {
-                        // Valid password, but insufficient rank!
-                        ErrorMessage = "ACCESS DENIED: Manager privileges required.";
-                    }
+                    AuthorizedUsername = result.Username;
+                    AuthenticationCompleted?.Invoke(true);
                 }
                 else
                 {
-                    // Wrong username or password
-                    ErrorMessage = message;
+                    AuthorizedUsername = string.Empty;
+                    ErrorMessage = result.Message;
                 }
             }
             catch (Exception)
