@@ -3,18 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
+using POS.Core.Services.Tax;
 
 namespace POS.Core.Repositories
 {
     public class SalesRepository
     {
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly SalesTaxService _salesTaxService = new();
 
         public SalesRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
         public async Task<SalesHeader> ProcessCheckoutAsync(
@@ -35,40 +38,63 @@ namespace POS.Core.Repositories
             NormalizeSalesLines(lines);
             NormalizePayments(payments);
 
-            bool sellingGiftVoucher = lines.Any(l => l.IsGiftVoucherSale);
+            bool sellingGiftVoucher = lines.Any(line => line.IsGiftVoucherSale);
             bool payingByGiftVoucher = payments.Any(IsGiftVoucherPayment);
 
             if (sellingGiftVoucher && payingByGiftVoucher)
                 throw new InvalidOperationException("Gift voucher cannot be used to buy another gift voucher.");
 
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
                 DateTime now = DateTime.Now;
 
-                await ValidateShiftAsync(context, header.ShiftSessionId);
-                await ApplyCustomerSnapshotAsync(context, header);
-
-                RecalculateHeaderTotals(header, lines);
-                ValidatePaymentTotals(header, payments);
-                ValidateCashTendering(header, payments);
-
-                var sequence = await GetOrCreateInvoiceSequenceAsync(context);
-
-                header.InvoiceNo = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
-                sequence.NextSequenceNumber++;
-                sequence.UpdatedAt = now;
-
                 header.TransactionDate = now;
                 header.Status = "Completed";
                 header.IsVoided = false;
 
+                await ValidateShiftAsync(context, header.ShiftSessionId);
+                await ApplyCustomerSnapshotAsync(context, header);
+                await ApplyStoreTaxSnapshotAsync(context, header);
+
+                RecalculateHeaderTotals(header, lines);
+
+                int[] variantIds = lines
+                    .Where(line => !line.IsGiftVoucherSale)
+                    .Select(line => line.ItemVariantId ?? 0)
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToArray();
+
+                Dictionary<int, SalesTaxProfile> taxProfiles =
+                    await _salesTaxService.ResolveProfilesAsync(
+                        context,
+                        variantIds,
+                        header.TransactionDate);
+
+                ApplySalesTaxSnapshots(
+                    header,
+                    lines,
+                    taxProfiles);
+
+                ValidatePaymentTotals(header, payments);
+                ValidateCashTendering(header, payments);
+
+                DocumentSequence sequence =
+                    await GetOrCreateInvoiceSequenceAsync(context);
+
+                header.InvoiceNo =
+                    $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
+
+                sequence.NextSequenceNumber++;
+                sequence.UpdatedAt = now;
+
                 await context.SalesHeaders.AddAsync(header);
                 await context.SaveChangesAsync();
 
-                foreach (var line in lines)
+                foreach (SalesLine line in lines)
                 {
                     line.SalesHeaderId = header.Id;
                     line.CreatedAt = now;
@@ -80,31 +106,114 @@ namespace POS.Core.Repositories
                         continue;
                     }
 
-                    if (!line.ItemBatchId.HasValue || line.ItemBatchId.Value <= 0)
-                        throw new InvalidOperationException("Product sale line has no selected batch.");
+                    if (!line.ItemVariantId.HasValue ||
+                        line.ItemVariantId.Value <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            "Sale line has no selected item variant.");
+                    }
 
-                    var batch = await context.ItemBatches
-                        .Include(b => b.ItemVariant)
-                            .ThenInclude(v => v.ItemParent)
-                        .FirstOrDefaultAsync(b => b.Id == line.ItemBatchId.Value);
+                    if (!taxProfiles.TryGetValue(
+                            line.ItemVariantId.Value,
+                            out SalesTaxProfile? taxProfile))
+                    {
+                        throw new InvalidOperationException(
+                            $"Tax profile was not resolved for item variant {line.ItemVariantId.Value}.");
+                    }
+
+                    if (string.Equals(
+                            taxProfile.ItemType,
+                            ItemTypeCodes.Service,
+                            StringComparison.Ordinal))
+                    {
+                        if (line.ItemBatchId.HasValue &&
+                            line.ItemBatchId.Value > 0)
+                        {
+                            throw new InvalidOperationException(
+                                "Service sale line cannot contain a stock batch.");
+                        }
+
+                        ItemVariant? serviceVariant =
+                            await context.ItemVariants
+                                .Include(variant => variant.ItemParent)
+                                .FirstOrDefaultAsync(
+                                    variant =>
+                                        variant.Id ==
+                                        line.ItemVariantId.Value);
+
+                        if (serviceVariant == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"Service item variant was not found. Variant ID: {line.ItemVariantId.Value}");
+                        }
+
+                        ValidateServiceForSale(
+                            serviceVariant,
+                            line);
+
+                        PrepareServiceSaleLineForPersistence(
+                            serviceVariant,
+                            line);
+
+                        await context.SalesLines.AddAsync(line);
+                        continue;
+                    }
+
+                    if (!string.Equals(
+                            taxProfile.ItemType,
+                            ItemTypeCodes.StockItem,
+                            StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Unsupported sale item type '{taxProfile.ItemType}'.");
+                    }
+
+                    if (!line.ItemBatchId.HasValue ||
+                        line.ItemBatchId.Value <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            "Stock Item sale line has no selected batch.");
+                    }
+
+                    ItemBatch? batch =
+                        await context.ItemBatches
+                            .Include(itemBatch =>
+                                itemBatch.ItemVariant)
+                                .ThenInclude(variant =>
+                                    variant.ItemParent)
+                            .FirstOrDefaultAsync(
+                                itemBatch =>
+                                    itemBatch.Id ==
+                                    line.ItemBatchId.Value);
 
                     if (batch == null)
-                        throw new InvalidOperationException($"Item batch was not found. Batch ID: {line.ItemBatchId}");
+                    {
+                        throw new InvalidOperationException(
+                            $"Item batch was not found. Batch ID: {line.ItemBatchId}");
+                    }
 
                     ValidateBatchForSale(batch, line);
                     PrepareProductSaleLineForPersistence(batch, line);
 
-                    batch.CurrentStock = Math.Round(batch.CurrentStock - line.Quantity, 3);
+                    batch.CurrentStock = Math.Round(
+                        batch.CurrentStock -
+                        line.Quantity,
+                        3);
 
                     await context.SalesLines.AddAsync(line);
                 }
 
                 await context.SaveChangesAsync();
 
-                await CreateDiscountAuditRowsAsync(context, header, lines, now);
+                await CreateDiscountAuditRowsAsync(
+                    context,
+                    header,
+                    lines,
+                    now);
+
                 await context.SaveChangesAsync();
 
-                foreach (var payment in payments)
+                foreach (SalesPayment payment in payments)
                 {
                     payment.SalesHeaderId = header.Id;
                     payment.CreatedAt = now;
@@ -117,40 +226,75 @@ namespace POS.Core.Repositories
 
                 await context.SaveChangesAsync();
 
-                await ProcessSoldGiftVoucherLinesAsync(context, header, lines);
-                await ProcessGiftVoucherRedemptionsAsync(context, header, payments);
-                await ProcessFreeItemSupplierClaimsAsync(context, header, lines);
+                await ProcessSoldGiftVoucherLinesAsync(
+                    context,
+                    header,
+                    lines);
+
+                await ProcessGiftVoucherRedemptionsAsync(
+                    context,
+                    header,
+                    payments);
+
+                await ProcessFreeItemSupplierClaimsAsync(
+                    context,
+                    header,
+                    lines);
 
                 await context.SaveChangesAsync();
 
-                foreach (var line in lines.Where(l => !l.IsGiftVoucherSale))
+                foreach (SalesLine line in lines.Where(
+                             line =>
+                                 !line.IsGiftVoucherSale &&
+                                 string.Equals(
+                                     line.ItemTypeSnapshot,
+                                     ItemTypeCodes.StockItem,
+                                     StringComparison.Ordinal)))
                 {
-                    if (!line.ItemVariantId.HasValue || !line.ItemBatchId.HasValue)
-                        throw new InvalidOperationException("Product sale line is missing item stock reference.");
-
-                    var inventoryTransaction = new InventoryTransaction
+                    if (!line.ItemVariantId.HasValue ||
+                        !line.ItemBatchId.HasValue)
                     {
-                        ItemVariantId = line.ItemVariantId.Value,
-                        ItemBatchId = line.ItemBatchId.Value,
-                        TransactionDate = header.TransactionDate,
-                        TransactionType = "SALE",
-                        ReferenceDocument = header.InvoiceNo,
-                        ReferenceLineId = line.Id,
-                        Quantity = -line.Quantity,
-                        UnitCost = line.CostPrice,
-                        CreatedBy = header.CashierName,
-                        Remarks = line.IsFreeItem
-                            ? $"Free issue sale invoice {header.InvoiceNo} / Batch {line.BatchNo} / {line.FreeIssueType}"
-                            : $"Sale invoice {header.InvoiceNo} / Batch {line.BatchNo}"
-                    };
+                        throw new InvalidOperationException(
+                            "Stock Item sale line is missing its stock reference.");
+                    }
 
-                    await context.InventoryTransactions.AddAsync(inventoryTransaction);
+                    var inventoryTransaction =
+                        new InventoryTransaction
+                        {
+                            ItemVariantId =
+                                line.ItemVariantId.Value,
+                            ItemBatchId =
+                                line.ItemBatchId.Value,
+                            TransactionDate =
+                                header.TransactionDate,
+                            TransactionType =
+                                "SALE",
+                            ReferenceDocument =
+                                header.InvoiceNo,
+                            ReferenceLineId =
+                                line.Id,
+                            Quantity =
+                                -line.Quantity,
+                            UnitCost =
+                                line.CostPrice,
+                            CreatedBy =
+                                header.CashierName,
+                            Remarks =
+                                line.IsFreeItem
+                                    ? $"Free issue sale invoice {header.InvoiceNo} / Batch {line.BatchNo} / {line.FreeIssueType}"
+                                    : $"Sale invoice {header.InvoiceNo} / Batch {line.BatchNo}"
+                        };
+
+                    await context.InventoryTransactions.AddAsync(
+                        inventoryTransaction);
                 }
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return await LoadSavedReceiptAsync(context, header.Id);
+                return await LoadSavedReceiptAsync(
+                    context,
+                    header.Id);
             }
             catch
             {
@@ -182,6 +326,9 @@ namespace POS.Core.Repositories
                 header.CustomerIsCreditEnabled = false;
                 header.CustomerCreditStatus = "None";
                 header.IsWholesaleSale = false;
+                header.CustomerTinSnapshot = string.Empty;
+                header.CustomerVatNoSnapshot = string.Empty;
+                header.CustomerAddressSnapshot = string.Empty;
 
                 return;
             }
@@ -225,6 +372,323 @@ namespace POS.Core.Repositories
                 : NormalizeText(customer.CreditStatus);
 
             header.IsWholesaleSale = isWholesale;
+            header.CustomerTinSnapshot = string.Empty;
+            header.CustomerVatNoSnapshot =
+                NormalizeText(customer.VatRegistrationNumber);
+            header.CustomerAddressSnapshot =
+                NormalizeText(customer.Address);
+        }
+
+        private static async Task ApplyStoreTaxSnapshotAsync(
+            AppDbContext context,
+            SalesHeader header)
+        {
+            StoreSettings? storeSettings =
+                await context.StoreSettings
+                    .AsNoTracking()
+                    .Where(settings => settings.IsActive)
+                    .OrderBy(settings => settings.Id)
+                    .FirstOrDefaultAsync();
+
+            header.DocumentType = "Receipt";
+            header.TaxInvoiceNo = null;
+
+            if (storeSettings == null)
+            {
+                header.IsVatRegisteredSale = false;
+                header.SupplierTinSnapshot = string.Empty;
+                header.SupplierVatNoSnapshot = string.Empty;
+                return;
+            }
+
+            header.IsVatRegisteredSale =
+                storeSettings.IsVatRegistered;
+
+            header.SupplierTinSnapshot =
+                NormalizeText(
+                    storeSettings.TaxpayerIdentificationNumber);
+
+            header.SupplierVatNoSnapshot =
+                NormalizeText(
+                    storeSettings.VatRegistrationNumber);
+        }
+
+        private void ApplySalesTaxSnapshots(
+            SalesHeader header,
+            IReadOnlyList<SalesLine> lines,
+            IReadOnlyDictionary<int, SalesTaxProfile> taxProfiles)
+        {
+            var normalLines = lines
+                .Select((line, index) => new
+                {
+                    Line = line,
+                    LineKey = index
+                })
+                .Where(row =>
+                    !row.Line.IsGiftVoucherSale &&
+                    !row.Line.IsFreeItem)
+                .ToList();
+
+            bool hasUnresolvedSpecialLine = lines.Any(
+                line =>
+                    line.IsGiftVoucherSale ||
+                    line.IsFreeItem);
+
+            foreach (SalesLine line in lines)
+            {
+                if (line.IsGiftVoucherSale)
+                {
+                    ClearTaxSnapshotForSpecialLine(line);
+                    continue;
+                }
+
+                if (!line.ItemVariantId.HasValue ||
+                    line.ItemVariantId.Value <= 0)
+                {
+                    throw new InvalidOperationException(
+                        "Sale item variant is required for tax calculation.");
+                }
+
+                if (!taxProfiles.TryGetValue(
+                        line.ItemVariantId.Value,
+                        out SalesTaxProfile? profile))
+                {
+                    throw new InvalidOperationException(
+                        $"Tax profile was not resolved for item variant {line.ItemVariantId.Value}.");
+                }
+
+                line.ItemTypeSnapshot = profile.ItemType;
+
+                if (line.IsFreeItem)
+                {
+                    ApplyUnresolvedItemTaxSnapshot(
+                        line,
+                        profile);
+
+                    continue;
+                }
+            }
+
+            if (normalLines.Count == 0)
+            {
+                ClearHeaderTaxSnapshot(header);
+                return;
+            }
+
+            var calculationInputs = normalLines
+                .Select(row =>
+                {
+                    SalesLine line = row.Line;
+                    SalesTaxProfile profile =
+                        taxProfiles[line.ItemVariantId!.Value];
+
+                    return new SalesTaxLineInput
+                    {
+                        LineKey = row.LineKey,
+                        ItemVariantId =
+                            line.ItemVariantId.Value,
+                        Quantity =
+                            line.Quantity,
+                        VatInclusiveUnitPrice =
+                            line.UnitPrice,
+                        LineDiscountAmount =
+                            line.DiscountAmount,
+                        TaxProfile =
+                            profile
+                    };
+                })
+                .ToList();
+
+            SalesTaxDocumentResult result =
+                _salesTaxService.CalculateDocument(
+                    calculationInputs,
+                    invoiceDiscount: 0m,
+                    isVatRegisteredSale:
+                        header.IsVatRegisteredSale);
+
+            foreach (SalesTaxLineResult lineResult in result.Lines)
+            {
+                SalesLine line =
+                    lines[lineResult.LineKey];
+
+                if (Math.Abs(
+                        line.LineTotal -
+                        lineResult.TaxInclusiveAmount) > 0.01m)
+                {
+                    throw new InvalidOperationException(
+                        $"Saved line total does not reconcile with VAT calculation for '{line.ItemDescription}'.");
+                }
+
+                ApplyCompleteTaxSnapshot(
+                    line,
+                    lineResult);
+            }
+
+            if (hasUnresolvedSpecialLine)
+            {
+                ClearHeaderTaxSnapshot(header);
+                return;
+            }
+
+            if (Math.Abs(
+                    header.GrossTotal -
+                    result.GrossTotal) > 0.01m ||
+                Math.Abs(
+                    header.TotalDiscount -
+                    result.TotalDiscount) > 0.01m ||
+                Math.Abs(
+                    header.NetTotal -
+                    result.NetTotal) > 0.01m)
+            {
+                throw new InvalidOperationException(
+                    "Sale totals do not reconcile with the shared VAT calculation.");
+            }
+
+            header.GrossTotal =
+                result.GrossTotal;
+
+            header.TotalDiscount =
+                result.TotalDiscount;
+
+            header.NetTotal =
+                result.NetTotal;
+
+            header.TaxableAmountTotal =
+                result.TaxableAmountTotal;
+
+            header.TotalVatAmount =
+                result.TotalVat;
+
+            header.StandardRatedAmount =
+                result.StandardRatedAmount;
+
+            header.ZeroRatedAmount =
+                result.ZeroRatedAmount;
+
+            header.ExemptAmount =
+                result.ExemptAmount;
+
+            header.OutOfScopeAmount =
+                result.OutOfScopeAmount;
+
+            header.TaxSnapshotStatus =
+                TaxSnapshotStatuses.Complete;
+        }
+
+        private static void ApplyCompleteTaxSnapshot(
+            SalesLine line,
+            SalesTaxLineResult result)
+        {
+            SalesTaxProfile profile =
+                result.TaxProfile;
+
+            line.ItemTypeSnapshot =
+                profile.ItemType;
+
+            line.TaxCategoryId =
+                profile.TaxCategoryId;
+
+            line.TaxRateId =
+                profile.TaxRateId;
+
+            line.TaxCategoryCodeSnapshot =
+                profile.TaxCategoryCode;
+
+            line.TaxCodeSnapshot =
+                profile.TaxCode;
+
+            line.TaxNameSnapshot =
+                profile.TaxName;
+
+            line.TaxRatePercentSnapshot =
+                profile.RatePercent;
+
+            line.IsTaxInclusiveSnapshot =
+                true;
+
+            line.TaxableAmountSnapshot =
+                result.TaxableAmount;
+
+            line.VatAmountSnapshot =
+                result.VatAmount;
+
+            line.TaxInclusiveAmountSnapshot =
+                result.TaxInclusiveAmount;
+
+            line.TaxSnapshotStatus =
+                TaxSnapshotStatuses.Complete;
+        }
+
+        private static void ApplyUnresolvedItemTaxSnapshot(
+            SalesLine line,
+            SalesTaxProfile profile)
+        {
+            line.ItemTypeSnapshot =
+                profile.ItemType;
+
+            line.TaxCategoryId =
+                profile.TaxCategoryId;
+
+            line.TaxRateId =
+                profile.TaxRateId;
+
+            line.TaxCategoryCodeSnapshot =
+                profile.TaxCategoryCode;
+
+            line.TaxCodeSnapshot =
+                profile.TaxCode;
+
+            line.TaxNameSnapshot =
+                profile.TaxName;
+
+            line.TaxRatePercentSnapshot =
+                profile.RatePercent;
+
+            line.IsTaxInclusiveSnapshot =
+                true;
+
+            line.TaxableAmountSnapshot =
+                null;
+
+            line.VatAmountSnapshot =
+                null;
+
+            line.TaxInclusiveAmountSnapshot =
+                null;
+
+            line.TaxSnapshotStatus =
+                TaxSnapshotStatuses.LegacyUnknown;
+        }
+
+        private static void ClearTaxSnapshotForSpecialLine(
+            SalesLine line)
+        {
+            line.ItemTypeSnapshot = null;
+            line.TaxCategoryId = null;
+            line.TaxRateId = null;
+            line.TaxCategoryCodeSnapshot = null;
+            line.TaxCodeSnapshot = null;
+            line.TaxNameSnapshot = null;
+            line.TaxRatePercentSnapshot = null;
+            line.IsTaxInclusiveSnapshot = null;
+            line.TaxableAmountSnapshot = null;
+            line.VatAmountSnapshot = null;
+            line.TaxInclusiveAmountSnapshot = null;
+            line.TaxSnapshotStatus =
+                TaxSnapshotStatuses.LegacyUnknown;
+        }
+
+        private static void ClearHeaderTaxSnapshot(
+            SalesHeader header)
+        {
+            header.TaxableAmountTotal = null;
+            header.TotalVatAmount = null;
+            header.StandardRatedAmount = null;
+            header.ZeroRatedAmount = null;
+            header.ExemptAmount = null;
+            header.OutOfScopeAmount = null;
+            header.TaxSnapshotStatus =
+                TaxSnapshotStatuses.LegacyUnknown;
         }
 
         // =========================================================
@@ -264,7 +728,9 @@ namespace POS.Core.Repositories
             return sequence;
         }
 
-        private static void ValidateBatchForSale(ItemBatch batch, SalesLine line)
+        private static void ValidateBatchForSale(
+            ItemBatch batch,
+            SalesLine line)
         {
             if (batch.IsDeactivated)
                 throw new InvalidOperationException($"Batch '{batch.BatchNo}' is inactive.");
@@ -281,8 +747,12 @@ namespace POS.Core.Repositories
                     $"Not enough stock in batch '{batch.BatchNo}'. Available: {batch.CurrentStock:N3}, Required: {line.Quantity:N3}");
             }
 
-            if (batch.ExpiryDate.HasValue && batch.ExpiryDate.Value.Date < DateTime.Today)
-                throw new InvalidOperationException($"Batch '{batch.BatchNo}' is expired and cannot be sold.");
+            if (batch.ExpiryDate.HasValue &&
+                batch.ExpiryDate.Value.Date < DateTime.Today)
+            {
+                throw new InvalidOperationException(
+                    $"Batch '{batch.BatchNo}' is expired and cannot be sold.");
+            }
 
             if (batch.ItemVariant == null)
                 throw new InvalidOperationException("Item variant was not found for selected batch.");
@@ -299,11 +769,68 @@ namespace POS.Core.Repositories
             if (batch.ItemVariant.ItemParent.IsSaleLocked)
                 throw new InvalidOperationException("Selected item is locked for sale.");
 
+            if (!string.Equals(
+                    batch.ItemVariant.ItemParent.ItemType,
+                    ItemTypeCodes.StockItem,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Only a Stock Item can be sold from an inventory batch.");
+            }
+
             if (line.ItemVariantId.HasValue &&
                 line.ItemVariantId.Value > 0 &&
                 line.ItemVariantId.Value != batch.ItemVariantId)
             {
-                throw new InvalidOperationException("Cart item variant does not match selected batch.");
+                throw new InvalidOperationException(
+                    "Cart item variant does not match selected batch.");
+            }
+        }
+
+        private static void ValidateServiceForSale(
+            ItemVariant variant,
+            SalesLine line)
+        {
+            if (variant.IsDeactivated)
+                throw new InvalidOperationException("Selected service variant is inactive.");
+
+            if (variant.ItemParent == null)
+                throw new InvalidOperationException("Service item parent was not found.");
+
+            if (variant.ItemParent.IsDeactivated)
+                throw new InvalidOperationException("Selected service is inactive.");
+
+            if (variant.ItemParent.IsSaleLocked)
+                throw new InvalidOperationException("Selected service is locked for sale.");
+
+            if (!string.Equals(
+                    variant.ItemParent.ItemType,
+                    ItemTypeCodes.Service,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Selected item is not configured as a Service.");
+            }
+
+            if (line.IsFreeItem)
+            {
+                throw new InvalidOperationException(
+                    "Free-issue VAT treatment for Services is not implemented. Use a normal priced Service until the approved free-issue rules are added.");
+            }
+
+            if (line.ItemBatchId.HasValue &&
+                line.ItemBatchId.Value > 0)
+            {
+                throw new InvalidOperationException(
+                    "Service sale line cannot contain a stock batch.");
+            }
+
+            if (line.ItemVariantId.HasValue &&
+                line.ItemVariantId.Value > 0 &&
+                line.ItemVariantId.Value != variant.Id)
+            {
+                throw new InvalidOperationException(
+                    "Cart service variant does not match the selected Service.");
             }
         }
 
@@ -356,11 +883,8 @@ namespace POS.Core.Repositories
                     continue;
                 }
 
-                if (!line.ItemBatchId.HasValue || line.ItemBatchId.Value <= 0)
-                    throw new InvalidOperationException("Every product sale line must have a selected batch.");
-
                 if (!line.ItemVariantId.HasValue || line.ItemVariantId.Value <= 0)
-                    throw new InvalidOperationException("Every product sale line must have a selected item variant.");
+                    throw new InvalidOperationException("Every item or service sale line must have a selected item variant.");
 
                 if (line.Quantity <= 0m)
                     throw new InvalidOperationException("Sale quantity must be greater than zero.");
@@ -683,7 +1207,9 @@ namespace POS.Core.Repositories
             return "ShopCost";
         }
 
-        private static void PrepareProductSaleLineForPersistence(ItemBatch batch, SalesLine line)
+        private static void PrepareProductSaleLineForPersistence(
+            ItemBatch batch,
+            SalesLine line)
         {
             line.ItemVariantId = batch.ItemVariantId;
             line.ItemBatchId = batch.Id;
@@ -698,12 +1224,36 @@ namespace POS.Core.Repositories
             }
 
             ValidateAndRecalculateNormalSaleLine(line);
-            ValidateMinimumPriceForProductLine(batch, line);
+            ValidateMinimumPrice(
+                batch.ItemVariant,
+                line);
         }
 
-        private static void ValidateMinimumPriceForProductLine(ItemBatch batch, SalesLine line)
+        private static void PrepareServiceSaleLineForPersistence(
+            ItemVariant variant,
+            SalesLine line)
         {
-            decimal minimumPrice = batch.ItemVariant?.MinimumPrice ?? 0m;
+            line.ItemVariantId = variant.Id;
+            line.ItemBatchId = null;
+            line.BatchNo = string.Empty;
+            line.ExpiryDate = null;
+            line.CostPrice =
+                variant.CostPrice > 0m
+                    ? variant.CostPrice
+                    : variant.AverageCost;
+
+            ValidateAndRecalculateNormalSaleLine(line);
+            ValidateMinimumPrice(
+                variant,
+                line);
+        }
+
+        private static void ValidateMinimumPrice(
+            ItemVariant? variant,
+            SalesLine line)
+        {
+            decimal minimumPrice =
+                variant?.MinimumPrice ?? 0m;
 
             if (minimumPrice <= 0m)
                 return;
@@ -711,14 +1261,17 @@ namespace POS.Core.Repositories
             if (line.Quantity <= 0m)
                 throw new InvalidOperationException("Sale quantity must be greater than zero.");
 
-            decimal effectiveUnitPrice = Math.Round(line.LineTotal / line.Quantity, 2);
+            decimal effectiveUnitPrice = Math.Round(
+                line.LineTotal / line.Quantity,
+                2);
 
             if (effectiveUnitPrice >= minimumPrice)
                 return;
 
             if (line.IsPriceOverridden)
             {
-                if (string.IsNullOrWhiteSpace(line.PriceOverrideApprovedBy))
+                if (string.IsNullOrWhiteSpace(
+                        line.PriceOverrideApprovedBy))
                 {
                     throw new InvalidOperationException(
                         $"Manager approval is required for price below minimum. Item: '{line.ItemDescription}', Minimum price: Rs. {minimumPrice:N2}.");
@@ -732,7 +1285,8 @@ namespace POS.Core.Repositories
 
             if (line.IsRuleDiscount)
             {
-                if (string.IsNullOrWhiteSpace(line.DiscountApprovedBy))
+                if (string.IsNullOrWhiteSpace(
+                        line.DiscountApprovedBy))
                 {
                     throw new InvalidOperationException(
                         $"Manager approval is required because discount sells below minimum price. Item: '{line.ItemDescription}', Minimum price: Rs. {minimumPrice:N2}.");
