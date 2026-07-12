@@ -309,7 +309,9 @@
                                    Style="{StaticResource InlineLabel}"/>
 
                         <TextBox Grid.Column="4"
-                                 Text="{Binding AuthorizedBy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Text="{Binding AuthorizedBy}"
+                                 IsReadOnly="True"
+                                 Background="#F3F4F6"
                                  Style="{StaticResource ClassicInput}"/>
                     </Grid>
 
@@ -318,7 +320,7 @@
                             BorderThickness="1"
                             Padding="7,4">
 
-                        <TextBlock Text="Post-only workflow. Average-cost items return from GENERAL. Batch-tracked items return from the exact GRN batch/barcode. Supplier ledger debit note is posted automatically."
+                        <TextBlock Text="Post-only workflow. Returns use the exact original GRN stock row. Supplier credit reverses the saved original product payable value; freight and restocking fees are not credited."
                                    Foreground="#6B3F00"
                                    FontStyle="Italic"
                                    FontSize="11"
@@ -455,7 +457,7 @@
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
 
-                            <DataGridTextColumn Header="Cost"
+                            <DataGridTextColumn Header="Landed Cost"
                                                 Binding="{Binding HistoricalCost, StringFormat=N2}"
                                                 Width="75"
                                                 IsReadOnly="True"
@@ -635,7 +637,7 @@
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource CenterText}"/>
 
-                        <DataGridTextColumn Header="Unit Cost"
+                        <DataGridTextColumn Header="Landed Cost"
                                             Binding="{Binding HistoricalCost, StringFormat=N2}"
                                             Width="85"
                                             IsReadOnly="True"
@@ -666,7 +668,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="Credit Value"
+                        <DataGridTextColumn Header="Supplier Credit"
                                             Binding="{Binding CreditValue, StringFormat=N2}"
                                             Width="105"
                                             IsReadOnly="True"
@@ -704,13 +706,13 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="330"/>
                         <ColumnDefinition Width="12"/>
                         <ColumnDefinition Width="360"/>
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Remarks / Dispatch Notes:"
+                        <TextBlock Text="Remarks / Supplier Authorization Reference:"
                                    Style="{StaticResource InlineLabel}"
                                    Margin="0,0,0,5"/>
 
@@ -728,41 +730,29 @@
                                Fill="#E0E0E0"
                                Margin="6,0"/>
 
-                    <StackPanel Grid.Column="2"
-                                VerticalAlignment="Center">
-
-                        <TextBlock Text="OPTIONAL DEDUCTION"
-                                   FontWeight="Bold"
-                                   Foreground="#003366"
-                                   Margin="0,0,0,10"/>
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="130"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0"
-                                       Text="Restocking Fee"
-                                       Style="{StaticResource InlineLabel}"
-                                       Foreground="#991B1B"/>
-
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding RestockingFee, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ClassicInput}"
-                                     HorizontalContentAlignment="Right"
-                                     Background="#FEF2F2"
-                                     FontWeight="Bold"
-                                     Foreground="#991B1B"/>
-                        </Grid>
-
-                        <TextBlock Text="Fee reduces supplier credit. Keep 0 if supplier accepts full credit."
-                                   Foreground="#777777"
-                                   FontSize="11"
-                                   FontStyle="Italic"
-                                   TextWrapping="Wrap"
-                                   Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <Border Grid.Column="2"
+                            Background="#EFF6FF"
+                            BorderBrush="#60A5FA"
+                            BorderThickness="1"
+                            Padding="10"
+                            VerticalAlignment="Center">
+                        <StackPanel>
+                            <TextBlock Text="SUPPLIER CREDIT RULE"
+                                       FontWeight="Bold"
+                                       Foreground="#1E3A8A"
+                                       Margin="0,0,0,7"/>
+                            <TextBlock Text="The debit note exactly reverses the saved original GRN product payable value after discounts and original VAT."
+                                       TextWrapping="Wrap"
+                                       Foreground="#1E3A8A"
+                                       FontSize="11"/>
+                            <TextBlock Text="Original landed cost is used only for inventory valuation. Freight and restocking fees are not credited."
+                                       TextWrapping="Wrap"
+                                       Foreground="#475569"
+                                       FontSize="11"
+                                       FontStyle="Italic"
+                                       Margin="0,7,0,0"/>
+                        </StackPanel>
+                    </Border>
 
                     <Rectangle Grid.Column="3"
                                Width="1"
@@ -772,38 +762,8 @@
                     <StackPanel Grid.Column="4"
                                 VerticalAlignment="Center">
 
-                        <Grid Margin="0,0,0,5">
-                            <TextBlock Text="GROSS RETURN VALUE:"
-                                       Foreground="#666666"
-                                       FontSize="13"
-                                       FontWeight="Bold"/>
-
-                            <TextBlock Text="{Binding GrossCredit, StringFormat=Rs. \{0:N2\}}"
-                                       HorizontalAlignment="Right"
-                                       FontSize="14"
-                                       FontWeight="Bold"
-                                       Foreground="#333333"/>
-                        </Grid>
-
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="RESTOCKING FEE:"
-                                       Foreground="#991B1B"
-                                       FontSize="13"
-                                       FontWeight="Bold"/>
-
-                            <TextBlock Text="{Binding RestockingFee, StringFormat=- Rs. \{0:N2\}}"
-                                       HorizontalAlignment="Right"
-                                       Foreground="#991B1B"
-                                       FontSize="14"
-                                       FontWeight="Bold"/>
-                        </Grid>
-
-                        <Rectangle Height="2"
-                                   Fill="#333333"
-                                   Margin="0,0,0,8"/>
-
-                        <Grid Margin="0,0,0,12">
-                            <TextBlock Text="NET SUPPLIER CREDIT:"
+                            <TextBlock Text="SUPPLIER CREDIT:"
                                        Foreground="#003366"
                                        FontSize="15"
                                        FontWeight="Bold"
@@ -815,6 +775,13 @@
                                        FontWeight="ExtraBold"
                                        HorizontalAlignment="Right"/>
                         </Grid>
+
+                        <TextBlock Text="Final value is recalculated from immutable GRN snapshots when posted."
+                                   Foreground="#666666"
+                                   FontSize="11"
+                                   FontStyle="Italic"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,12"/>
 
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -835,7 +802,7 @@
                                     Style="{StaticResource PostBtn}"
                                     Height="38"
                                     FontSize="13"
-                                    ToolTip="Deducts exact stock row and posts supplier ledger debit note."/>
+                                    ToolTip="Deducts the exact original stock row and posts the supplier debit note."/>
                         </Grid>
                     </StackPanel>
                 </Grid>

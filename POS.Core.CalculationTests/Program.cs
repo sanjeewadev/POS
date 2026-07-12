@@ -62,7 +62,21 @@ namespace POS.Core.CalculationTests
                 ("Legacy return invents no VAT", LegacyReturnInventsNoVat),
                 ("Invalid multi-line return changes nothing", InvalidMultiLineReturnChangesNothing),
                 ("Return lookup reports remaining quantity", ReturnLookupReportsRemainingQuantity),
-                ("Credit Note formatter uses saved return snapshots", CreditNoteFormatterUsesSavedReturnSnapshots)
+                ("Credit Note formatter uses saved return snapshots", CreditNoteFormatterUsesSavedReturnSnapshots),
+                ("Supplier return final residual reconciles", SupplierReturnFinalResidualReconciles),
+                ("Full supplier return deducts batch and supplier balance", FullSupplierReturnDeductsBatchAndLedger),
+                ("Partial supplier returns prevent over-return", PartialSupplierReturnsPreventOverReturn),
+                ("Supplier return blocks insufficient stock", SupplierReturnBlocksInsufficientStock),
+                ("Supplier return preserves inclusive and exclusive snapshots", SupplierReturnPreservesInclusiveAndExclusiveSnapshots),
+                ("Supplier return preserves all tax categories", SupplierReturnPreservesAllTaxCategories),
+                ("Supplier return preserves historical VAT rate", SupplierReturnPreservesHistoricalVatRate),
+                ("Legacy supplier return invents no VAT", LegacySupplierReturnInventsNoVat),
+                ("Supplier credit excludes landed-cost freight", SupplierCreditExcludesLandedCostFreight),
+                ("Invalid supplier return rolls back everything", InvalidSupplierReturnRollsBackEverything),
+                ("Deactivated historical supplier return remains available", DeactivatedHistoricalSupplierReturnRemainsAvailable),
+                ("Supplier debit note formatter uses saved snapshots", SupplierDebitNoteFormatterUsesSavedSnapshots),
+                ("Supplier return lookup uses financial snapshots", SupplierReturnLookupUsesFinancialSnapshots),
+                ("Prior legacy supplier return prevents invented VAT", PriorLegacySupplierReturnPreventsInventedVat)
             };
 
             try
@@ -74,13 +88,14 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, and customer return checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, and supplier return checks passed.");
                 return 0;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine();
-                Console.Error.WriteLine("FAILED: " + ex.Message);
+                Console.Error.WriteLine("FAILED:");
+                Console.Error.WriteLine(ex.ToString());
                 return 1;
             }
         }
@@ -2102,6 +2117,763 @@ namespace POS.Core.CalculationTests
             AssertContains(document, sale.InvoiceNo, "original invoice reference");
             AssertContains(document, "VAT reversed", "credit note VAT summary");
             AssertContains(document, "Installation Service", "credit note Service line");
+        }
+
+
+        private static void SupplierReturnFinalResidualReconciles()
+        {
+            var calculator = new SupplierReturnAllocationCalculator();
+
+            SupplierReturnAllocationResult first = calculator.Calculate(
+                new SupplierReturnAllocationInput
+                {
+                    OriginalQuantity = 3m,
+                    PreviouslyReturnedQuantity = 0m,
+                    RequestedQuantity = 1m,
+                    OriginalCreditAmount = 3540m,
+                    PreviouslyReturnedCreditAmount = 0m,
+                    OriginalTaxableAmount = 3000m,
+                    OriginalVatAmount = 540m,
+                    OriginalTaxInclusiveAmount = 3540m,
+                    TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+                });
+
+            SupplierReturnAllocationResult second = calculator.Calculate(
+                new SupplierReturnAllocationInput
+                {
+                    OriginalQuantity = 3m,
+                    PreviouslyReturnedQuantity = 1m,
+                    RequestedQuantity = 1m,
+                    OriginalCreditAmount = 3540m,
+                    PreviouslyReturnedCreditAmount = first.CreditAmount,
+                    OriginalTaxableAmount = 3000m,
+                    OriginalVatAmount = 540m,
+                    OriginalTaxInclusiveAmount = 3540m,
+                    PreviouslyReturnedTaxableAmount = first.TaxableAmount ?? 0m,
+                    PreviouslyReturnedVatAmount = first.VatAmount ?? 0m,
+                    PreviouslyReturnedTaxInclusiveAmount = first.TaxInclusiveAmount ?? 0m,
+                    TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+                });
+
+            SupplierReturnAllocationResult final = calculator.Calculate(
+                new SupplierReturnAllocationInput
+                {
+                    OriginalQuantity = 3m,
+                    PreviouslyReturnedQuantity = 2m,
+                    RequestedQuantity = 1m,
+                    OriginalCreditAmount = 3540m,
+                    PreviouslyReturnedCreditAmount = first.CreditAmount + second.CreditAmount,
+                    OriginalTaxableAmount = 3000m,
+                    OriginalVatAmount = 540m,
+                    OriginalTaxInclusiveAmount = 3540m,
+                    PreviouslyReturnedTaxableAmount = (first.TaxableAmount ?? 0m) + (second.TaxableAmount ?? 0m),
+                    PreviouslyReturnedVatAmount = (first.VatAmount ?? 0m) + (second.VatAmount ?? 0m),
+                    PreviouslyReturnedTaxInclusiveAmount = (first.TaxInclusiveAmount ?? 0m) + (second.TaxInclusiveAmount ?? 0m),
+                    TaxSnapshotStatus = TaxSnapshotStatuses.Complete
+                });
+
+            AssertMoney(3540m, first.CreditAmount + second.CreditAmount + final.CreditAmount, "supplier credit residual");
+            AssertMoney(3000m, (first.TaxableAmount ?? 0m) + (second.TaxableAmount ?? 0m) + (final.TaxableAmount ?? 0m), "supplier taxable residual");
+            AssertMoney(540m, (first.VatAmount ?? 0m) + (second.VatAmount ?? 0m) + (final.VatAmount ?? 0m), "supplier VAT residual");
+        }
+
+        private static void FullSupplierReturnDeductsBatchAndLedger()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory,
+                scenario,
+                scenario.MainGrnId,
+                "return.manager",
+                (scenario.StandardLineId, 3m));
+
+            using AppDbContext context = factory.CreateDbContext();
+            ItemBatch batch = context.ItemBatches.Single(row => row.Id == scenario.StandardBatchId);
+            Supplier supplier = context.Suppliers.Single(row => row.Id == scenario.SupplierId);
+            InventoryTransaction inventory = context.InventoryTransactions.Single(row => row.TransactionType == SupplierReturnCodes.InventoryTransactionType);
+            SupplierLedger ledger = context.SupplierLedgers.Single(row => row.TransactionType == SupplierReturnCodes.DebitNoteTransactionType);
+
+            AssertMoney(7m, batch.CurrentStock, "supplier return batch stock");
+            AssertMoney(3540m, result.ReturnHeader.NetCredit, "supplier return credit");
+            AssertMoney(6460m, supplier.CurrentBalance, "supplier balance after debit note");
+            AssertMoney(-3m, inventory.Quantity, "supplier return inventory quantity");
+            AssertMoney(900m, inventory.UnitCost, "supplier return inventory landed cost");
+            AssertMoney(3540m, ledger.PaymentAmount, "supplier ledger debit note amount");
+
+            if (!result.ReturnHeader.ReturnNumber.StartsWith("SDN-", StringComparison.Ordinal) ||
+                ledger.CreatedBy != "return.manager")
+            {
+                throw new InvalidOperationException("Supplier return document numbering or user audit is incorrect.");
+            }
+        }
+
+        private static void PartialSupplierReturnsPreventOverReturn()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            PostSupplierReturn(factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m));
+            PostSupplierReturn(factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m));
+
+            AssertThrows(
+                () => PostSupplierReturn(factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 2m)),
+                "Remaining returnable GRN quantity");
+
+            PostSupplierReturn(factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m));
+
+            using AppDbContext context = factory.CreateDbContext();
+            List<SupplierReturnLine> rows = context.SupplierReturnLines.Where(row => row.GrnLineId == scenario.StandardLineId).ToList();
+            AssertMoney(3m, rows.Sum(row => row.ReturnQty), "supplier returned quantity");
+            AssertMoney(3540m, rows.Sum(row => row.CreditValue), "supplier returned credit");
+            AssertMoney(540m, rows.Sum(row => row.VatAmountSnapshot ?? 0m), "supplier returned VAT");
+        }
+
+        private static void SupplierReturnBlocksInsufficientStock()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                context.ItemBatches.Single(row => row.Id == scenario.StandardBatchId).CurrentStock = 0.5m;
+                context.SaveChanges();
+            }
+
+            AssertThrows(
+                () => PostSupplierReturn(factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m)),
+                "Current stock is only");
+
+            using AppDbContext after = factory.CreateDbContext();
+            if (after.SupplierReturnHeaders.Any() || after.InventoryTransactions.Any(row => row.TransactionType == SupplierReturnCodes.InventoryTransactionType))
+                throw new InvalidOperationException("Insufficient-stock supplier return persisted partial data.");
+        }
+
+        private static void SupplierReturnPreservesInclusiveAndExclusiveSnapshots()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            SupplierReturnPostResult inclusive = PostSupplierReturn(
+                factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m));
+            SupplierReturnPostResult exclusive = PostSupplierReturn(
+                factory, scenario, scenario.ExclusiveGrnId, "manager", (scenario.ExclusiveLineId, 1m));
+
+            using AppDbContext context = factory.CreateDbContext();
+            SupplierReturnLine inclusiveLine = context.SupplierReturnLines.Single(row => row.ReturnHeaderId == inclusive.ReturnHeader.Id);
+            SupplierReturnLine exclusiveLine = context.SupplierReturnLines.Single(row => row.ReturnHeaderId == exclusive.ReturnHeader.Id);
+
+            if (inclusiveLine.IsTaxInclusiveSnapshot != true || exclusiveLine.IsTaxInclusiveSnapshot != false)
+                throw new InvalidOperationException("Supplier return did not preserve original VAT entry mode.");
+
+            AssertMoney(1180m, inclusiveLine.CreditValue, "inclusive supplier return credit");
+            AssertMoney(1180m, exclusiveLine.CreditValue, "exclusive supplier return credit");
+            AssertMoney(1000m, exclusiveLine.TaxableAmountSnapshot ?? 0m, "exclusive supplier return taxable");
+            AssertMoney(180m, exclusiveLine.VatAmountSnapshot ?? 0m, "exclusive supplier return VAT");
+        }
+
+        private static void SupplierReturnPreservesAllTaxCategories()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory,
+                scenario,
+                scenario.MainGrnId,
+                "manager",
+                (scenario.StandardLineId, 1m),
+                (scenario.ZeroLineId, 1m),
+                (scenario.ExemptLineId, 1m),
+                (scenario.OutOfScopeLineId, 1m));
+
+            SupplierReturnHeader header = result.ReturnHeader;
+            AssertMoney(1000m, header.StandardRatedAmount ?? 0m, "supplier Standard VAT amount");
+            AssertMoney(200m, header.ZeroRatedAmount ?? 0m, "supplier Zero Rated amount");
+            AssertMoney(300m, header.ExemptAmount ?? 0m, "supplier Exempt amount");
+            AssertMoney(500m, header.OutOfScopeAmount ?? 0m, "supplier Out of Scope amount");
+            AssertMoney(180m, header.TotalVatAmount ?? 0m, "supplier VAT reversal total");
+        }
+
+        private static void SupplierReturnPreservesHistoricalVatRate()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            using (AppDbContext setupContext = factory.CreateDbContext())
+            {
+                TaxRate rate = setupContext.TaxRates.Single(row => row.Id == scenario.StandardTaxRateId);
+                rate.RatePercent = 25m;
+                setupContext.SaveChanges();
+            }
+
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m));
+
+            using AppDbContext context = factory.CreateDbContext();
+            SupplierReturnLine saved = context.SupplierReturnLines.Single(row => row.ReturnHeaderId == result.ReturnHeader.Id);
+            AssertMoney(18m, saved.TaxRatePercentSnapshot ?? 0m, "historical supplier VAT rate");
+            AssertMoney(180m, saved.VatAmountSnapshot ?? 0m, "historical supplier VAT amount");
+        }
+
+        private static void LegacySupplierReturnInventsNoVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory, scenario, scenario.LegacyGrnId, "manager", (scenario.LegacyLineId, 1m));
+
+            using AppDbContext context = factory.CreateDbContext();
+            SupplierReturnLine saved = context.SupplierReturnLines.Single(row => row.ReturnHeaderId == result.ReturnHeader.Id);
+
+            if (result.ReturnHeader.TaxSnapshotStatus != TaxSnapshotStatuses.LegacyUnknown ||
+                result.ReturnHeader.TotalVatAmount.HasValue ||
+                saved.VatAmountSnapshot.HasValue ||
+                saved.TaxableAmountSnapshot.HasValue)
+            {
+                throw new InvalidOperationException("Legacy supplier return invented VAT values.");
+            }
+
+            AssertMoney(700m, saved.CreditValue, "legacy supplier credit");
+        }
+
+        private static void SupplierCreditExcludesLandedCostFreight()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            using AppDbContext before = factory.CreateDbContext();
+            ItemVariant variantBefore = before.ItemVariants.Single(row => row.Id == scenario.StandardVariantId);
+            decimal retailBefore = variantBefore.RetailPrice;
+            decimal wholesaleBefore = variantBefore.WholesalePrice;
+
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m));
+
+            using AppDbContext after = factory.CreateDbContext();
+            SupplierReturnLine saved = after.SupplierReturnLines.Single(row => row.ReturnHeaderId == result.ReturnHeader.Id);
+            InventoryTransaction inventory = after.InventoryTransactions.Single(row => row.ReferenceDocument == result.ReturnHeader.ReturnNumber);
+            ItemVariant variantAfter = after.ItemVariants.Single(row => row.Id == scenario.StandardVariantId);
+            GrnLine source = after.GrnLines.Single(row => row.Id == scenario.StandardLineId);
+
+            AssertMoney(1180m, saved.CreditValue, "supplier product payable credit");
+            AssertMoney(900m, saved.HistoricalCost, "supplier inventory landed cost");
+            AssertMoney(900m, inventory.UnitCost, "supplier inventory transaction cost");
+            AssertMoney(900m, source.LandedCost, "original GRN landed cost unchanged");
+            AssertMoney(retailBefore, variantAfter.RetailPrice, "retail price unchanged");
+            AssertMoney(wholesaleBefore, variantAfter.WholesalePrice, "wholesale price unchanged");
+        }
+
+        private static void InvalidSupplierReturnRollsBackEverything()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            using AppDbContext before = factory.CreateDbContext();
+            decimal stockBefore = before.ItemBatches.Single(row => row.Id == scenario.StandardBatchId).CurrentStock;
+            decimal balanceBefore = before.Suppliers.Single(row => row.Id == scenario.SupplierId).CurrentBalance;
+
+            AssertThrows(
+                () => PostSupplierReturn(
+                    factory,
+                    scenario,
+                    scenario.MainGrnId,
+                    "manager",
+                    (scenario.StandardLineId, 1m),
+                    (scenario.ZeroLineId, 999m)),
+                "Current stock is only");
+
+            using AppDbContext after = factory.CreateDbContext();
+            AssertMoney(stockBefore, after.ItemBatches.Single(row => row.Id == scenario.StandardBatchId).CurrentStock, "rollback batch stock");
+            AssertMoney(balanceBefore, after.Suppliers.Single(row => row.Id == scenario.SupplierId).CurrentBalance, "rollback supplier balance");
+
+            if (after.SupplierReturnHeaders.Any() ||
+                after.SupplierReturnLines.Any() ||
+                after.SupplierLedgers.Any(row => row.TransactionType == SupplierReturnCodes.DebitNoteTransactionType) ||
+                after.InventoryTransactions.Any(row => row.TransactionType == SupplierReturnCodes.InventoryTransactionType))
+            {
+                throw new InvalidOperationException("Invalid supplier return persisted partial financial or inventory data.");
+            }
+        }
+
+        private static void DeactivatedHistoricalSupplierReturnRemainsAvailable()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                context.Suppliers.Single(row => row.Id == scenario.SupplierId).IsDeactivated = true;
+                context.ItemParents.Single(row => row.Id == scenario.StandardParentId).IsDeactivated = true;
+                context.ItemVariants.Single(row => row.Id == scenario.StandardVariantId).IsDeactivated = true;
+                context.ItemBatches.Single(row => row.Id == scenario.StandardBatchId).IsDeactivated = true;
+                context.SaveChanges();
+            }
+
+            var repository = CreateSupplierReturnRepository(factory);
+            List<SupplierLookupDto> suppliers = repository.GetActiveSuppliersAsync().GetAwaiter().GetResult();
+            List<SupplierReturnSourceDto> rows = repository.GetReturnableBatchesForGrnAsync(scenario.MainGrnId).GetAwaiter().GetResult();
+
+            if (suppliers.All(row => row.Id != scenario.SupplierId) || rows.All(row => row.GrnLineId != scenario.StandardLineId))
+                throw new InvalidOperationException("Historical deactivation incorrectly hid a valid supplier return source.");
+
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory, scenario, scenario.MainGrnId, "audit.user", (scenario.StandardLineId, 1m));
+
+            using AppDbContext after = factory.CreateDbContext();
+            SupplierLedger ledger = after.SupplierLedgers.Single(row => row.ReferenceDocument == result.ReturnHeader.ReturnNumber);
+            InventoryTransaction inventory = after.InventoryTransactions.Single(row => row.ReferenceDocument == result.ReturnHeader.ReturnNumber);
+
+            if (result.ReturnHeader.AuthorizedBy != "audit.user" ||
+                result.ReturnHeader.CreatedBy != "audit.user" ||
+                ledger.CreatedBy != "audit.user" ||
+                inventory.CreatedBy != "audit.user")
+            {
+                throw new InvalidOperationException("Supplier return authenticated user audit was not preserved.");
+            }
+        }
+
+        private static void SupplierDebitNoteFormatterUsesSavedSnapshots()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory, scenario, scenario.MainGrnId, "manager", (scenario.StandardLineId, 1m));
+
+            var formatter = new SupplierDebitNoteTextFormatter();
+            string document = formatter.Format(result.DebitNote, 80);
+
+            AssertContains(document, "SUPPLIER DEBIT NOTE", "supplier debit note title");
+            AssertContains(document, result.ReturnHeader.ReturnNumber, "supplier debit note number");
+            AssertContains(document, "GRN-SR-MAIN", "supplier debit note GRN reference");
+            AssertContains(document, "18%", "supplier debit note saved VAT rate");
+            AssertContains(document, "Rs. 1,180.00", "supplier debit note saved credit");
+            AssertContains(document, "Freight and restocking fees are not credited", "supplier debit note freight rule");
+        }
+
+        private static void SupplierReturnLookupUsesFinancialSnapshots()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+            var repository = CreateSupplierReturnRepository(factory);
+
+            SupplierReturnSourceDto source = repository.GetReturnableBatchesForGrnAsync(scenario.MainGrnId)
+                .GetAwaiter()
+                .GetResult()
+                .Single(row => row.GrnLineId == scenario.StandardLineId);
+
+            AssertMoney(3540m, source.OriginalCreditAmount, "lookup original supplier credit");
+            AssertMoney(3540m, source.MaxReturnCredit, "lookup maximum supplier credit");
+            AssertMoney(900m, source.HistoricalCost, "lookup landed cost");
+
+            if (source.TaxSnapshotStatus != TaxSnapshotStatuses.Complete || source.TaxCategoryCode != TaxCategoryCodes.Standard)
+                throw new InvalidOperationException("Supplier return lookup did not expose saved tax snapshot identity.");
+        }
+
+        private static void PriorLegacySupplierReturnPreventsInventedVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SupplierReturnTestScenario scenario = SeedSupplierReturnTestScenario(factory);
+
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                var legacyHeader = new SupplierReturnHeader
+                {
+                    ReturnNumber = "SDN-LEGACY-PRIOR",
+                    SupplierId = scenario.SupplierId,
+                    GrnHeaderId = scenario.MainGrnId,
+                    OriginalInvoiceNo = "SUP-INV-MAIN",
+                    ReturnDate = new DateTime(2026, 7, 11),
+                    AuthorizedBy = "legacy.user",
+                    GrossCredit = 900m,
+                    NetCredit = 900m,
+                    TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown,
+                    Status = SupplierReturnCodes.PostedStatus,
+                    CreatedBy = "legacy.user",
+                    PostedBy = "legacy.user",
+                    PostedAt = new DateTime(2026, 7, 11)
+                };
+
+                context.SupplierReturnHeaders.Add(legacyHeader);
+                context.SaveChanges();
+
+                context.SupplierReturnLines.Add(new SupplierReturnLine
+                {
+                    ReturnHeaderId = legacyHeader.Id,
+                    GrnLineId = scenario.StandardLineId,
+                    ItemVariantId = scenario.StandardVariantId,
+                    ItemBatchId = scenario.StandardBatchId,
+                    BatchNo = "SR-BATCH-1",
+                    ReturnQty = 1m,
+                    HistoricalCost = 900m,
+                    CreditValue = 900m,
+                    ReasonCode = "Legacy Return",
+                    LineStatus = SupplierReturnCodes.PostedStatus,
+                    TaxSnapshotStatus = TaxSnapshotStatuses.LegacyUnknown
+                });
+                context.SaveChanges();
+            }
+
+            SupplierReturnPostResult result = PostSupplierReturn(
+                factory,
+                scenario,
+                scenario.MainGrnId,
+                "manager",
+                (scenario.StandardLineId, 1m));
+
+            using AppDbContext after = factory.CreateDbContext();
+            SupplierReturnLine line = after.SupplierReturnLines
+                .Single(row => row.ReturnHeaderId == result.ReturnHeader.Id);
+
+            if (line.TaxSnapshotStatus != TaxSnapshotStatuses.LegacyUnknown ||
+                line.TaxableAmountSnapshot.HasValue ||
+                line.VatAmountSnapshot.HasValue ||
+                line.TaxInclusiveAmountSnapshot.HasValue)
+            {
+                throw new InvalidOperationException("A later supplier return invented VAT after a legacy prior return.");
+            }
+        }
+
+        private static SupplierReturnRepository CreateSupplierReturnRepository(
+            RepositoryTestDbContextFactory factory)
+        {
+            return new SupplierReturnRepository(
+                factory,
+                new SupplierReturnAllocationCalculator());
+        }
+
+        private static SupplierReturnPostResult PostSupplierReturn(
+            RepositoryTestDbContextFactory factory,
+            SupplierReturnTestScenario scenario,
+            int grnHeaderId,
+            string authorizedBy,
+            params (int GrnLineId, decimal Quantity)[] requestedLines)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            int[] requestedIds = requestedLines
+                .Select(request => request.GrnLineId)
+                .Distinct()
+                .ToArray();
+
+            Dictionary<int, GrnLine> sources = context.GrnLines
+                .Where(row => requestedIds.Contains(row.Id))
+                .ToDictionary(row => row.Id);
+
+            var header = new SupplierReturnHeader
+            {
+                SupplierId = scenario.SupplierId,
+                GrnHeaderId = grnHeaderId,
+                ReturnDate = new DateTime(2026, 7, 12, 12, 0, 0),
+                AuthorizedBy = authorizedBy,
+                CreatedBy = authorizedBy,
+                PostedBy = authorizedBy,
+                Remarks = "Repository supplier return test"
+            };
+
+            List<SupplierReturnLine> lines = requestedLines.Select(request =>
+            {
+                GrnLine source = sources[request.GrnLineId];
+                return new SupplierReturnLine
+                {
+                    GrnLineId = source.Id,
+                    ItemVariantId = source.ItemVariantId,
+                    ItemBatchId = source.ItemBatchId ?? 0,
+                    ReturnQty = request.Quantity,
+                    ReasonCode = "Supplier Recall",
+                    LineRemarks = "Test"
+                };
+            }).ToList();
+
+            return CreateSupplierReturnRepository(factory)
+                .PostSupplierReturnAsync(header, lines)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        private static SupplierReturnTestScenario SeedSupplierReturnTestScenario(
+            RepositoryTestDbContextFactory factory)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+
+            var category = new Category
+            {
+                CategoryCode = "SUP-RET",
+                CategoryName = "Supplier Return Tests",
+                CreatedBy = "Test",
+                UpdatedBy = "Test"
+            };
+
+            UnitOfMeasure uom = context.UnitsOfMeasure
+                .Single(row => row.UomCode == "PCS");
+
+            var standardTax = CreateSupplierReturnTaxCategory(TaxCategoryCodes.Standard, "Standard VAT", TaxTreatmentTypes.StandardRated, true, 1);
+            var zeroTax = CreateSupplierReturnTaxCategory(TaxCategoryCodes.ZeroRated, "Zero Rated", TaxTreatmentTypes.ZeroRated, false, 2);
+            var exemptTax = CreateSupplierReturnTaxCategory(TaxCategoryCodes.Exempt, "Exempt", TaxTreatmentTypes.Exempt, false, 3);
+            var outTax = CreateSupplierReturnTaxCategory(TaxCategoryCodes.OutOfScope, "Out of Scope", TaxTreatmentTypes.OutOfScope, false, 4);
+
+            var supplier = new Supplier
+            {
+                SupplierCode = "SUP-RET-01",
+                SupplierName = "Supplier Return Test Vendor",
+                CompanyName = "Supplier Return Test Vendor (Pvt) Ltd",
+                Phone1 = "0110000000",
+                Address = "Supplier Test Address",
+                HasVat = true,
+                VatNumber = "SUP-VAT-18",
+                CurrentBalance = 10000m
+            };
+
+            context.AddRange(category, standardTax, zeroTax, exemptTax, outTax, supplier);
+            context.SaveChanges();
+
+            var standardRate = new TaxRate
+            {
+                TaxCode = "VAT-18",
+                TaxName = "Standard VAT 18%",
+                TaxCategoryId = standardTax.Id,
+                RatePercent = 18m,
+                EffectiveFrom = new DateTime(2024, 1, 1),
+                IsActive = true,
+                CreatedBy = "Test",
+                UpdatedBy = "Test"
+            };
+            context.TaxRates.Add(standardRate);
+
+            var parents = new[]
+            {
+                CreateSupplierReturnParent("SR-STANDARD", "Standard VAT Item", category.Id, uom.Id, standardTax.Id),
+                CreateSupplierReturnParent("SR-ZERO", "Zero Rated Item", category.Id, uom.Id, zeroTax.Id),
+                CreateSupplierReturnParent("SR-EXEMPT", "Exempt Item", category.Id, uom.Id, exemptTax.Id),
+                CreateSupplierReturnParent("SR-OUT", "Out of Scope Item", category.Id, uom.Id, outTax.Id),
+                CreateSupplierReturnParent("SR-EXCLUSIVE", "VAT Exclusive Item", category.Id, uom.Id, standardTax.Id),
+                CreateSupplierReturnParent("SR-LEGACY", "Legacy Item", category.Id, uom.Id, null)
+            };
+            context.ItemParents.AddRange(parents);
+            context.SaveChanges();
+
+            ItemVariant[] variants = parents.Select((parent, index) => new ItemVariant
+            {
+                ItemParentId = parent.Id,
+                SkuCode = $"SR-SKU-{index + 1}",
+                VariantDescription = "Standard",
+                AverageCost = 500m + index * 10m,
+                CostPrice = 500m + index * 10m,
+                RetailPrice = 1500m + index * 100m,
+                WholesalePrice = 1400m + index * 100m,
+                MinimumPrice = 500m
+            }).ToArray();
+            context.ItemVariants.AddRange(variants);
+            context.SaveChanges();
+
+            ItemBatch[] batches = variants.Select((variant, index) => new ItemBatch
+            {
+                ItemVariantId = variant.Id,
+                BatchNo = $"SR-BATCH-{index + 1}",
+                InternalBatchBarcode = $"SR-BC-{index + 1}",
+                ReceivedDate = new DateTime(2026, 7, 1),
+                CostPrice = 900m - index * 50m,
+                RetailPrice = variant.RetailPrice,
+                WholesalePrice = variant.WholesalePrice,
+                CurrentStock = 10m
+            }).ToArray();
+            context.ItemBatches.AddRange(batches);
+
+            var mainGrn = CreateSupplierReturnGrn(supplier.Id, "GRN-SR-MAIN", "SUP-INV-MAIN", true);
+            var exclusiveGrn = CreateSupplierReturnGrn(supplier.Id, "GRN-SR-EX", "SUP-INV-EX", false);
+            var legacyGrn = CreateSupplierReturnGrn(supplier.Id, "GRN-SR-LEG", "SUP-INV-LEG", null);
+            context.GrnHeaders.AddRange(mainGrn, exclusiveGrn, legacyGrn);
+            context.SaveChanges();
+
+            GrnLine standardLine = CreateSupplierReturnGrnLine(
+                mainGrn.Id, variants[0].Id, batches[0].Id, 3m, 1180m, 900m,
+                standardTax.Id, standardRate.Id, TaxCategoryCodes.Standard, "Standard VAT", 18m, true,
+                3000m, 540m, 3540m, TaxSnapshotStatuses.Complete);
+            GrnLine zeroLine = CreateSupplierReturnGrnLine(
+                mainGrn.Id, variants[1].Id, batches[1].Id, 2m, 200m, 180m,
+                zeroTax.Id, null, TaxCategoryCodes.ZeroRated, "Zero Rated", 0m, true,
+                400m, 0m, 400m, TaxSnapshotStatuses.Complete);
+            GrnLine exemptLine = CreateSupplierReturnGrnLine(
+                mainGrn.Id, variants[2].Id, batches[2].Id, 2m, 300m, 270m,
+                exemptTax.Id, null, TaxCategoryCodes.Exempt, "Exempt", 0m, true,
+                600m, 0m, 600m, TaxSnapshotStatuses.Complete);
+            GrnLine outLine = CreateSupplierReturnGrnLine(
+                mainGrn.Id, variants[3].Id, batches[3].Id, 1m, 500m, 450m,
+                outTax.Id, null, TaxCategoryCodes.OutOfScope, "Out of Scope", 0m, true,
+                500m, 0m, 500m, TaxSnapshotStatuses.Complete);
+            GrnLine exclusiveLine = CreateSupplierReturnGrnLine(
+                exclusiveGrn.Id, variants[4].Id, batches[4].Id, 1m, 1000m, 1000m,
+                standardTax.Id, standardRate.Id, TaxCategoryCodes.Standard, "Standard VAT", 18m, false,
+                1000m, 180m, 1180m, TaxSnapshotStatuses.Complete);
+            GrnLine legacyLine = CreateSupplierReturnGrnLine(
+                legacyGrn.Id, variants[5].Id, batches[5].Id, 1m, 700m, 650m,
+                null, null, null, null, null, null,
+                null, null, null, TaxSnapshotStatuses.LegacyUnknown);
+            legacyLine.LineTotal = 700m;
+
+            context.GrnLines.AddRange(standardLine, zeroLine, exemptLine, outLine, exclusiveLine, legacyLine);
+            context.StoreSettings.Add(new StoreSettings
+            {
+                StoreName = "Supplier Return Test Store",
+                LegalName = "Supplier Return Test Store (Pvt) Ltd",
+                AddressLine1 = "1 Test Road",
+                City = "Colombo",
+                Country = "Sri Lanka",
+                Phone = "0111111111",
+                TaxpayerIdentificationNumber = "STORE-TIN",
+                VatRegistrationNumber = "STORE-VAT",
+                IsVatRegistered = true,
+                IsActive = true
+            });
+            context.SaveChanges();
+
+            return new SupplierReturnTestScenario
+            {
+                SupplierId = supplier.Id,
+                MainGrnId = mainGrn.Id,
+                ExclusiveGrnId = exclusiveGrn.Id,
+                LegacyGrnId = legacyGrn.Id,
+                StandardParentId = parents[0].Id,
+                StandardVariantId = variants[0].Id,
+                StandardBatchId = batches[0].Id,
+                StandardLineId = standardLine.Id,
+                ZeroLineId = zeroLine.Id,
+                ExemptLineId = exemptLine.Id,
+                OutOfScopeLineId = outLine.Id,
+                ExclusiveLineId = exclusiveLine.Id,
+                LegacyLineId = legacyLine.Id,
+                StandardTaxRateId = standardRate.Id
+            };
+        }
+
+        private static TaxCategory CreateSupplierReturnTaxCategory(
+            string code,
+            string name,
+            string treatment,
+            bool rateBased,
+            int order)
+        {
+            return new TaxCategory
+            {
+                CategoryCode = code,
+                CategoryName = name,
+                TreatmentType = treatment,
+                IsRateBased = rateBased,
+                IsActive = true,
+                DisplayOrder = order
+            };
+        }
+
+        private static ItemParent CreateSupplierReturnParent(
+            string code,
+            string name,
+            int categoryId,
+            int uomId,
+            int? taxCategoryId)
+        {
+            return new ItemParent
+            {
+                ItemCode = code,
+                ItemName = name,
+                PrintName = name,
+                CategoryId = categoryId,
+                UnitOfMeasureId = uomId,
+                BaseUom = "PCS",
+                ItemType = ItemTypeCodes.StockItem,
+                TaxCategoryId = taxCategoryId,
+                TaxCode = taxCategoryId.HasValue ? "VAT-18" : "TAX-FREE",
+                IsTaxInclusive = true,
+                HasBatchTracking = true,
+                HasExpiryTracking = false,
+                HasBatchExpiry = false
+            };
+        }
+
+        private static GrnHeader CreateSupplierReturnGrn(
+            int supplierId,
+            string grnNumber,
+            string invoiceNumber,
+            bool? isTaxInclusive)
+        {
+            return new GrnHeader
+            {
+                GrnNumber = grnNumber,
+                SupplierId = supplierId,
+                SupplierInvoiceNo = invoiceNumber,
+                InvoiceDate = new DateTime(2026, 7, 1),
+                ReceivedDate = new DateTime(2026, 7, 2),
+                DueDate = new DateTime(2026, 8, 1),
+                Status = "Posted",
+                IsTaxInclusive = isTaxInclusive,
+                TaxSnapshotStatus = isTaxInclusive.HasValue
+                    ? TaxSnapshotStatuses.Complete
+                    : TaxSnapshotStatuses.LegacyUnknown,
+                CreatedBy = "Test",
+                PostedBy = "Test",
+                PostedAt = new DateTime(2026, 7, 2)
+            };
+        }
+
+        private static GrnLine CreateSupplierReturnGrnLine(
+            int grnHeaderId,
+            int variantId,
+            int batchId,
+            decimal quantity,
+            decimal unitCost,
+            decimal landedCost,
+            int? taxCategoryId,
+            int? taxRateId,
+            string? categoryCode,
+            string? taxName,
+            decimal? taxRate,
+            bool? inclusive,
+            decimal? taxable,
+            decimal? vat,
+            decimal? taxInclusive,
+            string snapshotStatus)
+        {
+            return new GrnLine
+            {
+                GrnHeaderId = grnHeaderId,
+                ItemVariantId = variantId,
+                ItemBatchId = batchId,
+                BatchNo = $"BATCH-{batchId}",
+                Uom = "PCS",
+                ReceivedQty = quantity,
+                UnitCost = unitCost,
+                LandedCost = landedCost,
+                LineTotal = taxInclusive ?? quantity * unitCost,
+                TaxCategoryId = taxCategoryId,
+                TaxRateId = taxRateId,
+                TaxCategoryCodeSnapshot = categoryCode,
+                TaxCodeSnapshot = categoryCode,
+                TaxNameSnapshot = taxName,
+                TaxRatePercentSnapshot = taxRate,
+                IsTaxInclusiveSnapshot = inclusive,
+                TaxableAmountSnapshot = taxable,
+                VatAmountSnapshot = vat,
+                TaxInclusiveAmountSnapshot = taxInclusive,
+                TaxSnapshotStatus = snapshotStatus,
+                LineStatus = "Posted"
+            };
+        }
+
+        private sealed class SupplierReturnTestScenario
+        {
+            public int SupplierId { get; init; }
+            public int MainGrnId { get; init; }
+            public int ExclusiveGrnId { get; init; }
+            public int LegacyGrnId { get; init; }
+            public int StandardParentId { get; init; }
+            public int StandardVariantId { get; init; }
+            public int StandardBatchId { get; init; }
+            public int StandardLineId { get; init; }
+            public int ZeroLineId { get; init; }
+            public int ExemptLineId { get; init; }
+            public int OutOfScopeLineId { get; init; }
+            public int ExclusiveLineId { get; init; }
+            public int LegacyLineId { get; init; }
+            public int StandardTaxRateId { get; init; }
         }
 
         private static CustomerReturnRepository CreateCustomerReturnRepository(

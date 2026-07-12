@@ -1,0 +1,77 @@
+<Window x:Class="POS.BackOffice.UI.Views.Dialogs.SupplierDebitNotePreviewDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Supplier Debit Note Preview"
+        Width="680"
+        Height="780"
+        MinWidth="520"
+        MinHeight="560"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="#D9E2EC"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Border Margin="10"
+            Background="#F8FAFC"
+            BorderBrush="#334155"
+            BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="52"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="#0F3D5E">
+                <DockPanel>
+                    <TextBlock Text="SUPPLIER DEBIT NOTE PREVIEW"
+                               Foreground="White"
+                               FontWeight="Bold"
+                               FontSize="17"
+                               VerticalAlignment="Center"
+                               Margin="14,0,0,0"/>
+                    <TextBlock Text="Esc = Close"
+                               Foreground="#DDEAF3"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               Margin="0,0,12,0"/>
+                </DockPanel>
+            </Border>
+
+            <TextBox x:Name="PreviewTextBox"
+                     Grid.Row="1"
+                     Margin="14"
+                     Padding="12"
+                     FontFamily="Consolas"
+                     FontSize="14"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"
+                     Background="White"
+                     BorderBrush="#94A3B8"/>
+
+            <Border Grid.Row="2"
+                    Background="#E5E7EB"
+                    BorderBrush="#CBD5E1"
+                    BorderThickness="0,1,0,0">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,12,0">
+                    <Button Content="Copy"
+                            Width="95"
+                            Height="32"
+                            Margin="0,0,8,0"
+                            Click="Copy_Click"/>
+                    <Button Content="Close"
+                            Width="95"
+                            Height="32"
+                            IsCancel="True"
+                            Click="Close_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

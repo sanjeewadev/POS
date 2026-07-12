@@ -13,6 +13,8 @@ using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Backup;
 using POS.Core.Services.Licensing;
+using POS.Core.Services.Documents;
+using POS.Core.Services.Returns;
 using POS.Hardware.Services;
 using System;
 using System.Threading.Tasks;
@@ -69,6 +71,8 @@ namespace POS.BackOffice.UI
             services.AddTransient<PoRepository>();
             services.AddTransient<StockAdjustmentRepository>();
             services.AddTransient<StockBalanceRepository>();
+            services.AddTransient<SupplierReturnAllocationCalculator>();
+            services.AddTransient<SupplierDebitNoteTextFormatter>();
             services.AddTransient<SupplierReturnRepository>();
             services.AddTransient<ExpressItemRepository>();
             services.AddTransient<CustomerRepository>();

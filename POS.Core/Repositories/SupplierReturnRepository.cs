@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
+using POS.Core.Models.DTOs;
+using POS.Core.Services.Returns;
 
 namespace POS.Core.Repositories
 {
     public class SupplierLookupDto
     {
         public int Id { get; set; }
-
         public string SupplierCode { get; set; } = string.Empty;
         public string SupplierName { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;
-
         public decimal CurrentBalance { get; set; }
 
         public string DisplayText
@@ -25,10 +26,7 @@ namespace POS.Core.Repositories
                 string code = NormalizeText(SupplierCode);
                 string name = NormalizeText(SupplierName);
                 string company = NormalizeText(CompanyName);
-
-                string main = string.IsNullOrWhiteSpace(code)
-                    ? name
-                    : $"{code} - {name}";
+                string main = string.IsNullOrWhiteSpace(code) ? name : $"{code} - {name}";
 
                 if (!string.IsNullOrWhiteSpace(company) &&
                     !company.Equals(name, StringComparison.OrdinalIgnoreCase))
@@ -40,24 +38,17 @@ namespace POS.Core.Repositories
             }
         }
 
-        private static string NormalizeText(string? value)
-        {
-            return (value ?? string.Empty).Trim();
-        }
+        private static string NormalizeText(string? value) => (value ?? string.Empty).Trim();
     }
 
     public class SupplierInvoiceLookupDto
     {
         public int Id { get; set; }
-
         public string GrnNumber { get; set; } = string.Empty;
         public string SupplierInvoiceNo { get; set; } = string.Empty;
-
         public DateTime InvoiceDate { get; set; }
         public DateTime ReceivedDate { get; set; }
-
         public decimal NetPayable { get; set; }
-
         public int ReturnableLineCount { get; set; }
         public decimal ReturnableQty { get; set; }
 
@@ -69,50 +60,44 @@ namespace POS.Core.Repositories
     {
         public int GrnHeaderId { get; set; }
         public int GrnLineId { get; set; }
-
         public int ItemVariantId { get; set; }
         public int ItemBatchId { get; set; }
-
         public string GrnNumber { get; set; } = string.Empty;
         public string SupplierInvoiceNo { get; set; } = string.Empty;
-
         public string ItemCode { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string VariantDescription { get; set; } = string.Empty;
-
         public bool HasBatchTracking { get; set; }
         public bool HasExpiryTracking { get; set; }
         public bool IsGeneralStockBucket { get; set; }
-
-        public string TrackingText
-        {
-            get
-            {
-                if (!HasBatchTracking)
-                    return "Average Cost";
-
-                return HasExpiryTracking ? "Batch + Expiry" : "Batch";
-            }
-        }
-
         public string BatchNo { get; set; } = string.Empty;
         public string InternalBatchBarcode { get; set; } = string.Empty;
         public DateTime? ExpiryDate { get; set; }
-
-        public string BatchDisplayText =>
-            IsGeneralStockBucket ? "GENERAL" : BatchNo;
-
-        public string BatchBarcodeDisplayText =>
-            IsGeneralStockBucket ? "-" : InternalBatchBarcode;
-
         public decimal ReceivedQty { get; set; }
         public decimal AlreadyReturnedQty { get; set; }
         public decimal CurrentBatchStock { get; set; }
         public decimal MaxReturnQty { get; set; }
-
         public decimal HistoricalCost { get; set; }
+        public decimal OriginalCreditAmount { get; set; }
+        public decimal PreviouslyReturnedCreditAmount { get; set; }
+        public decimal MaxReturnCredit { get; set; }
+        public decimal CreditUnitValue { get; set; }
+        public string TaxCategoryCode { get; set; } = string.Empty;
+        public string TaxName { get; set; } = string.Empty;
+        public decimal? TaxRatePercent { get; set; }
+        public string TaxSnapshotStatus { get; set; } = TaxSnapshotStatuses.LegacyUnknown;
 
-        public decimal CreditValue => Math.Round(MaxReturnQty * HistoricalCost, 2);
+        public string TrackingText => !HasBatchTracking
+            ? "Average Cost"
+            : HasExpiryTracking ? "Batch + Expiry" : "Batch";
+
+        public string BatchDisplayText => IsGeneralStockBucket ? "GENERAL" : BatchNo;
+        public string BatchBarcodeDisplayText => IsGeneralStockBucket ? "-" : InternalBatchBarcode;
+        public decimal CreditValue => MaxReturnCredit;
+        public string TaxDisplayText =>
+            string.Equals(TaxSnapshotStatus, TaxSnapshotStatuses.Complete, StringComparison.Ordinal)
+                ? $"{TaxCategoryCode} {(TaxRatePercent ?? 0m):0.####}%"
+                : "Legacy / Unknown";
     }
 
     public class SupplierReturnRepository
@@ -120,15 +105,15 @@ namespace POS.Core.Repositories
         private const string GeneralBatchNo = "GENERAL";
 
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly SupplierReturnAllocationCalculator _allocationCalculator;
 
-        public SupplierReturnRepository(IDbContextFactory<AppDbContext> contextFactory)
+        public SupplierReturnRepository(
+            IDbContextFactory<AppDbContext> contextFactory,
+            SupplierReturnAllocationCalculator allocationCalculator)
         {
             _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+            _allocationCalculator = allocationCalculator ?? throw new ArgumentNullException(nameof(allocationCalculator));
         }
-
-        // =========================================================
-        // LOOKUPS
-        // =========================================================
 
         public async Task<List<SupplierLookupDto>> GetActiveSuppliersAsync()
         {
@@ -136,7 +121,9 @@ namespace POS.Core.Repositories
 
             return await context.Suppliers
                 .AsNoTracking()
-                .Where(s => !s.IsDeactivated)
+                .Where(s => context.GrnHeaders.Any(g =>
+                    g.SupplierId == s.Id &&
+                    g.Status == SupplierReturnCodes.PostedStatus))
                 .OrderBy(s => s.SupplierCode)
                 .ThenBy(s => s.SupplierName)
                 .Select(s => new SupplierLookupDto
@@ -157,133 +144,79 @@ namespace POS.Core.Repositories
 
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            var grns = await context.GrnHeaders
+            List<GrnHeader> grns = await context.GrnHeaders
                 .AsNoTracking()
                 .Where(g =>
                     g.SupplierId == supplierId &&
-                    g.Status == "Posted")
+                    g.Status == SupplierReturnCodes.PostedStatus)
                 .OrderByDescending(g => g.ReceivedDate)
                 .ThenByDescending(g => g.GrnNumber)
                 .Take(300)
-                .Select(g => new
-                {
-                    g.Id,
-                    g.GrnNumber,
-                    g.SupplierInvoiceNo,
-                    g.InvoiceDate,
-                    g.ReceivedDate,
-                    g.NetPayable
-                })
                 .ToListAsync();
 
-            if (!grns.Any())
+            if (grns.Count == 0)
                 return new List<SupplierInvoiceLookupDto>();
 
-            var grnIds = grns
-                .Select(g => g.Id)
-                .ToList();
+            int[] grnIds = grns.Select(g => g.Id).ToArray();
 
-            var grnLines = await context.GrnLines
+            List<GrnLine> grnLines = await context.GrnLines
+                .Include(l => l.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
                 .Where(l =>
                     grnIds.Contains(l.GrnHeaderId) &&
-                    l.ReceivedQty > 0 &&
-                    l.ItemBatchId.HasValue)
-                .Select(l => new
-                {
-                    l.Id,
-                    l.GrnHeaderId,
-                    l.ItemVariantId,
-                    ItemBatchId = l.ItemBatchId!.Value,
-                    l.ReceivedQty
-                })
+                    l.ReceivedQty > 0m &&
+                    l.ItemBatchId.HasValue &&
+                    l.ItemVariant.ItemParent.ItemType == ItemTypeCodes.StockItem)
                 .ToListAsync();
 
-            if (!grnLines.Any())
+            if (grnLines.Count == 0)
                 return new List<SupplierInvoiceLookupDto>();
 
-            var grnLineIds = grnLines
-                .Select(l => l.Id)
-                .ToList();
+            int[] lineIds = grnLines.Select(l => l.Id).ToArray();
+            int[] batchIds = grnLines.Select(l => l.ItemBatchId!.Value).Distinct().ToArray();
 
-            var batchIds = grnLines
-                .Select(l => l.ItemBatchId)
-                .Distinct()
-                .ToList();
+            Dictionary<int, PreviousReturnAggregate> prior =
+                await LoadPriorReturnAggregatesAsync(context, lineIds);
 
-            var previousReturnRows = await context.SupplierReturnLines
-                .Include(l => l.ReturnHeader)
-                .AsNoTracking()
-                .Where(l =>
-                    l.GrnLineId.HasValue &&
-                    grnLineIds.Contains(l.GrnLineId.Value) &&
-                    l.ReturnHeader != null &&
-                    l.ReturnHeader.Status == "Posted")
-                .Select(l => new
-                {
-                    GrnLineId = l.GrnLineId!.Value,
-                    l.ReturnQty
-                })
-                .ToListAsync();
-
-            var returnedByGrnLine = previousReturnRows
-                .GroupBy(x => x.GrnLineId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Sum(x => x.ReturnQty));
-
-            var batches = await context.ItemBatches
+            Dictionary<int, ItemBatch> batches = await context.ItemBatches
                 .Include(b => b.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
-                .Where(b =>
-                    batchIds.Contains(b.Id) &&
-                    !b.IsDeactivated &&
-                    !b.ItemVariant.IsDeactivated &&
-                    !b.ItemVariant.ItemParent.IsDeactivated)
+                .Where(b => batchIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id);
 
             var result = new List<SupplierInvoiceLookupDto>();
 
-            foreach (var grn in grns)
+            foreach (GrnHeader grn in grns)
             {
-                var linesForGrn = grnLines
-                    .Where(l => l.GrnHeaderId == grn.Id)
-                    .ToList();
+                int count = 0;
+                decimal quantity = 0m;
 
-                int returnableLineCount = 0;
-                decimal totalReturnableQty = 0m;
-
-                foreach (var line in linesForGrn)
+                foreach (GrnLine line in grnLines.Where(l => l.GrnHeaderId == grn.Id))
                 {
-                    if (!batches.TryGetValue(line.ItemBatchId, out var batch))
+                    if (!line.ItemBatchId.HasValue ||
+                        !batches.TryGetValue(line.ItemBatchId.Value, out ItemBatch? batch) ||
+                        !IsValidStockBucketForItem(batch))
+                    {
                         continue;
+                    }
 
-                    if (!IsValidStockBucketForItem(batch))
-                        continue;
-
-                    decimal alreadyReturned = returnedByGrnLine.TryGetValue(line.Id, out decimal returned)
-                        ? returned
+                    decimal returned = prior.TryGetValue(line.Id, out PreviousReturnAggregate? aggregate)
+                        ? aggregate.Quantity
                         : 0m;
 
-                    decimal remainingFromReceipt = line.ReceivedQty - alreadyReturned;
+                    decimal remaining = Math.Max(0m, line.ReceivedQty - returned);
+                    decimal returnable = Math.Min(remaining, batch.CurrentStock);
 
-                    if (remainingFromReceipt <= 0)
+                    if (returnable <= 0m)
                         continue;
 
-                    if (batch.CurrentStock <= 0)
-                        continue;
-
-                    decimal returnableQty = Math.Min(remainingFromReceipt, batch.CurrentStock);
-
-                    if (returnableQty <= 0)
-                        continue;
-
-                    returnableLineCount++;
-                    totalReturnableQty += returnableQty;
+                    count++;
+                    quantity += returnable;
                 }
 
-                if (returnableLineCount <= 0 || totalReturnableQty <= 0)
+                if (count == 0)
                     continue;
 
                 result.Add(new SupplierInvoiceLookupDto
@@ -294,14 +227,14 @@ namespace POS.Core.Repositories
                     InvoiceDate = grn.InvoiceDate,
                     ReceivedDate = grn.ReceivedDate,
                     NetPayable = grn.NetPayable,
-                    ReturnableLineCount = returnableLineCount,
-                    ReturnableQty = totalReturnableQty
+                    ReturnableLineCount = count,
+                    ReturnableQty = quantity
                 });
             }
 
             return result
-                .OrderByDescending(g => g.ReceivedDate)
-                .ThenByDescending(g => g.GrnNumber)
+                .OrderByDescending(row => row.ReceivedDate)
+                .ThenByDescending(row => row.GrnNumber)
                 .Take(100)
                 .ToList();
         }
@@ -310,183 +243,117 @@ namespace POS.Core.Repositories
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
-            var grn = await context.GrnHeaders
+            GrnHeader? grn = await context.GrnHeaders
                 .AsNoTracking()
                 .FirstOrDefaultAsync(g =>
                     g.Id == grnHeaderId &&
-                    g.Status == "Posted");
+                    g.Status == SupplierReturnCodes.PostedStatus);
 
             if (grn == null)
                 throw new InvalidOperationException("Posted GRN was not found.");
 
-            var grnLines = await context.GrnLines
+            List<GrnLine> grnLines = await context.GrnLines
                 .Include(l => l.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
                 .Where(l =>
                     l.GrnHeaderId == grnHeaderId &&
-                    l.ReceivedQty > 0)
-                .OrderBy(l => l.ItemVariant!.ItemParent!.ItemCode)
-                .ThenBy(l => l.ItemVariant!.VariantDescription)
+                    l.ReceivedQty > 0m &&
+                    l.ItemBatchId.HasValue &&
+                    l.ItemVariant.ItemParent.ItemType == ItemTypeCodes.StockItem)
+                .OrderBy(l => l.ItemVariant.ItemParent.ItemCode)
+                .ThenBy(l => l.ItemVariant.VariantDescription)
                 .ToListAsync();
 
-            if (!grnLines.Any())
+            if (grnLines.Count == 0)
                 return new List<SupplierReturnSourceDto>();
 
-            var exactBatchIds = grnLines
-                .Where(l => l.ItemBatchId.HasValue)
-                .Select(l => l.ItemBatchId!.Value)
-                .Distinct()
-                .ToList();
+            int[] batchIds = grnLines.Select(l => l.ItemBatchId!.Value).Distinct().ToArray();
+            int[] lineIds = grnLines.Select(l => l.Id).ToArray();
 
-            var variantIds = grnLines
-                .Select(l => l.ItemVariantId)
-                .Distinct()
-                .ToList();
-
-            var batchNos = grnLines
-                .Select(l => NormalizeText(l.BatchNo).ToUpperInvariant())
-                .Where(b => !string.IsNullOrWhiteSpace(b))
-                .Distinct()
-                .ToList();
-
-            var batches = await context.ItemBatches
+            Dictionary<int, ItemBatch> batches = await context.ItemBatches
                 .Include(b => b.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
-                .Where(b =>
-                    !b.IsDeactivated &&
-                    !b.ItemVariant.IsDeactivated &&
-                    !b.ItemVariant.ItemParent.IsDeactivated &&
-                    (
-                        exactBatchIds.Contains(b.Id) ||
-                        (
-                            variantIds.Contains(b.ItemVariantId) &&
-                            batchNos.Contains(b.BatchNo.ToUpper())
-                        )
-                    ))
-                .ToListAsync();
+                .Where(b => batchIds.Contains(b.Id))
+                .ToDictionaryAsync(b => b.Id);
 
-            var grnLineIds = grnLines
-                .Select(l => l.Id)
-                .ToList();
-
-            var previousReturnRows = await context.SupplierReturnLines
-                .Include(l => l.ReturnHeader)
-                .AsNoTracking()
-                .Where(l =>
-                    l.GrnLineId.HasValue &&
-                    grnLineIds.Contains(l.GrnLineId.Value) &&
-                    l.ReturnHeader != null &&
-                    l.ReturnHeader.Status == "Posted")
-                .Select(l => new
-                {
-                    GrnLineId = l.GrnLineId!.Value,
-                    l.ReturnQty
-                })
-                .ToListAsync();
-
-            var returnedByGrnLine = previousReturnRows
-                .GroupBy(x => x.GrnLineId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Sum(x => x.ReturnQty));
+            Dictionary<int, PreviousReturnAggregate> prior =
+                await LoadPriorReturnAggregatesAsync(context, lineIds);
 
             var result = new List<SupplierReturnSourceDto>();
 
-            foreach (var line in grnLines)
+            foreach (GrnLine line in grnLines)
             {
-                ItemBatch? batch = null;
-
-                if (line.ItemBatchId.HasValue)
+                if (!line.ItemBatchId.HasValue ||
+                    !batches.TryGetValue(line.ItemBatchId.Value, out ItemBatch? batch) ||
+                    !IsValidStockBucketForItem(batch))
                 {
-                    batch = batches.FirstOrDefault(b => b.Id == line.ItemBatchId.Value);
+                    continue;
                 }
 
-                if (batch == null)
-                {
-                    string lineBatchNo = NormalizeText(line.BatchNo);
+                PreviousReturnAggregate previous = prior.TryGetValue(line.Id, out PreviousReturnAggregate? found)
+                    ? found
+                    : new PreviousReturnAggregate();
 
-                    batch = batches.FirstOrDefault(b =>
-                        b.ItemVariantId == line.ItemVariantId &&
-                        b.BatchNo.Equals(lineBatchNo, StringComparison.OrdinalIgnoreCase));
-                }
+                decimal remainingQuantity = Math.Max(0m, line.ReceivedQty - previous.Quantity);
+                decimal maxReturnQuantity = Math.Min(remainingQuantity, batch.CurrentStock);
 
-                if (batch == null)
+                if (maxReturnQuantity <= 0m)
                     continue;
 
-                if (!IsValidStockBucketForItem(batch))
-                    continue;
+                decimal historicalCost = ResolveHistoricalCost(line, batch, line.ItemVariant);
+                decimal originalCredit = ResolveOriginalCreditAmount(line);
 
-                decimal alreadyReturned = returnedByGrnLine.TryGetValue(line.Id, out decimal returned)
-                    ? returned
-                    : 0m;
+                SupplierReturnAllocationResult allocation = _allocationCalculator.Calculate(
+                    BuildAllocationInput(line, previous, maxReturnQuantity, originalCredit));
 
-                decimal remainingFromOriginalReceipt = line.ReceivedQty - alreadyReturned;
-
-                if (remainingFromOriginalReceipt <= 0)
-                    continue;
-
-                decimal maxReturnQty = Math.Min(remainingFromOriginalReceipt, batch.CurrentStock);
-
-                if (maxReturnQty <= 0)
-                    continue;
-
-                decimal historicalCost = line.LandedCost > 0
-                    ? line.LandedCost
-                    : line.UnitCost;
-
-                if (historicalCost <= 0)
-                {
-                    historicalCost = batch.CostPrice > 0
-                        ? batch.CostPrice
-                        : line.ItemVariant?.AverageCost ?? 0m;
-                }
-
-                bool hasBatchTracking = batch.ItemVariant.ItemParent.HasBatchTracking;
-                bool hasExpiryTracking = batch.ItemVariant.ItemParent.HasExpiryTracking || batch.ItemVariant.ItemParent.HasBatchExpiry;
                 bool isGeneral = IsGeneralBatch(batch.BatchNo);
+                ItemParent parent = batch.ItemVariant.ItemParent;
 
                 result.Add(new SupplierReturnSourceDto
                 {
                     GrnHeaderId = grn.Id,
                     GrnLineId = line.Id,
-
                     ItemVariantId = line.ItemVariantId,
                     ItemBatchId = batch.Id,
-
                     GrnNumber = grn.GrnNumber,
                     SupplierInvoiceNo = grn.SupplierInvoiceNo,
-
-                    ItemCode = line.ItemVariant?.ItemParent?.ItemCode ?? string.Empty,
-                    Description = line.ItemVariant?.ItemParent?.ItemName ?? string.Empty,
-                    VariantDescription = string.IsNullOrWhiteSpace(line.ItemVariant?.VariantDescription)
+                    ItemCode = parent.ItemCode,
+                    Description = parent.ItemName,
+                    VariantDescription = string.IsNullOrWhiteSpace(batch.ItemVariant.VariantDescription)
                         ? "Standard"
-                        : line.ItemVariant!.VariantDescription,
-
-                    HasBatchTracking = hasBatchTracking,
-                    HasExpiryTracking = hasExpiryTracking,
+                        : batch.ItemVariant.VariantDescription,
+                    HasBatchTracking = parent.HasBatchTracking,
+                    HasExpiryTracking = parent.HasExpiryTracking || parent.HasBatchExpiry,
                     IsGeneralStockBucket = isGeneral,
-
                     BatchNo = batch.BatchNo,
                     InternalBatchBarcode = batch.InternalBatchBarcode ?? string.Empty,
                     ExpiryDate = batch.ExpiryDate,
-
                     ReceivedQty = line.ReceivedQty,
-                    AlreadyReturnedQty = alreadyReturned,
+                    AlreadyReturnedQty = previous.Quantity,
                     CurrentBatchStock = batch.CurrentStock,
-                    MaxReturnQty = maxReturnQty,
-
-                    HistoricalCost = Math.Round(historicalCost, 2)
+                    MaxReturnQty = maxReturnQuantity,
+                    HistoricalCost = Money(historicalCost),
+                    OriginalCreditAmount = Money(originalCredit),
+                    PreviouslyReturnedCreditAmount = Money(previous.CreditAmount),
+                    MaxReturnCredit = allocation.CreditAmount,
+                    CreditUnitValue = line.ReceivedQty > 0m
+                        ? Money(originalCredit / line.ReceivedQty)
+                        : 0m,
+                    TaxCategoryCode = NormalizeText(line.TaxCategoryCodeSnapshot),
+                    TaxName = NormalizeText(line.TaxNameSnapshot),
+                    TaxRatePercent = line.TaxRatePercentSnapshot,
+                    TaxSnapshotStatus = allocation.TaxSnapshotStatus
                 });
             }
 
             return result
-                .OrderBy(r => r.ItemCode)
-                .ThenBy(r => r.VariantDescription)
-                .ThenBy(r => r.IsGeneralStockBucket ? 0 : 1)
-                .ThenBy(r => r.ExpiryDate ?? DateTime.MaxValue)
-                .ThenBy(r => r.BatchNo)
+                .OrderBy(row => row.ItemCode)
+                .ThenBy(row => row.VariantDescription)
+                .ThenBy(row => row.IsGeneralStockBucket ? 0 : 1)
+                .ThenBy(row => row.ExpiryDate ?? DateTime.MaxValue)
+                .ThenBy(row => row.BatchNo)
                 .ToList();
         }
 
@@ -505,67 +372,68 @@ namespace POS.Core.Repositories
             };
         }
 
-        // =========================================================
-        // POST SUPPLIER RETURN
-        // =========================================================
-
-        public async Task PostSupplierReturnAsync(
+        public async Task<SupplierReturnPostResult> PostSupplierReturnAsync(
             SupplierReturnHeader header,
             List<SupplierReturnLine> lines)
         {
             if (header == null)
                 throw new ArgumentNullException(nameof(header));
 
-            if (lines == null || !lines.Any())
+            if (lines == null || lines.Count == 0)
                 throw new InvalidOperationException("Supplier return must contain at least one line.");
 
             NormalizeHeader(header);
             NormalizeLines(lines);
             ValidateSubmittedLineDuplicates(lines);
-            RecalculateHeaderTotals(header, lines);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
-                await ValidateHeaderAsync(context, header);
-                await ValidateLinesAsync(context, header, lines);
+                GrnHeader sourceGrn = await ValidateAndLoadHeaderSourceAsync(context, header);
+                await ValidateAndCalculateLinesAsync(context, header, lines);
+                RecalculateHeaderTotals(header, lines);
+                ValidateCalculatedHeader(header);
 
                 DateTime now = DateTime.Now;
-
                 header.Id = 0;
-                header.ReturnNumber = await GenerateDocumentNumberAsync(context, "RTN");
-                header.Status = "Posted";
+                header.ReturnNumber = await GenerateDocumentNumberAsync(
+                    context,
+                    SupplierReturnCodes.DocumentSequenceType,
+                    SupplierReturnCodes.DocumentPrefix);
+                header.OriginalInvoiceNo = sourceGrn.SupplierInvoiceNo;
+                header.Status = SupplierReturnCodes.PostedStatus;
+                header.RestockingFee = 0m;
                 header.CreatedAt = now;
                 header.UpdatedAt = now;
                 header.PostedAt = now;
-
-                if (string.IsNullOrWhiteSpace(header.CreatedBy))
-                    header.CreatedBy = header.AuthorizedBy;
-
-                if (string.IsNullOrWhiteSpace(header.PostedBy))
-                    header.PostedBy = header.AuthorizedBy;
-
+                header.CreatedBy = FirstNonEmpty(header.CreatedBy, header.AuthorizedBy);
+                header.PostedBy = FirstNonEmpty(header.PostedBy, header.AuthorizedBy);
                 header.Supplier = null!;
                 header.GrnHeader = null;
                 header.ReturnLines = new List<SupplierReturnLine>();
 
-                await context.SupplierReturnHeaders.AddAsync(header);
+                context.SupplierReturnHeaders.Add(header);
                 await context.SaveChangesAsync();
 
-                foreach (var line in lines)
+                foreach (SupplierReturnLine line in lines)
                 {
                     PrepareNewLine(line, header.Id, now);
-                    await context.SupplierReturnLines.AddAsync(line);
+                    context.SupplierReturnLines.Add(line);
                 }
 
                 await context.SaveChangesAsync();
-
                 await PostInventoryAndLedgerAsync(context, header, lines, now);
-
                 await context.SaveChangesAsync();
+                SupplierDebitNoteDto debitNote = await BuildSupplierDebitNoteAsync(context, header.Id);
                 await transaction.CommitAsync();
+
+                return new SupplierReturnPostResult
+                {
+                    ReturnHeader = header,
+                    DebitNote = debitNote
+                };
             }
             catch
             {
@@ -574,7 +442,6 @@ namespace POS.Core.Repositories
             }
         }
 
-        // Compatibility method for older callers.
         public async Task SaveSupplierReturnAsync(
             SupplierReturnHeader header,
             List<SupplierReturnLine> lines,
@@ -586,136 +453,114 @@ namespace POS.Core.Repositories
             await PostSupplierReturnAsync(header, lines);
         }
 
-        private static async Task PostInventoryAndLedgerAsync(
-            AppDbContext context,
-            SupplierReturnHeader header,
-            List<SupplierReturnLine> lines,
-            DateTime now)
+        public async Task<SupplierDebitNoteDto> GetSupplierDebitNoteAsync(int supplierReturnHeaderId)
         {
-            var batchIds = lines
-                .Select(l => l.ItemBatchId)
-                .Distinct()
-                .ToList();
-
-            var batches = await context.ItemBatches
-                .Include(b => b.ItemVariant)
-                    .ThenInclude(v => v.ItemParent)
-                .Where(b => batchIds.Contains(b.Id))
-                .ToDictionaryAsync(b => b.Id);
-
-            foreach (var line in lines)
-            {
-                if (!batches.TryGetValue(line.ItemBatchId, out var batch))
-                    throw new InvalidOperationException($"Stock row ID {line.ItemBatchId} was not found.");
-
-                if (batch.IsDeactivated)
-                    throw new InvalidOperationException($"Stock row '{BuildBatchDisplayName(batch)}' is deactivated.");
-
-                if (!IsValidStockBucketForItem(batch))
-                {
-                    throw new InvalidOperationException(
-                        $"Stock row '{BuildBatchDisplayName(batch)}' does not match the item tracking method.");
-                }
-
-                if (batch.CurrentStock < line.ReturnQty)
-                {
-                    throw new InvalidOperationException(
-                        $"Insufficient stock in '{BuildBatchDisplayName(batch)}'. Current stock is {batch.CurrentStock:N3}, return quantity is {line.ReturnQty:N3}.");
-                }
-
-                batch.CurrentStock -= line.ReturnQty;
-                batch.UpdatedAt = now;
-
-                line.LineStatus = "Posted";
-                line.UpdatedAt = now;
-
-                var inventoryTx = new InventoryTransaction
-                {
-                    ItemVariantId = batch.ItemVariantId,
-                    ItemBatchId = batch.Id,
-                    TransactionDate = header.ReturnDate,
-                    TransactionType = "SUPPLIER_RETURN",
-                    ReferenceDocument = header.ReturnNumber,
-                    ReferenceLineId = line.Id,
-                    Quantity = -line.ReturnQty,
-                    UnitCost = line.HistoricalCost,
-                    CreatedBy = header.AuthorizedBy,
-                    CreatedAt = now,
-                    Remarks = TrimToMax(
-                        $"Supplier Return | Reason: {line.ReasonCode} | Stock Row: {BuildBatchDisplayName(batch)}",
-                        250)
-                };
-
-                await context.InventoryTransactions.AddAsync(inventoryTx);
-            }
-
-            var supplier = await context.Suppliers
-                .FirstOrDefaultAsync(s => s.Id == header.SupplierId)
-                ?? throw new InvalidOperationException("Supplier was not found.");
-
-            decimal newBalance = supplier.CurrentBalance - header.NetCredit;
-
-            var ledger = new SupplierLedger
-            {
-                SupplierId = supplier.Id,
-                GrnHeaderId = header.GrnHeaderId,
-                TransactionDate = header.ReturnDate,
-                TransactionType = "DEBIT_NOTE",
-                ReferenceDocument = header.ReturnNumber,
-                ChargeAmount = 0m,
-                PaymentAmount = header.NetCredit,
-                BalanceAfterTransaction = newBalance,
-                DueDate = header.ReturnDate,
-                IsPaid = true,
-                CreatedBy = header.AuthorizedBy,
-                CreatedAt = now,
-                Remarks = TrimToMax(
-                    $"Supplier Return | Original Invoice: {header.OriginalInvoiceNo} | Gross: {header.GrossCredit:N2} | Restocking Fee: {header.RestockingFee:N2}",
-                    250)
-            };
-
-            supplier.CurrentBalance = newBalance;
-            supplier.UpdatedAt = now;
-
-            await context.SupplierLedgers.AddAsync(ledger);
-
-            var affectedVariantIds = lines
-                .Select(l => l.ItemVariantId)
-                .Distinct()
-                .ToList();
-
-            await RecalculateVariantAverageCostsAsync(context, affectedVariantIds, now);
+            using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            return await BuildSupplierDebitNoteAsync(context, supplierReturnHeaderId);
         }
 
-        // =========================================================
-        // VALIDATION
-        // =========================================================
+        private static async Task<SupplierDebitNoteDto> BuildSupplierDebitNoteAsync(
+            AppDbContext context,
+            int supplierReturnHeaderId)
+        {
+            SupplierReturnHeader header = await context.SupplierReturnHeaders
+                .Include(row => row.Supplier)
+                .Include(row => row.GrnHeader)
+                .Include(row => row.ReturnLines)
+                    .ThenInclude(line => line.ItemVariant)
+                        .ThenInclude(variant => variant!.ItemParent)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(row => row.Id == supplierReturnHeaderId)
+                ?? throw new InvalidOperationException("Supplier return debit note was not found.");
 
-        private static async Task ValidateHeaderAsync(
+            StoreSettings? store = await context.StoreSettings
+                .AsNoTracking()
+                .OrderByDescending(row => row.IsActive)
+                .ThenBy(row => row.Id)
+                .FirstOrDefaultAsync();
+
+            string storeAddress = JoinNonEmpty(
+                ", ",
+                store?.AddressLine1,
+                store?.AddressLine2,
+                store?.City,
+                store?.PostalCode,
+                store?.Country);
+
+            return new SupplierDebitNoteDto
+            {
+                StoreName = FirstNonEmpty(store?.StoreName, store?.LegalName, "Store"),
+                StoreAddress = storeAddress,
+                StorePhone = NormalizeText(store?.Phone),
+                StoreTin = NormalizeText(store?.TaxpayerIdentificationNumber),
+                StoreVatNo = NormalizeText(store?.VatRegistrationNumber),
+                DebitNoteNumber = header.ReturnNumber,
+                ReturnDate = header.ReturnDate,
+                SupplierName = FirstNonEmpty(header.Supplier?.CompanyName, header.Supplier?.SupplierName),
+                SupplierCode = NormalizeText(header.Supplier?.SupplierCode),
+                SupplierVatNo = NormalizeText(header.Supplier?.VatNumber),
+                SupplierAddress = NormalizeText(header.Supplier?.Address),
+                GrnNumber = NormalizeText(header.GrnHeader?.GrnNumber),
+                OriginalSupplierInvoiceNo = header.OriginalInvoiceNo,
+                AuthorizedBy = header.AuthorizedBy,
+                Remarks = header.Remarks,
+                GrossCredit = header.GrossCredit,
+                NetCredit = header.NetCredit,
+                TaxableAmountTotal = header.TaxableAmountTotal,
+                TotalVatAmount = header.TotalVatAmount,
+                StandardRatedAmount = header.StandardRatedAmount,
+                ZeroRatedAmount = header.ZeroRatedAmount,
+                ExemptAmount = header.ExemptAmount,
+                OutOfScopeAmount = header.OutOfScopeAmount,
+                TaxSnapshotStatus = header.TaxSnapshotStatus,
+                Lines = header.ReturnLines
+                    .OrderBy(line => line.Id)
+                    .Select(line => new SupplierDebitNoteLineDto
+                    {
+                        ItemCode = line.ItemVariant?.ItemParent?.ItemCode ?? string.Empty,
+                        Description = BuildItemDescription(line.ItemVariant),
+                        BatchNo = line.BatchNo,
+                        ReturnQuantity = line.ReturnQty,
+                        HistoricalLandedCost = line.HistoricalCost,
+                        SupplierCredit = line.CreditValue,
+                        TaxCategoryCode = NormalizeText(line.TaxCategoryCodeSnapshot),
+                        TaxName = NormalizeText(line.TaxNameSnapshot),
+                        TaxRatePercent = line.TaxRatePercentSnapshot,
+                        TaxableAmount = line.TaxableAmountSnapshot,
+                        VatAmount = line.VatAmountSnapshot,
+                        TaxInclusiveAmount = line.TaxInclusiveAmountSnapshot,
+                        TaxSnapshotStatus = line.TaxSnapshotStatus,
+                        ReasonCode = line.ReasonCode,
+                        Remarks = line.LineRemarks
+                    })
+                    .ToList()
+            };
+        }
+
+        private static async Task<GrnHeader> ValidateAndLoadHeaderSourceAsync(
             AppDbContext context,
             SupplierReturnHeader header)
         {
             if (header.SupplierId <= 0)
                 throw new InvalidOperationException("Supplier is required.");
 
-            bool supplierExists = await context.Suppliers.AnyAsync(s =>
-                s.Id == header.SupplierId &&
-                !s.IsDeactivated);
+            Supplier? supplier = await context.Suppliers
+                .FirstOrDefaultAsync(row => row.Id == header.SupplierId);
 
-            if (!supplierExists)
-                throw new InvalidOperationException("Selected supplier is inactive or missing.");
+            if (supplier == null)
+                throw new InvalidOperationException("Selected supplier is missing.");
 
             if (!header.GrnHeaderId.HasValue || header.GrnHeaderId.Value <= 0)
                 throw new InvalidOperationException("Supplier return must be linked to a posted GRN.");
 
-            var grn = await context.GrnHeaders
+            GrnHeader? grn = await context.GrnHeaders
                 .AsNoTracking()
-                .FirstOrDefaultAsync(g => g.Id == header.GrnHeaderId.Value);
+                .FirstOrDefaultAsync(row => row.Id == header.GrnHeaderId.Value);
 
             if (grn == null)
                 throw new InvalidOperationException("Linked GRN was not found.");
 
-            if (grn.Status != "Posted")
+            if (!string.Equals(grn.Status, SupplierReturnCodes.PostedStatus, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Only posted GRNs can be used for supplier returns.");
 
             if (grn.SupplierId != header.SupplierId)
@@ -725,7 +570,7 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Return date cannot be in the far future.");
 
             if (string.IsNullOrWhiteSpace(header.AuthorizedBy))
-                throw new InvalidOperationException("Authorized by is required.");
+                throw new InvalidOperationException("Authenticated user is required.");
 
             if (header.AuthorizedBy.Length > 50)
                 throw new InvalidOperationException("Authorized by cannot be longer than 50 characters.");
@@ -733,173 +578,97 @@ namespace POS.Core.Repositories
             if (header.Remarks.Length > 500)
                 throw new InvalidOperationException("Remarks cannot be longer than 500 characters.");
 
-            if (header.OriginalInvoiceNo.Length > 50)
-                throw new InvalidOperationException("Original invoice number cannot be longer than 50 characters.");
-
-            if (header.RestockingFee < 0)
-                throw new InvalidOperationException("Restocking fee cannot be negative.");
-
-            if (header.GrossCredit <= 0)
-                throw new InvalidOperationException("Gross return value must be greater than zero.");
-
-            if (header.RestockingFee > header.GrossCredit)
-                throw new InvalidOperationException("Restocking fee cannot be greater than gross return value.");
-
-            if (header.NetCredit < 0)
-                throw new InvalidOperationException("Net credit cannot be negative.");
+            return grn;
         }
 
-        private static async Task ValidateLinesAsync(
+        private async Task ValidateAndCalculateLinesAsync(
             AppDbContext context,
             SupplierReturnHeader header,
             List<SupplierReturnLine> lines)
         {
-            var variantIds = lines
-                .Select(l => l.ItemVariantId)
+            int[] variantIds = lines.Select(line => line.ItemVariantId).Distinct().ToArray();
+            int[] batchIds = lines.Select(line => line.ItemBatchId).Distinct().ToArray();
+            int[] grnLineIds = lines
+                .Where(line => line.GrnLineId.HasValue)
+                .Select(line => line.GrnLineId!.Value)
                 .Distinct()
-                .ToList();
+                .ToArray();
 
-            var batchIds = lines
-                .Select(l => l.ItemBatchId)
-                .Distinct()
-                .ToList();
+            if (grnLineIds.Length != lines.Count)
+                throw new InvalidOperationException("Every supplier return line must be linked to one GRN line.");
 
-            var grnLineIds = lines
-                .Where(l => l.GrnLineId.HasValue)
-                .Select(l => l.GrnLineId!.Value)
-                .Distinct()
-                .ToList();
+            Dictionary<int, ItemVariant> variants = await context.ItemVariants
+                .Include(variant => variant.ItemParent)
+                .Where(variant => variantIds.Contains(variant.Id))
+                .ToDictionaryAsync(variant => variant.Id);
 
-            if (grnLineIds.Count != lines.Count)
-                throw new InvalidOperationException("Every supplier return line must be linked to a GRN line.");
+            Dictionary<int, ItemBatch> batches = await context.ItemBatches
+                .Include(batch => batch.ItemVariant)
+                    .ThenInclude(variant => variant.ItemParent)
+                .Where(batch => batchIds.Contains(batch.Id))
+                .ToDictionaryAsync(batch => batch.Id);
 
-            var variants = await context.ItemVariants
-                .Include(v => v.ItemParent)
-                .Where(v => variantIds.Contains(v.Id))
-                .ToDictionaryAsync(v => v.Id);
+            Dictionary<int, GrnLine> grnLines = await context.GrnLines
+                .Where(line => grnLineIds.Contains(line.Id))
+                .ToDictionaryAsync(line => line.Id);
 
-            var batches = await context.ItemBatches
-                .Include(b => b.ItemVariant)
-                    .ThenInclude(v => v.ItemParent)
-                .Where(b => batchIds.Contains(b.Id))
-                .ToDictionaryAsync(b => b.Id);
+            Dictionary<int, PreviousReturnAggregate> prior =
+                await LoadPriorReturnAggregatesAsync(context, grnLineIds);
 
-            var grnLines = await context.GrnLines
-                .Where(l => grnLineIds.Contains(l.Id))
-                .ToDictionaryAsync(l => l.Id);
-
-            var previousReturnRows = await context.SupplierReturnLines
-                .Include(l => l.ReturnHeader)
-                .AsNoTracking()
-                .Where(l =>
-                    l.GrnLineId.HasValue &&
-                    grnLineIds.Contains(l.GrnLineId.Value) &&
-                    l.ReturnHeader != null &&
-                    l.ReturnHeader.Status == "Posted")
-                .Select(l => new
-                {
-                    GrnLineId = l.GrnLineId!.Value,
-                    l.ReturnQty
-                })
-                .ToListAsync();
-
-            var returnedByGrnLine = previousReturnRows
-                .GroupBy(x => x.GrnLineId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Sum(x => x.ReturnQty));
-
-            foreach (var line in lines)
+            foreach (SupplierReturnLine line in lines)
             {
                 NormalizeLine(line);
 
-                if (line.ItemVariantId <= 0)
-                    throw new InvalidOperationException("Invalid item variant in supplier return line.");
+                if (!variants.TryGetValue(line.ItemVariantId, out ItemVariant? variant))
+                    throw new InvalidOperationException("One or more supplier return items were not found.");
 
-                if (!variants.TryGetValue(line.ItemVariantId, out var variant))
-                    throw new InvalidOperationException("One or more item variants were not found.");
+                if (!string.Equals(variant.ItemParent.ItemType, ItemTypeCodes.StockItem, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Service '{variant.SkuCode}' cannot be returned to a supplier.");
 
-                if (variant.IsDeactivated || variant.ItemParent.IsDeactivated)
-                    throw new InvalidOperationException($"Item '{variant.SkuCode}' is inactive.");
-
-                if (line.ItemBatchId <= 0)
-                    throw new InvalidOperationException($"Stock row is required for item '{variant.SkuCode}'.");
-
-                if (!batches.TryGetValue(line.ItemBatchId, out var batch))
-                    throw new InvalidOperationException($"Stock row was not found for item '{variant.SkuCode}'.");
+                if (!batches.TryGetValue(line.ItemBatchId, out ItemBatch? batch))
+                    throw new InvalidOperationException($"Original stock row was not found for item '{variant.SkuCode}'.");
 
                 if (batch.ItemVariantId != line.ItemVariantId)
                     throw new InvalidOperationException($"Stock row does not match item '{variant.SkuCode}'.");
 
-                if (batch.IsDeactivated)
-                    throw new InvalidOperationException($"Stock row '{BuildBatchDisplayName(batch)}' is deactivated.");
-
                 if (!IsValidStockBucketForItem(batch))
+                    throw new InvalidOperationException($"Stock row '{BuildBatchDisplayName(batch)}' does not match the item tracking method.");
+
+                if (!line.GrnLineId.HasValue ||
+                    !grnLines.TryGetValue(line.GrnLineId.Value, out GrnLine? grnLine))
                 {
-                    throw new InvalidOperationException(
-                        $"Stock row '{BuildBatchDisplayName(batch)}' does not match the item tracking method.");
-                }
-
-                if (!line.GrnLineId.HasValue || line.GrnLineId.Value <= 0)
-                    throw new InvalidOperationException($"GRN line is required for item '{variant.SkuCode}'.");
-
-                if (!grnLines.TryGetValue(line.GrnLineId.Value, out var grnLine))
                     throw new InvalidOperationException($"Linked GRN line was not found for item '{variant.SkuCode}'.");
-
-                if (!header.GrnHeaderId.HasValue ||
-                    grnLine.GrnHeaderId != header.GrnHeaderId.Value)
-                {
-                    throw new InvalidOperationException($"GRN line does not belong to the selected GRN for item '{variant.SkuCode}'.");
                 }
+
+                if (!header.GrnHeaderId.HasValue || grnLine.GrnHeaderId != header.GrnHeaderId.Value)
+                    throw new InvalidOperationException($"GRN line does not belong to the selected GRN for item '{variant.SkuCode}'.");
 
                 if (grnLine.ItemVariantId != line.ItemVariantId)
                     throw new InvalidOperationException($"GRN line item does not match return item '{variant.SkuCode}'.");
 
-                if (grnLine.ItemBatchId.HasValue &&
-                    grnLine.ItemBatchId.Value != line.ItemBatchId)
-                {
+                if (!grnLine.ItemBatchId.HasValue || grnLine.ItemBatchId.Value != line.ItemBatchId)
                     throw new InvalidOperationException($"Return stock row does not match the original GRN stock row for item '{variant.SkuCode}'.");
-                }
 
-                if (line.ReturnQty <= 0)
+                if (line.ReturnQty <= 0m)
                     throw new InvalidOperationException($"Return quantity must be greater than zero for item '{variant.SkuCode}'.");
 
                 if (line.ReturnQty > batch.CurrentStock)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Stock row has only {batch.CurrentStock:N3}.");
+                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Current stock is only {batch.CurrentStock:N3}.");
                 }
 
-                decimal alreadyReturned = returnedByGrnLine.TryGetValue(grnLine.Id, out decimal returned)
-                    ? returned
-                    : 0m;
+                PreviousReturnAggregate previous = prior.TryGetValue(grnLine.Id, out PreviousReturnAggregate? found)
+                    ? found
+                    : new PreviousReturnAggregate();
 
-                decimal remainingFromReceipt = grnLine.ReceivedQty - alreadyReturned;
+                decimal remainingQuantity = Math.Max(0m, grnLine.ReceivedQty - previous.Quantity);
 
-                if (remainingFromReceipt < 0)
-                    remainingFromReceipt = 0m;
-
-                if (line.ReturnQty > remainingFromReceipt)
+                if (line.ReturnQty > remainingQuantity)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Remaining returnable GRN quantity is {remainingFromReceipt:N3}.");
+                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Remaining returnable GRN quantity is {remainingQuantity:N3}.");
                 }
-
-                decimal historicalCost = grnLine.LandedCost > 0
-                    ? grnLine.LandedCost
-                    : grnLine.UnitCost;
-
-                if (historicalCost <= 0)
-                {
-                    historicalCost = batch.CostPrice > 0
-                        ? batch.CostPrice
-                        : variant.AverageCost > 0
-                            ? variant.AverageCost
-                            : variant.CostPrice;
-                }
-
-                if (historicalCost <= 0)
-                    throw new InvalidOperationException($"Historical cost must be greater than zero for item '{variant.SkuCode}'.");
 
                 if (string.IsNullOrWhiteSpace(line.ReasonCode))
                     throw new InvalidOperationException($"Reason code is required for item '{variant.SkuCode}'.");
@@ -910,142 +679,374 @@ namespace POS.Core.Repositories
                 if (line.LineRemarks.Length > 250)
                     throw new InvalidOperationException($"Line remarks are too long for item '{variant.SkuCode}'.");
 
+                decimal historicalCost = ResolveHistoricalCost(grnLine, batch, variant);
+                decimal originalCredit = ResolveOriginalCreditAmount(grnLine);
+
+                SupplierReturnAllocationResult allocation = _allocationCalculator.Calculate(
+                    BuildAllocationInput(grnLine, previous, line.ReturnQty, originalCredit));
+
                 line.BatchNo = batch.BatchNo;
                 line.ExpiryDate = batch.ExpiryDate;
-                line.HistoricalCost = Math.Round(historicalCost, 2);
-                line.CreditValue = Math.Round(line.ReturnQty * line.HistoricalCost, 2);
+                line.HistoricalCost = Money(historicalCost);
+                line.CreditValue = allocation.CreditAmount;
+                line.TaxCategoryId = grnLine.TaxCategoryId;
+                line.TaxRateId = grnLine.TaxRateId;
+                line.TaxCategoryCodeSnapshot = NormalizeNullable(grnLine.TaxCategoryCodeSnapshot);
+                line.TaxCodeSnapshot = NormalizeNullable(grnLine.TaxCodeSnapshot);
+                line.TaxNameSnapshot = NormalizeNullable(grnLine.TaxNameSnapshot);
+                line.TaxRatePercentSnapshot = grnLine.TaxRatePercentSnapshot;
+                line.IsTaxInclusiveSnapshot = grnLine.IsTaxInclusiveSnapshot;
+                line.TaxableAmountSnapshot = allocation.TaxableAmount;
+                line.VatAmountSnapshot = allocation.VatAmount;
+                line.TaxInclusiveAmountSnapshot = allocation.TaxInclusiveAmount;
+                line.OriginalTaxableAmount = grnLine.TaxableAmountSnapshot;
+                line.OriginalVatAmount = grnLine.VatAmountSnapshot;
+                line.OriginalTaxInclusiveAmount = grnLine.TaxInclusiveAmountSnapshot;
+                line.TaxSnapshotStatus = allocation.TaxSnapshotStatus;
+                line.ItemCode = variant.ItemParent.ItemCode;
+                line.Description = variant.ItemParent.ItemName;
+                line.VariantDescription = variant.VariantDescription;
+                line.CurrentBatchStock = batch.CurrentStock;
+                line.MaxReturnQty = Math.Min(remainingQuantity, batch.CurrentStock);
             }
         }
-
-        private static void ValidateSubmittedLineDuplicates(List<SupplierReturnLine> lines)
-        {
-            var duplicate = lines
-                .GroupBy(l => new
-                {
-                    l.GrnLineId,
-                    l.ItemBatchId
-                })
-                .FirstOrDefault(g => g.Count() > 1);
-
-            if (duplicate != null)
-                throw new InvalidOperationException("Duplicate return line found. The same GRN stock row can appear only once in one supplier return.");
-        }
-
-        // =========================================================
-        // CALCULATION
-        // =========================================================
 
         private static void RecalculateHeaderTotals(
             SupplierReturnHeader header,
-            List<SupplierReturnLine> lines)
+            IReadOnlyCollection<SupplierReturnLine> lines)
         {
-            decimal gross = 0m;
+            header.RestockingFee = 0m;
+            header.GrossCredit = Money(lines.Sum(line => line.CreditValue));
+            header.NetCredit = header.GrossCredit;
 
-            foreach (var line in lines)
+            bool complete = lines.All(line =>
+                string.Equals(line.TaxSnapshotStatus, TaxSnapshotStatuses.Complete, StringComparison.Ordinal) &&
+                line.TaxableAmountSnapshot.HasValue &&
+                line.VatAmountSnapshot.HasValue &&
+                line.TaxInclusiveAmountSnapshot.HasValue);
+
+            header.TaxSnapshotStatus = complete
+                ? TaxSnapshotStatuses.Complete
+                : TaxSnapshotStatuses.LegacyUnknown;
+
+            if (!complete)
             {
-                line.CreditValue = Math.Round(line.ReturnQty * line.HistoricalCost, 2);
-                gross += line.CreditValue;
+                header.TaxableAmountTotal = null;
+                header.TotalVatAmount = null;
+                header.StandardRatedAmount = null;
+                header.ZeroRatedAmount = null;
+                header.ExemptAmount = null;
+                header.OutOfScopeAmount = null;
+                return;
             }
 
-            header.GrossCredit = Math.Round(gross, 2);
+            header.TaxableAmountTotal = Money(lines.Sum(line => line.TaxableAmountSnapshot ?? 0m));
+            header.TotalVatAmount = Money(lines.Sum(line => line.VatAmountSnapshot ?? 0m));
+            header.StandardRatedAmount = SumCategory(lines, TaxCategoryCodes.Standard);
+            header.ZeroRatedAmount = SumCategory(lines, TaxCategoryCodes.ZeroRated);
+            header.ExemptAmount = SumCategory(lines, TaxCategoryCodes.Exempt);
+            header.OutOfScopeAmount = SumCategory(lines, TaxCategoryCodes.OutOfScope);
+        }
 
-            if (header.RestockingFee < 0)
-                throw new InvalidOperationException("Restocking fee cannot be negative.");
+        private static void ValidateCalculatedHeader(SupplierReturnHeader header)
+        {
+            if (header.GrossCredit <= 0m)
+                throw new InvalidOperationException("Supplier credit must be greater than zero.");
 
-            if (header.RestockingFee > header.GrossCredit)
-                throw new InvalidOperationException("Restocking fee cannot be greater than gross return value.");
+            if (header.RestockingFee != 0m)
+                throw new InvalidOperationException("Restocking fees are not supported for supplier returns.");
 
-            header.NetCredit = Math.Round(header.GrossCredit - header.RestockingFee, 2);
+            if (header.NetCredit != header.GrossCredit)
+                throw new InvalidOperationException("Supplier credit must exactly equal the reversed original GRN product value.");
+        }
+
+        private static async Task PostInventoryAndLedgerAsync(
+            AppDbContext context,
+            SupplierReturnHeader header,
+            IReadOnlyCollection<SupplierReturnLine> lines,
+            DateTime now)
+        {
+            int[] batchIds = lines.Select(line => line.ItemBatchId).Distinct().ToArray();
+
+            Dictionary<int, ItemBatch> batches = await context.ItemBatches
+                .Include(batch => batch.ItemVariant)
+                    .ThenInclude(variant => variant.ItemParent)
+                .Where(batch => batchIds.Contains(batch.Id))
+                .ToDictionaryAsync(batch => batch.Id);
+
+            foreach (SupplierReturnLine line in lines)
+            {
+                if (!batches.TryGetValue(line.ItemBatchId, out ItemBatch? batch))
+                    throw new InvalidOperationException($"Stock row ID {line.ItemBatchId} was not found.");
+
+                if (!IsValidStockBucketForItem(batch))
+                    throw new InvalidOperationException($"Stock row '{BuildBatchDisplayName(batch)}' does not match the item tracking method.");
+
+                if (batch.CurrentStock < line.ReturnQty)
+                {
+                    throw new InvalidOperationException(
+                        $"Insufficient stock in '{BuildBatchDisplayName(batch)}'. Current stock is {batch.CurrentStock:N3}, return quantity is {line.ReturnQty:N3}.");
+                }
+
+                batch.CurrentStock -= line.ReturnQty;
+                batch.UpdatedAt = now;
+                line.LineStatus = SupplierReturnCodes.PostedStatus;
+                line.UpdatedAt = now;
+
+                context.InventoryTransactions.Add(new InventoryTransaction
+                {
+                    ItemVariantId = batch.ItemVariantId,
+                    ItemBatchId = batch.Id,
+                    TransactionDate = header.ReturnDate,
+                    TransactionType = SupplierReturnCodes.InventoryTransactionType,
+                    ReferenceDocument = header.ReturnNumber,
+                    ReferenceLineId = line.Id,
+                    Quantity = -line.ReturnQty,
+                    UnitCost = line.HistoricalCost,
+                    CreatedBy = header.AuthorizedBy,
+                    CreatedAt = now,
+                    Remarks = TrimToMax(
+                        $"Supplier Return | Reason: {line.ReasonCode} | Stock Row: {BuildBatchDisplayName(batch)}",
+                        250)
+                });
+            }
+
+            Supplier supplier = await context.Suppliers
+                .FirstOrDefaultAsync(row => row.Id == header.SupplierId)
+                ?? throw new InvalidOperationException("Supplier was not found.");
+
+            decimal newBalance = Money(supplier.CurrentBalance - header.NetCredit);
+
+            context.SupplierLedgers.Add(new SupplierLedger
+            {
+                SupplierId = supplier.Id,
+                GrnHeaderId = header.GrnHeaderId,
+                TransactionDate = header.ReturnDate,
+                TransactionType = SupplierReturnCodes.DebitNoteTransactionType,
+                ReferenceDocument = header.ReturnNumber,
+                ChargeAmount = 0m,
+                PaymentAmount = header.NetCredit,
+                BalanceAfterTransaction = newBalance,
+                DueDate = header.ReturnDate,
+                IsPaid = true,
+                CreatedBy = header.AuthorizedBy,
+                CreatedAt = now,
+                Remarks = TrimToMax(
+                    $"Supplier Return | Original Invoice: {header.OriginalInvoiceNo} | Product Credit: {header.NetCredit:N2}",
+                    250)
+            });
+
+            supplier.CurrentBalance = newBalance;
+            supplier.UpdatedAt = now;
+
+            await RecalculateVariantAverageCostsAsync(
+                context,
+                lines.Select(line => line.ItemVariantId).Distinct().ToArray(),
+                now);
+        }
+
+        private static async Task<Dictionary<int, PreviousReturnAggregate>> LoadPriorReturnAggregatesAsync(
+            AppDbContext context,
+            IReadOnlyCollection<int> grnLineIds)
+        {
+            if (grnLineIds.Count == 0)
+                return new Dictionary<int, PreviousReturnAggregate>();
+
+            int[] ids = grnLineIds.Distinct().ToArray();
+
+            List<SupplierReturnLine> rows = await context.SupplierReturnLines
+                .Include(line => line.ReturnHeader)
+                .AsNoTracking()
+                .Where(line =>
+                    line.GrnLineId.HasValue &&
+                    ids.Contains(line.GrnLineId.Value) &&
+                    line.ReturnHeader != null &&
+                    line.ReturnHeader.Status == SupplierReturnCodes.PostedStatus)
+                .ToListAsync();
+
+            return rows
+                .GroupBy(line => line.GrnLineId!.Value)
+                .ToDictionary(
+                    group => group.Key,
+                    group => new PreviousReturnAggregate
+                    {
+                        Quantity = group.Sum(line => line.ReturnQty),
+                        CreditAmount = group.Sum(line => line.CreditValue),
+                        TaxableAmount = group.Sum(line => line.TaxableAmountSnapshot ?? 0m),
+                        VatAmount = group.Sum(line => line.VatAmountSnapshot ?? 0m),
+                        TaxInclusiveAmount = group.Sum(line => line.TaxInclusiveAmountSnapshot ?? 0m),
+                        HasIncompleteTaxSnapshot = group.Any(line =>
+                            !string.Equals(line.TaxSnapshotStatus, TaxSnapshotStatuses.Complete, StringComparison.Ordinal) ||
+                            !line.TaxableAmountSnapshot.HasValue ||
+                            !line.VatAmountSnapshot.HasValue ||
+                            !line.TaxInclusiveAmountSnapshot.HasValue)
+                    });
+        }
+
+        private static SupplierReturnAllocationInput BuildAllocationInput(
+            GrnLine line,
+            PreviousReturnAggregate previous,
+            decimal requestedQuantity,
+            decimal originalCredit)
+        {
+            return new SupplierReturnAllocationInput
+            {
+                OriginalQuantity = line.ReceivedQty,
+                PreviouslyReturnedQuantity = previous.Quantity,
+                RequestedQuantity = requestedQuantity,
+                OriginalCreditAmount = originalCredit,
+                PreviouslyReturnedCreditAmount = previous.CreditAmount,
+                OriginalTaxableAmount = line.TaxableAmountSnapshot,
+                OriginalVatAmount = line.VatAmountSnapshot,
+                OriginalTaxInclusiveAmount = line.TaxInclusiveAmountSnapshot,
+                PreviouslyReturnedTaxableAmount = previous.TaxableAmount,
+                PreviouslyReturnedVatAmount = previous.VatAmount,
+                PreviouslyReturnedTaxInclusiveAmount = previous.TaxInclusiveAmount,
+                TaxSnapshotStatus = previous.HasIncompleteTaxSnapshot
+                    ? TaxSnapshotStatuses.LegacyUnknown
+                    : line.TaxSnapshotStatus
+            };
+        }
+
+        private static decimal ResolveOriginalCreditAmount(GrnLine line)
+        {
+            bool complete = string.Equals(
+                line.TaxSnapshotStatus,
+                TaxSnapshotStatuses.Complete,
+                StringComparison.Ordinal) &&
+                line.TaxInclusiveAmountSnapshot.HasValue;
+
+            decimal amount = complete
+                ? line.TaxInclusiveAmountSnapshot!.Value
+                : line.LineTotal;
+
+            if (amount <= 0m)
+                throw new InvalidOperationException("Original GRN product payable amount is missing.");
+
+            return Money(amount);
+        }
+
+        private static decimal ResolveHistoricalCost(
+            GrnLine line,
+            ItemBatch batch,
+            ItemVariant variant)
+        {
+            decimal cost = line.LandedCost > 0m ? line.LandedCost : line.UnitCost;
+
+            if (cost <= 0m)
+                cost = batch.CostPrice > 0m ? batch.CostPrice : variant.AverageCost;
+
+            if (cost <= 0m)
+                cost = variant.CostPrice;
+
+            if (cost <= 0m)
+                throw new InvalidOperationException($"Historical landed cost is missing for item '{variant.SkuCode}'.");
+
+            return cost;
+        }
+
+        private static decimal SumCategory(
+            IEnumerable<SupplierReturnLine> lines,
+            string categoryCode)
+        {
+            return Money(lines
+                .Where(line => string.Equals(
+                    NormalizeText(line.TaxCategoryCodeSnapshot),
+                    categoryCode,
+                    StringComparison.OrdinalIgnoreCase))
+                .Sum(line => line.TaxableAmountSnapshot ?? 0m));
         }
 
         private static async Task RecalculateVariantAverageCostsAsync(
             AppDbContext context,
-            List<int> variantIds,
+            IReadOnlyCollection<int> variantIds,
             DateTime now)
         {
-            if (variantIds == null || !variantIds.Any())
-                return;
-
             foreach (int variantId in variantIds.Distinct())
             {
-                var variant = await context.ItemVariants
-                    .FirstOrDefaultAsync(v => v.Id == variantId);
+                ItemVariant? variant = await context.ItemVariants
+                    .FirstOrDefaultAsync(row => row.Id == variantId);
 
                 if (variant == null)
                     continue;
 
-                var activeBatches = await context.ItemBatches
-                    .Where(b =>
-                        b.ItemVariantId == variantId &&
-                        !b.IsDeactivated &&
-                        b.CurrentStock > 0)
+                List<ItemBatch> activeBatches = await context.ItemBatches
+                    .Where(batch =>
+                        batch.ItemVariantId == variantId &&
+                        !batch.IsDeactivated &&
+                        batch.CurrentStock > 0m)
                     .ToListAsync();
 
-                decimal totalQty = activeBatches.Sum(b => b.CurrentStock);
+                decimal totalQuantity = activeBatches.Sum(batch => batch.CurrentStock);
 
-                if (totalQty > 0)
+                if (totalQuantity > 0m)
                 {
-                    decimal totalValue = activeBatches.Sum(b => b.CurrentStock * b.CostPrice);
-                    variant.AverageCost = Math.Round(totalValue / totalQty, 2);
+                    decimal totalValue = activeBatches.Sum(batch => batch.CurrentStock * batch.CostPrice);
+                    variant.AverageCost = Money(totalValue / totalQuantity);
                 }
 
                 variant.UpdatedAt = now;
             }
         }
 
-        // =========================================================
-        // HELPERS
-        // =========================================================
-
         private static async Task<string> GenerateDocumentNumberAsync(
             AppDbContext context,
-            string documentType)
+            string documentType,
+            string prefix)
         {
-            var sequence = await context.DocumentSequences
-                .FirstOrDefaultAsync(s => s.DocumentType == documentType);
+            DocumentSequence? sequence = await context.DocumentSequences
+                .FirstOrDefaultAsync(row => row.DocumentType == documentType);
 
             if (sequence == null)
             {
                 sequence = new DocumentSequence
                 {
                     DocumentType = documentType,
-                    Prefix = $"{documentType}-",
+                    Prefix = prefix,
                     NextSequenceNumber = 1,
                     PaddingLength = 5,
                     UpdatedAt = DateTime.Now
                 };
 
-                await context.DocumentSequences.AddAsync(sequence);
+                context.DocumentSequences.Add(sequence);
                 await context.SaveChangesAsync();
             }
+
+            if (sequence.NextSequenceNumber <= 0)
+                sequence.NextSequenceNumber = 1;
 
             string number =
                 $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString().PadLeft(sequence.PaddingLength, '0')}";
 
             sequence.NextSequenceNumber++;
             sequence.UpdatedAt = DateTime.Now;
-
             await context.SaveChangesAsync();
-
             return number;
         }
 
-        private static void PrepareNewLine(
-            SupplierReturnLine line,
-            int headerId,
-            DateTime now)
+        private static void PrepareNewLine(SupplierReturnLine line, int headerId, DateTime now)
         {
             line.Id = 0;
             line.ReturnHeaderId = headerId;
-
             line.ReturnHeader = null;
             line.GrnLine = null;
             line.ItemVariant = null;
             line.ItemBatch = null;
-
-            line.LineStatus = "Posted";
+            line.TaxCategory = null;
+            line.TaxRate = null;
+            line.LineStatus = SupplierReturnCodes.PostedStatus;
             line.CreatedAt = now;
             line.UpdatedAt = now;
+        }
+
+        private static void ValidateSubmittedLineDuplicates(IEnumerable<SupplierReturnLine> lines)
+        {
+            bool duplicate = lines
+                .GroupBy(line => new { line.GrnLineId, line.ItemBatchId })
+                .Any(group => group.Count() > 1);
+
+            if (duplicate)
+                throw new InvalidOperationException("The same GRN stock row can appear only once in one supplier return.");
         }
 
         private static void NormalizeHeader(SupplierReturnHeader header)
@@ -1060,9 +1061,9 @@ namespace POS.Core.Repositories
             header.CancellationReason = NormalizeText(header.CancellationReason);
         }
 
-        private static void NormalizeLines(List<SupplierReturnLine> lines)
+        private static void NormalizeLines(IEnumerable<SupplierReturnLine> lines)
         {
-            foreach (var line in lines)
+            foreach (SupplierReturnLine line in lines)
                 NormalizeLine(line);
         }
 
@@ -1073,19 +1074,21 @@ namespace POS.Core.Repositories
             line.LineRemarks = NormalizeText(line.LineRemarks);
         }
 
-        private static string NormalizeText(string? value)
+        private static string BuildItemDescription(ItemVariant? variant)
         {
-            return (value ?? string.Empty).Trim();
-        }
+            if (variant == null)
+                return string.Empty;
 
-        private static string TrimToMax(string value, int maxLength)
-        {
-            value = NormalizeText(value);
+            string name = variant.ItemParent?.ItemName ?? string.Empty;
+            string description = NormalizeText(variant.VariantDescription);
 
-            if (value.Length <= maxLength)
-                return value;
+            if (string.IsNullOrWhiteSpace(description) ||
+                description.Equals("Standard", StringComparison.OrdinalIgnoreCase))
+            {
+                return name;
+            }
 
-            return value.Substring(0, maxLength);
+            return string.IsNullOrWhiteSpace(name) ? description : $"{name} - {description}";
         }
 
         private static bool IsGeneralBatch(string? batchNo)
@@ -1098,24 +1101,61 @@ namespace POS.Core.Repositories
 
         private static bool IsValidStockBucketForItem(ItemBatch batch)
         {
-            bool isBatchTracked = batch.ItemVariant.ItemParent.HasBatchTracking;
-            bool isGeneral = IsGeneralBatch(batch.BatchNo);
-
-            if (isBatchTracked)
-                return !isGeneral;
-
-            return isGeneral;
+            bool batchTracked = batch.ItemVariant.ItemParent.HasBatchTracking;
+            bool general = IsGeneralBatch(batch.BatchNo);
+            return batchTracked ? !general : general;
         }
 
         private static string BuildBatchDisplayName(ItemBatch batch)
         {
             if (IsGeneralBatch(batch.BatchNo))
-                return "GENERAL";
+                return GeneralBatchNo;
 
             if (!string.IsNullOrWhiteSpace(batch.InternalBatchBarcode))
                 return $"{batch.BatchNo} / {batch.InternalBatchBarcode}";
 
             return batch.BatchNo;
+        }
+
+        private static decimal Money(decimal value)
+        {
+            return decimal.Round(value, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static string NormalizeText(string? value) => (value ?? string.Empty).Trim();
+
+        private static string? NormalizeNullable(string? value)
+        {
+            string normalized = NormalizeText(value);
+            return normalized.Length == 0 ? null : normalized;
+        }
+
+        private static string FirstNonEmpty(params string?[] values)
+        {
+            return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+        }
+
+        private static string JoinNonEmpty(string separator, params string?[] values)
+        {
+            return string.Join(separator, values
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!.Trim()));
+        }
+
+        private static string TrimToMax(string value, int maxLength)
+        {
+            value = NormalizeText(value);
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+        }
+
+        private sealed class PreviousReturnAggregate
+        {
+            public decimal Quantity { get; init; }
+            public decimal CreditAmount { get; init; }
+            public decimal TaxableAmount { get; init; }
+            public decimal VatAmount { get; init; }
+            public decimal TaxInclusiveAmount { get; init; }
+            public bool HasIncompleteTaxSnapshot { get; init; }
         }
     }
 }

@@ -6,8 +6,12 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Models;
+using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services;
+using POS.Core.Services.Documents;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -57,6 +61,11 @@ namespace POS.BackOffice.UI.ViewModels
         public decimal MaxReturnQty { get; set; }
 
         public decimal HistoricalCost { get; set; }
+        public decimal OriginalCreditAmount { get; set; }
+        public decimal PreviouslyReturnedCreditAmount { get; set; }
+        public decimal MaxReturnCredit { get; set; }
+        public decimal CreditUnitValue { get; set; }
+        public string TaxDisplayText { get; set; } = string.Empty;
 
         [ObservableProperty]
         private decimal _returnQty = 0m;
@@ -67,7 +76,12 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _lineRemarks = string.Empty;
 
-        public decimal CreditValue => Math.Round(ReturnQty * HistoricalCost, 2);
+        public decimal CreditValue => CalculateCreditValue(
+            OriginalCreditAmount,
+            ReceivedQty,
+            MaxReturnQty,
+            MaxReturnCredit,
+            ReturnQty);
 
         public string DisplayDescription
         {
@@ -81,6 +95,28 @@ namespace POS.BackOffice.UI.ViewModels
 
                 return $"{Description} - {VariantDescription}";
             }
+        }
+
+        private static decimal CalculateCreditValue(
+            decimal originalCredit,
+            decimal receivedQuantity,
+            decimal maximumReturnQuantity,
+            decimal maximumReturnCredit,
+            decimal returnQuantity)
+        {
+            if (returnQuantity <= 0m || receivedQuantity <= 0m)
+                return 0m;
+
+            const decimal tolerance = 0.0005m;
+            if (Math.Abs(returnQuantity - maximumReturnQuantity) <= tolerance)
+                return maximumReturnCredit;
+
+            decimal proportional = decimal.Round(
+                originalCredit * returnQuantity / receivedQuantity,
+                2,
+                MidpointRounding.AwayFromZero);
+
+            return Math.Min(maximumReturnCredit, Math.Max(0m, proportional));
         }
 
         partial void OnReturnQtyChanged(decimal value)
@@ -132,7 +168,14 @@ namespace POS.BackOffice.UI.ViewModels
             IsGeneralStockBucket ? "-" : InternalBatchBarcode;
 
         public decimal HistoricalCost { get; set; }
+        public decimal OriginalCreditAmount { get; set; }
+        public decimal PreviouslyReturnedCreditAmount { get; set; }
+        public decimal MaxReturnCredit { get; set; }
+        public decimal CreditUnitValue { get; set; }
+        public string TaxDisplayText { get; set; } = string.Empty;
 
+        public decimal ReceivedQty { get; set; }
+        public decimal AlreadyReturnedQty { get; set; }
         public decimal CurrentBatchStock { get; set; }
         public decimal MaxReturnQty { get; set; }
 
@@ -145,7 +188,12 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _lineRemarks = string.Empty;
 
-        public decimal CreditValue => Math.Round(ReturnQty * HistoricalCost, 2);
+        public decimal CreditValue => CalculateCreditValue(
+            OriginalCreditAmount,
+            ReceivedQty,
+            MaxReturnQty,
+            MaxReturnCredit,
+            ReturnQty);
 
         public string DisplayDescription
         {
@@ -159,6 +207,28 @@ namespace POS.BackOffice.UI.ViewModels
 
                 return $"{Description} - {VariantDescription}";
             }
+        }
+
+        private static decimal CalculateCreditValue(
+            decimal originalCredit,
+            decimal receivedQuantity,
+            decimal maximumReturnQuantity,
+            decimal maximumReturnCredit,
+            decimal returnQuantity)
+        {
+            if (returnQuantity <= 0m || receivedQuantity <= 0m)
+                return 0m;
+
+            const decimal tolerance = 0.0005m;
+            if (Math.Abs(returnQuantity - maximumReturnQuantity) <= tolerance)
+                return maximumReturnCredit;
+
+            decimal proportional = decimal.Round(
+                originalCredit * returnQuantity / receivedQuantity,
+                2,
+                MidpointRounding.AwayFromZero);
+
+            return Math.Min(maximumReturnCredit, Math.Max(0m, proportional));
         }
 
         partial void OnReturnQtyChanged(decimal value)
@@ -176,6 +246,8 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class SupplierReturnViewModel : ViewModelBase
     {
         private readonly SupplierReturnRepository _returnRepository;
+        private readonly AuthService _authService;
+        private readonly SupplierDebitNoteTextFormatter _debitNoteFormatter;
 
         // =========================================================
         // HEADER
@@ -191,7 +263,7 @@ namespace POS.BackOffice.UI.ViewModels
         private DateTime _returnDate = DateTime.Now;
 
         [ObservableProperty]
-        private string _authorizedBy = "Admin";
+        private string _authorizedBy = string.Empty;
 
         [ObservableProperty]
         private string _remarks = string.Empty;
@@ -236,9 +308,15 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
-        public SupplierReturnViewModel(SupplierReturnRepository returnRepository)
+        public SupplierReturnViewModel(
+            SupplierReturnRepository returnRepository,
+            AuthService authService,
+            SupplierDebitNoteTextFormatter debitNoteFormatter)
         {
             _returnRepository = returnRepository ?? throw new ArgumentNullException(nameof(returnRepository));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _debitNoteFormatter = debitNoteFormatter ?? throw new ArgumentNullException(nameof(debitNoteFormatter));
+            AuthorizedBy = GetCurrentUserName();
 
             foreach (var reason in _returnRepository.GetReasonCodes())
                 ReasonCodes.Add(reason);
@@ -259,7 +337,7 @@ namespace POS.BackOffice.UI.ViewModels
                 foreach (var supplier in suppliers)
                     Suppliers.Add(supplier);
 
-                StatusMessage = $"Loaded {Suppliers.Count} active supplier(s).";
+                StatusMessage = $"Loaded {Suppliers.Count} supplier(s) with posted GRNs.";
             }
             catch (Exception ex)
             {
@@ -306,17 +384,8 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnRestockingFeeChanged(decimal value)
         {
-            if (value < 0)
-            {
+            if (value != 0m)
                 RestockingFee = 0m;
-                return;
-            }
-
-            if (GrossCredit > 0 && value > GrossCredit)
-            {
-                RestockingFee = GrossCredit;
-                return;
-            }
 
             RecalculateTotals();
         }
@@ -422,6 +491,11 @@ namespace POS.BackOffice.UI.ViewModels
                         MaxReturnQty = row.MaxReturnQty,
 
                         HistoricalCost = row.HistoricalCost,
+                        OriginalCreditAmount = row.OriginalCreditAmount,
+                        PreviouslyReturnedCreditAmount = row.PreviouslyReturnedCreditAmount,
+                        MaxReturnCredit = row.MaxReturnCredit,
+                        CreditUnitValue = row.CreditUnitValue,
+                        TaxDisplayText = row.TaxDisplayText,
                         ReturnQty = 0m,
                         ReasonCode = ReasonCodes.FirstOrDefault() ?? "Damaged / Defective"
                     });
@@ -522,6 +596,13 @@ namespace POS.BackOffice.UI.ViewModels
 
                     ReturnQty = item.ReturnQty,
                     HistoricalCost = item.HistoricalCost,
+                    OriginalCreditAmount = item.OriginalCreditAmount,
+                    PreviouslyReturnedCreditAmount = item.PreviouslyReturnedCreditAmount,
+                    MaxReturnCredit = item.MaxReturnCredit,
+                    CreditUnitValue = item.CreditUnitValue,
+                    ReceivedQty = item.ReceivedQty,
+                    AlreadyReturnedQty = item.AlreadyReturnedQty,
+                    TaxDisplayText = item.TaxDisplayText,
 
                     ReasonCode = item.ReasonCode,
                     LineRemarks = item.LineRemarks,
@@ -570,6 +651,12 @@ namespace POS.BackOffice.UI.ViewModels
             if (item.HistoricalCost <= 0)
             {
                 MessageBox.Show($"Historical cost is missing for '{item.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (item.CreditValue <= 0m)
+            {
+                MessageBox.Show($"Original supplier credit value is missing for '{item.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
@@ -635,17 +722,8 @@ namespace POS.BackOffice.UI.ViewModels
         private void RecalculateTotals()
         {
             GrossCredit = Math.Round(ReturnLines.Sum(l => l.CreditValue), 2);
-
-            if (RestockingFee < 0)
-                RestockingFee = 0m;
-
-            if (RestockingFee > GrossCredit && GrossCredit > 0)
-                RestockingFee = GrossCredit;
-
-            NetCredit = Math.Round(GrossCredit - RestockingFee, 2);
-
-            if (NetCredit < 0)
-                NetCredit = 0m;
+            RestockingFee = 0m;
+            NetCredit = GrossCredit;
         }
 
         // =========================================================
@@ -708,12 +786,6 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            if (RestockingFee > GrossCredit)
-            {
-                MessageBox.Show("Restocking fee cannot be greater than gross return value.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
             var result = MessageBox.Show(
                 $"Post supplier return?\n\nThis will deduct exact stock rows and reduce supplier balance by Rs. {NetCredit:N2}.",
                 "Post Supplier Return",
@@ -738,11 +810,11 @@ namespace POS.BackOffice.UI.ViewModels
                     Remarks = Remarks.Trim(),
 
                     GrossCredit = GrossCredit,
-                    RestockingFee = RestockingFee,
+                    RestockingFee = 0m,
                     NetCredit = NetCredit,
 
                     Status = "Posted",
-                    CreatedBy = "Admin",
+                    CreatedBy = AuthorizedBy.Trim(),
                     PostedBy = AuthorizedBy.Trim()
                 };
 
@@ -759,7 +831,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                         ReturnQty = l.ReturnQty,
                         HistoricalCost = l.HistoricalCost,
-                        CreditValue = Math.Round(l.ReturnQty * l.HistoricalCost, 2),
+                        CreditValue = l.CreditValue,
 
                         ReasonCode = l.ReasonCode,
                         LineRemarks = l.LineRemarks,
@@ -773,10 +845,18 @@ namespace POS.BackOffice.UI.ViewModels
                     })
                     .ToList();
 
-                await _returnRepository.PostSupplierReturnAsync(header, lines);
+                SupplierReturnPostResult postResult =
+                    await _returnRepository.PostSupplierReturnAsync(header, lines);
+
+                string documentText = _debitNoteFormatter.Format(postResult.DebitNote);
+                var preview = new SupplierDebitNotePreviewDialog(documentText)
+                {
+                    Owner = Application.Current?.MainWindow
+                };
+                preview.ShowDialog();
 
                 MessageBox.Show(
-                    "Supplier return posted successfully. Stock and supplier ledger were updated.",
+                    $"Supplier return {postResult.ReturnHeader.ReturnNumber} posted successfully. Stock and supplier ledger were updated.",
                     "Supplier Return",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -831,6 +911,12 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
+            if (line.CreditValue <= 0m)
+            {
+                MessageBox.Show($"Original supplier credit value is missing for '{line.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
             if (string.IsNullOrWhiteSpace(line.ReasonCode))
             {
                 MessageBox.Show($"Reason code is required for '{line.DisplayDescription}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -851,7 +937,7 @@ namespace POS.BackOffice.UI.ViewModels
             SelectedInvoice = null;
 
             ReturnDate = DateTime.Now;
-            AuthorizedBy = "Admin";
+            AuthorizedBy = GetCurrentUserName();
             Remarks = string.Empty;
 
             RestockingFee = 0m;
@@ -863,6 +949,17 @@ namespace POS.BackOffice.UI.ViewModels
             RecalculateTotals();
 
             StatusMessage = "Ready.";
+        }
+
+
+        private string GetCurrentUserName()
+        {
+            string username = (_authService.CurrentUser?.Username ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(username))
+                return username;
+
+            string fullName = (_authService.CurrentUser?.FullName ?? string.Empty).Trim();
+            return string.IsNullOrWhiteSpace(fullName) ? "BackOffice" : fullName;
         }
 
         private void ClearReturnLines()
