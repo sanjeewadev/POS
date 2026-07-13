@@ -1,10 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using System;
 using System.Collections.ObjectModel;
-using System.Drawing.Printing;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -14,168 +13,155 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly MasterSalesAnalyticsRepository _repository;
 
-        // ==========================================
-        // 1. FILTER PROPERTIES
-        // ==========================================
-        [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-7); // Default to last 7 days
+        [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-7);
         [ObservableProperty] private DateTime _endDate = DateTime.Today;
         [ObservableProperty] private string _searchText = string.Empty;
-        [ObservableProperty] private string _selectedStatus = "All";
-
-        public ObservableCollection<string> AvailableStatuses { get; } = new()
-        {
-            "All", "Completed", "Returned", "Voided", "Suspended"
-        };
-
-        // ==========================================
-        // 2. PAGINATION STATE
-        // ==========================================
+        [ObservableProperty] private string _terminalFilter = string.Empty;
+        [ObservableProperty] private string _selectedReturnStatus = "All";
         [ObservableProperty] private int _currentPage = 1;
-        [ObservableProperty] private int _pageSize = 50; // Standard ERP grid size
+        [ObservableProperty] private int _pageSize = 50;
         [ObservableProperty] private int _totalPages = 1;
-        [ObservableProperty] private int _totalRecords = 0;
-
+        [ObservableProperty] private int _totalRecords;
         [ObservableProperty] private bool _canGoPrevious;
         [ObservableProperty] private bool _canGoNext;
+        [ObservableProperty] private decimal _summaryNetSales;
+        [ObservableProperty] private decimal _summaryReturns;
+        [ObservableProperty] private decimal _summaryNetAfterReturns;
+        [ObservableProperty] private decimal _summaryGrossProfit;
+        [ObservableProperty] private bool _isBusy;
+        [ObservableProperty] private string _statusMessage = "Ready.";
+        [ObservableProperty] private SalesExplorerRecordDto? _selectedSale;
+        [ObservableProperty] private SaleReceiptDetailsDto? _selectedDetails;
 
-        // ==========================================
-        // 3. MACRO SUMMARY MATH (Header Cards)
-        // ==========================================
-        [ObservableProperty] private decimal _summaryTotalRevenue;
-        [ObservableProperty] private decimal _summaryTotalProfit;
+        public ObservableCollection<string> ReturnStatuses { get; } = new()
+        {
+            "All", "Not Returned", "Partially Returned", "Fully Returned"
+        };
 
-        // ==========================================
-        // 4. COLLECTIONS & DRILL-DOWN STATE
-        // ==========================================
-        public ObservableCollection<SalesExplorerRecordDto> PagedSales { get; set; } = new();
-
-        [ObservableProperty] private bool _isReceiptModalOpen;
-        [ObservableProperty] private SaleReceiptDetailsDto? _selectedReceipt;
+        public ObservableCollection<SalesExplorerRecordDto> Sales { get; } = new();
+        public bool IsEmpty => !IsBusy && Sales.Count == 0;
 
         public SalesExplorerViewModel(MasterSalesAnalyticsRepository repository)
         {
             _repository = repository;
-            _ = LoadPageAsync(); // Initial load
+            _ = LoadPageAsync();
         }
 
-        // ==========================================
-        // 5. THE ENGINE COMMANDS
-        // ==========================================
+        partial void OnSelectedSaleChanged(SalesExplorerRecordDto? value)
+        {
+            _ = LoadDetailsAsync(value?.SaleId);
+        }
+
         [RelayCommand]
         private async Task LoadPageAsync()
         {
-            if (StartDate > EndDate)
+            if (StartDate.Date > EndDate.Date)
             {
-                MessageBox.Show("Start Date cannot be later than End Date.", "Filter Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Start date cannot be later than end date.", "Sales Explorer", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            IsBusy = true;
+            StatusMessage = "Loading completed sales...";
+            try
+            {
+                PagedSalesResult result = await _repository.GetPagedSalesAsync(
+                    StartDate,
+                    EndDate,
+                    SearchText,
+                    TerminalFilter,
+                    SelectedReturnStatus,
+                    CurrentPage,
+                    PageSize);
+
+                Sales.Clear();
+                foreach (var row in result.Records)
+                    Sales.Add(row);
+
+                TotalRecords = result.TotalCount;
+                TotalPages = Math.Max(1, (int)Math.Ceiling((double)TotalRecords / PageSize));
+                if (CurrentPage > TotalPages)
+                {
+                    CurrentPage = TotalPages;
+                    await LoadPageAsync();
+                    return;
+                }
+
+                CanGoPrevious = CurrentPage > 1;
+                CanGoNext = CurrentPage < TotalPages;
+                SummaryNetSales = result.SummaryNetSales;
+                SummaryReturns = result.SummaryReturns;
+                SummaryNetAfterReturns = result.SummaryNetAfterReturns;
+                SummaryGrossProfit = result.SummaryGrossProfit;
+                SelectedSale = Sales.Count > 0 ? Sales[0] : null;
+                StatusMessage = $"{TotalRecords:N0} completed sale(s). Page {CurrentPage:N0} of {TotalPages:N0}.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Sales Explorer could not be loaded.";
+                MessageBox.Show(ex.Message, "Sales Explorer", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+                OnPropertyChanged(nameof(IsEmpty));
+            }
+        }
+
+        private async Task LoadDetailsAsync(int? saleId)
+        {
+            if (!saleId.HasValue)
+            {
+                SelectedDetails = null;
                 return;
             }
 
             try
             {
-                var result = await _repository.GetPagedSalesAsync(
-                    StartDate,
-                    EndDate,
-                    SearchText,
-                    SelectedStatus,
-                    CurrentPage,
-                    PageSize);
-
-                // Update Grid
-                PagedSales.Clear();
-                foreach (var record in result.Records)
-                {
-                    PagedSales.Add(record);
-                }
-
-                // Update Pagination Math
-                TotalRecords = result.TotalCount;
-                TotalPages = (int)Math.Ceiling((double)TotalRecords / PageSize);
-                if (TotalPages == 0) TotalPages = 1; // Prevent "Page 1 of 0"
-
-                CanGoPrevious = CurrentPage > 1;
-                CanGoNext = CurrentPage < TotalPages;
-
-                // Update Macro Summaries
-                SummaryTotalRevenue = result.SummaryTotalRevenue;
-                SummaryTotalProfit = result.SummaryTotalProfit;
+                SelectedDetails = await _repository.GetSaleReceiptDetailsAsync(saleId.Value);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading sales data: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                SelectedDetails = null;
+                MessageBox.Show(ex.Message, "Sale Details", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         [RelayCommand]
-        private void ApplyFilters()
+        private async Task ApplyFiltersAsync()
         {
-            // Whenever a user searches or changes a date, we MUST reset to Page 1
             CurrentPage = 1;
-            _ = LoadPageAsync();
+            await LoadPageAsync();
         }
 
         [RelayCommand]
-        private void ClearFilters()
+        private async Task ResetAsync()
         {
             StartDate = DateTime.Today.AddDays(-7);
             EndDate = DateTime.Today;
             SearchText = string.Empty;
-            SelectedStatus = "All";
+            TerminalFilter = string.Empty;
+            SelectedReturnStatus = "All";
             CurrentPage = 1;
-
-            _ = LoadPageAsync();
-        }
-
-        // --- PAGINATION CONTROLS ---
-
-        [RelayCommand]
-        private void NextPage()
-        {
-            if (CanGoNext)
-            {
-                CurrentPage++;
-                _ = LoadPageAsync();
-            }
+            await LoadPageAsync();
         }
 
         [RelayCommand]
-        private void PreviousPage()
+        private async Task NextPageAsync()
         {
-            if (CanGoPrevious)
-            {
-                CurrentPage--;
-                _ = LoadPageAsync();
-            }
-        }
-
-        // ==========================================
-        // 6. DRILL-DOWN RECEIPT COMMANDS
-        // ==========================================
-        [RelayCommand]
-        private async Task OpenReceiptAsync(SalesExplorerRecordDto clickedRow)
-        {
-            if (clickedRow == null) return;
-
-            try
-            {
-                var fullReceipt = await _repository.GetSaleReceiptDetailsAsync(clickedRow.SaleId);
-
-                if (fullReceipt != null)
-                {
-                    SelectedReceipt = fullReceipt;
-                    IsReceiptModalOpen = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to load receipt details: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            if (!CanGoNext)
+                return;
+            CurrentPage++;
+            await LoadPageAsync();
         }
 
         [RelayCommand]
-        private void CloseReceipt()
+        private async Task PreviousPageAsync()
         {
-            IsReceiptModalOpen = false;
-            SelectedReceipt = null;
+            if (!CanGoPrevious)
+                return;
+            CurrentPage--;
+            await LoadPageAsync();
         }
     }
 }

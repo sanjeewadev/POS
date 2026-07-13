@@ -350,12 +350,6 @@ namespace POS.BackOffice.UI.ViewModels
                     .GetRequiredService<
                         ItemSalesAnalyticsViewModel>();
 
-        [RelayCommand]
-        private void NavigateToReceiptLedger() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<ReceiptLedgerViewModel>();
-
         // ==========================================
         // 7. FINANCE
         // ==========================================

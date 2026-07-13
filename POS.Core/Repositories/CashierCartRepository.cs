@@ -460,6 +460,185 @@ namespace POS.Core.Repositories
             }
         }
 
+        public async Task<List<BackOfficeCartSessionDto>> GetBackOfficeSessionsAsync(
+            DateTime startDate,
+            DateTime endDate,
+            string statusFilter,
+            string searchText)
+        {
+            if (startDate.Date > endDate.Date)
+                throw new ArgumentException("Start date cannot be later than end date.");
+
+            DateTime startUtc = ToUtcBoundary(startDate.Date);
+            DateTime endExclusiveUtc = ToUtcBoundary(endDate.Date.AddDays(1));
+            string status = Normalize(statusFilter);
+            string search = Normalize(searchText);
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            var query = context.CashierCartSessions
+                .AsNoTracking()
+                .Where(row => row.UpdatedAtUtc >= startUtc && row.UpdatedAtUtc < endExclusiveUtc);
+
+            if (!string.IsNullOrWhiteSpace(status) &&
+                !status.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(row => row.Status == status);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(row =>
+                    row.ReferenceNo.Contains(search) ||
+                    row.TerminalNo.Contains(search) ||
+                    row.CashierName.Contains(search) ||
+                    row.CustomerNameSnapshot.Contains(search) ||
+                    (row.SalesHeader != null && row.SalesHeader.InvoiceNo.Contains(search)));
+            }
+
+            var rows = await query
+                .OrderByDescending(row => row.UpdatedAtUtc)
+                .ThenByDescending(row => row.Id)
+                .Select(row => new
+                {
+                    row.Id,
+                    row.ReferenceNo,
+                    row.ShiftSessionId,
+                    row.TerminalNo,
+                    row.CashierName,
+                    row.CustomerNameSnapshot,
+                    row.IsWholesaleMode,
+                    row.GrossTotal,
+                    row.TotalDiscount,
+                    row.NetTotal,
+                    row.ItemCount,
+                    row.TotalQuantity,
+                    row.Status,
+                    row.Revision,
+                    row.RecallCount,
+                    row.CreatedAtUtc,
+                    row.UpdatedAtUtc,
+                    row.HeldAtUtc,
+                    row.RecalledAtUtc,
+                    row.CompletedAtUtc,
+                    row.CancelledAtUtc,
+                    row.CancellationReasonCode,
+                    row.CancellationReasonText,
+                    row.SalesHeaderId,
+                    CompletedInvoiceNo = row.SalesHeader == null
+                        ? string.Empty
+                        : row.SalesHeader.InvoiceNo
+                })
+                .ToListAsync();
+
+            return rows.Select(row => new BackOfficeCartSessionDto
+            {
+                Id = row.Id,
+                ReferenceNo = row.ReferenceNo,
+                ShiftSessionId = row.ShiftSessionId,
+                TerminalNo = row.TerminalNo,
+                CashierName = row.CashierName,
+                CustomerName = string.IsNullOrWhiteSpace(row.CustomerNameSnapshot)
+                    ? "Walk-In"
+                    : row.CustomerNameSnapshot,
+                IsWholesaleMode = row.IsWholesaleMode,
+                GrossTotal = row.GrossTotal,
+                TotalDiscount = row.TotalDiscount,
+                NetTotal = row.NetTotal,
+                ItemCount = row.ItemCount,
+                TotalQuantity = row.TotalQuantity,
+                Status = row.Status,
+                Revision = row.Revision,
+                RecallCount = row.RecallCount,
+                CreatedAt = ToLocal(row.CreatedAtUtc),
+                UpdatedAt = ToLocal(row.UpdatedAtUtc),
+                HeldAt = ToLocal(row.HeldAtUtc),
+                RecalledAt = ToLocal(row.RecalledAtUtc),
+                CompletedAt = ToLocal(row.CompletedAtUtc),
+                CancelledAt = ToLocal(row.CancelledAtUtc),
+                CancellationReasonCode = row.CancellationReasonCode,
+                CancellationReasonText = row.CancellationReasonText,
+                SalesHeaderId = row.SalesHeaderId,
+                CompletedInvoiceNo = row.CompletedInvoiceNo
+            }).ToList();
+        }
+
+        public async Task<BackOfficeCartDetailsDto?> GetBackOfficeSessionDetailsAsync(int sessionId)
+        {
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            CashierCartSession? session = await context.CashierCartSessions
+                .AsNoTracking()
+                .Include(row => row.Lines)
+                .Include(row => row.SalesHeader)
+                .FirstOrDefaultAsync(row => row.Id == sessionId);
+
+            if (session == null)
+                return null;
+
+            return new BackOfficeCartDetailsDto
+            {
+                Session = new BackOfficeCartSessionDto
+                {
+                    Id = session.Id,
+                    ReferenceNo = session.ReferenceNo,
+                    ShiftSessionId = session.ShiftSessionId,
+                    TerminalNo = session.TerminalNo,
+                    CashierName = session.CashierName,
+                    CustomerName = string.IsNullOrWhiteSpace(session.CustomerNameSnapshot)
+                        ? "Walk-In"
+                        : session.CustomerNameSnapshot,
+                    IsWholesaleMode = session.IsWholesaleMode,
+                    GrossTotal = session.GrossTotal,
+                    TotalDiscount = session.TotalDiscount,
+                    NetTotal = session.NetTotal,
+                    ItemCount = session.ItemCount,
+                    TotalQuantity = session.TotalQuantity,
+                    Status = session.Status,
+                    Revision = session.Revision,
+                    RecallCount = session.RecallCount,
+                    CreatedAt = ToLocal(session.CreatedAtUtc),
+                    UpdatedAt = ToLocal(session.UpdatedAtUtc),
+                    HeldAt = ToLocal(session.HeldAtUtc),
+                    RecalledAt = ToLocal(session.RecalledAtUtc),
+                    CompletedAt = ToLocal(session.CompletedAtUtc),
+                    CancelledAt = ToLocal(session.CancelledAtUtc),
+                    CancellationReasonCode = session.CancellationReasonCode,
+                    CancellationReasonText = session.CancellationReasonText,
+                    SalesHeaderId = session.SalesHeaderId,
+                    CompletedInvoiceNo = session.SalesHeader?.InvoiceNo ?? string.Empty
+                },
+                Lines = session.Lines
+                    .OrderBy(line => line.LineNumber)
+                    .Select(line => new BackOfficeCartLineDto
+                    {
+                        LineNumber = line.LineNumber,
+                        LineType = line.LineType,
+                        Description = line.Description,
+                        Quantity = line.Quantity,
+                        UnitPrice = line.UnitPrice,
+                        LineTotal = line.LineTotal
+                    })
+                    .ToList()
+            };
+        }
+
+        private static DateTime ToUtcBoundary(DateTime localDate)
+        {
+            return TimeZoneInfo.ConvertTimeToUtc(
+                DateTime.SpecifyKind(localDate, DateTimeKind.Local));
+        }
+
+        private static DateTime ToLocal(DateTime utcDate)
+        {
+            return DateTime.SpecifyKind(utcDate, DateTimeKind.Utc).ToLocalTime();
+        }
+
+        private static DateTime? ToLocal(DateTime? utcDate)
+        {
+            return utcDate.HasValue ? ToLocal(utcDate.Value) : null;
+        }
+
         private static void ValidateSaveRequest(CashierCartSaveRequest request)
         {
             if (request == null)

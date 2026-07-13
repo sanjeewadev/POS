@@ -1,53 +1,65 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace POS.Core.Models.DTOs
 {
-    public class AnalyticsKpiDto
+    public sealed class AnalyticsKpiDto
     {
-        public decimal TotalRevenue { get; set; }
-        public decimal TotalCost { get; set; }
-        public decimal GrossProfit => TotalRevenue - TotalCost;
-        public double AverageMargin => TotalRevenue == 0 ? 0 : Math.Round((double)(GrossProfit / TotalRevenue) * 100, 2);
-
-        public decimal TotalUnitsSold { get; set; }
-        public int ActiveSellingItems { get; set; }
-        public int DeadStockItems { get; set; }
+        public decimal GrossSales { get; set; }
+        public decimal Discounts { get; set; }
+        public decimal ReturnValue { get; set; }
+        public decimal NetSales { get; set; }
+        public decimal NetCost { get; set; }
+        public decimal GrossProfit => NetSales - NetCost;
+        public decimal SoldQuantity { get; set; }
+        public decimal ReturnedQuantity { get; set; }
+        public decimal NetQuantity => SoldQuantity - ReturnedQuantity;
+        public int SellingItemCount { get; set; }
+        public int SlowOrNonSellingStockItemCount { get; set; }
     }
 
-    public class ItemPerformanceDto
+    public sealed class ItemPerformanceDto
     {
         public int Rank { get; set; }
-        public int ItemId { get; set; }
+        public int ItemVariantId { get; set; }
         public string ItemCode { get; set; } = string.Empty;
+        public string SkuCode { get; set; } = string.Empty;
         public string ItemName { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
-        public decimal CurrentStock { get; set; }
-
-        public decimal QtySold { get; set; }
-        public decimal Revenue { get; set; }
-        public decimal Cost { get; set; }
-        public decimal Profit => Revenue - Cost;
-        public double Margin => Revenue == 0 ? 0 : Math.Round((double)(Profit / Revenue) * 100, 2);
-
-        public DateTime? LastSoldDate { get; set; }
-        public int DaysSinceLastSale => LastSoldDate.HasValue ? (DateTime.Today - LastSoldDate.Value.Date).Days : 999;
-        public double AverageDailySales { get; set; }
+        public decimal? CurrentStock { get; set; }
+        public decimal SoldQuantity { get; set; }
+        public decimal ReturnedQuantity { get; set; }
+        public decimal NetQuantity => SoldQuantity - ReturnedQuantity;
+        public decimal GrossSales { get; set; }
+        public decimal Discounts { get; set; }
+        public decimal ReturnValue { get; set; }
+        public decimal NetSales => GrossSales - Discounts - ReturnValue;
+        public decimal SaleCost { get; set; }
+        public decimal ReturnedCost { get; set; }
+        public decimal NetCost => SaleCost - ReturnedCost;
+        public decimal GrossProfit => NetSales - NetCost;
+        public decimal MarginPercent => NetSales == 0m
+            ? 0m
+            : Math.Round(GrossProfit / NetSales * 100m, 2);
+        public DateTime? LastSaleDate { get; set; }
+        public bool IsSlowOrNonSelling { get; set; }
+        public string StockDisplay => CurrentStock.HasValue ? CurrentStock.Value.ToString("N3") : "N/A";
     }
 
-    public class TrendPointDto
-    {
-        public string DateLabel { get; set; } = string.Empty;
-        public decimal Revenue { get; set; }
-        public decimal Profit { get; set; }
-    }
-
-    public class ItemDrillDownDto
+    public sealed class ItemSalesTransactionDto
     {
         public DateTime TransactionDate { get; set; }
         public string TransactionType { get; set; } = string.Empty;
         public string DocumentNo { get; set; } = string.Empty;
-        public string PartyName { get; set; } = string.Empty;
-        public decimal QtyIn { get; set; }
-        public decimal QtyOut { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public decimal Value { get; set; }
+    }
+
+    public sealed class ItemSalesAnalyticsResultDto
+    {
+        public AnalyticsKpiDto Summary { get; set; } = new();
+        public List<ItemPerformanceDto> Items { get; set; } = new();
     }
 }

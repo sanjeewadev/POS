@@ -96,8 +96,6 @@
                           Command="{Binding NavigateToCustomerReturnsAuditCommand}"/>
                 <MenuItem Header="Item Sales Analytics"
                           Command="{Binding NavigateToItemSalesAnalyticsCommand}"/>
-                <MenuItem Header="Receipt Ledger"
-                          Command="{Binding NavigateToReceiptLedgerCommand}"/>
                 <MenuItem Header="Sales Explorer"
                           Command="{Binding NavigateToSalesExplorerCommand}"/>
                 <MenuItem Header="Security Audit"

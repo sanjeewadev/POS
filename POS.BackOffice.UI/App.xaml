@@ -121,9 +121,6 @@
             <DataTemplate DataType="{x:Type viewmodels:CustomerReturnsAuditViewModel}">
                 <sales:CustomerReturnsAuditView />
             </DataTemplate>
-            <DataTemplate DataType="{x:Type viewmodels:ReceiptLedgerViewModel}">
-                <sales:ReceiptLedgerView />
-            </DataTemplate>
             <DataTemplate DataType="{x:Type viewmodels:CustomerMasterViewModel}">
                 <crm:CustomerMasterView />
             </DataTemplate>

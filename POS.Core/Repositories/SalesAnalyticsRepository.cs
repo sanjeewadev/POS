@@ -1,266 +1,299 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
-using POS.Core.DTOs;
 using POS.Core.Models.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using static POS.Core.Models.DTOs.ItemPerformanceDto;
 
 namespace POS.Core.Repositories
 {
-    public class SalesAnalyticsRepository
+    public sealed class SalesAnalyticsRepository
     {
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
         public SalesAnalyticsRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
-        // ==============================================================================
-        // 1. MASTER PERFORMANCE QUERY (CQRS Read-Side)
-        // ==============================================================================
-        public async Task<List<ItemPerformanceDto>> GetItemPerformanceAsync(DateTime startDate, DateTime endDate)
+        public async Task<ItemSalesAnalyticsResultDto> GetAnalyticsAsync(
+            DateTime startDate,
+            DateTime endDate,
+            string searchText,
+            int slowMovingDays = 90)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (startDate.Date > endDate.Date)
+                throw new ArgumentException("Start date cannot be later than end date.");
 
-            // 1. Pull raw, flat sales data traversing from SalesLine -> Batch -> Variant
-            var rawSalesData = await context.SalesLines
+            DateTime start = startDate.Date;
+            DateTime endExclusive = endDate.Date.AddDays(1);
+            DateTime slowThreshold = endDate.Date.AddDays(-Math.Max(1, slowMovingDays));
+            string search = Normalize(searchText);
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            var variants = await context.ItemVariants
                 .AsNoTracking()
-                .Where(l => l.SalesHeader.TransactionDate >= startDate && l.SalesHeader.TransactionDate <= endDate && l.SalesHeader.Status == "Completed")
-                .Select(l => new
+                .Where(variant => !variant.IsDeactivated && !variant.ItemParent.IsDeactivated)
+                .Select(variant => new
                 {
-                    ItemVariantId = l.ItemBatch.ItemVariantId,
-                    Qty = l.Quantity,
-                    Revenue = l.LineTotal,
-                    Cost = l.CostPrice * l.Quantity,
-                    SaleDate = l.SalesHeader.TransactionDate
+                    variant.Id,
+                    variant.SkuCode,
+                    variant.VariantDescription,
+                    ItemCode = variant.ItemParent.ItemCode,
+                    ParentName = variant.ItemParent.ItemName,
+                    ItemType = variant.ItemParent.ItemType,
+                    CategoryName = variant.ItemParent.Category.CategoryName
                 })
                 .ToListAsync();
 
-            // 2. Fetch Variant Master dictionary, combining Parent Name and Variant Description
-            var itemDict = await context.ItemVariants
-                            .AsNoTracking()
-                            .Select(v => new
-                            {
-                                v.Id,
-                                ItemCode = v.SkuCode,
-                                ItemName = v.ItemParent.ItemName + " " + v.VariantDescription,
-                                CategoryName = "General",
-                                // ✅ FIXED: Double-cast applied here
-                                CurrentSOH = (decimal)v.ItemBatches.Sum(b => (double)b.CurrentStock)
-                            })
-                            .ToDictionaryAsync(v => v.Id);
-
-            var daysInPeriod = (endDate - startDate).Days;
-            if (daysInPeriod <= 0) daysInPeriod = 1;
-
-            // 3. Aggregate data safely in memory
-            var aggregatedData = rawSalesData
-                .GroupBy(s => s.ItemVariantId)
-                .Select(g => new
+            var stockRows = await context.ItemBatches
+                .AsNoTracking()
+                .Where(batch => !batch.IsDeactivated)
+                .Select(batch => new
                 {
-                    ItemVariantId = g.Key,
-                    QtySold = g.Sum(x => x.Qty),
-                    Revenue = g.Sum(x => x.Revenue),
-                    Cost = g.Sum(x => x.Cost),
-                    LastSoldDate = g.Max(x => x.SaleDate)
+                    batch.ItemVariantId,
+                    batch.CurrentStock
                 })
+                .ToListAsync();
+
+            var stockByVariant = stockRows
+                .GroupBy(row => row.ItemVariantId)
+                .ToDictionary(group => group.Key, group => group.Sum(row => row.CurrentStock));
+
+            var sales = await context.SalesLines
+                .AsNoTracking()
+                .Where(line =>
+                    line.ItemVariantId.HasValue &&
+                    line.SalesHeader.Status == "Completed" &&
+                    !line.SalesHeader.IsVoided &&
+                    line.SalesHeader.TransactionDate >= start &&
+                    line.SalesHeader.TransactionDate < endExclusive)
+                .Select(line => new
+                {
+                    ItemVariantId = line.ItemVariantId!.Value,
+                    line.Quantity,
+                    line.GrossAmount,
+                    line.DiscountAmount,
+                    line.LineTotal,
+                    line.CostPrice,
+                    line.SalesHeader.TransactionDate,
+                    line.SalesHeader.InvoiceNo,
+                    line.SalesHeader.CustomerName
+                })
+                .ToListAsync();
+
+            var returns = await context.CustomerReturnLines
+                .AsNoTracking()
+                .Where(line =>
+                    line.SalesLineId.HasValue &&
+                    line.SalesLine != null &&
+                    line.SalesLine.ItemVariantId.HasValue &&
+                    line.CustomerReturnHeader != null &&
+                    line.CustomerReturnHeader.ReturnDate >= start &&
+                    line.CustomerReturnHeader.ReturnDate < endExclusive)
+                .Select(line => new
+                {
+                    ItemVariantId = line.SalesLine!.ItemVariantId!.Value,
+                    line.QuantityReturned,
+                    line.LineTotalRefund,
+                    CostPrice = line.SalesLine.CostPrice,
+                    line.CustomerReturnHeader!.ReturnDate,
+                    DocumentNo = line.CustomerReturnHeader.CreditNoteNo ?? line.CustomerReturnHeader.ReturnNo,
+                    CustomerName = line.CustomerReturnHeader.OriginalSalesHeader == null
+                        ? "Walk-In"
+                        : line.CustomerReturnHeader.OriginalSalesHeader.CustomerName
+                })
+                .ToListAsync();
+
+            var lastSales = await context.SalesLines
+                .AsNoTracking()
+                .Where(line =>
+                    line.ItemVariantId.HasValue &&
+                    line.SalesHeader.Status == "Completed" &&
+                    !line.SalesHeader.IsVoided &&
+                    line.SalesHeader.TransactionDate < endExclusive)
+                .GroupBy(line => line.ItemVariantId!.Value)
+                .Select(group => new
+                {
+                    ItemVariantId = group.Key,
+                    LastSaleDate = group.Max(line => line.SalesHeader.TransactionDate)
+                })
+                .ToListAsync();
+
+            var salesByVariant = sales
+                .GroupBy(row => row.ItemVariantId)
+                .ToDictionary(group => group.Key, group => group.ToList());
+            var returnsByVariant = returns
+                .GroupBy(row => row.ItemVariantId)
+                .ToDictionary(group => group.Key, group => group.ToList());
+            var lastSaleByVariant = lastSales
+                .ToDictionary(row => row.ItemVariantId, row => (DateTime?)row.LastSaleDate);
+
+            var items = new List<ItemPerformanceDto>();
+
+            foreach (var variant in variants)
+            {
+                salesByVariant.TryGetValue(variant.Id, out var itemSales);
+                returnsByVariant.TryGetValue(variant.Id, out var itemReturns);
+                lastSaleByVariant.TryGetValue(variant.Id, out DateTime? lastSaleDate);
+
+                itemSales ??= new();
+                itemReturns ??= new();
+
+                string itemName = BuildDisplayName(
+                    variant.ParentName,
+                    variant.VariantDescription,
+                    variant.SkuCode);
+
+                stockByVariant.TryGetValue(variant.Id, out decimal currentStock);
+
+                var row = new ItemPerformanceDto
+                {
+                    ItemVariantId = variant.Id,
+                    ItemCode = variant.ItemCode,
+                    SkuCode = variant.SkuCode,
+                    ItemName = itemName,
+                    ItemType = variant.ItemType,
+                    CategoryName = variant.CategoryName,
+                    CurrentStock = string.Equals(variant.ItemType, ItemTypeCodes.Service, StringComparison.Ordinal)
+                        ? null
+                        : RoundQuantity(currentStock),
+                    SoldQuantity = RoundQuantity(itemSales.Sum(item => item.Quantity)),
+                    ReturnedQuantity = RoundQuantity(itemReturns.Sum(item => item.QuantityReturned)),
+                    GrossSales = Money(itemSales.Sum(item => item.GrossAmount)),
+                    Discounts = Money(itemSales.Sum(item => item.DiscountAmount)),
+                    ReturnValue = Money(itemReturns.Sum(item => item.LineTotalRefund)),
+                    SaleCost = Money(itemSales.Sum(item => item.CostPrice * item.Quantity)),
+                    ReturnedCost = Money(itemReturns.Sum(item => item.CostPrice * item.QuantityReturned)),
+                    LastSaleDate = lastSaleDate,
+                    IsSlowOrNonSelling = !string.Equals(variant.ItemType, ItemTypeCodes.Service, StringComparison.Ordinal) &&
+                        currentStock > 0m &&
+                        (!lastSaleDate.HasValue || lastSaleDate.Value < slowThreshold)
+                };
+
+                if (!string.IsNullOrWhiteSpace(search) &&
+                    !Contains(row.ItemCode, search) &&
+                    !Contains(row.SkuCode, search) &&
+                    !Contains(row.ItemName, search) &&
+                    !Contains(row.CategoryName, search) &&
+                    !Contains(row.ItemType, search))
+                {
+                    continue;
+                }
+
+                items.Add(row);
+            }
+
+            items = items
+                .OrderByDescending(row => row.NetSales)
+                .ThenByDescending(row => row.NetQuantity)
+                .ThenBy(row => row.ItemName)
                 .ToList();
 
-            var results = new List<ItemPerformanceDto>();
+            for (int index = 0; index < items.Count; index++)
+                items[index].Rank = index + 1;
 
-            // 4. Map and calculate advanced metrics
-            foreach (var agg in aggregatedData)
+            return new ItemSalesAnalyticsResultDto
             {
-                if (itemDict.TryGetValue(agg.ItemVariantId, out var item))
+                Items = items,
+                Summary = new AnalyticsKpiDto
                 {
-                    results.Add(new ItemPerformanceDto
-                    {
-                        ItemId = agg.ItemVariantId, // UI uses ItemId, DB uses VariantId
-                        ItemCode = item.ItemCode,
-                        ItemName = item.ItemName.Trim(),
-                        CategoryName = item.CategoryName,
-                        CurrentStock = item.CurrentSOH,
-                        QtySold = agg.QtySold,
-                        Revenue = agg.Revenue,
-                        Cost = agg.Cost,
-                        LastSoldDate = agg.LastSoldDate,
-                        AverageDailySales = Math.Round((double)agg.QtySold / daysInPeriod, 2)
-                    });
+                    GrossSales = Money(items.Sum(row => row.GrossSales)),
+                    Discounts = Money(items.Sum(row => row.Discounts)),
+                    ReturnValue = Money(items.Sum(row => row.ReturnValue)),
+                    NetSales = Money(items.Sum(row => row.NetSales)),
+                    NetCost = Money(items.Sum(row => row.NetCost)),
+                    SoldQuantity = RoundQuantity(items.Sum(row => row.SoldQuantity)),
+                    ReturnedQuantity = RoundQuantity(items.Sum(row => row.ReturnedQuantity)),
+                    SellingItemCount = items.Count(row => row.SoldQuantity > 0m),
+                    SlowOrNonSellingStockItemCount = items.Count(row => row.IsSlowOrNonSelling)
                 }
-            }
-
-            results = results.OrderByDescending(r => r.Revenue).ToList();
-            for (int i = 0; i < results.Count; i++)
-            {
-                results[i].Rank = i + 1;
-            }
-
-            return results;
-        }
-
-        // ==============================================================================
-        // 2. DEAD STOCK ENGINE
-        // ==============================================================================
-        public async Task<List<ItemPerformanceDto>> GetDeadStockAsync(int daysWithoutSaleThreshold)
-        {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var cutoffDate = DateTime.Today.AddDays(-daysWithoutSaleThreshold);
-
-            var latestSales = await context.SalesLines
-                .AsNoTracking()
-                .Where(l => l.SalesHeader.Status == "Completed")
-                .GroupBy(l => l.ItemBatch.ItemVariantId)
-                .Select(g => new { ItemVariantId = g.Key, LastSoldDate = g.Max(l => l.SalesHeader.TransactionDate) })
-                .ToListAsync();
-
-            var itemLastSoldDict = latestSales.ToDictionary(s => s.ItemVariantId, s => s.LastSoldDate);
-
-            var allStockedItems = await context.ItemVariants
-                            .AsNoTracking()
-                            .Select(v => new
-                            {
-                                v.Id,
-                                ItemCode = v.SkuCode,
-                                ItemName = v.ItemParent.ItemName + " " + v.VariantDescription,
-                                // ✅ FIXED: Double-cast applied here
-                                CurrentSOH = (decimal)v.ItemBatches.Sum(b => (double)b.CurrentStock),
-                                v.IsDeactivated
-                            })
-                            // Note: If CurrentSOH is cast to decimal above, this Where clause still works perfectly
-                            .Where(v => v.CurrentSOH > 0 && !v.IsDeactivated)
-                            .ToListAsync();
-
-            var deadStockList = new List<ItemPerformanceDto>();
-
-            foreach (var item in allStockedItems)
-            {
-                DateTime? lastSold = null;
-                bool isDead = false;
-
-                if (itemLastSoldDict.TryGetValue(item.Id, out var date))
-                {
-                    lastSold = date;
-                    if (date < cutoffDate) isDead = true;
-                }
-                else
-                {
-                    isDead = true;
-                }
-
-                if (isDead)
-                {
-                    deadStockList.Add(new ItemPerformanceDto
-                    {
-                        ItemId = item.Id,
-                        ItemCode = item.ItemCode,
-                        ItemName = item.ItemName.Trim(),
-                        CategoryName = "General",
-                        CurrentStock = item.CurrentSOH,
-                        LastSoldDate = lastSold,
-                        QtySold = 0,
-                        Revenue = 0,
-                        Cost = 0
-                    });
-                }
-            }
-
-            return deadStockList.OrderByDescending(d => d.CurrentStock).ToList();
-        }
-
-        // ==============================================================================
-        // 3. KPI AGGREGATION ENGINE
-        // ==============================================================================
-        public async Task<AnalyticsKpiDto> GetKpisAsync(DateTime startDate, DateTime endDate, int deadStockThreshold = 90)
-        {
-            var performanceData = await GetItemPerformanceAsync(startDate, endDate);
-            var deadStockData = await GetDeadStockAsync(deadStockThreshold);
-
-            return new AnalyticsKpiDto
-            {
-                TotalRevenue = performanceData.Sum(p => p.Revenue),
-                TotalCost = performanceData.Sum(p => p.Cost),
-                TotalUnitsSold = performanceData.Sum(p => p.QtySold),
-                ActiveSellingItems = performanceData.Count,
-                DeadStockItems = deadStockData.Count
             };
         }
 
-        // ==============================================================================
-        // 4. TREND ANALYSIS ENGINE
-        // ==============================================================================
-        public async Task<List<TrendPointDto>> GetSalesTrendsAsync(DateTime startDate, DateTime endDate)
+        public async Task<List<ItemSalesTransactionDto>> GetItemTransactionsAsync(
+            int itemVariantId,
+            DateTime startDate,
+            DateTime endDate)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            if (itemVariantId <= 0)
+                return new List<ItemSalesTransactionDto>();
+            if (startDate.Date > endDate.Date)
+                throw new ArgumentException("Start date cannot be later than end date.");
 
-            var rawSalesData = await context.SalesLines
+            DateTime start = startDate.Date;
+            DateTime endExclusive = endDate.Date.AddDays(1);
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            var sales = await context.SalesLines
                 .AsNoTracking()
-                .Where(l => l.SalesHeader.TransactionDate >= startDate && l.SalesHeader.TransactionDate <= endDate && l.SalesHeader.Status == "Completed")
-                .Select(l => new
+                .Where(line =>
+                    line.ItemVariantId == itemVariantId &&
+                    line.SalesHeader.Status == "Completed" &&
+                    !line.SalesHeader.IsVoided &&
+                    line.SalesHeader.TransactionDate >= start &&
+                    line.SalesHeader.TransactionDate < endExclusive)
+                .Select(line => new ItemSalesTransactionDto
                 {
-                    SaleDate = l.SalesHeader.TransactionDate.Date,
-                    Revenue = l.LineTotal,
-                    Cost = l.CostPrice * l.Quantity
+                    TransactionDate = line.SalesHeader.TransactionDate,
+                    TransactionType = line.IsFreeItem ? "Free Issue" : "Sale",
+                    DocumentNo = line.SalesHeader.InvoiceNo,
+                    CustomerName = line.SalesHeader.CustomerName,
+                    Quantity = line.Quantity,
+                    Value = line.LineTotal
                 })
                 .ToListAsync();
 
-            return rawSalesData
-                .GroupBy(s => s.SaleDate)
-                .OrderBy(g => g.Key)
-                .Select(g => new TrendPointDto
+            var returns = await context.CustomerReturnLines
+                .AsNoTracking()
+                .Where(line =>
+                    line.SalesLine != null &&
+                    line.SalesLine.ItemVariantId == itemVariantId &&
+                    line.CustomerReturnHeader != null &&
+                    line.CustomerReturnHeader.ReturnDate >= start &&
+                    line.CustomerReturnHeader.ReturnDate < endExclusive)
+                .Select(line => new ItemSalesTransactionDto
                 {
-                    DateLabel = g.Key.ToString("dd-MMM"),
-                    Revenue = g.Sum(x => x.Revenue),
-                    Profit = g.Sum(x => x.Revenue) - g.Sum(x => x.Cost)
+                    TransactionDate = line.CustomerReturnHeader!.ReturnDate,
+                    TransactionType = "Customer Return",
+                    DocumentNo = line.CustomerReturnHeader.CreditNoteNo ?? line.CustomerReturnHeader.ReturnNo,
+                    CustomerName = line.CustomerReturnHeader.OriginalSalesHeader == null
+                        ? "Walk-In"
+                        : line.CustomerReturnHeader.OriginalSalesHeader.CustomerName,
+                    Quantity = -line.QuantityReturned,
+                    Value = -line.LineTotalRefund
                 })
+                .ToListAsync();
+
+            return sales
+                .Concat(returns)
+                .OrderByDescending(row => row.TransactionDate)
+                .ThenBy(row => row.DocumentNo)
                 .ToList();
         }
 
-        // ==============================================================================
-        // 5. ITEM DRILL-DOWN ENGINE (Unified Ledger)
-        // ==============================================================================
-        public async Task<List<ItemDrillDownDto>> GetItemHistoryAsync(int variantId)
+        private static bool Contains(string value, string search) =>
+            (value ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase);
+
+        private static string BuildDisplayName(string parentName, string variantDescription, string fallback)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var history = new List<ItemDrillDownDto>();
+            string parent = Normalize(parentName);
+            string variant = Normalize(variantDescription);
+            if (string.IsNullOrWhiteSpace(variant) ||
+                variant.Equals("Standard", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.IsNullOrWhiteSpace(parent) ? Normalize(fallback) : parent;
+            }
 
-            // 1. Fetch Purchases (GRNs) directly linked to the ItemVariant
-            var purchases = await context.GrnLines
-                .AsNoTracking()
-                .Include(l => l.GrnHeader)
-                .ThenInclude(h => h.Supplier)
-                .Where(l => l.ItemVariantId == variantId && l.GrnHeader.Status == "Posted")
-                .Select(l => new ItemDrillDownDto
-                {
-                    TransactionDate = l.GrnHeader.ReceivedDate,
-                    TransactionType = "PURCHASE (GRN)",
-                    DocumentNo = l.GrnHeader.GrnNumber,
-                    PartyName = l.GrnHeader.Supplier.CompanyName,
-                    QtyIn = l.ReceivedQty,
-                    QtyOut = 0
-                }).ToListAsync();
-
-            // 2. Fetch Sales Traversing through the Batch up to the Variant
-            var sales = await context.SalesLines
-                .AsNoTracking()
-                .Include(l => l.SalesHeader)
-                .Where(l => l.ItemBatch.ItemVariantId == variantId && l.SalesHeader.Status == "Completed")
-                .Select(l => new ItemDrillDownDto
-                {
-                    TransactionDate = l.SalesHeader.TransactionDate,
-                    TransactionType = "SALE",
-                    DocumentNo = l.SalesHeader.InvoiceNo,
-                    PartyName = l.SalesHeader.CustomerName ?? "Walk-in",
-                    QtyIn = 0,
-                    QtyOut = l.Quantity
-                }).ToListAsync();
-
-            history.AddRange(purchases);
-            history.AddRange(sales);
-            return history.OrderByDescending(h => h.TransactionDate).ToList();
+            return string.IsNullOrWhiteSpace(parent) ? variant : $"{parent} - {variant}";
         }
+
+        private static string Normalize(string? value) => (value ?? string.Empty).Trim();
+        private static decimal Money(decimal value) => decimal.Round(value, 2, MidpointRounding.AwayFromZero);
+        private static decimal RoundQuantity(decimal value) => decimal.Round(value, 3, MidpointRounding.AwayFromZero);
     }
 }

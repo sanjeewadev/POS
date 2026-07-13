@@ -1,46 +1,36 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace POS.Core.Models.DTOs
 {
-    // ==============================================================================
-    // 1. MACRO FINANCIAL SUMMARY (For Top KPI Cards)
-    // ==============================================================================
-    public class FinancialSummaryDto
+    public sealed class FinancialSummaryDto
     {
-        public decimal GrossSales { get; set; }
+        public decimal GrossMerchandiseSales { get; set; }
         public decimal TotalDiscounts { get; set; }
-        public decimal TotalReturns { get; set; }
-
-        // Net Sales = All money coming in, minus discounts and refunds given back
-        public decimal NetSales => GrossSales - TotalDiscounts - TotalReturns;
-
-        public decimal TotalCostOfGoods { get; set; }
-
-        // Gross Profit = What you made after paying for the physical items
-        public decimal GrossProfit => NetSales - TotalCostOfGoods;
-
-        // Operating Expenses = Store payouts (Petty cash, cleaning supplies, etc.)
-        public decimal OperatingExpenses { get; set; }
-
-        // Operating Margin = True store profitability after daily expenses
-        public decimal OperatingMargin => GrossProfit - OperatingExpenses;
-
+        public decimal MerchandiseSalesAfterDiscounts => GrossMerchandiseSales - TotalDiscounts;
+        public decimal CustomerReturns { get; set; }
+        public decimal NetSales => MerchandiseSalesAfterDiscounts - CustomerReturns;
+        public decimal SaleCostOfGoods { get; set; }
+        public decimal ReturnedCostOfGoods { get; set; }
+        public decimal NetCostOfGoods => SaleCostOfGoods - ReturnedCostOfGoods;
+        public decimal GrossProfit => NetSales - NetCostOfGoods;
+        public decimal GiftVoucherIssueValue { get; set; }
+        public decimal PostedPurchases { get; set; }
+        public decimal PostedSupplierReturns { get; set; }
+        public decimal PaidIn { get; set; }
+        public decimal PaidOut { get; set; }
+        public decimal FloatIn { get; set; }
+        public decimal FloatOut { get; set; }
+        public decimal CustomerCashRefunds { get; set; }
         public int TotalSalesCount { get; set; }
-        public decimal AverageSaleValue => TotalSalesCount == 0 ? 0 : NetSales / TotalSalesCount;
+        public decimal AverageSaleValue => TotalSalesCount == 0 ? 0m : NetSales / TotalSalesCount;
+        public List<FinancialTenderTotalDto> TenderTotals { get; set; } = new();
     }
 
-    // ==============================================================================
-    // 2. TIME-SERIES TREND DATA (For LiveCharts)
-    // ==============================================================================
-    public class FinancialTrendPointDto
+    public sealed class FinancialTenderTotalDto
     {
-        public DateTime Date { get; set; }
-        public string DateLabel { get; set; } = string.Empty;
-
-        public decimal Revenue { get; set; }
-        public decimal Cost { get; set; }
-        public decimal Profit => Revenue - Cost;
-
+        public string PaymentType { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
         public int TransactionCount { get; set; }
     }
 }

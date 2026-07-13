@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -796,6 +796,146 @@ namespace POS.Core.Repositories
                 return "The original item type is not supported for return.";
 
             return string.Empty;
+        }
+
+        public async Task<List<CustomerReturnHistoryRowDto>> GetReturnHistoryAsync(
+            DateTime startDate,
+            DateTime endDate,
+            string searchText)
+        {
+            if (startDate.Date > endDate.Date)
+                throw new ArgumentException("Start date cannot be later than end date.");
+
+            DateTime start = startDate.Date;
+            DateTime endExclusive = endDate.Date.AddDays(1);
+            string search = Normalize(searchText);
+
+            await using AppDbContext context =
+                await _contextFactory.CreateDbContextAsync();
+
+            var query = context.CustomerReturnHeaders
+                .AsNoTracking()
+                .Where(row => row.ReturnDate >= start && row.ReturnDate < endExclusive);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(row =>
+                    row.ReturnNo.Contains(search) ||
+                    (row.CreditNoteNo ?? string.Empty).Contains(search) ||
+                    (row.OriginalInvoiceNo ?? string.Empty).Contains(search) ||
+                    row.CashierName.Contains(search) ||
+                    row.TerminalNo.Contains(search) ||
+                    (row.OriginalSalesHeader != null &&
+                        (row.OriginalSalesHeader.CustomerName.Contains(search) ||
+                         row.OriginalSalesHeader.CustomerCode.Contains(search))));
+            }
+
+            return await query
+                .OrderByDescending(row => row.ReturnDate)
+                .ThenByDescending(row => row.Id)
+                .Select(row => new CustomerReturnHistoryRowDto
+                {
+                    Id = row.Id,
+                    ReturnNo = row.ReturnNo,
+                    CreditNoteNo = row.CreditNoteNo ?? row.ReturnNo,
+                    OriginalInvoiceNo = row.OriginalInvoiceNo ?? string.Empty,
+                    ReturnDate = row.ReturnDate,
+                    CustomerName = row.OriginalSalesHeader == null
+                        ? "Walk-In"
+                        : row.OriginalSalesHeader.CustomerName,
+                    CashierName = row.CashierName,
+                    TerminalNo = row.TerminalNo,
+                    AuthorizedBy = row.AuthorizedBy,
+                    RefundMethod = row.RefundMethod,
+                    TotalRefundAmount = row.TotalRefundAmount,
+                    AccountCreditAmount = row.AccountCreditAmount,
+                    GiftVoucherRefundAmount = row.GiftVoucherRefundAmount,
+                    CashRefundAmount = row.CashRefundAmount,
+                    TaxableAmountTotal = row.TaxableAmountTotal,
+                    TotalVatAmount = row.TotalVatAmount,
+                    TaxSnapshotStatus = row.TaxSnapshotStatus,
+                    LineCount = row.Lines.Count
+                })
+                .ToListAsync();
+        }
+
+        public async Task<CustomerReturnHistoryDetailsDto?> GetReturnHistoryDetailsAsync(
+            int returnHeaderId)
+        {
+            await using AppDbContext context =
+                await _contextFactory.CreateDbContextAsync();
+
+            CustomerReturnHeader? row = await context.CustomerReturnHeaders
+                .AsNoTracking()
+                .Include(header => header.OriginalSalesHeader)
+                .Include(header => header.Lines)
+                    .ThenInclude(line => line.SalesLine)
+                .FirstOrDefaultAsync(header => header.Id == returnHeaderId);
+
+            if (row == null)
+                return null;
+
+            return new CustomerReturnHistoryDetailsDto
+            {
+                Id = row.Id,
+                ReturnNo = row.ReturnNo,
+                CreditNoteNo = row.CreditNoteNo ?? row.ReturnNo,
+                OriginalInvoiceNo = row.OriginalInvoiceNo ?? string.Empty,
+                ReturnDate = row.ReturnDate,
+                CustomerName = row.OriginalSalesHeader?.CustomerName ?? "Walk-In",
+                CustomerCode = row.OriginalSalesHeader?.CustomerCode ?? string.Empty,
+                CashierName = row.CashierName,
+                TerminalNo = row.TerminalNo,
+                AuthorizedBy = row.AuthorizedBy,
+                RefundMethod = row.RefundMethod,
+                TotalRefundAmount = row.TotalRefundAmount,
+                AccountCreditAmount = row.AccountCreditAmount,
+                GiftVoucherRefundAmount = row.GiftVoucherRefundAmount,
+                ReplacementGiftVoucherNo = row.ReplacementGiftVoucherNo,
+                CashRefundAmount = row.CashRefundAmount,
+                TaxableAmountTotal = row.TaxableAmountTotal,
+                TotalVatAmount = row.TotalVatAmount,
+                StandardRatedAmount = row.StandardRatedAmount,
+                ZeroRatedAmount = row.ZeroRatedAmount,
+                ExemptAmount = row.ExemptAmount,
+                OutOfScopeAmount = row.OutOfScopeAmount,
+                TaxSnapshotStatus = row.TaxSnapshotStatus,
+                Lines = row.Lines
+                    .OrderBy(line => line.Id)
+                    .Select(line => new CustomerReturnHistoryLineDto
+                    {
+                        Id = line.Id,
+                        SalesLineId = line.SalesLineId,
+                        ItemCode = line.SalesLine?.SkuCode ?? string.Empty,
+                        ItemDescription = line.ItemDescription,
+                        ItemType = line.ItemTypeSnapshot ?? string.Empty,
+                        QuantityReturned = line.QuantityReturned,
+                        RefundValue = line.RefundValue,
+                        LineTotalRefund = line.LineTotalRefund,
+                        ReturnReason = line.ReturnReason,
+                        InventoryAction = line.InventoryAction,
+                        TaxCategoryCode = line.TaxCategoryCodeSnapshot ?? string.Empty,
+                        TaxRatePercent = line.TaxRatePercentSnapshot,
+                        TaxableAmount = line.TaxableAmountSnapshot,
+                        VatAmount = line.VatAmountSnapshot,
+                        TaxInclusiveAmount = line.TaxInclusiveAmountSnapshot,
+                        TaxSnapshotStatus = line.TaxSnapshotStatus
+                    })
+                    .ToList()
+            };
+        }
+
+        public async Task<CustomerReturnHeader?> GetReturnDocumentAsync(int returnHeaderId)
+        {
+            await using AppDbContext context =
+                await _contextFactory.CreateDbContextAsync();
+
+            return await context.CustomerReturnHeaders
+                .AsNoTracking()
+                .Include(header => header.OriginalSalesHeader)
+                .Include(header => header.Lines)
+                    .ThenInclude(line => line.SalesLine)
+                .FirstOrDefaultAsync(header => header.Id == returnHeaderId);
         }
 
         private static string ResolveItemType(SalesLine line)

@@ -228,7 +228,19 @@ namespace POS.Core.CalculationTests
                 ("Free Issue rule names are unique", FreeIssueRuleNamesAreUnique),
                 ("Phase 8E migration applies from empty database", Phase8EMigrationAppliesFromEmptyDatabase),
                 ("Phase 8E migration upgrades Phase 8D baseline", Phase8EMigrationUpgradesPhase8DBaseline),
-                ("Phase 8E migration duplicate preflight rolls back", Phase8EMigrationDuplicatePreflightRollsBack)
+                ("Phase 8E migration duplicate preflight rolls back", Phase8EMigrationDuplicatePreflightRollsBack),
+                ("Phase 9A customer return history filters and loads details", Phase9AOperationalPageTests.CustomerReturnHistoryFiltersAndLoadsDetails),
+                ("Phase 9A cart history shows statuses and lines", Phase9AOperationalPageTests.BackOfficeCartHistoryShowsStatusesAndLines),
+                ("Phase 9A item analytics supports Stock Items and Services", Phase9AOperationalPageTests.ItemAnalyticsSupportsStockAndService),
+                ("Phase 9A item analytics uses period activity returns", Phase9AOperationalPageTests.ItemAnalyticsUsesPeriodActivityReturns),
+                ("Phase 9A Sales Explorer excludes Gift Voucher issue value", Phase9AOperationalPageTests.SalesExplorerExcludesGiftVoucherIssueValue),
+                ("Phase 9A Sales Explorer loads tax payments Credit Notes and audits", Phase9AOperationalPageTests.SalesExplorerLoadsTaxPaymentsCreditNotesAndAudits),
+                ("Phase 9A Financial Summary excludes vouchers and reverses returned cost", Phase9AOperationalPageTests.FinancialSummaryExcludesVoucherAndReversesReturnedCost),
+                ("Phase 9A Financial Summary separates cash movements and tenders", Phase9AOperationalPageTests.FinancialSummarySeparatesCashMovementsAndTenders),
+                ("Phase 9A Security Audit aggregates operational events", Phase9AOperationalPageTests.SecurityAuditAggregatesOperationalEvents),
+                ("Phase 9A Security Audit search filters events", Phase9AOperationalPageTests.SecurityAuditSearchFiltersEvents),
+                ("Phase 9A Supplier Reports filter and reconcile", Phase9AOperationalPageTests.SupplierReportsFilterAndReconcile),
+                ("Phase 9A operational repositories reject invalid date ranges", Phase9AOperationalPageTests.OperationalRepositoriesRejectInvalidDateRanges)
             };
 
             try
@@ -240,7 +252,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue and Supplier Claim checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim and Phase 9A operational reporting checks passed.");
                 return 0;
             }
             catch (Exception ex)

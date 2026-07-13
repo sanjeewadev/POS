@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
@@ -13,100 +13,78 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly SecurityAuditRepository _repository;
 
-        // ==========================================
-        // 1. FILTER PROPERTIES
-        // ==========================================
-        [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-7); // Default to a 7-day security review
+        [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-7);
         [ObservableProperty] private DateTime _endDate = DateTime.Today;
+        [ObservableProperty] private string _searchText = string.Empty;
+        [ObservableProperty] private bool _isBusy;
+        [ObservableProperty] private string _statusMessage = "Ready.";
+        [ObservableProperty] private int _totalEventCount;
+        [ObservableProperty] private int _failedLoginCount;
+        [ObservableProperty] private int _cancelledCartCount;
+        [ObservableProperty] private int _customerReturnCount;
+        [ObservableProperty] private int _approvalEventCount;
+        [ObservableProperty] private int _drawerFailureCount;
+        [ObservableProperty] private int _unusualCashierCount;
 
-        // ==========================================
-        // 2. MACRO KPI CARDS (Security Summary)
-        // ==========================================
-        [ObservableProperty] private int _totalVoidCount;
-        [ObservableProperty] private decimal _totalVoidAmount;
-        [ObservableProperty] private int _totalReturnCount;
-        [ObservableProperty] private decimal _totalReturnAmount;
-        [ObservableProperty] private int _suspendedCartCount;
-        [ObservableProperty] private int _highRiskCashierCount;
-
-        // ==========================================
-        // 3. AUDIT COLLECTIONS (For DataGrids)
-        // ==========================================
-        public ObservableCollection<CashierFraudRiskDto> CashierRiskProfiles { get; set; } = new();
-        public ObservableCollection<ReturnAuditRecordDto> ReturnRecords { get; set; } = new();
-        public ObservableCollection<VoidAuditRecordDto> VoidRecords { get; set; } = new();
+        public ObservableCollection<SecurityAuditEventDto> Events { get; } = new();
+        public ObservableCollection<CashierActivitySummaryDto> CashierActivity { get; } = new();
+        public bool IsEmpty => !IsBusy && Events.Count == 0;
 
         public SecurityAuditViewModel(SecurityAuditRepository repository)
         {
             _repository = repository;
-            _ = LoadSecurityAuditAsync();
+            _ = LoadAsync();
         }
 
-        // ==========================================
-        // 4. THE ENGINE COMMANDS
-        // ==========================================
         [RelayCommand]
-        private async Task LoadSecurityAuditAsync()
+        private async Task LoadAsync()
         {
-            if (StartDate > EndDate)
+            if (StartDate.Date > EndDate.Date)
             {
-                MessageBox.Show("Start Date cannot be later than End Date.", "Filter Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Start date cannot be later than end date.", "Security Audit", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            IsBusy = true;
+            StatusMessage = "Loading security and operational audit events...";
             try
             {
-                // 1. Load Macro KPIs
-                var summary = await _repository.GetSecuritySummaryAsync(StartDate, EndDate);
-                TotalVoidCount = summary.TotalVoidCount;
-                TotalVoidAmount = summary.TotalVoidAmount;
-                TotalReturnCount = summary.TotalReturnCount;
-                TotalReturnAmount = summary.TotalReturnAmount;
-                SuspendedCartCount = summary.SuspendedCartCount;
-                HighRiskCashierCount = summary.HighRiskCashierCount;
+                SecurityAuditResultDto result = await _repository.GetAuditAsync(StartDate, EndDate, SearchText);
+                Events.Clear();
+                CashierActivity.Clear();
+                foreach (var row in result.Events)
+                    Events.Add(row);
+                foreach (var row in result.CashierActivity)
+                    CashierActivity.Add(row);
 
-                // 2. Load Cashier Risk Profiles
-                var profiles = await _repository.GetCashierRiskProfilesAsync(StartDate, EndDate);
-                CashierRiskProfiles.Clear();
-                foreach (var profile in profiles)
-                {
-                    CashierRiskProfiles.Add(profile);
-                }
-
-                // 3. Load Raw Returns
-                var returns = await _repository.GetReturnRecordsAsync(StartDate, EndDate);
-                ReturnRecords.Clear();
-                foreach (var record in returns)
-                {
-                    ReturnRecords.Add(record);
-                }
-
-                // 4. Load Raw Voids
-                var voids = await _repository.GetVoidRecordsAsync(StartDate, EndDate);
-                VoidRecords.Clear();
-                foreach (var record in voids)
-                {
-                    VoidRecords.Add(record);
-                }
+                TotalEventCount = result.Summary.TotalEventCount;
+                FailedLoginCount = result.Summary.FailedLoginCount;
+                CancelledCartCount = result.Summary.CancelledCartCount;
+                CustomerReturnCount = result.Summary.CustomerReturnCount;
+                ApprovalEventCount = result.Summary.ApprovalEventCount;
+                DrawerFailureCount = result.Summary.DrawerFailureCount;
+                UnusualCashierCount = result.Summary.UnusualCashierCount;
+                StatusMessage = $"{Events.Count:N0} audit event(s).";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading security audit: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Security Audit could not be loaded.";
+                MessageBox.Show(ex.Message, "Security Audit", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+                OnPropertyChanged(nameof(IsEmpty));
             }
         }
 
         [RelayCommand]
-        private void ApplyFilters()
-        {
-            _ = LoadSecurityAuditAsync();
-        }
-
-        [RelayCommand]
-        private void ClearFilters()
+        private async Task ResetAsync()
         {
             StartDate = DateTime.Today.AddDays(-7);
             EndDate = DateTime.Today;
-            _ = LoadSecurityAuditAsync();
+            SearchText = string.Empty;
+            await LoadAsync();
         }
     }
 }

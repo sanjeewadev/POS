@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Models.DTOs;
 using System;
@@ -27,7 +27,7 @@ namespace POS.Core.Repositories
         // DEBIT_NOTE -> PaymentAmount
         // PAYMENT    -> PaymentAmount
 
-        public async Task<List<SupplierOutstandingSummaryDto>> GetSupplierOutstandingSummaryAsync()
+        public async Task<List<SupplierOutstandingSummaryDto>> GetSupplierOutstandingSummaryAsync(string searchText = "")
         {
             using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -102,6 +102,16 @@ namespace POS.Core.Repositories
                 .ThenBy(r => r.SupplierDisplayName)
                 .ToList();
 
+            string search = NormalizeText(searchText);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                result = result.Where(row =>
+                    row.SupplierCode.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    row.SupplierName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    row.CompanyName.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
             return result;
         }
 
@@ -113,7 +123,8 @@ namespace POS.Core.Repositories
 
         public async Task<List<SupplierPurchaseVolumeDto>> GetPurchasingVolumeAsync(
             DateTime startDate,
-            DateTime endDate)
+            DateTime endDate,
+            string searchText = "")
         {
             NormalizeDateRange(ref startDate, ref endDate);
 
@@ -181,6 +192,16 @@ namespace POS.Core.Repositories
                 .Take(50)
                 .ToList();
 
+            string search = NormalizeText(searchText);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                result = result.Where(row =>
+                    row.SupplierCode.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    row.SupplierName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    row.CompanyName.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
             return result;
         }
 
@@ -192,7 +213,8 @@ namespace POS.Core.Repositories
 
         public async Task<List<SupplierReturnSummaryDto>> GetSupplierReturnSummaryAsync(
             DateTime startDate,
-            DateTime endDate)
+            DateTime endDate,
+            string searchText = "")
         {
             NormalizeDateRange(ref startDate, ref endDate);
 
@@ -296,6 +318,16 @@ namespace POS.Core.Repositories
                 .ThenByDescending(r => r.TotalReturnedQty)
                 .ThenBy(r => r.SupplierDisplayName)
                 .ToList();
+
+            string search = NormalizeText(searchText);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                result = result.Where(row =>
+                    row.SupplierCode.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    row.SupplierName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    row.CompanyName.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
 
             return result;
         }

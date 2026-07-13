@@ -112,4 +112,75 @@ namespace POS.Core.Models.DTOs
         public decimal? TaxInclusiveAmount { get; init; }
         public bool IsFinalQuantity { get; init; }
     }
+
+    public sealed class CustomerReturnHistoryRowDto
+    {
+        public int Id { get; init; }
+        public string ReturnNo { get; init; } = string.Empty;
+        public string CreditNoteNo { get; init; } = string.Empty;
+        public string OriginalInvoiceNo { get; init; } = string.Empty;
+        public DateTime ReturnDate { get; init; }
+        public string CustomerName { get; init; } = string.Empty;
+        public string CashierName { get; init; } = string.Empty;
+        public string TerminalNo { get; init; } = string.Empty;
+        public string AuthorizedBy { get; init; } = string.Empty;
+        public string RefundMethod { get; init; } = string.Empty;
+        public decimal TotalRefundAmount { get; init; }
+        public decimal AccountCreditAmount { get; init; }
+        public decimal GiftVoucherRefundAmount { get; init; }
+        public decimal CashRefundAmount { get; init; }
+        public decimal? TaxableAmountTotal { get; init; }
+        public decimal? TotalVatAmount { get; init; }
+        public string TaxSnapshotStatus { get; init; } = string.Empty;
+        public int LineCount { get; init; }
+    }
+
+    public sealed class CustomerReturnHistoryDetailsDto
+    {
+        public int Id { get; init; }
+        public string ReturnNo { get; init; } = string.Empty;
+        public string CreditNoteNo { get; init; } = string.Empty;
+        public string OriginalInvoiceNo { get; init; } = string.Empty;
+        public DateTime ReturnDate { get; init; }
+        public string CustomerName { get; init; } = string.Empty;
+        public string CustomerCode { get; init; } = string.Empty;
+        public string CashierName { get; init; } = string.Empty;
+        public string TerminalNo { get; init; } = string.Empty;
+        public string AuthorizedBy { get; init; } = string.Empty;
+        public string RefundMethod { get; init; } = string.Empty;
+        public decimal TotalRefundAmount { get; init; }
+        public decimal AccountCreditAmount { get; init; }
+        public decimal GiftVoucherRefundAmount { get; init; }
+        public string ReplacementGiftVoucherNo { get; init; } = string.Empty;
+        public decimal CashRefundAmount { get; init; }
+        public decimal? TaxableAmountTotal { get; init; }
+        public decimal? TotalVatAmount { get; init; }
+        public decimal? StandardRatedAmount { get; init; }
+        public decimal? ZeroRatedAmount { get; init; }
+        public decimal? ExemptAmount { get; init; }
+        public decimal? OutOfScopeAmount { get; init; }
+        public string TaxSnapshotStatus { get; init; } = string.Empty;
+        public List<CustomerReturnHistoryLineDto> Lines { get; init; } = new();
+    }
+
+    public sealed class CustomerReturnHistoryLineDto
+    {
+        public int Id { get; init; }
+        public int? SalesLineId { get; init; }
+        public string ItemCode { get; init; } = string.Empty;
+        public string ItemDescription { get; init; } = string.Empty;
+        public string ItemType { get; init; } = string.Empty;
+        public decimal QuantityReturned { get; init; }
+        public decimal RefundValue { get; init; }
+        public decimal LineTotalRefund { get; init; }
+        public string ReturnReason { get; init; } = string.Empty;
+        public string InventoryAction { get; init; } = string.Empty;
+        public string TaxCategoryCode { get; init; } = string.Empty;
+        public decimal? TaxRatePercent { get; init; }
+        public decimal? TaxableAmount { get; init; }
+        public decimal? VatAmount { get; init; }
+        public decimal? TaxInclusiveAmount { get; init; }
+        public string TaxSnapshotStatus { get; init; } = string.Empty;
+    }
+
 }

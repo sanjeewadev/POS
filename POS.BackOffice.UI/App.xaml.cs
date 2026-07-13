@@ -74,6 +74,10 @@ namespace POS.BackOffice.UI
             services.AddTransient<SupplierReturnAllocationCalculator>();
             services.AddTransient<SupplierDebitNoteTextFormatter>();
             services.AddTransient<SupplierReturnRepository>();
+            services.AddTransient<CustomerReturnAllocationCalculator>();
+            services.AddTransient<CustomerCreditNoteTextFormatter>();
+            services.AddTransient<CustomerReturnRepository>();
+            services.AddTransient<CashierCartRepository>();
             services.AddTransient<ExpressItemRepository>();
             services.AddTransient<CustomerRepository>();
             services.AddTransient<CustomerCreditRepository>();
@@ -178,7 +182,6 @@ namespace POS.BackOffice.UI
             services.AddTransient<ItemSalesAnalyticsViewModel>();
             services.AddTransient<CashMovementDashboardViewModel>();
             services.AddTransient<CustomerReturnsAuditViewModel>();
-            services.AddTransient<ReceiptLedgerViewModel>();
             services.AddTransient<VatReportViewModel>();
 
             // ==========================================

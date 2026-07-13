@@ -1,50 +1,54 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace POS.Core.Models.DTOs
 {
-    // ==============================================================================
-    // 1. PAGINATION WRAPPER (Critical for 100,000+ record performance)
-    // ==============================================================================
-    public class PagedSalesResult
+    public sealed class PagedSalesResult
     {
         public List<SalesExplorerRecordDto> Records { get; set; } = new();
         public int TotalCount { get; set; }
+        public decimal SummaryNetSales { get; set; }
+        public decimal SummaryReturns { get; set; }
+        public decimal SummaryNetAfterReturns { get; set; }
+        public decimal SummaryGrossProfit { get; set; }
 
-        // We calculate these on the server so the UI doesn't have to download 100k rows just to show the sum
-        public decimal SummaryTotalRevenue { get; set; }
-        public decimal SummaryTotalProfit { get; set; }
+        // Compatibility aliases retained for the completed Phase 8D regression path.
+        public decimal SummaryTotalRevenue
+        {
+            get => SummaryNetSales;
+            set => SummaryNetSales = value;
+        }
+
+        public decimal SummaryTotalProfit
+        {
+            get => SummaryGrossProfit;
+            set => SummaryGrossProfit = value;
+        }
     }
 
-    // ==============================================================================
-    // 2. THE GRID ROW (Lightweight object for the master table)
-    // ==============================================================================
-    public class SalesExplorerRecordDto
+    public sealed class SalesExplorerRecordDto
     {
         public int SaleId { get; set; }
         public string InvoiceNo { get; set; } = string.Empty;
         public DateTime TransactionDate { get; set; }
+        public string TerminalNo { get; set; } = string.Empty;
         public string CustomerName { get; set; } = string.Empty;
         public string CashierName { get; set; } = string.Empty;
-
         public decimal GrossAmount { get; set; }
         public decimal TotalDiscount { get; set; }
         public decimal NetAmount { get; set; }
-
+        public decimal ReturnedAmount { get; set; }
+        public decimal NetAfterReturns => NetAmount - ReturnedAmount;
         public decimal TotalCost { get; set; }
-        public decimal Profit => NetAmount - TotalCost;
-
-        // We will combine the 1-to-Many payments into a single string (e.g., "Cash, Card") for the grid
+        public decimal ReturnedCost { get; set; }
+        public decimal GrossProfit => NetAfterReturns - (TotalCost - ReturnedCost);
         public string PaymentMethods { get; set; } = string.Empty;
-
-        public string Status { get; set; } = string.Empty;
+        public string ReturnStatus { get; set; } = string.Empty;
+        public string TaxInvoiceNo { get; set; } = string.Empty;
     }
 
-    // ==============================================================================
-    // 3. THE DRILL-DOWN RECEIPT (Heavy object, only loaded when a row is double-clicked)
-    // ==============================================================================
-    public class SaleReceiptDetailsDto
+    public sealed class SaleReceiptDetailsDto
     {
         public int SaleId { get; set; }
         public string InvoiceNo { get; set; } = string.Empty;
@@ -52,27 +56,52 @@ namespace POS.Core.Models.DTOs
         public string TerminalNo { get; set; } = string.Empty;
         public string CashierName { get; set; } = string.Empty;
         public string CustomerName { get; set; } = string.Empty;
+        public string CustomerCode { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
-
+        public string DocumentType { get; set; } = string.Empty;
+        public string TaxInvoiceNo { get; set; } = string.Empty;
         public decimal GrossAmount { get; set; }
         public decimal TotalDiscount { get; set; }
+        public decimal GiftVoucherIssueTotal { get; set; }
         public decimal NetAmount { get; set; }
-
+        public decimal ReturnedAmount { get; set; }
+        public decimal? TaxableAmountTotal { get; set; }
+        public decimal? TotalVatAmount { get; set; }
+        public decimal? StandardRatedAmount { get; set; }
+        public decimal? ZeroRatedAmount { get; set; }
+        public decimal? ExemptAmount { get; set; }
+        public decimal? OutOfScopeAmount { get; set; }
+        public string TaxSnapshotStatus { get; set; } = string.Empty;
+        public string ReturnStatus { get; set; } = string.Empty;
         public List<SaleReceiptLineDto> Lines { get; set; } = new();
         public List<SaleReceiptPaymentDto> Payments { get; set; } = new();
+        public List<SalesExplorerCreditNoteDto> CreditNotes { get; set; } = new();
+        public List<SalesExplorerDocumentAuditDto> DocumentAudits { get; set; } = new();
     }
 
-    public class SaleReceiptLineDto
+    public sealed class SaleReceiptLineDto
     {
+        public int SalesLineId { get; set; }
         public string ItemCode { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string ItemType { get; set; } = string.Empty;
         public decimal Qty { get; set; }
+        public decimal ReturnedQty { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal LineTotal { get; set; }
+        public string TaxCategory { get; set; } = string.Empty;
+        public decimal? TaxRatePercent { get; set; }
+        public decimal? TaxableAmount { get; set; }
+        public decimal? VatAmount { get; set; }
+        public decimal? TaxInclusiveAmount { get; set; }
+        public string TaxSnapshotStatus { get; set; } = string.Empty;
+        public bool IsFreeItem { get; set; }
+        public bool IsGiftVoucherSale { get; set; }
+        public string ReturnStatus { get; set; } = string.Empty;
     }
 
-    public class SaleReceiptPaymentDto
+    public sealed class SaleReceiptPaymentDto
     {
         public string PaymentType { get; set; } = string.Empty;
         public decimal Amount { get; set; }
@@ -103,7 +132,6 @@ namespace POS.Core.Models.DTOs
                     string masked = string.IsNullOrWhiteSpace(CardLastDigits)
                         ? string.Empty
                         : $"******{CardLastDigits}";
-
                     return string.Join(" / ", new[] { BankOrCardType, masked, ReferenceNo }
                         .Where(value => !string.IsNullOrWhiteSpace(value)));
                 }
@@ -124,5 +152,29 @@ namespace POS.Core.Models.DTOs
                 return ReferenceNo;
             }
         }
+    }
+
+    public sealed class SalesExplorerCreditNoteDto
+    {
+        public int CustomerReturnHeaderId { get; set; }
+        public string CreditNoteNo { get; set; } = string.Empty;
+        public DateTime ReturnDate { get; set; }
+        public decimal RefundAmount { get; set; }
+        public string RefundMethod { get; set; } = string.Empty;
+        public string AuthorizedBy { get; set; } = string.Empty;
+    }
+
+    public sealed class SalesExplorerDocumentAuditDto
+    {
+        public DateTime OccurredAt { get; set; }
+        public string DocumentType { get; set; } = string.Empty;
+        public string DocumentNumber { get; set; } = string.Empty;
+        public string EventType { get; set; } = string.Empty;
+        public int CopyNumber { get; set; }
+        public bool IsSuccessful { get; set; }
+        public string PerformedBy { get; set; } = string.Empty;
+        public string TerminalNo { get; set; } = string.Empty;
+        public string PrinterName { get; set; } = string.Empty;
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 }

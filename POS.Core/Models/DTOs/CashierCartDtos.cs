@@ -142,4 +142,50 @@ namespace POS.Core.Models.DTOs
         public bool DiscountRequiresManagerApproval { get; set; }
         public bool DiscountRequiresAdminApproval { get; set; }
     }
+
+    public sealed class BackOfficeCartSessionDto
+    {
+        public int Id { get; init; }
+        public string ReferenceNo { get; init; } = string.Empty;
+        public int ShiftSessionId { get; init; }
+        public string TerminalNo { get; init; } = string.Empty;
+        public string CashierName { get; init; } = string.Empty;
+        public string CustomerName { get; init; } = string.Empty;
+        public bool IsWholesaleMode { get; init; }
+        public decimal GrossTotal { get; init; }
+        public decimal TotalDiscount { get; init; }
+        public decimal NetTotal { get; init; }
+        public int ItemCount { get; init; }
+        public decimal TotalQuantity { get; init; }
+        public string Status { get; init; } = string.Empty;
+        public int Revision { get; init; }
+        public int RecallCount { get; init; }
+        public DateTime CreatedAt { get; init; }
+        public DateTime UpdatedAt { get; init; }
+        public DateTime? HeldAt { get; init; }
+        public DateTime? RecalledAt { get; init; }
+        public DateTime? CompletedAt { get; init; }
+        public DateTime? CancelledAt { get; init; }
+        public string CancellationReasonCode { get; init; } = string.Empty;
+        public string CancellationReasonText { get; init; } = string.Empty;
+        public int? SalesHeaderId { get; init; }
+        public string CompletedInvoiceNo { get; init; } = string.Empty;
+    }
+
+    public sealed class BackOfficeCartDetailsDto
+    {
+        public BackOfficeCartSessionDto Session { get; init; } = new();
+        public IReadOnlyList<BackOfficeCartLineDto> Lines { get; init; } = Array.Empty<BackOfficeCartLineDto>();
+    }
+
+    public sealed class BackOfficeCartLineDto
+    {
+        public int LineNumber { get; init; }
+        public string LineType { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+        public decimal Quantity { get; init; }
+        public decimal UnitPrice { get; init; }
+        public decimal LineTotal { get; init; }
+    }
+
 }

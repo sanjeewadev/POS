@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
@@ -7,7 +7,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using static POS.Core.Models.DTOs.ItemPerformanceDto;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -15,153 +14,113 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly SalesAnalyticsRepository _repository;
 
-        // ==========================================
-        // 1. FILTER PARAMETERS
-        // ==========================================
-        [ObservableProperty]
-        private DateTime _startDate = DateTime.Today.AddDays(-30); // Default to last 30 days
-
-        [ObservableProperty]
-        private DateTime _endDate = DateTime.Today;
-
-        [ObservableProperty]
-        private string _searchText = string.Empty;
-
-        // ==========================================
-        // 2. MACRO KPI CARDS
-        // ==========================================
-        [ObservableProperty] private decimal _totalRevenue;
-        [ObservableProperty] private decimal _totalCost;
+        [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-30);
+        [ObservableProperty] private DateTime _endDate = DateTime.Today;
+        [ObservableProperty] private string _searchText = string.Empty;
+        [ObservableProperty] private bool _isBusy;
+        [ObservableProperty] private string _statusMessage = "Ready.";
+        [ObservableProperty] private decimal _grossSales;
+        [ObservableProperty] private decimal _discounts;
+        [ObservableProperty] private decimal _returnValue;
+        [ObservableProperty] private decimal _netSales;
         [ObservableProperty] private decimal _grossProfit;
-        [ObservableProperty] private double _averageMargin;
-        [ObservableProperty] private decimal _totalUnitsSold;
-        [ObservableProperty] private int _activeSellingItems;
-        [ObservableProperty] private int _deadStockItems;
+        [ObservableProperty] private decimal _soldQuantity;
+        [ObservableProperty] private decimal _returnedQuantity;
+        [ObservableProperty] private int _sellingItemCount;
+        [ObservableProperty] private int _slowOrNonSellingCount;
+        [ObservableProperty] private ItemPerformanceDto? _selectedItem;
 
-        // ==========================================
-        // 3. MASTER GRID COLLECTION
-        // ==========================================
-        public ObservableCollection<ItemPerformanceDto> ItemPerformances { get; set; } = new();
-
-        public ObservableCollection<ItemPerformanceDto> TopSellingItems { get; set; } = new();
-        public ObservableCollection<ItemPerformanceDto> WorstSellingItems { get; set; } = new();
-        public ObservableCollection<ItemPerformanceDto> DeadStockList { get; set; } = new();
-
-        public ObservableCollection<ItemPerformanceDto> HighestProfitItems { get; set; } = new();
-        public ObservableCollection<ItemPerformanceDto> NegativeMarginItems { get; set; } = new();
-        public ObservableCollection<TrendPointDto> SalesTrendData { get; set; } = new();
-
-        public class ItemDrillDownDto
-        {
-            public DateTime TransactionDate { get; set; }
-            public string TransactionType { get; set; } = string.Empty; // "SALE" or "GRN"
-            public string DocumentNo { get; set; } = string.Empty;
-            public string PartyName { get; set; } = string.Empty; // Supplier or Customer Name
-            public decimal QtyIn { get; set; }
-            public decimal QtyOut { get; set; }
-        }
+        public ObservableCollection<ItemPerformanceDto> Items { get; } = new();
+        public ObservableCollection<ItemPerformanceDto> TopSellers { get; } = new();
+        public ObservableCollection<ItemPerformanceDto> SlowOrNonSellingItems { get; } = new();
+        public ObservableCollection<ItemSalesTransactionDto> Transactions { get; } = new();
+        public bool IsEmpty => !IsBusy && Items.Count == 0;
 
         public ItemSalesAnalyticsViewModel(SalesAnalyticsRepository repository)
         {
             _repository = repository;
-
-            // Auto-fire the analytics engine when the page opens
-            _ = GenerateAnalyticsAsync();
+            _ = LoadAsync();
         }
 
-        // ==========================================
-        // 4. THE EXECUTION ENGINE
-        // ==========================================
-        [RelayCommand]
-        private async Task GenerateAnalyticsAsync()
+        partial void OnSelectedItemChanged(ItemPerformanceDto? value)
         {
-            if (StartDate > EndDate)
+            _ = LoadTransactionsAsync(value?.ItemVariantId);
+        }
+
+        [RelayCommand]
+        private async Task LoadAsync()
+        {
+            if (StartDate.Date > EndDate.Date)
             {
-                MessageBox.Show("Start Date cannot be later than End Date.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Start date cannot be later than end date.", "Item Sales Analysis", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            IsBusy = true;
+            StatusMessage = "Calculating item sales...";
             try
             {
-                // 1. Fire the KPI Engine
-                var kpis = await _repository.GetKpisAsync(StartDate, EndDate, 90); // 90 days = Dead Stock threshold
-                TotalRevenue = kpis.TotalRevenue;
-                TotalCost = kpis.TotalCost;
-                GrossProfit = kpis.GrossProfit;
-                AverageMargin = kpis.AverageMargin;
-                TotalUnitsSold = kpis.TotalUnitsSold;
-                ActiveSellingItems = kpis.ActiveSellingItems;
-                DeadStockItems = kpis.DeadStockItems;
+                ItemSalesAnalyticsResultDto result = await _repository.GetAnalyticsAsync(StartDate, EndDate, SearchText);
+                Items.Clear();
+                TopSellers.Clear();
+                SlowOrNonSellingItems.Clear();
 
-                // 2. Fire the Master Grid Engine
-                var rawGridData = await _repository.GetItemPerformanceAsync(StartDate, EndDate);
+                foreach (var row in result.Items)
+                    Items.Add(row);
+                foreach (var row in result.Items.Where(row => row.NetQuantity > 0m).OrderByDescending(row => row.NetQuantity).Take(20))
+                    TopSellers.Add(row);
+                foreach (var row in result.Items.Where(row => row.IsSlowOrNonSelling).OrderBy(row => row.LastSaleDate).Take(50))
+                    SlowOrNonSellingItems.Add(row);
 
-                // 3. Apply Local UI Search Filters (Fast in-memory filtering)
-                if (!string.IsNullOrWhiteSpace(SearchText))
-                {
-                    var lowerSearch = SearchText.ToLower();
-                    rawGridData = rawGridData.Where(x =>
-                        x.ItemName.ToLower().Contains(lowerSearch) ||
-                        x.ItemCode.ToLower().Contains(lowerSearch) ||
-                        x.CategoryName.ToLower().Contains(lowerSearch)).ToList();
-                }
-
-                // 4. Bind to UI
-                // 4. Bind to UI & Pivot Intelligence Data
-                ItemPerformances.Clear();
-                TopSellingItems.Clear();
-                WorstSellingItems.Clear();
-                DeadStockList.Clear();
-
-                // Master Grid
-                foreach (var item in rawGridData) ItemPerformances.Add(item);
-
-                // Intelligence: Winners (Top 20 by Volume)
-                var topSellers = rawGridData.OrderByDescending(x => x.QtySold).Take(20);
-                foreach (var item in topSellers) TopSellingItems.Add(item);
-
-                // Intelligence: Losers (Bottom 20 by Volume, excluding zero-sellers)
-                var worstSellers = rawGridData.Where(x => x.QtySold > 0).OrderBy(x => x.QtySold).Take(20);
-                foreach (var item in worstSellers) WorstSellingItems.Add(item);
-
-                // Intelligence: Dead Stock (Items with SOH that haven't sold in 90 days)
-                var deadStockData = await _repository.GetDeadStockAsync(90);
-                foreach (var item in deadStockData) DeadStockList.Add(item);
-
-                // Intelligence: Profitability (Top 20 Cash Cows)
-                HighestProfitItems.Clear();
-                var mostProfitable = rawGridData.Where(x => x.Profit > 0).OrderByDescending(x => x.Profit).Take(20);
-                foreach (var item in mostProfitable) HighestProfitItems.Add(item);
-
-                // Intelligence: Profitability (Items losing money)
-                NegativeMarginItems.Clear();
-                var negativeMargin = rawGridData.Where(x => x.Margin < 0).OrderBy(x => x.Margin); // Lowest negative first
-                foreach (var item in negativeMargin) NegativeMarginItems.Add(item);
-
-                // Intelligence: Time-Series Trends
-                SalesTrendData.Clear();
-                var trendData = await _repository.GetSalesTrendsAsync(StartDate, EndDate);
-                foreach (var item in trendData) SalesTrendData.Add(item);
+                GrossSales = result.Summary.GrossSales;
+                Discounts = result.Summary.Discounts;
+                ReturnValue = result.Summary.ReturnValue;
+                NetSales = result.Summary.NetSales;
+                GrossProfit = result.Summary.GrossProfit;
+                SoldQuantity = result.Summary.SoldQuantity;
+                ReturnedQuantity = result.Summary.ReturnedQuantity;
+                SellingItemCount = result.Summary.SellingItemCount;
+                SlowOrNonSellingCount = result.Summary.SlowOrNonSellingStockItemCount;
+                SelectedItem = Items.Count > 0 ? Items[0] : null;
+                StatusMessage = $"{Items.Count:N0} item/service row(s). Period activity basis.";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Analytics Engine Error: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusMessage = "Item sales analysis could not be loaded.";
+                MessageBox.Show(ex.Message, "Item Sales Analysis", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+                OnPropertyChanged(nameof(IsEmpty));
+            }
+        }
+
+        private async Task LoadTransactionsAsync(int? itemVariantId)
+        {
+            Transactions.Clear();
+            if (!itemVariantId.HasValue)
+                return;
+
+            try
+            {
+                var rows = await _repository.GetItemTransactionsAsync(itemVariantId.Value, StartDate, EndDate);
+                foreach (var row in rows)
+                    Transactions.Add(row);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Item Transactions", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         [RelayCommand]
-        private void ClearFilters()
+        private async Task ResetAsync()
         {
             StartDate = DateTime.Today.AddDays(-30);
             EndDate = DateTime.Today;
             SearchText = string.Empty;
-            _ = GenerateAnalyticsAsync();
-        }
-
-        [RelayCommand]
-        private void ExportToExcel()
-        {
-            MessageBox.Show("Excel Export module initializing...\n\n(Will connect to ClosedXML in the next phase).", "Export to Excel", MessageBoxButton.OK, MessageBoxImage.Information);
+            await LoadAsync();
         }
     }
 }

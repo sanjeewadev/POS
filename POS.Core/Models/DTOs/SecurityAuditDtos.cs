@@ -1,75 +1,52 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace POS.Core.Models.DTOs
 {
-    // ==============================================================================
-    // 1. MACRO SECURITY SUMMARY (For Top KPI Cards)
-    // ==============================================================================
-    public class SecurityAuditSummaryDto
+    public sealed class SecurityAuditSummaryDto
     {
-        public int TotalVoidCount { get; set; }
-        public decimal TotalVoidAmount { get; set; }
-
-        public int TotalReturnCount { get; set; }
-        public decimal TotalReturnAmount { get; set; }
-
-        public int SuspendedCartCount { get; set; }
-
-        // Count of cashiers whose void/return ratios exceed normal thresholds
-        public int HighRiskCashierCount { get; set; }
+        public int TotalEventCount { get; set; }
+        public int FailedLoginCount { get; set; }
+        public int CancelledCartCount { get; set; }
+        public int CustomerReturnCount { get; set; }
+        public int ApprovalEventCount { get; set; }
+        public int DrawerFailureCount { get; set; }
+        public int UnusualCashierCount { get; set; }
     }
 
-    // ==============================================================================
-    // 2. RETURN AUDIT RECORD (The Refund Ledger)
-    // ==============================================================================
-    public class ReturnAuditRecordDto
+    public sealed class SecurityAuditEventDto
     {
-        public string ReturnNo { get; set; } = string.Empty;
-        public string OriginalInvoiceNo { get; set; } = string.Empty;
-        public DateTime ReturnDate { get; set; }
-
-        public string CashierName { get; set; } = string.Empty;
-        public string TerminalNo { get; set; } = string.Empty;
+        public DateTime OccurredAt { get; set; }
+        public string EventType { get; set; } = string.Empty;
+        public string Severity { get; set; } = "Information";
+        public string Actor { get; set; } = string.Empty;
         public string AuthorizedBy { get; set; } = string.Empty;
-
-        public decimal RefundAmount { get; set; }
-        public string RefundMethod { get; set; } = string.Empty;
-
-        // UI Flag: If a cashier authorized their own high-value return, it is a severe security risk
-        public bool IsSelfAuthorized => !string.IsNullOrWhiteSpace(AuthorizedBy) &&
-                                        CashierName.Equals(AuthorizedBy, StringComparison.OrdinalIgnoreCase);
-    }
-
-    // ==============================================================================
-    // 3. VOID & SUSPENDED RECORD (The Cancelled Sales Ledger)
-    // ==============================================================================
-    public class VoidAuditRecordDto
-    {
-        public string InvoiceNo { get; set; } = string.Empty;
-        public DateTime TransactionDate { get; set; }
-        public string CashierName { get; set; } = string.Empty;
         public string TerminalNo { get; set; } = string.Empty;
-
-        public decimal AttemptedAmount { get; set; }
-        public string Status { get; set; } = string.Empty; // "Voided" or "Suspended"
+        public string ReferenceNo { get; set; } = string.Empty;
+        public decimal? Amount { get; set; }
+        public string Description { get; set; } = string.Empty;
     }
 
-    // ==============================================================================
-    // 4. CASHIER FRAUD RISK PROFILE (Behavioral Analytics)
-    // ==============================================================================
-    public class CashierFraudRiskDto
+    public sealed class CashierActivitySummaryDto
     {
         public string CashierName { get; set; } = string.Empty;
+        public int CompletedSales { get; set; }
+        public int CancelledCarts { get; set; }
+        public int CustomerReturns { get; set; }
+        public int ManualDiscounts { get; set; }
+        public int PriceOverrides { get; set; }
+        public int FreeIssues { get; set; }
+        public decimal ReturnRatePercent => CompletedSales == 0
+            ? 0m
+            : Math.Round((decimal)CustomerReturns / CompletedSales * 100m, 2);
+        public bool IsUnusual => CancelledCarts >= 5 || ReturnRatePercent > 10m || PriceOverrides >= 10;
+        public string ReviewNote => IsUnusual ? "Review activity" : "Normal";
+    }
 
-        public int TotalTransactions { get; set; }
-        public int VoidCount { get; set; }
-        public int ReturnCount { get; set; }
-
-        // Ratios are far more important than raw numbers for catching fraud
-        public decimal VoidRate => TotalTransactions == 0 ? 0 : Math.Round((decimal)VoidCount / TotalTransactions * 100, 2);
-        public decimal ReturnRate => TotalTransactions == 0 ? 0 : Math.Round((decimal)ReturnCount / TotalTransactions * 100, 2);
-
-        // Automatically flag a cashier if their Voids exceed 5% or Returns exceed 10% of their total traffic
-        public bool IsHighRisk => VoidRate > 5m || ReturnRate > 10m;
+    public sealed class SecurityAuditResultDto
+    {
+        public SecurityAuditSummaryDto Summary { get; set; } = new();
+        public List<SecurityAuditEventDto> Events { get; set; } = new();
+        public List<CashierActivitySummaryDto> CashierActivity { get; set; } = new();
     }
 }
