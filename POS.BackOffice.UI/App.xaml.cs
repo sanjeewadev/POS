@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.ViewModels;
@@ -104,6 +104,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<POS.Core.Services.IBarcodePrintService, WpfBarcodePrintService>();
             services.AddTransient<BackupService>();
             services.AddSingleton<CustomerStatementTextFormatter>();
+            services.AddSingleton<GiftVoucherTextFormatter>();
             services.AddSingleton<
                 ITerminalHardwareService,
                 TerminalHardwareService>();

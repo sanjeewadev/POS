@@ -299,151 +299,99 @@
                         Margin="0,0,8,0"/>
 
                 <Button Grid.Column="8"
-                        Content="EXPORT / PRINT"
-                        Command="{Binding ExportBarcodesCommand}"
+                        Content="EXPORT CSV"
+                        Command="{Binding ExportCsvCommand}"
                         Style="{StaticResource ClassicBtn}"
                         MinWidth="130"/>
             </Grid>
         </Border>
 
-        <!-- GRID -->
-        <DataGrid Grid.Row="3"
-                  ItemsSource="{Binding Vouchers}"
-                  SelectedItem="{Binding SelectedVoucher, Mode=TwoWay}"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  IsReadOnly="True"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal"
-                  HorizontalGridLinesBrush="#D1D5DB"
-                  VerticalGridLinesBrush="#D1D5DB"
-                  BorderBrush="#808080"
-                  BorderThickness="1"
-                  Background="White"
-                  AlternatingRowBackground="#F9FAFB"
-                  RowHeight="34"
-                  FontSize="13">
+        <!-- VOUCHER REGISTER AND IMMUTABLE HISTORY -->
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <DataGrid.Columns>
+            <DataGrid Grid.Row="0"
+                      ItemsSource="{Binding Vouchers}"
+                      SelectedItem="{Binding SelectedVoucher, Mode=TwoWay}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal"
+                      BorderBrush="#808080"
+                      BorderThickness="1"
+                      Background="White"
+                      AlternatingRowBackground="#F9FAFB"
+                      RowHeight="34">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Voucher No" Binding="{Binding VoucherNo}" Width="125" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}" Width="135"/>
+                    <DataGridTextColumn Header="Value" Binding="{Binding VoucherAmount, StringFormat=Rs. {0:N2}}" Width="105" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Redeemed" Binding="{Binding RedeemedAmount, StringFormat=Rs. {0:N2}}" Width="105"/>
+                    <DataGridTextColumn Header="Forfeited" Binding="{Binding ForfeitedAmount, StringFormat=Rs. {0:N2}}" Width="100"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding DisplayStatus}" Width="95" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo}" Width="105"/>
+                    <DataGridTextColumn Header="Expiry" Binding="{Binding ExpiryDate, StringFormat=yyyy-MM-dd}" Width="100"/>
+                    <DataGridTextColumn Header="Sold Invoice" Binding="{Binding SoldInvoiceNo}" Width="120"/>
+                    <DataGridTextColumn Header="Redeemed Invoice" Binding="{Binding RedeemedInvoiceNo}" Width="135"/>
+                    <DataGridTextColumn Header="Prints" Binding="{Binding PrintCount}" Width="65"/>
+                    <DataGridTemplateColumn Header="Actions" Width="330">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="PRINT"
+                                            Command="{Binding DataContext.PrintVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding Id}" Height="26" Width="66" Margin="0,0,5,0"/>
+                                    <Button Content="BLOCK"
+                                            Command="{Binding DataContext.BlockVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding Id}" Height="26" Width="68" Margin="0,0,5,0"/>
+                                    <Button Content="UNBLOCK"
+                                            Command="{Binding DataContext.UnblockVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding Id}" Height="26" Width="78" Margin="0,0,5,0"/>
+                                    <Button Content="VOID"
+                                            Command="{Binding DataContext.VoidVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding Id}" Height="26" Width="62" Background="#B91C1C" Foreground="White"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
 
-                <DataGridTextColumn Header="Voucher No"
-                                    Binding="{Binding VoucherNo}"
-                                    Width="135"
-                                    FontWeight="Bold"/>
+            <Border Grid.Row="1" Background="#2B3C38" Padding="8" Margin="0,8,0,0">
+                <TextBlock Text="SELECTED VOUCHER MOVEMENT HISTORY" Foreground="White" FontWeight="Bold"/>
+            </Border>
 
-                <DataGridTextColumn Header="Barcode"
-                                    Binding="{Binding Barcode}"
-                                    Width="150"
-                                    FontWeight="SemiBold"/>
-
-                <DataGridTextColumn Header="Amount"
-                                    Binding="{Binding VoucherAmount, StringFormat=Rs. {0:N2}}"
-                                    Width="110"
-                                    FontWeight="Bold"/>
-
-                <DataGridTextColumn Header="Status"
-                                    Binding="{Binding DisplayStatus}"
-                                    Width="105"
-                                    FontWeight="Bold"/>
-
-                <DataGridTextColumn Header="Batch No"
-                                    Binding="{Binding BatchNo}"
-                                    Width="120"/>
-
-                <DataGridTextColumn Header="Description"
-                                    Binding="{Binding Description}"
-                                    Width="190"/>
-
-                <DataGridTextColumn Header="Expiry"
-                                    Binding="{Binding ExpiryDate, StringFormat=yyyy-MM-dd}"
-                                    Width="105"/>
-
-                <DataGridTextColumn Header="Created"
-                                    Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm}"
-                                    Width="145"/>
-
-                <DataGridTextColumn Header="Activated"
-                                    Binding="{Binding ActivatedAt, StringFormat=yyyy-MM-dd HH:mm}"
-                                    Width="145"/>
-
-                <DataGridTextColumn Header="Sold Invoice"
-                                    Binding="{Binding SoldInvoiceNo}"
-                                    Width="130"/>
-
-                <DataGridTextColumn Header="Redeemed"
-                                    Binding="{Binding RedeemedDate, StringFormat=yyyy-MM-dd HH:mm}"
-                                    Width="145"/>
-
-                <DataGridTextColumn Header="Redeemed Invoice"
-                                    Binding="{Binding RedeemedInvoiceNo}"
-                                    Width="145"/>
-
-                <DataGridTextColumn Header="Remarks"
-                                    Binding="{Binding Remarks}"
-                                    Width="220"/>
-
-                <DataGridTemplateColumn Header="Actions" Width="190">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-
-                                <Button Content="BLOCK"
-                                        Command="{Binding DataContext.BlockVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                        CommandParameter="{Binding Id}"
-                                        Height="26"
-                                        MinWidth="75"
-                                        Padding="8,0"
-                                        Margin="0,0,6,0">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource DangerBtn}">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Redeemed">
-                                                    <Setter Property="Visibility" Value="Hidden"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Blocked">
-                                                    <Setter Property="Visibility" Value="Hidden"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Cancelled">
-                                                    <Setter Property="Visibility" Value="Hidden"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-
-                                <Button Content="CANCEL"
-                                        Command="{Binding DataContext.CancelVoucherCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                        CommandParameter="{Binding Id}"
-                                        Height="26"
-                                        MinWidth="82"
-                                        Padding="8,0">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource WarningBtn}">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Redeemed">
-                                                    <Setter Property="Visibility" Value="Hidden"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Blocked">
-                                                    <Setter Property="Visibility" Value="Hidden"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding DisplayStatus}" Value="Cancelled">
-                                                    <Setter Property="Visibility" Value="Hidden"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-
-                            </StackPanel>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-
-            </DataGrid.Columns>
-        </DataGrid>
+            <DataGrid Grid.Row="2"
+                      ItemsSource="{Binding VoucherHistory}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      IsReadOnly="True"
+                      HeadersVisibility="Column"
+                      BorderBrush="#808080"
+                      BorderThickness="1"
+                      Background="White"
+                      AlternatingRowBackground="#F9FAFB"
+                      RowHeight="30">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Date" Binding="{Binding TransactionDate, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="145"/>
+                    <DataGridTextColumn Header="Type" Binding="{Binding TransactionType}" Width="115" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Applied" Binding="{Binding AppliedAmount, StringFormat=Rs. {0:N2}}" Width="100"/>
+                    <DataGridTextColumn Header="Forfeited" Binding="{Binding ForfeitedAmount, StringFormat=Rs. {0:N2}}" Width="100"/>
+                    <DataGridTextColumn Header="Status After" Binding="{Binding StatusAfter}" Width="105"/>
+                    <DataGridTextColumn Header="Invoice" Binding="{Binding ReferenceInvoiceNo}" Width="120"/>
+                    <DataGridTextColumn Header="Return" Binding="{Binding ReferenceReturnNo}" Width="120"/>
+                    <DataGridTextColumn Header="Created By" Binding="{Binding CreatedBy}" Width="100"/>
+                    <DataGridTextColumn Header="Authorized By" Binding="{Binding AuthorizedBy}" Width="110"/>
+                    <DataGridTextColumn Header="Remarks" Binding="{Binding Remarks}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
 
         <!-- STATUS BAR -->
         <Border Grid.Row="4"

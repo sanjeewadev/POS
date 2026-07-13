@@ -23,6 +23,8 @@ namespace POS.Cashier.UI.Dialogs
 
         public decimal ForfeitedAmount => ViewModel?.ForfeitedAmount ?? 0m;
 
+        public string AuthorizedBy => ViewModel?.AuthorizedBy ?? string.Empty;
+
         public GiftVoucherTenderDialog(decimal balanceDue)
         {
             InitializeComponent();
@@ -34,6 +36,7 @@ namespace POS.Cashier.UI.Dialogs
 
                 DataContext = ViewModel;
                 ViewModel.ActionCompleted += OnActionCompleted;
+                ViewModel.ManagerApprovalRequested += OnManagerApprovalRequested;
             }
             else
             {
@@ -54,6 +57,7 @@ namespace POS.Cashier.UI.Dialogs
 
             DataContext = ViewModel;
             ViewModel.ActionCompleted += OnActionCompleted;
+            ViewModel.ManagerApprovalRequested += OnManagerApprovalRequested;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -101,6 +105,22 @@ namespace POS.Cashier.UI.Dialogs
             ViewModel.SearchVoucherCommand.Execute(null);
         }
 
+        private async void OnManagerApprovalRequested()
+        {
+            if (ViewModel == null || App.Services == null)
+                return;
+
+            ManagerAuthViewModel authViewModel =
+                App.Services.GetRequiredService<ManagerAuthViewModel>();
+            var authDialog = new ManagerAuthDialogView(authViewModel)
+            {
+                Owner = this
+            };
+
+            if (authDialog.ShowDialog() == true)
+                await ViewModel.ApplyManagerApprovalAsync(authViewModel.AuthorizedUsername);
+        }
+
         private void OnActionCompleted(bool success)
         {
             DialogResult = success;
@@ -110,7 +130,10 @@ namespace POS.Cashier.UI.Dialogs
         protected override void OnClosed(EventArgs e)
         {
             if (ViewModel != null)
+            {
                 ViewModel.ActionCompleted -= OnActionCompleted;
+                ViewModel.ManagerApprovalRequested -= OnManagerApprovalRequested;
+            }
 
             base.OnClosed(e);
         }

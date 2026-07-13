@@ -388,7 +388,7 @@
 
                 <Button Grid.Column="2"
                         Content="MANAGER APPROVE"
-                        Command="{Binding ApproveForfeitCommand}"
+                        Command="{Binding RequestManagerApprovalCommand}"
                         Margin="0,0,8,0">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource ManagerBtn}">

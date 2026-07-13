@@ -53,6 +53,9 @@ namespace POS.Cashier.UI.ViewModels
         private bool _isManagerApproved = false;
 
         [ObservableProperty]
+        private string _authorizedBy = string.Empty;
+
+        [ObservableProperty]
         private bool _isVoucherValid = false;
 
         // =========================================================
@@ -75,9 +78,11 @@ namespace POS.Cashier.UI.ViewModels
 
         public bool CanConfirm =>
             HasValidatedVoucher &&
-            (!RequiresManagerApproval || IsManagerApproved);
+            (!RequiresManagerApproval ||
+             (IsManagerApproved && !string.IsNullOrWhiteSpace(AuthorizedBy)));
 
         public event Action<bool>? ActionCompleted;
+        public event Action? ManagerApprovalRequested;
 
         public GiftVoucherTenderDialogViewModel(GiftVoucherRepository giftVoucherRepository)
         {
@@ -189,23 +194,29 @@ namespace POS.Cashier.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task ApproveForfeitAsync()
+        private void RequestManagerApproval()
+        {
+            if (!RequiresManagerApproval || ForfeitedAmount <= 0m)
+            {
+                StatusText = "Manager approval is not required for this voucher.";
+                StatusColorHex = "#F59E0B";
+                return;
+            }
+
+            ManagerApprovalRequested?.Invoke();
+        }
+
+        public async Task ApplyManagerApprovalAsync(string authorizedBy)
         {
             if (IsBusy)
                 return;
 
             string code = NormalizeText(VoucherBarcode);
+            string safeAuthorizedBy = NormalizeText(authorizedBy);
 
-            if (BalanceDue <= 0m)
+            if (string.IsNullOrWhiteSpace(safeAuthorizedBy))
             {
-                StatusText = "Invoice is already fully paid.";
-                StatusColorHex = "#EF4444";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(code))
-            {
-                StatusText = "Voucher barcode is required.";
+                StatusText = "A valid manager or administrator authorization is required.";
                 StatusColorHex = "#EF4444";
                 return;
             }
@@ -226,29 +237,32 @@ namespace POS.Cashier.UI.ViewModels
                 VoucherBarcode = string.IsNullOrWhiteSpace(result.Barcode)
                     ? code
                     : result.Barcode;
-
                 VoucherAmount = result.VoucherAmount;
                 AmountToApply = result.AmountToApply;
                 ForfeitedAmount = result.ForfeitedAmount;
                 VoucherStatus = result.Status;
                 ExpiryDate = result.ExpiryDate;
                 RequiresManagerApproval = false;
-                IsManagerApproved = true;
+                IsManagerApproved = result.IsValid;
+                AuthorizedBy = result.IsValid ? safeAuthorizedBy : string.Empty;
                 IsVoucherValid = result.IsValid;
 
                 if (!result.IsValid)
                 {
                     StatusText = result.Message;
                     StatusColorHex = "#EF4444";
-                    IsManagerApproved = false;
                     return;
                 }
 
-                StatusText = $"Manager approved. Apply Rs. {AmountToApply:N2}. Forfeit Rs. {ForfeitedAmount:N2}.";
+                StatusText =
+                    $"Approved by {AuthorizedBy}. Apply Rs. {AmountToApply:N2}. " +
+                    $"Forfeit Rs. {ForfeitedAmount:N2}.";
                 StatusColorHex = "#10B981";
             }
             catch (Exception ex)
             {
+                AuthorizedBy = string.Empty;
+                IsManagerApproved = false;
                 StatusText = $"Manager approval failed: {ex.Message}";
                 StatusColorHex = "#EF4444";
             }
@@ -334,6 +348,7 @@ namespace POS.Cashier.UI.ViewModels
             ExpiryDate = null;
             RequiresManagerApproval = false;
             IsManagerApproved = false;
+            AuthorizedBy = string.Empty;
             IsVoucherValid = false;
 
             NotifyComputedProperties();
@@ -351,6 +366,11 @@ namespace POS.Cashier.UI.ViewModels
         }
 
         partial void OnIsManagerApprovedChanged(bool value)
+        {
+            NotifyComputedProperties();
+        }
+
+        partial void OnAuthorizedByChanged(string value)
         {
             NotifyComputedProperties();
         }

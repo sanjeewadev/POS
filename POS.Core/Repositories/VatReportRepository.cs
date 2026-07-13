@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
@@ -110,6 +110,12 @@ namespace POS.Core.Repositories
 
             foreach (SalesHeader sale in sales)
             {
+                if (!sale.SalesLines.Any(line => !line.IsGiftVoucherSale))
+                    continue;
+
+                decimal merchandiseInclusive = Money(
+                    sale.NetTotal - sale.GiftVoucherIssueTotal);
+
                 if (!IsCompleteSale(sale))
                 {
                     AddLegacy(
@@ -118,7 +124,7 @@ namespace POS.Core.Repositories
                         sale.InvoiceNo,
                         string.Empty,
                         sale.TransactionDate,
-                        sale.NetTotal,
+                        merchandiseInclusive,
                         sale.TaxSnapshotStatus,
                         BuildIncompleteWarning(sale.TaxSnapshotStatus, "sale"));
                     continue;
@@ -133,7 +139,7 @@ namespace POS.Core.Repositories
                     isReversal: false,
                     sale.TaxableAmountTotal!.Value,
                     sale.TotalVatAmount!.Value,
-                    sale.NetTotal,
+                    merchandiseInclusive,
                     sale.StandardRatedAmount!.Value,
                     sale.ZeroRatedAmount!.Value,
                     sale.ExemptAmount!.Value,
@@ -145,7 +151,9 @@ namespace POS.Core.Repositories
                     "Sale",
                     sale.InvoiceNo,
                     isReversal: false,
-                    sale.SalesLines.Select(l => new SnapshotLine(
+                    sale.SalesLines
+                        .Where(l => !l.IsGiftVoucherSale)
+                        .Select(l => new SnapshotLine(
                         l.TaxCategoryCodeSnapshot,
                         l.TaxRatePercentSnapshot,
                         l.TaxableAmountSnapshot,
@@ -402,11 +410,16 @@ namespace POS.Core.Repositories
             IReadOnlyCollection<SupplierReturnHeader> supplierReturns,
             CancellationToken cancellationToken)
         {
-            foreach (SalesHeader sale in sales.Where(s => IsCompleteStatus(s.TaxSnapshotStatus)))
+            foreach (SalesHeader sale in sales.Where(s =>
+                         IsCompleteStatus(s.TaxSnapshotStatus) &&
+                         s.SalesLines.Any(line => !line.IsGiftVoucherSale)))
             {
-                decimal lineTaxable = Money(sale.SalesLines.Sum(l => l.TaxableAmountSnapshot ?? 0m));
-                decimal lineVat = Money(sale.SalesLines.Sum(l => l.VatAmountSnapshot ?? 0m));
-                decimal lineInclusive = Money(sale.SalesLines.Sum(l => l.TaxInclusiveAmountSnapshot ?? 0m));
+                List<SalesLine> merchandiseLines = sale.SalesLines
+                    .Where(line => !line.IsGiftVoucherSale)
+                    .ToList();
+                decimal lineTaxable = Money(merchandiseLines.Sum(l => l.TaxableAmountSnapshot ?? 0m));
+                decimal lineVat = Money(merchandiseLines.Sum(l => l.VatAmountSnapshot ?? 0m));
+                decimal lineInclusive = Money(merchandiseLines.Sum(l => l.TaxInclusiveAmountSnapshot ?? 0m));
 
                 AddDifference(result, "Sale", sale.InvoiceNo, sale.TransactionDate,
                     "Taxable total", sale.TaxableAmountTotal ?? 0m, lineTaxable,
@@ -415,12 +428,12 @@ namespace POS.Core.Repositories
                     "VAT total", sale.TotalVatAmount ?? 0m, lineVat,
                     "Header VAT does not equal saved line snapshots.");
                 AddDifference(result, "Sale", sale.InvoiceNo, sale.TransactionDate,
-                    "Inclusive/net total", sale.NetTotal, lineInclusive,
+                    "Inclusive/net total", Money(sale.NetTotal - sale.GiftVoucherIssueTotal), lineInclusive,
                     "Sale net total does not equal saved line inclusive values.");
                 AddCategoryDifferences(result, "Sale", sale.InvoiceNo, sale.TransactionDate,
                     sale.StandardRatedAmount, sale.ZeroRatedAmount, sale.ExemptAmount,
                     sale.OutOfScopeAmount,
-                    sale.SalesLines.Select(ToSnapshotLine));
+                    merchandiseLines.Select(ToSnapshotLine));
             }
 
             foreach (GrnHeader grn in grns.Where(g => IsCompleteStatus(g.TaxSnapshotStatus)))
@@ -603,7 +616,10 @@ namespace POS.Core.Repositories
                 header.ZeroRatedAmount,
                 header.ExemptAmount,
                 header.OutOfScopeAmount) &&
-            LinesComplete(header.SalesLines.Select(ToSnapshotLineWithStatus));
+            LinesComplete(
+                header.SalesLines
+                    .Where(line => !line.IsGiftVoucherSale)
+                    .Select(ToSnapshotLineWithStatus));
 
         private static bool IsCompleteCustomerReturn(CustomerReturnHeader header) =>
             IsCompleteStatus(header.TaxSnapshotStatus) &&

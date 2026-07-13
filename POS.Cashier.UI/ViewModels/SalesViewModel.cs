@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -1195,7 +1195,14 @@ namespace POS.Cashier.UI.ViewModels
                 BalanceDue <= 0m ? "#10B981" : "#D97706");
         }
 
-        public void AddConfirmedGiftVoucherPayment(int giftVoucherId, string voucherNo, string voucherBarcode, decimal voucherAmount, decimal amountToApply, decimal forfeitedAmount)
+        public void AddConfirmedGiftVoucherPayment(
+            int giftVoucherId,
+            string voucherNo,
+            string voucherBarcode,
+            decimal voucherAmount,
+            decimal amountToApply,
+            decimal forfeitedAmount,
+            string authorizedBy)
         {
             if (!EnsurePaymentModeReady())
                 return;
@@ -1215,10 +1222,22 @@ namespace POS.Cashier.UI.ViewModels
             amountToApply = Math.Round(amountToApply, 2);
             voucherAmount = Math.Round(voucherAmount, 2);
             forfeitedAmount = Math.Round(forfeitedAmount, 2);
+            string safeAuthorizedBy = (authorizedBy ?? string.Empty).Trim();
 
-            if (amountToApply <= 0m || amountToApply > BalanceDue || voucherAmount <= 0m || forfeitedAmount < 0m || Math.Round(amountToApply + forfeitedAmount, 2) > voucherAmount)
+            decimal totalConsumed = Math.Round(amountToApply + forfeitedAmount, 2);
+            if (amountToApply <= 0m ||
+                amountToApply > BalanceDue ||
+                voucherAmount <= 0m ||
+                forfeitedAmount < 0m ||
+                Math.Abs(totalConsumed - voucherAmount) > 0.01m)
             {
-                _ = ShowNotificationAsync("Gift voucher payment amount is invalid.", "#EF4444");
+                _ = ShowNotificationAsync("A one-time gift voucher must be fully consumed by the applied and forfeited amounts.", "#EF4444");
+                return;
+            }
+
+            if (forfeitedAmount > 0m && string.IsNullOrWhiteSpace(safeAuthorizedBy))
+            {
+                _ = ShowNotificationAsync("Manager authorization is required for gift voucher forfeiture.", "#EF4444");
                 return;
             }
 
@@ -1244,6 +1263,7 @@ namespace POS.Cashier.UI.ViewModels
                 GiftVoucherBarcode = safeBarcode,
                 GiftVoucherAmount = voucherAmount,
                 GiftVoucherForfeitedAmount = forfeitedAmount,
+                GiftVoucherAuthorizedBy = forfeitedAmount > 0m ? safeAuthorizedBy : string.Empty,
                 PaymentDate = DateTime.Now,
                 CreatedAt = DateTime.Now
             });
@@ -2500,7 +2520,8 @@ namespace POS.Cashier.UI.ViewModels
                     GiftVoucherNo = p.IsGiftVoucher ? p.GiftVoucherNo : string.Empty,
                     GiftVoucherBarcode = p.IsGiftVoucher ? p.GiftVoucherBarcode : string.Empty,
                     GiftVoucherAmount = p.IsGiftVoucher ? p.GiftVoucherAmount : 0m,
-                    GiftVoucherForfeitedAmount = p.IsGiftVoucher ? p.GiftVoucherForfeitedAmount : 0m
+                    GiftVoucherForfeitedAmount = p.IsGiftVoucher ? p.GiftVoucherForfeitedAmount : 0m,
+                    GiftVoucherAuthorizedBy = p.IsGiftVoucher ? p.GiftVoucherAuthorizedBy : string.Empty
                 }).ToList();
 
                 var savedReceipt =

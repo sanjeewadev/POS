@@ -597,10 +597,7 @@ namespace POS.Core.Repositories
                     !row.Line.IsFreeItem)
                 .ToList();
 
-            bool hasUnresolvedSpecialLine = lines.Any(
-                line =>
-                    line.IsGiftVoucherSale ||
-                    line.IsFreeItem);
+            bool hasUnresolvedSpecialLine = lines.Any(line => line.IsFreeItem);
 
             if (hasUnresolvedSpecialLine &&
                 header.InvoiceDiscountAmount != 0m)
@@ -646,6 +643,18 @@ namespace POS.Core.Repositories
 
             if (normalLines.Count == 0)
             {
+                if (lines.All(line => line.IsGiftVoucherSale))
+                {
+                    header.TaxableAmountTotal = 0m;
+                    header.TotalVatAmount = 0m;
+                    header.StandardRatedAmount = 0m;
+                    header.ZeroRatedAmount = 0m;
+                    header.ExemptAmount = 0m;
+                    header.OutOfScopeAmount = 0m;
+                    header.TaxSnapshotStatus = TaxSnapshotStatuses.Complete;
+                    return;
+                }
+
                 ClearHeaderTaxSnapshot(header);
                 return;
             }
@@ -725,28 +734,20 @@ namespace POS.Core.Repositories
                 return;
             }
 
-            if (Math.Abs(
-                    header.GrossTotal -
-                    result.GrossTotal) > 0.01m ||
-                Math.Abs(
-                    header.TotalDiscount -
-                    result.TotalDiscount) > 0.01m ||
-                Math.Abs(
-                    header.NetTotal -
-                    result.NetTotal) > 0.01m)
+            decimal merchandiseGross = Math.Round(
+                header.GrossTotal - header.GiftVoucherIssueTotal,
+                2);
+            decimal merchandiseNet = Math.Round(
+                header.NetTotal - header.GiftVoucherIssueTotal,
+                2);
+
+            if (Math.Abs(merchandiseGross - result.GrossTotal) > 0.01m ||
+                Math.Abs(header.TotalDiscount - result.TotalDiscount) > 0.01m ||
+                Math.Abs(merchandiseNet - result.NetTotal) > 0.01m)
             {
                 throw new InvalidOperationException(
-                    "Sale totals do not reconcile with the shared VAT calculation.");
+                    "Merchandise totals do not reconcile with the shared VAT calculation.");
             }
-
-            header.GrossTotal =
-                result.GrossTotal;
-
-            header.TotalDiscount =
-                result.TotalDiscount;
-
-            header.NetTotal =
-                result.NetTotal;
 
             header.TaxableAmountTotal =
                 result.TaxableAmountTotal;
@@ -1709,6 +1710,7 @@ namespace POS.Core.Repositories
                 payment.ChangeAmount = Math.Round(payment.ChangeAmount, 2);
                 payment.GiftVoucherNo = NormalizeText(payment.GiftVoucherNo);
                 payment.GiftVoucherBarcode = NormalizeText(payment.GiftVoucherBarcode);
+                payment.GiftVoucherAuthorizedBy = NormalizeText(payment.GiftVoucherAuthorizedBy);
 
                 if (string.IsNullOrWhiteSpace(payment.PaymentType))
                     throw new InvalidOperationException("Payment type is required.");
@@ -1748,6 +1750,10 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException(
                     "Invoice discount cannot be greater than sale value.");
             }
+
+            header.GiftVoucherIssueTotal = Math.Round(
+                lines.Where(line => line.IsGiftVoucherSale).Sum(line => line.LineTotal),
+                2);
 
             header.GrossTotal = grossTotal;
             header.TotalDiscount = Math.Round(
@@ -2051,8 +2057,10 @@ namespace POS.Core.Repositories
                     payment.Amount,
                     payment.GiftVoucherForfeitedAmount,
                     header,
+                    payment,
                     header.CashierName,
                     header.TerminalNo,
+                    payment.GiftVoucherAuthorizedBy,
                     $"Gift voucher redeemed from invoice {header.InvoiceNo}.");
             }
         }
@@ -2109,8 +2117,18 @@ namespace POS.Core.Repositories
             decimal totalUsed = Math.Round(payment.Amount + payment.GiftVoucherForfeitedAmount, 2);
             decimal voucherValue = Math.Round(payment.GiftVoucherAmount, 2);
 
-            if (totalUsed > voucherValue)
-                throw new InvalidOperationException("Gift voucher applied amount plus forfeited amount cannot exceed voucher value.");
+            if (Math.Abs(totalUsed - voucherValue) > 0.01m)
+            {
+                throw new InvalidOperationException(
+                    "A one-time gift voucher must be fully consumed by the applied and forfeited amounts.");
+            }
+
+            if (payment.GiftVoucherForfeitedAmount > 0m &&
+                string.IsNullOrWhiteSpace(payment.GiftVoucherAuthorizedBy))
+            {
+                throw new InvalidOperationException(
+                    "Manager authorization is required for gift voucher forfeiture.");
+            }
         }
 
         // =========================================================

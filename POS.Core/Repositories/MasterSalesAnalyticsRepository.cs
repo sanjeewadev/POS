@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Configuration;
 using POS.Core.Models.DTOs;
@@ -58,7 +58,8 @@ namespace POS.Core.Repositories
             var totalCount = await query.CountAsync();
 
             // ✅ FIX 1: Double-cast the revenue sum
-            var totalRevenue = (decimal)await query.SumAsync(h => (double)h.NetTotal);
+            var totalRevenue = (decimal)await query.SumAsync(
+                h => (double)(h.NetTotal - h.GiftVoucherIssueTotal));
 
             // ✅ FIX 2: Double-cast the cost sum
             var totalCost = (decimal)await context.SalesLines

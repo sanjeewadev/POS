@@ -210,6 +210,9 @@ namespace POS.Cashier.UI.Models
         [ObservableProperty]
         private decimal _giftVoucherForfeitedAmount = 0m;
 
+        [ObservableProperty]
+        private string _giftVoucherAuthorizedBy = string.Empty;
+
         public bool IsGiftVoucher =>
             PaymentType.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase) ||
             PaymentType.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase);

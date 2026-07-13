@@ -56,11 +56,21 @@ namespace POS.Core.Models
         [MaxLength(30)]
         public string StatusAfter { get; set; } = string.Empty;
 
-        // Optional sales reference.
+        // Optional sales/payment/return references.
         public int? SalesHeaderId { get; set; }
+
+        public int? SalesPaymentId { get; set; }
+
+        public int? CustomerReturnHeaderId { get; set; }
 
         [MaxLength(50)]
         public string ReferenceInvoiceNo { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string ReferenceReturnNo { get; set; } = string.Empty;
+
+        [MaxLength(120)]
+        public string? ReferenceKey { get; set; }
 
         [MaxLength(100)]
         public string CashierName { get; set; } = string.Empty;
@@ -70,6 +80,9 @@ namespace POS.Core.Models
 
         [MaxLength(100)]
         public string CreatedBy { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        public string AuthorizedBy { get; set; } = string.Empty;
 
         [MaxLength(500)]
         public string Remarks { get; set; } = string.Empty;
@@ -85,5 +98,11 @@ namespace POS.Core.Models
 
         [ForeignKey(nameof(SalesHeaderId))]
         public virtual SalesHeader? SalesHeader { get; set; }
+
+        [ForeignKey(nameof(SalesPaymentId))]
+        public virtual SalesPayment? SalesPayment { get; set; }
+
+        [ForeignKey(nameof(CustomerReturnHeaderId))]
+        public virtual CustomerReturnHeader? CustomerReturnHeader { get; set; }
     }
 }

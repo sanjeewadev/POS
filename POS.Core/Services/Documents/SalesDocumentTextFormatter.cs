@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -56,6 +56,12 @@ namespace POS.Core.Services.Documents
             {
                 throw new InvalidOperationException(
                     "Tax Invoice number is missing.");
+            }
+
+            if (!sale.SalesLines.Any(line => !line.IsGiftVoucherSale))
+            {
+                throw new InvalidOperationException(
+                    "A voucher-only receipt is not a Tax Invoice.");
             }
 
             if (!string.Equals(
@@ -192,7 +198,11 @@ namespace POS.Core.Services.Documents
                         columns);
                 }
 
-                if (includeTaxColumns)
+                if (line.IsGiftVoucherSale)
+                {
+                    AppendWrapped(text, "One-time gift voucher issue - excluded from VAT taxable supplies.", columns);
+                }
+                else if (includeTaxColumns)
                 {
                     string category = FirstNonEmpty(
                         line.TaxNameSnapshot,
@@ -231,6 +241,20 @@ namespace POS.Core.Services.Documents
 
             if (sale.TotalDiscount > 0m)
                 AppendTwoColumns(text, "Discount", FormatMoney(sale.TotalDiscount, settings), columns);
+
+            if (sale.GiftVoucherIssueTotal > 0m)
+            {
+                AppendTwoColumns(
+                    text,
+                    "Merchandise / services",
+                    FormatMoney(sale.NetTotal - sale.GiftVoucherIssueTotal, settings),
+                    columns);
+                AppendTwoColumns(
+                    text,
+                    "Voucher issue (non-VAT)",
+                    FormatMoney(sale.GiftVoucherIssueTotal, settings),
+                    columns);
+            }
 
             AppendTwoColumns(text, "NET TOTAL", FormatMoney(sale.NetTotal, settings), columns);
             AppendSeparator(text, columns);

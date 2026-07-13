@@ -14,6 +14,7 @@ namespace POS.Core.Models.DTOs
         public string CashierName { get; init; } = string.Empty;
         public string TaxSnapshotStatus { get; init; } = string.Empty;
         public decimal NetTotal { get; init; }
+        public decimal OriginalGiftVoucherPaymentAmount { get; init; }
         public List<CustomerReturnableLineDto> Lines { get; init; } = new();
     }
 
@@ -76,6 +77,8 @@ namespace POS.Core.Models.DTOs
         public string CreditNoteNo { get; init; } = string.Empty;
         public decimal TotalRefundAmount { get; init; }
         public decimal AccountCreditAmount { get; init; }
+        public decimal GiftVoucherRefundAmount { get; init; }
+        public string ReplacementGiftVoucherNo { get; init; } = string.Empty;
         public decimal CashRefundAmount { get; init; }
     }
 

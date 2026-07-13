@@ -1,94 +1,79 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using POS.Core.Models;
-using POS.Core.Repositories;
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
+using POS.BackOffice.UI.Views.Dialogs;
+using POS.Core.Configuration;
+using POS.Core.Data;
+using POS.Core.Models;
+using POS.Core.Repositories;
+using POS.Core.Services;
+using POS.Core.Services.Documents;
 
 namespace POS.BackOffice.UI.ViewModels
 {
     public partial class GiftVoucherAdminViewModel : ObservableObject
     {
         private readonly GiftVoucherRepository _giftVoucherRepository;
-
-        // =========================================================
-        // GRID
-        // =========================================================
+        private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly AuthService _authService;
+        private readonly GiftVoucherTextFormatter _voucherFormatter;
 
         public ObservableCollection<GiftVoucherSearchDto> Vouchers { get; } = new();
+        public ObservableCollection<GiftVoucherTransaction> VoucherHistory { get; } = new();
 
         public ObservableCollection<string> StatusFilters { get; } = new()
         {
             "All",
-            "Created",
-            "Active",
-            "Redeemed",
-            "Expired",
-            "Blocked",
-            "Cancelled"
+            GiftVoucherStatusCodes.Created,
+            GiftVoucherStatusCodes.Active,
+            GiftVoucherStatusCodes.Redeemed,
+            GiftVoucherStatusCodes.Expired,
+            GiftVoucherStatusCodes.Blocked,
+            GiftVoucherStatusCodes.Voided
         };
 
-        [ObservableProperty]
-        private GiftVoucherSearchDto? _selectedVoucher;
+        [ObservableProperty] private GiftVoucherSearchDto? _selectedVoucher;
+        [ObservableProperty] private string _selectedFilter = "All";
+        [ObservableProperty] private string _searchText = string.Empty;
+        [ObservableProperty] private int _generateCount = 10;
+        [ObservableProperty] private decimal _generateAmount = 1000m;
+        [ObservableProperty] private DateTime? _generateExpiryDate = DateTime.Today.AddYears(1);
+        [ObservableProperty] private string _generateBatchNo = string.Empty;
+        [ObservableProperty] private string _generateDescription = string.Empty;
+        [ObservableProperty] private bool _isBusy;
+        [ObservableProperty] private string _statusText = "Ready.";
+        [ObservableProperty] private string _statusColorHex = "#003366";
 
-        [ObservableProperty]
-        private string _selectedFilter = "All";
-
-        [ObservableProperty]
-        private string _searchText = string.Empty;
-
-        // =========================================================
-        // GENERATE BATCH INPUTS
-        // =========================================================
-
-        [ObservableProperty]
-        private int _generateCount = 10;
-
-        [ObservableProperty]
-        private decimal _generateAmount = 1000m;
-
-        [ObservableProperty]
-        private DateTime? _generateExpiryDate = DateTime.Today.AddYears(1);
-
-        [ObservableProperty]
-        private string _generateBatchNo = string.Empty;
-
-        [ObservableProperty]
-        private string _generateDescription = string.Empty;
-
-        // =========================================================
-        // STATUS
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _isBusy = false;
-
-        [ObservableProperty]
-        private string _statusText = "Ready.";
-
-        [ObservableProperty]
-        private string _statusColorHex = "#003366";
-
-        public GiftVoucherAdminViewModel(GiftVoucherRepository giftVoucherRepository)
+        public GiftVoucherAdminViewModel(
+            GiftVoucherRepository giftVoucherRepository,
+            IDbContextFactory<AppDbContext> contextFactory,
+            AuthService authService,
+            GiftVoucherTextFormatter voucherFormatter)
         {
-            _giftVoucherRepository = giftVoucherRepository;
+            _giftVoucherRepository = giftVoucherRepository ?? throw new ArgumentNullException(nameof(giftVoucherRepository));
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _voucherFormatter = voucherFormatter ?? throw new ArgumentNullException(nameof(voucherFormatter));
         }
 
-        // =========================================================
-        // INITIALIZE
-        // =========================================================
+        public Task InitializeAsync() => RefreshAsync();
 
-        public async Task InitializeAsync()
-        {
-            await RefreshAsync();
-        }
+        partial void OnSelectedVoucherChanged(GiftVoucherSearchDto? value) =>
+            _ = LoadSelectedHistoryAsync(value);
 
-        // =========================================================
-        // COMMANDS
-        // =========================================================
+        partial void OnSelectedFilterChanged(string value) => _ = RefreshAsync();
 
         [RelayCommand]
         private async Task RefreshAsync()
@@ -99,29 +84,25 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 IsBusy = true;
-                StatusText = "Loading gift vouchers...";
-                StatusColorHex = "#3B82F6";
+                SetStatus("Loading gift vouchers...", "#3B82F6");
+                int? selectedId = SelectedVoucher?.Id;
+                var data = await _giftVoucherRepository.SearchVouchersAsync(
+                    NormalizeFilter(SelectedFilter),
+                    NormalizeText(SearchText),
+                    500);
 
                 Vouchers.Clear();
-
-                string filter = NormalizeFilter(SelectedFilter);
-                string search = NormalizeText(SearchText);
-
-                var vouchers = await _giftVoucherRepository.SearchVouchersAsync(
-                    filter,
-                    search,
-                    take: 500);
-
-                foreach (var voucher in vouchers)
+                foreach (GiftVoucherSearchDto voucher in data)
                     Vouchers.Add(voucher);
 
-                StatusText = $"Loaded {Vouchers.Count} voucher(s).";
-                StatusColorHex = "#10B981";
+                SelectedVoucher = selectedId.HasValue
+                    ? Vouchers.FirstOrDefault(row => row.Id == selectedId.Value)
+                    : null;
+                SetStatus($"Loaded {Vouchers.Count} voucher(s).", "#10B981");
             }
             catch (Exception ex)
             {
-                StatusText = $"Failed to load vouchers: {ex.Message}";
-                StatusColorHex = "#EF4444";
+                SetStatus($"Failed to load vouchers: {ex.Message}", "#EF4444");
             }
             finally
             {
@@ -130,60 +111,43 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
+        private Task SearchAsync() => RefreshAsync();
+
+        [RelayCommand]
         private async Task GenerateBatchAsync()
         {
             if (IsBusy)
                 return;
-
-            if (GenerateCount <= 0)
+            if (GenerateCount <= 0 || GenerateCount > 1000)
             {
-                StatusText = "Voucher count must be greater than zero.";
-                StatusColorHex = "#EF4444";
+                SetStatus("Voucher count must be between 1 and 1000.", "#EF4444");
                 return;
             }
-
-            if (GenerateCount > 1000)
-            {
-                StatusText = "Cannot generate more than 1000 vouchers at once.";
-                StatusColorHex = "#EF4444";
-                return;
-            }
-
             if (GenerateAmount <= 0m)
             {
-                StatusText = "Voucher amount must be greater than zero.";
-                StatusColorHex = "#EF4444";
+                SetStatus("Voucher amount must be greater than zero.", "#EF4444");
                 return;
             }
-
-            if (GenerateExpiryDate.HasValue &&
-                GenerateExpiryDate.Value.Date < DateTime.Today)
+            if (GenerateExpiryDate.HasValue && GenerateExpiryDate.Value.Date < DateTime.Today)
             {
-                StatusText = "Expiry date cannot be in the past.";
-                StatusColorHex = "#EF4444";
+                SetStatus("Expiry date cannot be in the past.", "#EF4444");
                 return;
             }
 
-            string message =
-                $"Generate {GenerateCount} gift voucher(s) with value Rs. {GenerateAmount:N2}?";
-
-            var confirm = MessageBox.Show(
-                message,
-                "Generate Gift Voucher Batch",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (confirm != MessageBoxResult.Yes)
+            if (MessageBox.Show(
+                    $"Generate {GenerateCount} one-time gift voucher(s) with value Rs. {GenerateAmount:N2}?",
+                    "Generate Gift Voucher Batch",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
                 return;
+            }
 
             try
             {
                 IsBusy = true;
-                StatusText = "Generating gift voucher batch...";
-                StatusColorHex = "#3B82F6";
-
+                SetStatus("Generating gift voucher batch...", "#3B82F6");
                 string description = NormalizeText(GenerateDescription);
-
                 if (string.IsNullOrWhiteSpace(description))
                     description = $"Gift Voucher Rs. {GenerateAmount:N2}";
 
@@ -191,131 +155,17 @@ namespace POS.BackOffice.UI.ViewModels
                     GenerateCount,
                     GenerateAmount,
                     GenerateExpiryDate,
-                    createdBy: "Admin",
-                    batchNo: GenerateBatchNo,
-                    description: description);
-
-                StatusText = $"Generated {generated.Count} gift voucher(s).";
-                StatusColorHex = "#10B981";
+                    CurrentUserName(),
+                    GenerateBatchNo,
+                    description);
 
                 GenerateBatchNo = string.Empty;
-
+                SetStatus($"Generated {generated.Count} voucher(s). Print each voucher before issuing the batch.", "#10B981");
                 await RefreshAsync();
             }
             catch (Exception ex)
             {
-                StatusText = $"Failed to generate vouchers: {ex.Message}";
-                StatusColorHex = "#EF4444";
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        [RelayCommand]
-        private async Task BlockVoucherAsync(int giftVoucherId)
-        {
-            if (IsBusy)
-                return;
-
-            if (giftVoucherId <= 0)
-            {
-                StatusText = "Select a valid voucher to block.";
-                StatusColorHex = "#EF4444";
-                return;
-            }
-
-            var voucher = Vouchers.FirstOrDefault(v => v.Id == giftVoucherId);
-
-            string voucherText = voucher == null
-                ? $"Voucher ID {giftVoucherId}"
-                : $"{voucher.VoucherNo} / Rs. {voucher.VoucherAmount:N2}";
-
-            var confirm = MessageBox.Show(
-                $"Block this gift voucher?\n\n{voucherText}\n\nBlocked vouchers cannot be sold or redeemed.",
-                "Block Gift Voucher",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (confirm != MessageBoxResult.Yes)
-                return;
-
-            try
-            {
-                IsBusy = true;
-                StatusText = "Blocking gift voucher...";
-                StatusColorHex = "#3B82F6";
-
-                await _giftVoucherRepository.BlockVoucherAsync(
-                    giftVoucherId,
-                    blockedBy: "Admin",
-                    reason: "Blocked from BackOffice.");
-
-                StatusText = "Gift voucher blocked.";
-                StatusColorHex = "#10B981";
-
-                await RefreshAsync();
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"Failed to block voucher: {ex.Message}";
-                StatusColorHex = "#EF4444";
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        [RelayCommand]
-        private async Task CancelVoucherAsync(int giftVoucherId)
-        {
-            if (IsBusy)
-                return;
-
-            if (giftVoucherId <= 0)
-            {
-                StatusText = "Select a valid voucher to cancel.";
-                StatusColorHex = "#EF4444";
-                return;
-            }
-
-            var voucher = Vouchers.FirstOrDefault(v => v.Id == giftVoucherId);
-
-            string voucherText = voucher == null
-                ? $"Voucher ID {giftVoucherId}"
-                : $"{voucher.VoucherNo} / Rs. {voucher.VoucherAmount:N2}";
-
-            var confirm = MessageBox.Show(
-                $"Cancel this gift voucher?\n\n{voucherText}\n\nCancelled vouchers cannot be sold or redeemed.",
-                "Cancel Gift Voucher",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (confirm != MessageBoxResult.Yes)
-                return;
-
-            try
-            {
-                IsBusy = true;
-                StatusText = "Cancelling gift voucher...";
-                StatusColorHex = "#3B82F6";
-
-                await _giftVoucherRepository.CancelVoucherAsync(
-                    giftVoucherId,
-                    cancelledBy: "Admin",
-                    reason: "Cancelled from BackOffice.");
-
-                StatusText = "Gift voucher cancelled.";
-                StatusColorHex = "#10B981";
-
-                await RefreshAsync();
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"Failed to cancel voucher: {ex.Message}";
-                StatusColorHex = "#EF4444";
+                SetStatus($"Failed to generate vouchers: {ex.Message}", "#EF4444");
             }
             finally
             {
@@ -331,63 +181,218 @@ namespace POS.BackOffice.UI.ViewModels
             GenerateExpiryDate = DateTime.Today.AddYears(1);
             GenerateBatchNo = string.Empty;
             GenerateDescription = string.Empty;
-
-            StatusText = "Generate form cleared.";
-            StatusColorHex = "#003366";
+            SetStatus("Generate form cleared.", "#003366");
         }
 
         [RelayCommand]
-        private async Task SearchAsync()
+        private async Task PrintVoucherAsync(int giftVoucherId)
         {
-            await RefreshAsync();
+            if (IsBusy || giftVoucherId <= 0)
+                return;
+
+            try
+            {
+                IsBusy = true;
+                GiftVoucher voucher = await LoadVoucherAsync(giftVoucherId);
+                await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+                StoreSettings settings = await context.StoreSettings.AsNoTracking().FirstOrDefaultAsync()
+                    ?? new StoreSettings { StoreName = "My Store", CurrencySymbol = "Rs." };
+
+                bool isReprint = voucher.PrintCount > 0;
+                string text = _voucherFormatter.Format(voucher, settings, isReprint);
+                var document = new FlowDocument
+                {
+                    FontFamily = new FontFamily("Consolas"),
+                    FontSize = 11,
+                    PagePadding = new Thickness(36),
+                    ColumnGap = 0,
+                    ColumnWidth = double.PositiveInfinity
+                };
+                document.Blocks.Add(new Paragraph(new Run(text)) { Margin = new Thickness(0) });
+
+                var printDialog = new PrintDialog();
+                if (printDialog.ShowDialog() != true)
+                {
+                    SetStatus("Voucher printing cancelled.", "#F59E0B");
+                    return;
+                }
+
+                printDialog.PrintDocument(
+                    ((IDocumentPaginatorSource)document).DocumentPaginator,
+                    $"Gift Voucher {voucher.VoucherNo}");
+                await _giftVoucherRepository.MarkVoucherPrintedAsync(voucher.Id, CurrentUserName());
+                SetStatus(isReprint ? "Voucher reprinted and audited." : "Voucher printed and audited.", "#10B981");
+                await RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                SetStatus($"Voucher printing failed: {ex.Message}", "#EF4444");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand]
-        private void ExportBarcodes()
+        private async Task BlockVoucherAsync(int giftVoucherId)
         {
-            MessageBox.Show(
-                "Barcode export/printing will be connected after the voucher create/sell/redeem flow is stable.",
-                "Gift Voucher Export",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-
-            StatusText = "Barcode export is not connected yet.";
-            StatusColorHex = "#F59E0B";
+            await RunReasonActionAsync(
+                giftVoucherId,
+                "BLOCK GIFT VOUCHER",
+                "Block",
+                (id, user, reason) => _giftVoucherRepository.BlockVoucherAsync(id, user, reason));
         }
 
-        // =========================================================
-        // PROPERTY CHANGES
-        // =========================================================
-
-        partial void OnSelectedFilterChanged(string value)
+        [RelayCommand]
+        private async Task UnblockVoucherAsync(int giftVoucherId)
         {
-            _ = RefreshAsync();
+            await RunReasonActionAsync(
+                giftVoucherId,
+                "UNBLOCK GIFT VOUCHER",
+                "Unblock",
+                (id, user, reason) => _giftVoucherRepository.UnblockVoucherAsync(id, user, reason));
         }
 
-        // =========================================================
-        // HELPERS
-        // =========================================================
-
-        private static string NormalizeText(string? value)
+        [RelayCommand]
+        private async Task VoidVoucherAsync(int giftVoucherId)
         {
-            return (value ?? string.Empty).Trim();
+            await RunReasonActionAsync(
+                giftVoucherId,
+                "VOID UNSOLD GIFT VOUCHER",
+                "Void",
+                (id, user, reason) => _giftVoucherRepository.VoidVoucherAsync(id, user, reason));
+        }
+
+        [RelayCommand]
+        private void ExportCsv()
+        {
+            if (Vouchers.Count == 0)
+            {
+                MessageBox.Show("There are no vouchers to export.", "Gift Voucher Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Export Gift Voucher Register",
+                Filter = "CSV files (*.csv)|*.csv",
+                FileName = $"GiftVoucher_Register_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var csv = new StringBuilder();
+            csv.AppendLine("VoucherNo,Barcode,Value,Redeemed,Forfeited,Status,Batch,Expiry,Created,Activated,SoldInvoice,RedeemedDate,RedeemedInvoice,PrintCount,LastPrintedBy,Remarks");
+            foreach (GiftVoucherSearchDto row in Vouchers)
+            {
+                csv.AppendLine(string.Join(",", new[]
+                {
+                    Csv(row.VoucherNo), Csv(row.Barcode), row.VoucherAmount.ToString("0.00", CultureInfo.InvariantCulture),
+                    row.RedeemedAmount.ToString("0.00", CultureInfo.InvariantCulture), row.ForfeitedAmount.ToString("0.00", CultureInfo.InvariantCulture),
+                    Csv(row.DisplayStatus), Csv(row.BatchNo), Csv(row.ExpiryDate?.ToString("yyyy-MM-dd") ?? string.Empty),
+                    Csv(row.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")), Csv(row.ActivatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty),
+                    Csv(row.SoldInvoiceNo), Csv(row.RedeemedDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty), Csv(row.RedeemedInvoiceNo),
+                    row.PrintCount.ToString(CultureInfo.InvariantCulture), Csv(row.LastPrintedBy), Csv(row.Remarks)
+                }));
+            }
+
+            File.WriteAllText(dialog.FileName, csv.ToString(), new UTF8Encoding(true));
+            SetStatus($"Exported {Vouchers.Count} voucher(s).", "#10B981");
+        }
+
+        private async Task RunReasonActionAsync(
+            int giftVoucherId,
+            string actionTitle,
+            string actionVerb,
+            Func<int, string, string, Task> action)
+        {
+            if (IsBusy || giftVoucherId <= 0)
+                return;
+
+            if (!_authService.IsManager)
+            {
+                MessageBox.Show(
+                    "Manager or administrator authorization is required for this gift voucher action.",
+                    "Gift Voucher Authorization",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new GiftVoucherReasonDialog(actionTitle)
+            {
+                Owner = Application.Current.MainWindow
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            try
+            {
+                IsBusy = true;
+                SetStatus($"{actionVerb}ing gift voucher...", "#3B82F6");
+                await action(giftVoucherId, CurrentUserName(), dialog.Reason);
+                SetStatus($"Gift voucher {actionVerb.ToLowerInvariant()}ed and audited.", "#10B981");
+                await RefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                SetStatus($"Failed to {actionVerb.ToLowerInvariant()} voucher: {ex.Message}", "#EF4444");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        private async Task LoadSelectedHistoryAsync(GiftVoucherSearchDto? voucher)
+        {
+            VoucherHistory.Clear();
+            if (voucher == null)
+                return;
+
+            try
+            {
+                var history = await _giftVoucherRepository.GetVoucherHistoryAsync(voucher.Id);
+                foreach (GiftVoucherTransaction row in history)
+                    VoucherHistory.Add(row);
+            }
+            catch (Exception ex)
+            {
+                SetStatus($"Failed to load voucher history: {ex.Message}", "#EF4444");
+            }
+        }
+
+        private async Task<GiftVoucher> LoadVoucherAsync(int giftVoucherId)
+        {
+            GiftVoucherSearchDto selected = Vouchers.FirstOrDefault(row => row.Id == giftVoucherId)
+                ?? throw new InvalidOperationException("Select a valid gift voucher.");
+            return await _giftVoucherRepository.GetByBarcodeOrVoucherNoAsync(selected.VoucherNo)
+                ?? throw new InvalidOperationException("Gift voucher was not found.");
+        }
+
+        private string CurrentUserName() =>
+            string.IsNullOrWhiteSpace(_authService.CurrentUser?.Username)
+                ? Environment.UserName
+                : _authService.CurrentUser.Username.Trim();
+
+        private void SetStatus(string text, string color)
+        {
+            StatusText = text;
+            StatusColorHex = color;
         }
 
         private static string NormalizeFilter(string? filter)
         {
             string value = NormalizeText(filter);
-
-            if (string.IsNullOrWhiteSpace(value))
-                return "All";
-
-            // Legacy filter support from old generated UI.
-            if (value.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
-                return "Created";
-
-            if (value.Equals("Exhausted", StringComparison.OrdinalIgnoreCase))
-                return "Redeemed";
-
+            if (string.IsNullOrWhiteSpace(value)) return "All";
+            if (value.Equals("Inactive", StringComparison.OrdinalIgnoreCase)) return GiftVoucherStatusCodes.Created;
+            if (value.Equals("Exhausted", StringComparison.OrdinalIgnoreCase)) return GiftVoucherStatusCodes.Redeemed;
+            if (value.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)) return GiftVoucherStatusCodes.Voided;
             return value;
         }
+
+        private static string NormalizeText(string? value) => (value ?? string.Empty).Trim();
+        private static string Csv(string? value) => "\"" + (value ?? string.Empty).Replace("\"", "\"\"") + "\"";
     }
 }

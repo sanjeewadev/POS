@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
@@ -176,7 +176,32 @@ namespace POS.Core.CalculationTests
                 ("Credit return cash-refunds only paid excess", CreditReturnCashRefundsOnlyPaidExcess),
                 ("Return credit cannot reduce balance twice", ReturnCreditCannotReduceBalanceTwice),
                 ("Customer aging buckets are calculated", CustomerAgingBucketsAreCalculated),
-                ("Customer statement running balance reconciles", CustomerStatementRunningBalanceReconciles)
+                ("Customer statement running balance reconciles", CustomerStatementRunningBalanceReconciles),
+                ("Gift Voucher batch generates unique codes", GiftVoucherBatchGeneratesUniqueCodes),
+                ("Gift Voucher sale activates atomically", GiftVoucherSaleActivatesAtomically),
+                ("Duplicate Gift Voucher activation is rejected", DuplicateGiftVoucherActivationIsRejected),
+                ("Full Gift Voucher redemption consumes voucher once", FullGiftVoucherRedemptionConsumesVoucherOnce),
+                ("Partial Gift Voucher consumption is rejected", PartialGiftVoucherConsumptionIsRejected),
+                ("Gift Voucher forfeiture requires manager authorization", GiftVoucherForfeitureRequiresManagerAuthorization),
+                ("Gift Voucher forfeiture authorization persists", GiftVoucherForfeitureAuthorizationPersists),
+                ("Redeemed Gift Voucher cannot be reused", RedeemedGiftVoucherCannotBeReused),
+                ("Expired Gift Voucher is rejected", ExpiredGiftVoucherIsRejected),
+                ("Blocked Gift Voucher can be safely unblocked", BlockedGiftVoucherCanBeSafelyUnblocked),
+                ("Only Created Gift Voucher can be voided", OnlyCreatedGiftVoucherCanBeVoided),
+                ("Gift Voucher print and reprint are audited", GiftVoucherPrintAndReprintAreAudited),
+                ("Gift Voucher issue total persists separately", GiftVoucherIssueTotalPersistsSeparately),
+                ("Voucher-only issue has complete zero VAT snapshot", VoucherOnlyIssueHasCompleteZeroVatSnapshot),
+                ("Mixed voucher issue preserves merchandise VAT snapshot", MixedVoucherIssuePreservesMerchandiseVatSnapshot),
+                ("Gift Voucher checkout is idempotent", GiftVoucherCheckoutIsIdempotent),
+                ("Gift Voucher return creates replacement voucher", GiftVoucherReturnCreatesReplacementVoucher),
+                ("Mixed Gift Voucher return uses original tender order", MixedGiftVoucherReturnUsesOriginalTenderOrder),
+                ("Repeated returns do not overissue replacement voucher value", RepeatedReturnsDoNotOverissueReplacementVoucherValue),
+                ("Gift Voucher print formatter states one-time terms", GiftVoucherPrintFormatterStatesOneTimeTerms),
+                ("Voucher-only issue is excluded from VAT report", VoucherOnlyIssueIsExcludedFromVatReport),
+                ("Voucher issue is excluded from sales revenue", VoucherIssueIsExcludedFromSalesRevenue),
+                ("Voucher-only receipt cannot format Tax Invoice", VoucherOnlyReceiptCannotFormatTaxInvoice),
+                ("Mixed Tax Invoice identifies voucher issue as non-VAT", MixedTaxInvoiceIdentifiesVoucherIssueAsNonVat),
+                ("Legacy Cancelled voucher displays as Voided", LegacyCancelledVoucherDisplaysAsVoided)
             };
 
             try
@@ -188,7 +213,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit and customer ledger checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger and one-time Gift Voucher lifecycle checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -6386,6 +6411,721 @@ namespace POS.Core.CalculationTests
             AssertContains(statement, "CUSTOMER ACCOUNT STATEMENT", "statement heading");
             AssertContains(statement, "INV-STMT", "statement invoice reference");
             AssertContains(statement, "Closing Balance: Rs. 600.00", "statement closing balance");
+        }
+
+        private static void GiftVoucherBatchGeneratesUniqueCodes()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            var repository = new GiftVoucherRepository(factory);
+
+            List<GiftVoucher> generated = repository.GenerateVoucherBatchAsync(
+                    3,
+                    1000m,
+                    DateTime.Today.AddYears(1),
+                    "Voucher Admin",
+                    "GVB-TEST",
+                    "Test voucher")
+                .GetAwaiter().GetResult();
+
+            AssertEqual(3, generated.Count, "generated voucher count");
+            AssertEqual(3, generated.Select(row => row.VoucherNo).Distinct().Count(), "unique voucher numbers");
+            AssertEqual(3, generated.Select(row => row.Barcode).Distinct().Count(), "unique voucher barcodes");
+            AssertTrue(generated.All(row => GiftVoucherStatusCodes.Equals(row.Status, GiftVoucherStatusCodes.Created)), "generated voucher status");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(3, context.GiftVoucherTransactions.Count(row => row.TransactionType == GiftVoucherTransactionCodes.Created), "created voucher transaction count");
+        }
+
+        private static void GiftVoucherSaleActivatesAtomically()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+
+            SalesHeader sale = CompleteGiftVoucherIssueSale(factory, scenario, voucher);
+
+            using AppDbContext context = factory.CreateDbContext();
+            GiftVoucher saved = context.GiftVouchers.AsNoTracking().Single(row => row.Id == voucher.Id);
+            AssertEqual(GiftVoucherStatusCodes.Active, saved.Status, "activated voucher status");
+            AssertEqual(sale.Id, saved.SoldSalesHeaderId.GetValueOrDefault(), "activated voucher sale link");
+            AssertEqual(sale.InvoiceNo, saved.SoldInvoiceNo, "activated voucher invoice");
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.ReferenceKey == $"ACTIVATE:{voucher.Id}"), "activation transaction count");
+        }
+
+        private static void DuplicateGiftVoucherActivationIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+            SalesHeader sale = CompleteGiftVoucherIssueSale(factory, scenario, voucher);
+            var repository = new GiftVoucherRepository(factory);
+
+            AssertThrows(
+                () => repository.MarkVoucherSoldAsync(
+                        voucher.Id,
+                        sale,
+                        "Test Cashier",
+                        "T01")
+                    .GetAwaiter().GetResult(),
+                "cannot be sold");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.ReferenceKey == $"ACTIVATE:{voucher.Id}"), "duplicate activation transaction count");
+        }
+
+        private static void FullGiftVoucherRedemptionConsumesVoucherOnce()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1180m, GiftVoucherStatusCodes.Active);
+
+            SalesHeader sale = CompleteGiftVoucherRedemptionSale(factory, scenario, voucher, 1180m, 0m);
+
+            using AppDbContext context = factory.CreateDbContext();
+            GiftVoucher saved = context.GiftVouchers.AsNoTracking().Single(row => row.Id == voucher.Id);
+            SalesPayment payment = context.SalesPayments.AsNoTracking().Single(row => row.SalesHeaderId == sale.Id);
+            GiftVoucherTransaction movement = context.GiftVoucherTransactions.AsNoTracking()
+                .Single(row => row.ReferenceKey == $"REDEEM:{voucher.Id}");
+            AssertEqual(GiftVoucherStatusCodes.Redeemed, saved.Status, "redeemed voucher status");
+            AssertMoney(1180m, saved.RedeemedAmount, "redeemed voucher amount");
+            AssertMoney(0m, saved.ForfeitedAmount, "redeemed voucher forfeiture");
+            AssertEqual(payment.Id, movement.SalesPaymentId.GetValueOrDefault(), "redemption payment link");
+        }
+
+        private static void PartialGiftVoucherConsumptionIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            var repository = new SalesRepository(factory);
+
+            AssertThrows(
+                () => repository.ProcessCheckoutAsync(
+                        CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m),
+                        new List<SalesLine>
+                        {
+                            CreateRepositoryTestLine(
+                                scenario.ServiceVariantId,
+                                null,
+                                scenario.ServiceSku,
+                                "Installation Service",
+                                1m,
+                                800m)
+                        },
+                        new List<SalesPayment>
+                        {
+                            CreateGiftVoucherPayment(voucher, 800m, 0m)
+                        })
+                    .GetAwaiter().GetResult(),
+                "fully consumed");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(GiftVoucherStatusCodes.Active, context.GiftVouchers.Single(row => row.Id == voucher.Id).Status, "rejected partial voucher status");
+            AssertEqual(0, context.SalesHeaders.Count(), "rejected partial sale count");
+        }
+
+        private static void GiftVoucherForfeitureRequiresManagerAuthorization()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            var repository = new SalesRepository(factory);
+
+            AssertThrows(
+                () => repository.ProcessCheckoutAsync(
+                        CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m),
+                        new List<SalesLine>
+                        {
+                            CreateRepositoryTestLine(
+                                scenario.ServiceVariantId,
+                                null,
+                                scenario.ServiceSku,
+                                "Installation Service",
+                                1m,
+                                800m)
+                        },
+                        new List<SalesPayment>
+                        {
+                            CreateGiftVoucherPayment(voucher, 800m, 200m)
+                        })
+                    .GetAwaiter().GetResult(),
+                "Manager authorization");
+        }
+
+        private static void GiftVoucherForfeitureAuthorizationPersists()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+
+            SalesHeader sale = CompleteGiftVoucherRedemptionSale(
+                factory,
+                scenario,
+                voucher,
+                800m,
+                200m,
+                "Manager One");
+
+            using AppDbContext context = factory.CreateDbContext();
+            GiftVoucher saved = context.GiftVouchers.AsNoTracking().Single(row => row.Id == voucher.Id);
+            SalesPayment payment = context.SalesPayments.AsNoTracking().Single(row => row.SalesHeaderId == sale.Id);
+            GiftVoucherTransaction movement = context.GiftVoucherTransactions.AsNoTracking()
+                .Single(row => row.ReferenceKey == $"REDEEM:{voucher.Id}");
+            AssertMoney(800m, saved.RedeemedAmount, "authorized redeemed amount");
+            AssertMoney(200m, saved.ForfeitedAmount, "authorized forfeited amount");
+            AssertEqual("Manager One", payment.GiftVoucherAuthorizedBy, "payment manager authorization");
+            AssertEqual("Manager One", movement.AuthorizedBy, "movement manager authorization");
+        }
+
+        private static void RedeemedGiftVoucherCannotBeReused()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1180m, GiftVoucherStatusCodes.Active);
+            CompleteGiftVoucherRedemptionSale(factory, scenario, voucher, 1180m, 0m);
+
+            AssertThrows(
+                () => CompleteGiftVoucherRedemptionSale(factory, scenario, voucher, 1180m, 0m),
+                "cannot be redeemed");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.ReferenceKey == $"REDEEM:{voucher.Id}"), "single redemption transaction");
+        }
+
+        private static void ExpiredGiftVoucherIsRejected()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(
+                factory,
+                1000m,
+                GiftVoucherStatusCodes.Active,
+                DateTime.Today.AddDays(-1));
+            var repository = new GiftVoucherRepository(factory);
+
+            GiftVoucherRedeemValidationResult result = repository.ValidateVoucherForRedemptionAsync(
+                    voucher.VoucherNo,
+                    1000m)
+                .GetAwaiter().GetResult();
+
+            AssertFalse(result.IsValid, "expired voucher validation");
+            AssertContains(result.Message, "expired", "expired voucher message");
+        }
+
+        private static void BlockedGiftVoucherCanBeSafelyUnblocked()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            var repository = new GiftVoucherRepository(factory);
+
+            repository.BlockVoucherAsync(voucher.Id, "Manager One", "Voucher reported missing")
+                .GetAwaiter().GetResult();
+            GiftVoucherRedeemValidationResult blocked = repository.ValidateVoucherForRedemptionAsync(voucher.VoucherNo, 1000m)
+                .GetAwaiter().GetResult();
+            AssertFalse(blocked.IsValid, "blocked voucher redemption");
+
+            repository.UnblockVoucherAsync(voucher.Id, "Manager One", "Voucher recovered and verified")
+                .GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            GiftVoucher saved = context.GiftVouchers.AsNoTracking().Single(row => row.Id == voucher.Id);
+            AssertEqual(GiftVoucherStatusCodes.Active, saved.Status, "unblocked active status");
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.TransactionType == GiftVoucherTransactionCodes.Blocked), "block transaction count");
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.TransactionType == GiftVoucherTransactionCodes.Unblocked), "unblock transaction count");
+        }
+
+        private static void OnlyCreatedGiftVoucherCanBeVoided()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            GiftVoucher created = CreateGiftVoucherTestVoucher(factory, 500m, GiftVoucherStatusCodes.Created);
+            GiftVoucher active = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            var repository = new GiftVoucherRepository(factory);
+
+            repository.VoidVoucherAsync(created.Id, "Manager One", "Incorrectly generated denomination")
+                .GetAwaiter().GetResult();
+            AssertThrows(
+                () => repository.VoidVoucherAsync(active.Id, "Manager One", "Issued voucher cannot be voided")
+                    .GetAwaiter().GetResult(),
+                "Only an unsold Created voucher");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(GiftVoucherStatusCodes.Voided, context.GiftVouchers.Single(row => row.Id == created.Id).Status, "created voucher void status");
+            AssertEqual(GiftVoucherStatusCodes.Active, context.GiftVouchers.Single(row => row.Id == active.Id).Status, "active voucher preserved status");
+        }
+
+        private static void GiftVoucherPrintAndReprintAreAudited()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+            var repository = new GiftVoucherRepository(factory);
+
+            repository.MarkVoucherPrintedAsync(voucher.Id, "Admin One").GetAwaiter().GetResult();
+            repository.MarkVoucherPrintedAsync(voucher.Id, "Admin Two").GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            GiftVoucher saved = context.GiftVouchers.AsNoTracking().Single(row => row.Id == voucher.Id);
+            AssertEqual(2, saved.PrintCount, "voucher print count");
+            AssertEqual("Admin One", saved.PrintedBy, "original printed user");
+            AssertEqual("Admin Two", saved.LastPrintedBy, "last printed user");
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.TransactionType == GiftVoucherTransactionCodes.Printed), "original print audit count");
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.TransactionType == GiftVoucherTransactionCodes.Reprinted), "reprint audit count");
+        }
+
+        private static void GiftVoucherIssueTotalPersistsSeparately()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+
+            SalesHeader sale = CompleteGiftVoucherIssueSale(factory, scenario, voucher);
+
+            AssertMoney(1000m, sale.GiftVoucherIssueTotal, "gift voucher issue total");
+            AssertMoney(1000m, sale.NetTotal, "voucher issue receipt total");
+        }
+
+        private static void VoucherOnlyIssueHasCompleteZeroVatSnapshot()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+
+            SalesHeader sale = CompleteGiftVoucherIssueSale(factory, scenario, voucher);
+
+            AssertEqual(TaxSnapshotStatuses.Complete, sale.TaxSnapshotStatus, "voucher-only tax snapshot status");
+            AssertMoney(0m, sale.TaxableAmountTotal.GetValueOrDefault(), "voucher-only taxable amount");
+            AssertMoney(0m, sale.TotalVatAmount.GetValueOrDefault(), "voucher-only VAT amount");
+        }
+
+        private static void MixedVoucherIssuePreservesMerchandiseVatSnapshot()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+            var repository = new SalesRepository(factory);
+
+            SalesHeader sale = repository.ProcessCheckoutAsync(
+                    CreateRepositoryTestHeader(scenario.ShiftSessionId, 2180m),
+                    new List<SalesLine>
+                    {
+                        CreateRepositoryTestLine(
+                            scenario.ServiceVariantId,
+                            null,
+                            scenario.ServiceSku,
+                            "Installation Service",
+                            1m,
+                            1180m),
+                        CreateGiftVoucherIssueLine(voucher)
+                    },
+                    new List<SalesPayment> { CreateCashPayment(2180m) })
+                .GetAwaiter().GetResult();
+
+            AssertMoney(1000m, sale.GiftVoucherIssueTotal, "mixed voucher issue total");
+            AssertMoney(2180m, sale.NetTotal, "mixed receipt total");
+            AssertMoney(1000m, sale.TaxableAmountTotal.GetValueOrDefault(), "mixed merchandise taxable amount");
+            AssertMoney(180m, sale.TotalVatAmount.GetValueOrDefault(), "mixed merchandise VAT amount");
+            AssertEqual(TaxSnapshotStatuses.Complete, sale.TaxSnapshotStatus, "mixed tax snapshot status");
+        }
+
+        private static void GiftVoucherCheckoutIsIdempotent()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1180m, GiftVoucherStatusCodes.Active);
+            Guid token = Guid.NewGuid();
+            var cartRepository = new CashierCartRepository(factory);
+            cartRepository.SaveActiveAsync(CreateCartRequest(
+                    scenario,
+                    token,
+                    CreateServiceCartSnapshot(scenario)))
+                .GetAwaiter().GetResult();
+
+            SalesHeader first = CompleteGiftVoucherRedemptionSale(factory, scenario, voucher, 1180m, 0m, checkoutToken: token);
+            SalesHeader second = CompleteGiftVoucherRedemptionSale(factory, scenario, voucher, 1180m, 0m, checkoutToken: token);
+
+            AssertEqual(first.Id, second.Id, "idempotent voucher sale ID");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.SalesHeaders.Count(), "idempotent voucher invoice count");
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.ReferenceKey == $"REDEEM:{voucher.Id}"), "idempotent voucher redemption count");
+        }
+
+        private static void GiftVoucherReturnCreatesReplacementVoucher()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1180m, GiftVoucherStatusCodes.Active);
+            SalesHeader sale = CompleteGiftVoucherRedemptionSale(factory, scenario, voucher, 1180m, 0m);
+            var returnRepository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = returnRepository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertMoney(1180m, result.GiftVoucherRefundAmount, "replacement voucher refund amount");
+            AssertMoney(0m, result.CashRefundAmount, "voucher-funded return Cash amount");
+            AssertTrue(!string.IsNullOrWhiteSpace(result.ReplacementGiftVoucherNo), "replacement voucher number");
+
+            using AppDbContext context = factory.CreateDbContext();
+            GiftVoucher replacement = context.GiftVouchers.AsNoTracking()
+                .Single(row => row.VoucherNo == result.ReplacementGiftVoucherNo);
+            AssertEqual(GiftVoucherStatusCodes.Active, replacement.Status, "replacement voucher active status");
+            AssertMoney(1180m, replacement.VoucherAmount, "replacement voucher value");
+            AssertEqual(1, context.GiftVoucherTransactions.Count(row => row.ReferenceKey == $"RETURN:{result.ReturnHeader.Id}"), "replacement voucher movement count");
+        }
+
+        private static void MixedGiftVoucherReturnUsesOriginalTenderOrder()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            SalesHeader sale = CompleteGiftVoucherFundedServiceSale(factory, scenario, voucher, quantity: 1m, cashAmount: 180m);
+            var returnRepository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult result = returnRepository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (sale.SalesLines.Single().Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertMoney(1000m, result.GiftVoucherRefundAmount, "mixed return replacement voucher amount");
+            AssertMoney(180m, result.CashRefundAmount, "mixed return Cash amount");
+        }
+
+        private static void RepeatedReturnsDoNotOverissueReplacementVoucherValue()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            SalesHeader sale = CompleteGiftVoucherFundedServiceSale(factory, scenario, voucher, quantity: 2m, cashAmount: 1360m);
+            SalesLine line = sale.SalesLines.Single();
+            var returnRepository = CreateCustomerReturnRepository(factory);
+
+            CustomerReturnProcessResult first = returnRepository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (line.Id, 1m)))
+                .GetAwaiter().GetResult();
+            CustomerReturnProcessResult second = returnRepository.ProcessReturnAsync(
+                    CreateReturnRequest(sale, scenario, (line.Id, 1m)))
+                .GetAwaiter().GetResult();
+
+            AssertMoney(1000m, first.GiftVoucherRefundAmount, "first return voucher amount");
+            AssertMoney(180m, first.CashRefundAmount, "first return Cash amount");
+            AssertMoney(0m, second.GiftVoucherRefundAmount, "second return voucher amount");
+            AssertMoney(1180m, second.CashRefundAmount, "second return Cash amount");
+
+            using AppDbContext context = factory.CreateDbContext();
+            List<decimal> issuedValues = context.GiftVoucherTransactions.AsNoTracking()
+                .Where(row => row.TransactionType == GiftVoucherTransactionCodes.ReturnVoucherIssued)
+                .Select(row => row.Amount)
+                .AsEnumerable()
+                .ToList();
+            AssertMoney(1000m, issuedValues.Sum(), "total replacement voucher value");
+        }
+
+        private static void GiftVoucherPrintFormatterStatesOneTimeTerms()
+        {
+            GiftVoucher voucher = new()
+            {
+                VoucherNo = "GV-FORMAT",
+                Barcode = "GV-FORMAT",
+                VoucherAmount = 1000m,
+                Status = GiftVoucherStatusCodes.Active,
+                CreatedAt = DateTime.Now,
+                ExpiryDate = DateTime.Today.AddYears(1)
+            };
+            StoreSettings settings = new()
+            {
+                StoreName = "Test Store",
+                LegalName = "Test Store",
+                CurrencySymbol = "Rs.",
+                ReceiptFooter = "Thank you"
+            };
+
+            string text = new GiftVoucherTextFormatter().Format(voucher, settings, false);
+            AssertContains(text, "ONE-TIME GIFT VOUCHER", "voucher print heading");
+            AssertContains(text, "VALID FOR ONE REDEMPTION ONLY", "voucher one-time term");
+            AssertContains(text, "Unused value is forfeited", "voucher forfeiture term");
+            AssertContains(text, "Not exchangeable for cash", "voucher no-cash term");
+        }
+
+        private static void VoucherOnlyIssueIsExcludedFromVatReport()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+            CompleteGiftVoucherIssueSale(factory, scenario, voucher);
+            var repository = new VatReportRepository(factory);
+
+            VatReportResultDto report = repository.GetReportAsync(DateTime.Today, DateTime.Today)
+                .GetAwaiter().GetResult();
+
+            AssertEqual(0, report.Documents.Count(row => row.SourceType == "Sale"), "voucher-only VAT sale row count");
+            AssertEqual(0, report.LegacyUnknownRows.Count(row => row.SourceType == "Sale"), "voucher-only legacy VAT row count");
+            AssertMoney(0m, report.Summary.GrossOutputVat, "voucher-only output VAT");
+        }
+
+        private static void VoucherIssueIsExcludedFromSalesRevenue()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+            CompleteGiftVoucherIssueSale(factory, scenario, voucher);
+            var repository = new MasterSalesAnalyticsRepository(factory);
+
+            PagedSalesResult result = repository.GetPagedSalesAsync(
+                    DateTime.Today,
+                    DateTime.Today,
+                    string.Empty,
+                    "All",
+                    1,
+                    50)
+                .GetAwaiter().GetResult();
+
+            AssertMoney(0m, result.SummaryTotalRevenue, "voucher issue revenue");
+            AssertEqual(1, result.TotalCount, "voucher issue receipt count");
+        }
+
+        private static void VoucherOnlyReceiptCannotFormatTaxInvoice()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+            SalesHeader sale = CompleteGiftVoucherIssueSale(factory, scenario, voucher);
+            sale.TaxInvoiceNo = "TI-GV-ONLY";
+            StoreSettings settings = LoadStoreSettings(factory);
+
+            AssertThrows(
+                () => new SalesDocumentTextFormatter().FormatTaxInvoice(
+                    sale,
+                    settings,
+                    DateTime.UtcNow,
+                    80,
+                    "ORIGINAL"),
+                "voucher-only receipt");
+        }
+
+        private static void MixedTaxInvoiceIdentifiesVoucherIssueAsNonVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Created);
+            var repository = new SalesRepository(factory);
+            SalesHeader sale = repository.ProcessCheckoutAsync(
+                    CreateRepositoryTestHeader(scenario.ShiftSessionId, 2180m),
+                    new List<SalesLine>
+                    {
+                        CreateRepositoryTestLine(
+                            scenario.ServiceVariantId,
+                            null,
+                            scenario.ServiceSku,
+                            "Installation Service",
+                            1m,
+                            1180m),
+                        CreateGiftVoucherIssueLine(voucher)
+                    },
+                    new List<SalesPayment> { CreateCashPayment(2180m) })
+                .GetAwaiter().GetResult();
+            sale.TaxInvoiceNo = "TI-GV-MIXED";
+
+            string text = new SalesDocumentTextFormatter().FormatTaxInvoice(
+                sale,
+                LoadStoreSettings(factory),
+                DateTime.UtcNow,
+                80,
+                "ORIGINAL");
+
+            string normalizedText = string.Join(
+                " ",
+                text.Split(
+                    (char[]?)null,
+                    StringSplitOptions.RemoveEmptyEntries));
+
+            AssertContains(
+                normalizedText,
+                "excluded from VAT taxable supplies",
+                "mixed Tax Invoice voucher note");
+            AssertContains(text, "Output VAT", "mixed Tax Invoice VAT total");
+        }
+
+        private static void LegacyCancelledVoucherDisplaysAsVoided()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            SeedRepositoryTestScenario(factory);
+            GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.LegacyCancelled);
+            var repository = new GiftVoucherRepository(factory);
+
+            GiftVoucherSearchDto result = repository.SearchVouchersAsync(GiftVoucherStatusCodes.Voided, voucher.VoucherNo, 10)
+                .GetAwaiter().GetResult()
+                .Single();
+
+            AssertEqual(GiftVoucherStatusCodes.Voided, result.DisplayStatus, "legacy cancelled display status");
+        }
+
+        private static GiftVoucher CreateGiftVoucherTestVoucher(
+            RepositoryTestDbContextFactory factory,
+            decimal amount,
+            string status,
+            DateTime? expiryDate = null)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            string code = $"GV-TEST-{Guid.NewGuid():N}"[..28].ToUpperInvariant();
+            var voucher = new GiftVoucher
+            {
+                VoucherNo = code,
+                Barcode = code,
+                VoucherAmount = amount,
+                Status = status,
+                ExpiryDate = expiryDate,
+                BatchNo = "GVB-TEST",
+                Description = $"Gift Voucher Rs. {amount:N2}",
+                CreatedAt = DateTime.Now,
+                CreatedBy = "Voucher Admin",
+                ActivatedAt = GiftVoucherStatusCodes.Equals(status, GiftVoucherStatusCodes.Active)
+                    ? DateTime.Now
+                    : null,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = "Voucher Admin"
+            };
+            context.GiftVouchers.Add(voucher);
+            context.SaveChanges();
+            return voucher;
+        }
+
+        private static SalesLine CreateGiftVoucherIssueLine(GiftVoucher voucher)
+        {
+            return new SalesLine
+            {
+                IsGiftVoucherSale = true,
+                GiftVoucherId = voucher.Id,
+                GiftVoucherNo = voucher.VoucherNo,
+                GiftVoucherBarcode = voucher.Barcode,
+                SkuCode = "GV-SALE",
+                Barcode = voucher.Barcode,
+                ItemDescription = voucher.Description,
+                Uom = "VOU",
+                Quantity = 1m,
+                UnitPrice = voucher.VoucherAmount,
+                OriginalUnitPrice = voucher.VoucherAmount,
+                GrossAmount = voucher.VoucherAmount,
+                LineTotal = voucher.VoucherAmount,
+                DiscountMode = "None"
+            };
+        }
+
+        private static SalesPayment CreateGiftVoucherPayment(
+            GiftVoucher voucher,
+            decimal appliedAmount,
+            decimal forfeitedAmount,
+            string authorizedBy = "")
+        {
+            return new SalesPayment
+            {
+                PaymentType = PaymentTypeCodes.GiftVoucher,
+                Amount = appliedAmount,
+                TenderedAmount = appliedAmount,
+                ChangeAmount = 0m,
+                ReferenceNo = voucher.VoucherNo,
+                BankOrCardType = "Gift Voucher",
+                GiftVoucherId = voucher.Id,
+                GiftVoucherNo = voucher.VoucherNo,
+                GiftVoucherBarcode = voucher.Barcode,
+                GiftVoucherAmount = voucher.VoucherAmount,
+                GiftVoucherForfeitedAmount = forfeitedAmount,
+                GiftVoucherAuthorizedBy = authorizedBy,
+                EnteredBy = "Test Cashier",
+                TerminalNo = "T01"
+            };
+        }
+
+        private static SalesHeader CompleteGiftVoucherIssueSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario,
+            GiftVoucher voucher)
+        {
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, voucher.VoucherAmount);
+            header.PaymentMethod = PaymentTypeCodes.Cash;
+            return repository.ProcessCheckoutAsync(
+                    header,
+                    new List<SalesLine> { CreateGiftVoucherIssueLine(voucher) },
+                    new List<SalesPayment> { CreateCashPayment(voucher.VoucherAmount) })
+                .GetAwaiter().GetResult();
+        }
+
+        private static SalesHeader CompleteGiftVoucherRedemptionSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario,
+            GiftVoucher voucher,
+            decimal appliedAmount,
+            decimal forfeitedAmount,
+            string authorizedBy = "",
+            Guid? checkoutToken = null)
+        {
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m);
+            header.PaymentMethod = PaymentTypeCodes.GiftVoucher;
+            return repository.ProcessCheckoutAsync(
+                    header,
+                    new List<SalesLine>
+                    {
+                        CreateRepositoryTestLine(
+                            scenario.ServiceVariantId,
+                            null,
+                            scenario.ServiceSku,
+                            "Installation Service",
+                            1m,
+                            appliedAmount)
+                    },
+                    new List<SalesPayment>
+                    {
+                        CreateGiftVoucherPayment(voucher, appliedAmount, forfeitedAmount, authorizedBy)
+                    },
+                    checkoutToken)
+                .GetAwaiter().GetResult();
+        }
+
+        private static SalesHeader CompleteGiftVoucherFundedServiceSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario,
+            GiftVoucher voucher,
+            decimal quantity,
+            decimal cashAmount)
+        {
+            decimal total = Math.Round(quantity * 1180m, 2);
+            decimal voucherAmount = voucher.VoucherAmount;
+            if (Math.Round(voucherAmount + cashAmount, 2) != total)
+                throw new InvalidOperationException("Gift Voucher return test payments must equal the service sale total.");
+
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, cashAmount);
+            header.PaymentMethod = cashAmount > 0m ? "Split" : PaymentTypeCodes.GiftVoucher;
+            var payments = new List<SalesPayment>
+            {
+                CreateGiftVoucherPayment(voucher, voucherAmount, 0m)
+            };
+            if (cashAmount > 0m)
+                payments.Add(CreateCashPayment(cashAmount));
+
+            return repository.ProcessCheckoutAsync(
+                    header,
+                    new List<SalesLine>
+                    {
+                        CreateRepositoryTestLine(
+                            scenario.ServiceVariantId,
+                            null,
+                            scenario.ServiceSku,
+                            "Installation Service",
+                            quantity,
+                            1180m)
+                    },
+                    payments)
+                .GetAwaiter().GetResult();
+        }
+
+        private static StoreSettings LoadStoreSettings(RepositoryTestDbContextFactory factory)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            return context.StoreSettings.AsNoTracking().First();
         }
 
 

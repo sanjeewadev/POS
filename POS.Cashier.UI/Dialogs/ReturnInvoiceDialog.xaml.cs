@@ -50,7 +50,8 @@ namespace POS.Cashier.UI.Dialogs
                 return;
 
             MessageBoxResult confirmation = MessageBox.Show(
-                $"Complete a cash refund of LKR {_viewModel.TotalRefundAmount:N2}?\n\n" +
+                $"Complete a return settlement of LKR {_viewModel.TotalRefundAmount:N2}?\n\n" +
+                "The settlement will follow the original Customer Credit, Gift Voucher and Cash funding. " +
                 "The original sale will remain unchanged and a Credit Note will be created.",
                 "Confirm Customer Return",
                 MessageBoxButton.YesNo,
@@ -101,9 +102,17 @@ namespace POS.Cashier.UI.Dialogs
                     }
                 }
 
-                MessageBox.Show(
+                string settlementMessage =
                     $"Return completed.\nCredit Note: {result.CreditNoteNo}\n" +
-                    $"Cash refund: LKR {result.TotalRefundAmount:N2}",
+                    $"Account credit: LKR {result.AccountCreditAmount:N2}\n" +
+                    $"Replacement voucher: LKR {result.GiftVoucherRefundAmount:N2}" +
+                    (string.IsNullOrWhiteSpace(result.ReplacementGiftVoucherNo)
+                        ? string.Empty
+                        : $" ({result.ReplacementGiftVoucherNo})") +
+                    $"\nCash refund: LKR {result.CashRefundAmount:N2}";
+
+                MessageBox.Show(
+                    settlementMessage,
                     "Customer Return Complete",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);

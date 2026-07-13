@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using POS.Core.Configuration;
 
 namespace POS.Core.Models
 {
@@ -61,6 +62,13 @@ namespace POS.Core.Models
 
         [MaxLength(100)]
         public string PrintedBy { get; set; } = string.Empty;
+
+        public int PrintCount { get; set; } = 0;
+
+        public DateTime? LastPrintedAt { get; set; }
+
+        [MaxLength(100)]
+        public string LastPrintedBy { get; set; } = string.Empty;
 
         // =========================================================
         // SOLD / ACTIVATED DETAILS
@@ -124,6 +132,9 @@ namespace POS.Core.Models
         [MaxLength(255)]
         public string BlockReason { get; set; } = string.Empty;
 
+        [MaxLength(30)]
+        public string StatusBeforeBlock { get; set; } = string.Empty;
+
         public DateTime? CancelledAt { get; set; }
 
         [MaxLength(100)]
@@ -159,23 +170,23 @@ namespace POS.Core.Models
 
         [NotMapped]
         public bool IsCreated =>
-            Status.Equals("Created", StringComparison.OrdinalIgnoreCase);
+            GiftVoucherStatusCodes.Equals(Status, GiftVoucherStatusCodes.Created);
 
         [NotMapped]
         public bool IsActive =>
-            Status.Equals("Active", StringComparison.OrdinalIgnoreCase);
+            GiftVoucherStatusCodes.Equals(Status, GiftVoucherStatusCodes.Active);
 
         [NotMapped]
         public bool IsRedeemed =>
-            Status.Equals("Redeemed", StringComparison.OrdinalIgnoreCase);
+            GiftVoucherStatusCodes.Equals(Status, GiftVoucherStatusCodes.Redeemed);
 
         [NotMapped]
         public bool IsBlocked =>
-            Status.Equals("Blocked", StringComparison.OrdinalIgnoreCase);
+            GiftVoucherStatusCodes.Equals(Status, GiftVoucherStatusCodes.Blocked);
 
         [NotMapped]
         public bool IsCancelled =>
-            Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase);
+            GiftVoucherStatusCodes.IsVoided(Status);
 
         [NotMapped]
         public bool IsExpiredByDate =>
@@ -205,7 +216,9 @@ namespace POS.Core.Models
                 if (IsExpiredByDate)
                     return "Expired";
 
-                return Status;
+                return IsCancelled
+                    ? GiftVoucherStatusCodes.Voided
+                    : Status;
             }
         }
 

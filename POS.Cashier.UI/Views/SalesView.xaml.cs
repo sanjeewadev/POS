@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Models;
 using POS.Cashier.UI.Services;
@@ -1156,7 +1156,8 @@ namespace POS.Cashier.UI.Views
                     dialog.VoucherBarcode,
                     dialog.VoucherAmount,
                     dialog.AmountToApply,
-                    dialog.ForfeitedAmount);
+                    dialog.ForfeitedAmount,
+                    dialog.AuthorizedBy);
             }
 
             ResetTerminalActionMode();

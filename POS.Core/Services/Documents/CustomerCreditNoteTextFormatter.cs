@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -117,6 +117,12 @@ namespace POS.Core.Services.Documents
             AppendTwoColumns(text, "TOTAL CREDIT NOTE", FormatMoney(returnHeader.TotalRefundAmount, settings), columns);
             if (returnHeader.AccountCreditAmount > 0m)
                 AppendTwoColumns(text, "ACCOUNT CREDIT", FormatMoney(returnHeader.AccountCreditAmount, settings), columns);
+            if (returnHeader.GiftVoucherRefundAmount > 0m)
+            {
+                AppendTwoColumns(text, "REPLACEMENT VOUCHER", FormatMoney(returnHeader.GiftVoucherRefundAmount, settings), columns);
+                AppendWrappedLabel(text, "Voucher No", returnHeader.ReplacementGiftVoucherNo, columns);
+                AppendWrapped(text, "The replacement voucher is one-time use and cannot be exchanged for cash.", columns);
+            }
             if (returnHeader.CashRefundAmount > 0m)
                 AppendTwoColumns(text, "CASH REFUND", FormatMoney(returnHeader.CashRefundAmount, settings), columns);
             AppendSeparator(text, columns);

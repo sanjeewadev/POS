@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -41,6 +41,7 @@ namespace POS.Core.Repositories
 
             SalesHeader? sale = await context.SalesHeaders
                 .Include(header => header.SalesLines)
+                .Include(header => header.SalesPayments)
                 .AsNoTracking()
                 .Where(header =>
                     EF.Functions.Collate(header.InvoiceNo, "NOCASE") == safeInvoiceNo &&
@@ -70,7 +71,14 @@ namespace POS.Core.Repositories
                 TerminalNo = sale.TerminalNo,
                 CashierName = sale.CashierName,
                 TaxSnapshotStatus = sale.TaxSnapshotStatus,
-                NetTotal = sale.NetTotal
+                NetTotal = sale.NetTotal,
+                OriginalGiftVoucherPaymentAmount = Money(
+                    sale.SalesPayments
+                        .Where(payment => string.Equals(
+                            payment.PaymentType,
+                            PaymentTypeCodes.GiftVoucher,
+                            StringComparison.OrdinalIgnoreCase))
+                        .Sum(payment => payment.Amount))
             };
 
             foreach (SalesLine line in sale.SalesLines.OrderBy(row => row.Id))
@@ -119,6 +127,7 @@ namespace POS.Core.Repositories
 
                 SalesHeader sale = await context.SalesHeaders
                     .Include(header => header.SalesLines)
+                    .Include(header => header.SalesPayments)
                     .FirstOrDefaultAsync(header =>
                         header.Id == request.SalesHeaderId)
                     ?? throw new InvalidOperationException(
@@ -260,8 +269,36 @@ namespace POS.Core.Repositories
                     }
                 }
 
-                decimal cashRefundAmount = Money(
+                decimal originalGiftVoucherPaymentAmount = Money(
+                    sale.SalesPayments
+                        .Where(payment => string.Equals(
+                            payment.PaymentType,
+                            PaymentTypeCodes.GiftVoucher,
+                            StringComparison.OrdinalIgnoreCase))
+                        .Sum(payment => payment.Amount));
+
+                List<decimal> priorVoucherRefundAmounts = await context.CustomerReturnHeaders
+                    .AsNoTracking()
+                    .Where(row =>
+                        row.OriginalSalesHeaderId == sale.Id &&
+                        row.GiftVoucherRefundAmount > 0m)
+                    .Select(row => row.GiftVoucherRefundAmount)
+                    .ToListAsync();
+
+                decimal priorGiftVoucherRefundAmount = Money(
+                    priorVoucherRefundAmounts.Sum());
+                decimal remainingVoucherFundedAmount = Money(
+                    Math.Max(
+                        0m,
+                        originalGiftVoucherPaymentAmount - priorGiftVoucherRefundAmount));
+                decimal unsettledAfterAccountCredit = Money(
                     totalReturnAmount - accountCreditAmount);
+                decimal giftVoucherRefundAmount = Money(
+                    Math.Min(
+                        unsettledAfterAccountCredit,
+                        remainingVoucherFundedAmount));
+                decimal cashRefundAmount = Money(
+                    unsettledAfterAccountCredit - giftVoucherRefundAmount);
 
                 var returnHeader = new CustomerReturnHeader
                 {
@@ -275,12 +312,12 @@ namespace POS.Core.Repositories
                     ReturnDate = DateTime.Now,
                     TotalRefundAmount = totalReturnAmount,
                     AccountCreditAmount = accountCreditAmount,
+                    GiftVoucherRefundAmount = giftVoucherRefundAmount,
                     CashRefundAmount = cashRefundAmount,
-                    RefundMethod = accountCreditAmount > 0m && cashRefundAmount > 0m
-                        ? "Split"
-                        : accountCreditAmount > 0m
-                            ? "Account Credit"
-                            : CustomerReturnRefundMethods.Cash,
+                    RefundMethod = BuildRefundMethod(
+                        accountCreditAmount,
+                        giftVoucherRefundAmount,
+                        cashRefundAmount),
                     DocumentType = CustomerReturnDocumentTypes.CreditNote,
                     CreditNoteNo = creditNoteNo,
                     TaxSnapshotStatus = completeTax
@@ -362,6 +399,23 @@ namespace POS.Core.Repositories
                 }
 
                 await context.SaveChangesAsync();
+
+                if (giftVoucherRefundAmount > 0m)
+                {
+                    GiftVoucher replacementVoucher =
+                        await GiftVoucherRepository.CreateReturnVoucherAsync(
+                            context,
+                            returnHeader,
+                            giftVoucherRefundAmount,
+                            Truncate(Normalize(request.CashierName), 100),
+                            Truncate(Normalize(request.TerminalNo), 20),
+                            DateTime.Today.AddYears(1),
+                            $"One-time replacement voucher for return {creditNoteNo} against {sale.InvoiceNo}.");
+
+                    returnHeader.ReplacementGiftVoucherId = replacementVoucher.Id;
+                    returnHeader.ReplacementGiftVoucherNo = replacementVoucher.VoucherNo;
+                    await context.SaveChangesAsync();
+                }
 
                 foreach (ReturnPlan plan in plans)
                 {
@@ -484,6 +538,8 @@ namespace POS.Core.Repositories
                     CreditNoteNo = creditNoteNo,
                     TotalRefundAmount = savedReturn.TotalRefundAmount,
                     AccountCreditAmount = savedReturn.AccountCreditAmount,
+                    GiftVoucherRefundAmount = savedReturn.GiftVoucherRefundAmount,
+                    ReplacementGiftVoucherNo = savedReturn.ReplacementGiftVoucherNo,
                     CashRefundAmount = savedReturn.CashRefundAmount
                 };
             }
@@ -501,12 +557,32 @@ namespace POS.Core.Repositories
 
             return await context.CustomerReturnHeaders
                 .Include(header => header.OriginalSalesHeader)
+                .Include(header => header.ReplacementGiftVoucher)
                 .Include(header => header.Lines)
                     .ThenInclude(line => line.SalesLine)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(header => header.Id == returnId)
                 ?? throw new InvalidOperationException(
                     "The completed customer return could not be loaded.");
+        }
+
+        private static string BuildRefundMethod(
+            decimal accountCreditAmount,
+            decimal giftVoucherRefundAmount,
+            decimal cashRefundAmount)
+        {
+            int methodCount = 0;
+            if (accountCreditAmount > 0m) methodCount++;
+            if (giftVoucherRefundAmount > 0m) methodCount++;
+            if (cashRefundAmount > 0m) methodCount++;
+
+            if (methodCount > 1)
+                return "Split";
+            if (accountCreditAmount > 0m)
+                return "Account Credit";
+            if (giftVoucherRefundAmount > 0m)
+                return "Gift Voucher";
+            return CustomerReturnRefundMethods.Cash;
         }
 
         private static CustomerReturnableLineDto MapReturnableLine(

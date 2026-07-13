@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using System;
@@ -11,77 +12,52 @@ namespace POS.Core.Repositories
     public class GiftVoucherSearchDto
     {
         public int Id { get; set; }
-
         public string VoucherNo { get; set; } = string.Empty;
-
         public string Barcode { get; set; } = string.Empty;
-
         public decimal VoucherAmount { get; set; }
-
-        public string Status { get; set; } = "Created";
-
-        public string DisplayStatus { get; set; } = "Created";
-
+        public decimal RedeemedAmount { get; set; }
+        public decimal ForfeitedAmount { get; set; }
+        public string Status { get; set; } = GiftVoucherStatusCodes.Created;
+        public string DisplayStatus { get; set; } = GiftVoucherStatusCodes.Created;
         public string BatchNo { get; set; } = string.Empty;
-
         public string Description { get; set; } = string.Empty;
-
         public DateTime? ExpiryDate { get; set; }
-
         public DateTime CreatedAt { get; set; }
-
+        public string CreatedBy { get; set; } = string.Empty;
         public DateTime? ActivatedAt { get; set; }
-
         public DateTime? RedeemedDate { get; set; }
-
         public string SoldInvoiceNo { get; set; } = string.Empty;
-
         public string RedeemedInvoiceNo { get; set; } = string.Empty;
-
+        public int PrintCount { get; set; }
+        public DateTime? LastPrintedAt { get; set; }
+        public string LastPrintedBy { get; set; } = string.Empty;
         public string Remarks { get; set; } = string.Empty;
     }
 
     public class GiftVoucherSaleValidationResult
     {
         public bool IsValid { get; set; }
-
         public string Message { get; set; } = string.Empty;
-
         public int GiftVoucherId { get; set; }
-
         public string VoucherNo { get; set; } = string.Empty;
-
         public string Barcode { get; set; } = string.Empty;
-
         public decimal VoucherAmount { get; set; }
-
         public string Status { get; set; } = string.Empty;
-
         public DateTime? ExpiryDate { get; set; }
     }
 
     public class GiftVoucherRedeemValidationResult
     {
         public bool IsValid { get; set; }
-
         public bool RequiresManagerApproval { get; set; }
-
         public string Message { get; set; } = string.Empty;
-
         public int GiftVoucherId { get; set; }
-
         public string VoucherNo { get; set; } = string.Empty;
-
         public string Barcode { get; set; } = string.Empty;
-
         public decimal VoucherAmount { get; set; }
-
         public decimal AmountToApply { get; set; }
-
         public decimal ForfeitedAmount { get; set; }
-
         public string Status { get; set; } = string.Empty;
-
         public DateTime? ExpiryDate { get; set; }
     }
 
@@ -91,12 +67,8 @@ namespace POS.Core.Repositories
 
         public GiftVoucherRepository(IDbContextFactory<AppDbContext> contextFactory)
         {
-            _contextFactory = contextFactory;
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
-
-        // =========================================================
-        // ADMIN: CREATE VOUCHER BATCH
-        // =========================================================
 
         public async Task<List<GiftVoucher>> GenerateVoucherBatchAsync(
             int count,
@@ -108,23 +80,24 @@ namespace POS.Core.Repositories
         {
             if (count <= 0)
                 throw new InvalidOperationException("Voucher count must be greater than zero.");
-
             if (count > 1000)
                 throw new InvalidOperationException("Cannot generate more than 1000 vouchers at once.");
 
+            voucherAmount = Money(voucherAmount);
             if (voucherAmount <= 0m)
                 throw new InvalidOperationException("Voucher amount must be greater than zero.");
+            if (expiryDate.HasValue && expiryDate.Value.Date < DateTime.Today)
+                throw new InvalidOperationException("Voucher expiry date cannot be in the past.");
 
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            string safeCreatedBy = RequiredText(createdBy, "Created user is required.");
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
 
             try
             {
                 DateTime now = DateTime.Now;
-
-                string safeCreatedBy = NormalizeText(createdBy);
                 string safeBatchNo = NormalizeText(batchNo);
-
                 if (string.IsNullOrWhiteSpace(safeBatchNo))
                     safeBatchNo = await GenerateBatchNoAsync(context);
 
@@ -133,22 +106,22 @@ namespace POS.Core.Repositories
                     : NormalizeText(description);
 
                 var generated = new List<GiftVoucher>();
-
-                for (int i = 0; i < count; i++)
+                for (int index = 0; index < count; index++)
                 {
                     string voucherNo = await GenerateVoucherNoAsync(context);
-
                     var voucher = new GiftVoucher
                     {
                         VoucherNo = voucherNo,
                         Barcode = voucherNo,
-                        VoucherAmount = Math.Round(voucherAmount, 2),
-                        Status = "Created",
-                        ExpiryDate = expiryDate,
+                        VoucherAmount = voucherAmount,
+                        Status = GiftVoucherStatusCodes.Created,
+                        ExpiryDate = expiryDate?.Date,
                         BatchNo = safeBatchNo,
                         Description = safeDescription,
                         CreatedAt = now,
                         CreatedBy = safeCreatedBy,
+                        UpdatedAt = now,
+                        UpdatedBy = safeCreatedBy,
                         Remarks = "Generated from voucher batch."
                     };
 
@@ -158,26 +131,30 @@ namespace POS.Core.Repositories
 
                 await context.SaveChangesAsync();
 
-                foreach (var voucher in generated)
+                foreach (GiftVoucher voucher in generated)
                 {
-                    await AddVoucherTransactionAsync(
+                    AddVoucherTransaction(
                         context,
                         voucher,
-                        "Created",
+                        GiftVoucherTransactionCodes.Created,
                         voucher.VoucherAmount,
                         0m,
                         0m,
                         null,
+                        null,
+                        null,
+                        string.Empty,
                         string.Empty,
                         string.Empty,
                         string.Empty,
                         safeCreatedBy,
+                        string.Empty,
+                        null,
                         "Voucher generated.");
                 }
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
-
                 return generated;
             }
             catch
@@ -187,32 +164,41 @@ namespace POS.Core.Repositories
             }
         }
 
-        // =========================================================
-        // SEARCH / INQUIRY
-        // =========================================================
-
         public async Task<List<GiftVoucherSearchDto>> SearchVouchersAsync(
             string filter = "All",
             string searchTerm = "",
             int take = 200)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
 
             string safeFilter = NormalizeText(filter);
-            string safeTerm = NormalizeText(searchTerm).ToLower();
+            string safeTerm = NormalizeText(searchTerm).ToLowerInvariant();
+            take = Math.Clamp(take <= 0 ? 200 : take, 1, 1000);
 
-            if (take <= 0)
-                take = 200;
-
-            if (take > 1000)
-                take = 1000;
-
-            var query = context.GiftVouchers.AsNoTracking();
+            IQueryable<GiftVoucher> query = context.GiftVouchers.AsNoTracking();
+            DateTime today = DateTime.Today;
 
             if (!string.IsNullOrWhiteSpace(safeFilter) &&
                 !safeFilter.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
-                query = query.Where(v => v.Status == safeFilter);
+                if (GiftVoucherStatusCodes.Equals(safeFilter, GiftVoucherStatusCodes.Expired))
+                {
+                    query = query.Where(v =>
+                        v.ExpiryDate.HasValue &&
+                        v.ExpiryDate.Value < today &&
+                        (v.Status == GiftVoucherStatusCodes.Created ||
+                         v.Status == GiftVoucherStatusCodes.Active));
+                }
+                else if (GiftVoucherStatusCodes.IsVoided(safeFilter))
+                {
+                    query = query.Where(v =>
+                        v.Status == GiftVoucherStatusCodes.Voided ||
+                        v.Status == GiftVoucherStatusCodes.LegacyCancelled);
+                }
+                else
+                {
+                    query = query.Where(v => v.Status == safeFilter);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(safeTerm))
@@ -225,131 +211,68 @@ namespace POS.Core.Repositories
                     v.RedeemedInvoiceNo.ToLower().Contains(safeTerm));
             }
 
-            var vouchers = await query
+            List<GiftVoucher> vouchers = await query
                 .OrderByDescending(v => v.CreatedAt)
                 .ThenBy(v => v.VoucherNo)
                 .Take(take)
                 .ToListAsync();
 
-            return vouchers
-                .Select(BuildSearchDto)
-                .ToList();
+            return vouchers.Select(BuildSearchDto).ToList();
         }
 
         public async Task<GiftVoucher?> GetByBarcodeOrVoucherNoAsync(string barcodeOrVoucherNo)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-
             string code = NormalizeText(barcodeOrVoucherNo);
-
             if (string.IsNullOrWhiteSpace(code))
                 return null;
 
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
             return await context.GiftVouchers
                 .AsNoTracking()
-                .FirstOrDefaultAsync(v =>
-                    v.Barcode == code ||
-                    v.VoucherNo == code);
+                .FirstOrDefaultAsync(v => v.Barcode == code || v.VoucherNo == code);
         }
 
         public async Task<List<GiftVoucherTransaction>> GetVoucherHistoryAsync(int giftVoucherId)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
             return await context.GiftVoucherTransactions
                 .AsNoTracking()
                 .Where(t => t.GiftVoucherId == giftVoucherId)
                 .OrderByDescending(t => t.TransactionDate)
+                .ThenByDescending(t => t.Id)
                 .ToListAsync();
         }
 
-        // =========================================================
-        // CASHIER: VALIDATE SELLING A VOUCHER
-        // =========================================================
-
-        public async Task<GiftVoucherSaleValidationResult> ValidateVoucherForSaleAsync(
-            string barcodeOrVoucherNo)
+        public async Task<GiftVoucherSaleValidationResult> ValidateVoucherForSaleAsync(string barcodeOrVoucherNo)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-
-            string code = NormalizeText(barcodeOrVoucherNo);
-
-            if (string.IsNullOrWhiteSpace(code))
-            {
-                return new GiftVoucherSaleValidationResult
-                {
-                    IsValid = false,
-                    Message = "Voucher barcode or number is required."
-                };
-            }
-
-            var voucher = await context.GiftVouchers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(v =>
-                    v.Barcode == code ||
-                    v.VoucherNo == code);
-
+            GiftVoucher? voucher = await GetByBarcodeOrVoucherNoAsync(barcodeOrVoucherNo);
             if (voucher == null)
             {
                 return new GiftVoucherSaleValidationResult
                 {
                     IsValid = false,
-                    Message = "Voucher was not found."
+                    Message = string.IsNullOrWhiteSpace(barcodeOrVoucherNo)
+                        ? "Voucher barcode or number is required."
+                        : "Voucher was not found."
                 };
             }
 
             if (IsExpiredByDate(voucher))
-            {
-                return BuildSaleValidationResult(
-                    voucher,
-                    false,
-                    "Voucher is expired and cannot be sold.");
-            }
-
-            if (!voucher.Status.Equals("Created", StringComparison.OrdinalIgnoreCase))
-            {
-                return BuildSaleValidationResult(
-                    voucher,
-                    false,
-                    $"Voucher cannot be sold. Current status: {voucher.Status}.");
-            }
-
+                return BuildSaleValidationResult(voucher, false, "Voucher is expired and cannot be sold.");
+            if (!GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Created))
+                return BuildSaleValidationResult(voucher, false, $"Voucher cannot be sold. Current status: {DisplayStatus(voucher)}.");
             if (voucher.VoucherAmount <= 0m)
-            {
-                return BuildSaleValidationResult(
-                    voucher,
-                    false,
-                    "Voucher amount is invalid.");
-            }
+                return BuildSaleValidationResult(voucher, false, "Voucher amount is invalid.");
 
-            return BuildSaleValidationResult(
-                voucher,
-                true,
-                "Voucher can be sold.");
+            return BuildSaleValidationResult(voucher, true, "Voucher can be sold.");
         }
-
-        // =========================================================
-        // CASHIER: VALIDATE REDEMPTION
-        // =========================================================
 
         public async Task<GiftVoucherRedeemValidationResult> ValidateVoucherForRedemptionAsync(
             string barcodeOrVoucherNo,
             decimal balanceDue,
             bool allowForfeitWithManagerApproval = false)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-
-            string code = NormalizeText(barcodeOrVoucherNo);
-
-            if (string.IsNullOrWhiteSpace(code))
-            {
-                return new GiftVoucherRedeemValidationResult
-                {
-                    IsValid = false,
-                    Message = "Voucher barcode or number is required."
-                };
-            }
-
+            balanceDue = Money(balanceDue);
             if (balanceDue <= 0m)
             {
                 return new GiftVoucherRedeemValidationResult
@@ -359,97 +282,49 @@ namespace POS.Core.Repositories
                 };
             }
 
-            var voucher = await context.GiftVouchers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(v =>
-                    v.Barcode == code ||
-                    v.VoucherNo == code);
-
+            GiftVoucher? voucher = await GetByBarcodeOrVoucherNoAsync(barcodeOrVoucherNo);
             if (voucher == null)
             {
                 return new GiftVoucherRedeemValidationResult
                 {
                     IsValid = false,
-                    Message = "Voucher was not found."
+                    Message = string.IsNullOrWhiteSpace(barcodeOrVoucherNo)
+                        ? "Voucher barcode or number is required."
+                        : "Voucher was not found."
                 };
             }
 
             if (IsExpiredByDate(voucher))
-            {
-                return BuildRedeemValidationResult(
-                    voucher,
-                    false,
-                    false,
-                    "Voucher is expired.",
-                    0m,
-                    0m);
-            }
-
-            if (!voucher.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
-            {
-                return BuildRedeemValidationResult(
-                    voucher,
-                    false,
-                    false,
-                    $"Voucher cannot be redeemed. Current status: {voucher.Status}.",
-                    0m,
-                    0m);
-            }
-
+                return BuildRedeemValidationResult(voucher, false, false, "Voucher is expired.", 0m, 0m);
+            if (!GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Active))
+                return BuildRedeemValidationResult(voucher, false, false, $"Voucher cannot be redeemed. Current status: {DisplayStatus(voucher)}.", 0m, 0m);
             if (voucher.VoucherAmount <= 0m)
+                return BuildRedeemValidationResult(voucher, false, false, "Voucher amount is invalid.", 0m, 0m);
+
+            decimal amountToApply = Money(Math.Min(voucher.VoucherAmount, balanceDue));
+            decimal forfeitedAmount = Money(voucher.VoucherAmount - amountToApply);
+
+            if (forfeitedAmount > 0m && !allowForfeitWithManagerApproval)
             {
                 return BuildRedeemValidationResult(
                     voucher,
                     false,
-                    false,
-                    "Voucher amount is invalid.",
-                    0m,
-                    0m);
-            }
-
-            decimal amountToApply;
-            decimal forfeitedAmount;
-
-            if (voucher.VoucherAmount > balanceDue)
-            {
-                amountToApply = Math.Round(balanceDue, 2);
-                forfeitedAmount = Math.Round(voucher.VoucherAmount - balanceDue, 2);
-
-                if (!allowForfeitWithManagerApproval)
-                {
-                    return BuildRedeemValidationResult(
-                        voucher,
-                        false,
-                        true,
-                        $"Voucher value is higher than balance due. Rs. {forfeitedAmount:N2} will be forfeited. Manager approval required.",
-                        amountToApply,
-                        forfeitedAmount);
-                }
-
-                return BuildRedeemValidationResult(
-                    voucher,
                     true,
-                    false,
-                    $"Voucher approved. Rs. {forfeitedAmount:N2} will be forfeited.",
+                    $"Voucher value is higher than balance due. Rs. {forfeitedAmount:N2} will be forfeited. Manager approval required.",
                     amountToApply,
                     forfeitedAmount);
             }
-
-            amountToApply = Math.Round(voucher.VoucherAmount, 2);
-            forfeitedAmount = 0m;
 
             return BuildRedeemValidationResult(
                 voucher,
                 true,
                 false,
-                "Voucher can be redeemed.",
+                forfeitedAmount > 0m
+                    ? $"Voucher approved. Rs. {forfeitedAmount:N2} will be forfeited."
+                    : "Voucher can be redeemed.",
                 amountToApply,
                 forfeitedAmount);
         }
-
-        // =========================================================
-        // SALES CHECKOUT SUPPORT: ACTIVATE SOLD VOUCHER
-        // =========================================================
 
         public async Task MarkVoucherSoldAsync(
             int giftVoucherId,
@@ -458,19 +333,11 @@ namespace POS.Core.Repositories
             string terminalNo,
             string remarks = "")
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
-
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
             try
             {
-                await MarkVoucherSoldAsync(
-                    context,
-                    giftVoucherId,
-                    salesHeader,
-                    cashierName,
-                    terminalNo,
-                    remarks);
-
+                await MarkVoucherSoldAsync(context, giftVoucherId, salesHeader, cashierName, terminalNo, remarks);
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
@@ -489,53 +356,72 @@ namespace POS.Core.Repositories
             string terminalNo,
             string remarks = "")
         {
-            var voucher = await context.GiftVouchers
-                .FirstOrDefaultAsync(v => v.Id == giftVoucherId);
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (salesHeader == null || salesHeader.Id <= 0)
+                throw new InvalidOperationException("Saved sales header is required to activate a gift voucher.");
 
-            if (voucher == null)
-                throw new InvalidOperationException("Gift voucher was not found.");
+            GiftVoucher voucher = await context.GiftVouchers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == giftVoucherId)
+                ?? throw new InvalidOperationException("Gift voucher was not found.");
 
             if (IsExpiredByDate(voucher))
                 throw new InvalidOperationException("Gift voucher is expired and cannot be sold.");
-
-            if (!voucher.Status.Equals("Created", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Gift voucher cannot be sold. Current status: {voucher.Status}.");
-
+            if (!GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Created))
+                throw new InvalidOperationException($"Gift voucher cannot be sold. Current status: {DisplayStatus(voucher)}.");
             if (voucher.VoucherAmount <= 0m)
                 throw new InvalidOperationException("Gift voucher amount is invalid.");
 
             DateTime now = DateTime.Now;
+            string safeCashier = RequiredText(cashierName, "Cashier name is required.");
+            string safeTerminal = RequiredText(terminalNo, "Terminal number is required.");
 
-            voucher.Status = "Active";
+            int affected = await context.GiftVouchers
+                .Where(v => v.Id == giftVoucherId && v.Status == GiftVoucherStatusCodes.Created)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(v => v.Status, GiftVoucherStatusCodes.Active)
+                    .SetProperty(v => v.ActivatedAt, now)
+                    .SetProperty(v => v.SoldDate, now)
+                    .SetProperty(v => v.SoldSalesHeaderId, salesHeader.Id)
+                    .SetProperty(v => v.SoldInvoiceNo, salesHeader.InvoiceNo)
+                    .SetProperty(v => v.SoldCashierName, safeCashier)
+                    .SetProperty(v => v.SoldTerminalNo, safeTerminal)
+                    .SetProperty(v => v.UpdatedAt, now)
+                    .SetProperty(v => v.UpdatedBy, safeCashier));
+
+            if (affected != 1)
+                throw new InvalidOperationException("Gift voucher activation was rejected because its status changed.");
+
+            voucher.Status = GiftVoucherStatusCodes.Active;
             voucher.ActivatedAt = now;
             voucher.SoldDate = now;
             voucher.SoldSalesHeaderId = salesHeader.Id;
             voucher.SoldInvoiceNo = salesHeader.InvoiceNo;
-            voucher.SoldCashierName = NormalizeText(cashierName);
-            voucher.SoldTerminalNo = NormalizeText(terminalNo);
-            voucher.UpdatedAt = now;
-            voucher.UpdatedBy = NormalizeText(cashierName);
+            voucher.SoldCashierName = safeCashier;
+            voucher.SoldTerminalNo = safeTerminal;
 
-            await AddVoucherTransactionAsync(
+            AddVoucherTransaction(
                 context,
                 voucher,
-                "Activated",
+                GiftVoucherTransactionCodes.Activated,
                 voucher.VoucherAmount,
                 0m,
                 0m,
                 salesHeader,
+                null,
+                null,
                 salesHeader.InvoiceNo,
-                cashierName,
-                terminalNo,
-                cashierName,
+                string.Empty,
+                safeCashier,
+                safeTerminal,
+                safeCashier,
+                string.Empty,
+                $"ACTIVATE:{giftVoucherId}",
                 string.IsNullOrWhiteSpace(remarks)
                     ? $"Voucher sold and activated from invoice {salesHeader.InvoiceNo}."
                     : remarks);
         }
-
-        // =========================================================
-        // SALES CHECKOUT SUPPORT: REDEEM VOUCHER
-        // =========================================================
 
         public async Task MarkVoucherRedeemedAsync(
             int giftVoucherId,
@@ -544,11 +430,11 @@ namespace POS.Core.Repositories
             SalesHeader salesHeader,
             string cashierName,
             string terminalNo,
+            string authorizedBy = "",
             string remarks = "")
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
-
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync();
             try
             {
                 await MarkVoucherRedeemedAsync(
@@ -557,10 +443,11 @@ namespace POS.Core.Repositories
                     appliedAmount,
                     forfeitedAmount,
                     salesHeader,
+                    null,
                     cashierName,
                     terminalNo,
+                    authorizedBy,
                     remarks);
-
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
@@ -577,184 +464,369 @@ namespace POS.Core.Repositories
             decimal appliedAmount,
             decimal forfeitedAmount,
             SalesHeader salesHeader,
+            SalesPayment? salesPayment,
             string cashierName,
             string terminalNo,
+            string authorizedBy = "",
             string remarks = "")
         {
-            var voucher = await context.GiftVouchers
-                .FirstOrDefaultAsync(v => v.Id == giftVoucherId);
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (salesHeader == null || salesHeader.Id <= 0)
+                throw new InvalidOperationException("Saved sales header is required to redeem a gift voucher.");
 
-            if (voucher == null)
-                throw new InvalidOperationException("Gift voucher was not found.");
+            GiftVoucher voucher = await context.GiftVouchers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == giftVoucherId)
+                ?? throw new InvalidOperationException("Gift voucher was not found.");
 
             if (IsExpiredByDate(voucher))
                 throw new InvalidOperationException("Gift voucher is expired.");
+            if (!GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Active))
+                throw new InvalidOperationException($"Gift voucher cannot be redeemed. Current status: {DisplayStatus(voucher)}.");
 
-            if (!voucher.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Gift voucher cannot be redeemed. Current status: {voucher.Status}.");
-
-            appliedAmount = Math.Round(appliedAmount, 2);
-            forfeitedAmount = Math.Round(forfeitedAmount, 2);
+            appliedAmount = Money(appliedAmount);
+            forfeitedAmount = Money(forfeitedAmount);
+            string safeAuthorizedBy = NormalizeText(authorizedBy);
 
             if (appliedAmount <= 0m)
                 throw new InvalidOperationException("Gift voucher applied amount must be greater than zero.");
-
-            if (appliedAmount > voucher.VoucherAmount)
-                throw new InvalidOperationException("Applied amount cannot exceed voucher amount.");
-
             if (forfeitedAmount < 0m)
-                forfeitedAmount = 0m;
+                throw new InvalidOperationException("Gift voucher forfeited amount cannot be negative.");
+            if (forfeitedAmount > 0m && string.IsNullOrWhiteSpace(safeAuthorizedBy))
+                throw new InvalidOperationException("Manager authorization is required for gift voucher forfeiture.");
 
-            if (Math.Round(appliedAmount + forfeitedAmount, 2) > voucher.VoucherAmount)
-                throw new InvalidOperationException("Applied plus forfeited amount cannot exceed voucher amount.");
+            decimal totalConsumed = Money(appliedAmount + forfeitedAmount);
+            if (Math.Abs(totalConsumed - Money(voucher.VoucherAmount)) > 0.01m)
+            {
+                throw new InvalidOperationException(
+                    "A one-time gift voucher must be fully consumed by the applied and forfeited amounts.");
+            }
 
             DateTime now = DateTime.Now;
+            string safeCashier = RequiredText(cashierName, "Cashier name is required.");
+            string safeTerminal = RequiredText(terminalNo, "Terminal number is required.");
 
-            voucher.Status = "Redeemed";
+            int affected = await context.GiftVouchers
+                .Where(v => v.Id == giftVoucherId && v.Status == GiftVoucherStatusCodes.Active)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(v => v.Status, GiftVoucherStatusCodes.Redeemed)
+                    .SetProperty(v => v.RedeemedDate, now)
+                    .SetProperty(v => v.RedeemedSalesHeaderId, salesHeader.Id)
+                    .SetProperty(v => v.RedeemedInvoiceNo, salesHeader.InvoiceNo)
+                    .SetProperty(v => v.RedeemedCashierName, safeCashier)
+                    .SetProperty(v => v.RedeemedTerminalNo, safeTerminal)
+                    .SetProperty(v => v.RedeemedAmount, appliedAmount)
+                    .SetProperty(v => v.ForfeitedAmount, forfeitedAmount)
+                    .SetProperty(v => v.UpdatedAt, now)
+                    .SetProperty(v => v.UpdatedBy, safeCashier));
+
+            if (affected != 1)
+                throw new InvalidOperationException("Gift voucher redemption was rejected because it was already used or its status changed.");
+
+            voucher.Status = GiftVoucherStatusCodes.Redeemed;
             voucher.RedeemedDate = now;
             voucher.RedeemedSalesHeaderId = salesHeader.Id;
             voucher.RedeemedInvoiceNo = salesHeader.InvoiceNo;
-            voucher.RedeemedCashierName = NormalizeText(cashierName);
-            voucher.RedeemedTerminalNo = NormalizeText(terminalNo);
+            voucher.RedeemedCashierName = safeCashier;
+            voucher.RedeemedTerminalNo = safeTerminal;
             voucher.RedeemedAmount = appliedAmount;
             voucher.ForfeitedAmount = forfeitedAmount;
-            voucher.UpdatedAt = now;
-            voucher.UpdatedBy = NormalizeText(cashierName);
 
-            await AddVoucherTransactionAsync(
+            AddVoucherTransaction(
                 context,
                 voucher,
-                "Redeemed",
+                GiftVoucherTransactionCodes.Redeemed,
                 appliedAmount,
                 appliedAmount,
                 forfeitedAmount,
                 salesHeader,
+                salesPayment,
+                null,
                 salesHeader.InvoiceNo,
-                cashierName,
-                terminalNo,
-                cashierName,
+                string.Empty,
+                safeCashier,
+                safeTerminal,
+                safeCashier,
+                safeAuthorizedBy,
+                $"REDEEM:{giftVoucherId}",
                 string.IsNullOrWhiteSpace(remarks)
                     ? $"Voucher redeemed from invoice {salesHeader.InvoiceNo}."
                     : remarks);
         }
 
-        // =========================================================
-        // ADMIN ACTIONS
-        // =========================================================
+        public async Task MarkVoucherPrintedAsync(int giftVoucherId, string printedBy)
+        {
+            string safePrintedBy = RequiredText(printedBy, "Printed user is required.");
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            GiftVoucher voucher = await context.GiftVouchers
+                .FirstOrDefaultAsync(v => v.Id == giftVoucherId)
+                ?? throw new InvalidOperationException("Gift voucher was not found.");
+
+            if (GiftVoucherStatusCodes.IsVoided(voucher.Status))
+                throw new InvalidOperationException("Voided voucher cannot be printed.");
+
+            DateTime now = DateTime.Now;
+            bool isReprint = voucher.PrintCount > 0;
+            voucher.PrintCount++;
+            voucher.PrintedAt ??= now;
+            voucher.PrintedBy = string.IsNullOrWhiteSpace(voucher.PrintedBy)
+                ? safePrintedBy
+                : voucher.PrintedBy;
+            voucher.LastPrintedAt = now;
+            voucher.LastPrintedBy = safePrintedBy;
+            voucher.UpdatedAt = now;
+            voucher.UpdatedBy = safePrintedBy;
+
+            AddVoucherTransaction(
+                context,
+                voucher,
+                isReprint ? GiftVoucherTransactionCodes.Reprinted : GiftVoucherTransactionCodes.Printed,
+                voucher.VoucherAmount,
+                0m,
+                0m,
+                null,
+                null,
+                null,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                safePrintedBy,
+                string.Empty,
+                null,
+                isReprint ? "Voucher reprinted." : "Voucher printed.");
+
+            await context.SaveChangesAsync();
+        }
 
         public async Task BlockVoucherAsync(int giftVoucherId, string blockedBy, string reason)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            string safeUser = RequiredText(blockedBy, "Authorized user is required.");
+            string safeReason = RequiredText(reason, "Block reason is required.");
 
-            var voucher = await context.GiftVouchers
-                .FirstOrDefaultAsync(v => v.Id == giftVoucherId);
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            GiftVoucher voucher = await context.GiftVouchers
+                .FirstOrDefaultAsync(v => v.Id == giftVoucherId)
+                ?? throw new InvalidOperationException("Gift voucher was not found.");
 
-            if (voucher == null)
-                throw new InvalidOperationException("Gift voucher was not found.");
-
-            if (voucher.Status.Equals("Redeemed", StringComparison.OrdinalIgnoreCase))
+            if (IsExpiredByDate(voucher))
+                throw new InvalidOperationException("Expired voucher cannot be blocked.");
+            if (GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Redeemed))
                 throw new InvalidOperationException("Redeemed voucher cannot be blocked.");
-
-            if (voucher.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Cancelled voucher cannot be blocked.");
+            if (GiftVoucherStatusCodes.IsVoided(voucher.Status))
+                throw new InvalidOperationException("Voided voucher cannot be blocked.");
+            if (GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Blocked))
+                throw new InvalidOperationException("Voucher is already blocked.");
+            if (!GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Created) &&
+                !GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Active))
+                throw new InvalidOperationException($"Voucher cannot be blocked from status {DisplayStatus(voucher)}.");
 
             DateTime now = DateTime.Now;
-
-            voucher.Status = "Blocked";
+            voucher.StatusBeforeBlock = voucher.Status;
+            voucher.Status = GiftVoucherStatusCodes.Blocked;
             voucher.BlockedAt = now;
-            voucher.BlockedBy = NormalizeText(blockedBy);
-            voucher.BlockReason = NormalizeText(reason);
+            voucher.BlockedBy = safeUser;
+            voucher.BlockReason = safeReason;
             voucher.UpdatedAt = now;
-            voucher.UpdatedBy = NormalizeText(blockedBy);
+            voucher.UpdatedBy = safeUser;
 
-            await AddVoucherTransactionAsync(
-                context,
-                voucher,
-                "Blocked",
-                0m,
-                0m,
-                0m,
-                null,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                blockedBy,
-                voucher.BlockReason);
-
+            AddVoucherTransaction(
+                context, voucher, GiftVoucherTransactionCodes.Blocked,
+                0m, 0m, 0m, null, null, null,
+                string.Empty, string.Empty, string.Empty, string.Empty,
+                safeUser, safeUser, null, safeReason);
             await context.SaveChangesAsync();
         }
 
-        public async Task CancelVoucherAsync(int giftVoucherId, string cancelledBy, string reason)
+        public async Task UnblockVoucherAsync(int giftVoucherId, string unblockedBy, string reason)
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            string safeUser = RequiredText(unblockedBy, "Authorized user is required.");
+            string safeReason = RequiredText(reason, "Unblock reason is required.");
 
-            var voucher = await context.GiftVouchers
-                .FirstOrDefaultAsync(v => v.Id == giftVoucherId);
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            GiftVoucher voucher = await context.GiftVouchers
+                .FirstOrDefaultAsync(v => v.Id == giftVoucherId)
+                ?? throw new InvalidOperationException("Gift voucher was not found.");
 
-            if (voucher == null)
-                throw new InvalidOperationException("Gift voucher was not found.");
+            if (!GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Blocked))
+                throw new InvalidOperationException("Only a blocked voucher can be unblocked.");
+            if (voucher.ExpiryDate.HasValue && voucher.ExpiryDate.Value.Date < DateTime.Today)
+                throw new InvalidOperationException("Expired voucher cannot be unblocked.");
 
-            if (voucher.Status.Equals("Redeemed", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Redeemed voucher cannot be cancelled.");
+            string restoredStatus = GiftVoucherStatusCodes.Equals(
+                    voucher.StatusBeforeBlock,
+                    GiftVoucherStatusCodes.Active)
+                ? GiftVoucherStatusCodes.Active
+                : GiftVoucherStatusCodes.Created;
 
             DateTime now = DateTime.Now;
-
-            voucher.Status = "Cancelled";
-            voucher.CancelledAt = now;
-            voucher.CancelledBy = NormalizeText(cancelledBy);
-            voucher.CancelReason = NormalizeText(reason);
+            voucher.Status = restoredStatus;
+            voucher.StatusBeforeBlock = string.Empty;
+            voucher.BlockedAt = null;
+            voucher.BlockedBy = string.Empty;
+            voucher.BlockReason = string.Empty;
             voucher.UpdatedAt = now;
-            voucher.UpdatedBy = NormalizeText(cancelledBy);
+            voucher.UpdatedBy = safeUser;
 
-            await AddVoucherTransactionAsync(
-                context,
-                voucher,
-                "Cancelled",
-                0m,
-                0m,
-                0m,
-                null,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                cancelledBy,
-                voucher.CancelReason);
-
+            AddVoucherTransaction(
+                context, voucher, GiftVoucherTransactionCodes.Unblocked,
+                0m, 0m, 0m, null, null, null,
+                string.Empty, string.Empty, string.Empty, string.Empty,
+                safeUser, safeUser, null, safeReason);
             await context.SaveChangesAsync();
         }
 
-        // =========================================================
-        // PRIVATE HELPERS
-        // =========================================================
-
-        private static GiftVoucherSearchDto BuildSearchDto(GiftVoucher voucher)
+        public async Task VoidVoucherAsync(int giftVoucherId, string voidedBy, string reason)
         {
-            return new GiftVoucherSearchDto
+            string safeUser = RequiredText(voidedBy, "Authorized user is required.");
+            string safeReason = RequiredText(reason, "Void reason is required.");
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            GiftVoucher voucher = await context.GiftVouchers
+                .FirstOrDefaultAsync(v => v.Id == giftVoucherId)
+                ?? throw new InvalidOperationException("Gift voucher was not found.");
+
+            if (GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Redeemed))
+                throw new InvalidOperationException("Redeemed voucher cannot be voided.");
+            if (GiftVoucherStatusCodes.IsVoided(voucher.Status))
+                throw new InvalidOperationException("Voucher is already voided.");
+            if (!GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Created))
+            {
+                throw new InvalidOperationException(
+                    "Only an unsold Created voucher can be voided. Block an issued Active voucher instead.");
+            }
+
+            DateTime now = DateTime.Now;
+            voucher.Status = GiftVoucherStatusCodes.Voided;
+            voucher.CancelledAt = now;
+            voucher.CancelledBy = safeUser;
+            voucher.CancelReason = safeReason;
+            voucher.UpdatedAt = now;
+            voucher.UpdatedBy = safeUser;
+
+            AddVoucherTransaction(
+                context, voucher, GiftVoucherTransactionCodes.Voided,
+                0m, 0m, 0m, null, null, null,
+                string.Empty, string.Empty, string.Empty, string.Empty,
+                safeUser, safeUser, null, safeReason);
+            await context.SaveChangesAsync();
+        }
+
+        public Task CancelVoucherAsync(int giftVoucherId, string cancelledBy, string reason) =>
+            VoidVoucherAsync(giftVoucherId, cancelledBy, reason);
+
+        public static async Task<GiftVoucher> CreateReturnVoucherAsync(
+            AppDbContext context,
+            CustomerReturnHeader returnHeader,
+            decimal amount,
+            string createdBy,
+            string terminalNo,
+            DateTime? expiryDate = null,
+            string remarks = "")
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (returnHeader == null || returnHeader.Id <= 0)
+                throw new InvalidOperationException("Saved customer return is required to issue a replacement voucher.");
+
+            amount = Money(amount);
+            if (amount <= 0m)
+                throw new InvalidOperationException("Replacement gift voucher amount must be greater than zero.");
+
+            string referenceKey = $"RETURN:{returnHeader.Id}";
+            GiftVoucherTransaction? existing = await context.GiftVoucherTransactions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.ReferenceKey == referenceKey);
+            if (existing != null)
+            {
+                return await context.GiftVouchers
+                    .FirstAsync(v => v.Id == existing.GiftVoucherId);
+            }
+
+            DateTime now = returnHeader.ReturnDate == default
+                ? DateTime.Now
+                : returnHeader.ReturnDate;
+            string safeCreatedBy = RequiredText(createdBy, "Created user is required.");
+            string safeTerminal = NormalizeText(terminalNo);
+            string voucherNo = await GenerateVoucherNoAsync(context);
+
+            var voucher = new GiftVoucher
+            {
+                VoucherNo = voucherNo,
+                Barcode = voucherNo,
+                VoucherAmount = amount,
+                Status = GiftVoucherStatusCodes.Active,
+                ExpiryDate = expiryDate?.Date,
+                BatchNo = "RETURN",
+                Description = $"Return Voucher {returnHeader.ReturnNo}",
+                CreatedAt = now,
+                CreatedBy = safeCreatedBy,
+                ActivatedAt = now,
+                UpdatedAt = now,
+                UpdatedBy = safeCreatedBy,
+                Remarks = string.IsNullOrWhiteSpace(remarks)
+                    ? $"Issued against customer return {returnHeader.ReturnNo}."
+                    : NormalizeText(remarks)
+            };
+
+            context.GiftVouchers.Add(voucher);
+            await context.SaveChangesAsync();
+
+            AddVoucherTransaction(
+                context,
+                voucher,
+                GiftVoucherTransactionCodes.ReturnVoucherIssued,
+                amount,
+                amount,
+                0m,
+                null,
+                null,
+                returnHeader,
+                returnHeader.OriginalInvoiceNo ?? string.Empty,
+                returnHeader.ReturnNo,
+                returnHeader.CashierName,
+                safeTerminal,
+                safeCreatedBy,
+                returnHeader.AuthorizedBy,
+                referenceKey,
+                voucher.Remarks);
+
+            return voucher;
+        }
+
+        private static GiftVoucherSearchDto BuildSearchDto(GiftVoucher voucher) =>
+            new()
             {
                 Id = voucher.Id,
                 VoucherNo = voucher.VoucherNo,
                 Barcode = voucher.Barcode,
                 VoucherAmount = voucher.VoucherAmount,
+                RedeemedAmount = voucher.RedeemedAmount,
+                ForfeitedAmount = voucher.ForfeitedAmount,
                 Status = voucher.Status,
-                DisplayStatus = IsExpiredByDate(voucher) ? "Expired" : voucher.Status,
+                DisplayStatus = DisplayStatus(voucher),
                 BatchNo = voucher.BatchNo,
                 Description = voucher.Description,
                 ExpiryDate = voucher.ExpiryDate,
                 CreatedAt = voucher.CreatedAt,
+                CreatedBy = voucher.CreatedBy,
                 ActivatedAt = voucher.ActivatedAt,
                 RedeemedDate = voucher.RedeemedDate,
                 SoldInvoiceNo = voucher.SoldInvoiceNo,
                 RedeemedInvoiceNo = voucher.RedeemedInvoiceNo,
+                PrintCount = voucher.PrintCount,
+                LastPrintedAt = voucher.LastPrintedAt,
+                LastPrintedBy = voucher.LastPrintedBy,
                 Remarks = voucher.Remarks
             };
-        }
 
         private static GiftVoucherSaleValidationResult BuildSaleValidationResult(
             GiftVoucher voucher,
             bool isValid,
-            string message)
-        {
-            return new GiftVoucherSaleValidationResult
+            string message) =>
+            new()
             {
                 IsValid = isValid,
                 Message = message,
@@ -762,10 +834,9 @@ namespace POS.Core.Repositories
                 VoucherNo = voucher.VoucherNo,
                 Barcode = voucher.Barcode,
                 VoucherAmount = voucher.VoucherAmount,
-                Status = voucher.Status,
+                Status = DisplayStatus(voucher),
                 ExpiryDate = voucher.ExpiryDate
             };
-        }
 
         private static GiftVoucherRedeemValidationResult BuildRedeemValidationResult(
             GiftVoucher voucher,
@@ -773,9 +844,8 @@ namespace POS.Core.Repositories
             bool requiresManagerApproval,
             string message,
             decimal amountToApply,
-            decimal forfeitedAmount)
-        {
-            return new GiftVoucherRedeemValidationResult
+            decimal forfeitedAmount) =>
+            new()
             {
                 IsValid = isValid,
                 RequiresManagerApproval = requiresManagerApproval,
@@ -784,14 +854,13 @@ namespace POS.Core.Repositories
                 VoucherNo = voucher.VoucherNo,
                 Barcode = voucher.Barcode,
                 VoucherAmount = voucher.VoucherAmount,
-                AmountToApply = Math.Round(amountToApply, 2),
-                ForfeitedAmount = Math.Round(forfeitedAmount, 2),
-                Status = voucher.Status,
+                AmountToApply = Money(amountToApply),
+                ForfeitedAmount = Money(forfeitedAmount),
+                Status = DisplayStatus(voucher),
                 ExpiryDate = voucher.ExpiryDate
             };
-        }
 
-        private static async Task AddVoucherTransactionAsync(
+        private static void AddVoucherTransaction(
             AppDbContext context,
             GiftVoucher voucher,
             string transactionType,
@@ -799,60 +868,61 @@ namespace POS.Core.Repositories
             decimal appliedAmount,
             decimal forfeitedAmount,
             SalesHeader? salesHeader,
+            SalesPayment? salesPayment,
+            CustomerReturnHeader? customerReturn,
             string referenceInvoiceNo,
+            string referenceReturnNo,
             string cashierName,
             string terminalNo,
             string createdBy,
+            string authorizedBy,
+            string? referenceKey,
             string remarks)
         {
-            var transaction = new GiftVoucherTransaction
-            {
-                GiftVoucherId = voucher.Id,
-                TransactionDate = DateTime.Now,
-                TransactionType = NormalizeText(transactionType),
-                VoucherNo = voucher.VoucherNo,
-                Barcode = voucher.Barcode,
-                VoucherAmount = voucher.VoucherAmount,
-                Amount = Math.Round(amount, 2),
-                AppliedAmount = Math.Round(appliedAmount, 2),
-                ForfeitedAmount = Math.Round(forfeitedAmount, 2),
-                StatusAfter = voucher.Status,
-                SalesHeaderId = salesHeader?.Id,
-                ReferenceInvoiceNo = NormalizeText(referenceInvoiceNo),
-                CashierName = NormalizeText(cashierName),
-                TerminalNo = NormalizeText(terminalNo),
-                CreatedBy = NormalizeText(createdBy),
-                Remarks = NormalizeText(remarks),
-                CreatedAt = DateTime.Now
-            };
-
-            await context.GiftVoucherTransactions.AddAsync(transaction);
+            context.GiftVoucherTransactions.Add(
+                new GiftVoucherTransaction
+                {
+                    GiftVoucherId = voucher.Id,
+                    TransactionDate = DateTime.Now,
+                    TransactionType = NormalizeText(transactionType),
+                    VoucherNo = voucher.VoucherNo,
+                    Barcode = voucher.Barcode,
+                    VoucherAmount = Money(voucher.VoucherAmount),
+                    Amount = Money(amount),
+                    AppliedAmount = Money(appliedAmount),
+                    ForfeitedAmount = Money(forfeitedAmount),
+                    StatusAfter = voucher.Status,
+                    SalesHeaderId = salesHeader?.Id,
+                    SalesPaymentId = salesPayment?.Id,
+                    CustomerReturnHeaderId = customerReturn?.Id,
+                    ReferenceInvoiceNo = NormalizeText(referenceInvoiceNo),
+                    ReferenceReturnNo = NormalizeText(referenceReturnNo),
+                    ReferenceKey = string.IsNullOrWhiteSpace(referenceKey)
+                        ? null
+                        : NormalizeText(referenceKey),
+                    CashierName = NormalizeText(cashierName),
+                    TerminalNo = NormalizeText(terminalNo),
+                    CreatedBy = NormalizeText(createdBy),
+                    AuthorizedBy = NormalizeText(authorizedBy),
+                    Remarks = NormalizeText(remarks),
+                    CreatedAt = DateTime.Now
+                });
         }
 
         private static async Task<string> GenerateVoucherNoAsync(AppDbContext context)
         {
-            var sequence = await GetOrCreateSequenceAsync(
-                context,
-                "GV",
-                "GV-",
-                6);
-
-            int attempts = 0;
-
-            while (attempts < 1000)
+            DocumentSequence sequence = await GetOrCreateSequenceAsync(context, "GV", "GV-", 6);
+            for (int attempts = 0; attempts < 1000; attempts++)
             {
-                string voucherNo = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString($"D{sequence.PaddingLength}")}";
-
+                string voucherNo =
+                    $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString($"D{sequence.PaddingLength}")}";
                 sequence.NextSequenceNumber++;
                 sequence.UpdatedAt = DateTime.Now;
 
                 bool exists = await context.GiftVouchers
                     .AnyAsync(v => v.VoucherNo == voucherNo || v.Barcode == voucherNo);
-
                 if (!exists)
                     return voucherNo;
-
-                attempts++;
             }
 
             throw new InvalidOperationException("Unable to generate a unique gift voucher number.");
@@ -860,17 +930,11 @@ namespace POS.Core.Repositories
 
         private static async Task<string> GenerateBatchNoAsync(AppDbContext context)
         {
-            var sequence = await GetOrCreateSequenceAsync(
-                context,
-                "GVB",
-                "GVB-",
-                6);
-
-            string batchNo = $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString($"D{sequence.PaddingLength}")}";
-
+            DocumentSequence sequence = await GetOrCreateSequenceAsync(context, "GVB", "GVB-", 6);
+            string batchNo =
+                $"{sequence.Prefix}{sequence.NextSequenceNumber.ToString($"D{sequence.PaddingLength}")}";
             sequence.NextSequenceNumber++;
             sequence.UpdatedAt = DateTime.Now;
-
             return batchNo;
         }
 
@@ -880,9 +944,16 @@ namespace POS.Core.Repositories
             string prefix,
             int paddingLength)
         {
-            var sequence = await context.DocumentSequences
-                .FirstOrDefaultAsync(s => s.DocumentType == documentType);
+            DocumentSequence? sequence = context.DocumentSequences.Local
+                .FirstOrDefault(s => string.Equals(
+                    s.DocumentType,
+                    documentType,
+                    StringComparison.OrdinalIgnoreCase));
+            if (sequence != null)
+                return sequence;
 
+            sequence = await context.DocumentSequences
+                .FirstOrDefaultAsync(s => s.DocumentType == documentType);
             if (sequence != null)
                 return sequence;
 
@@ -894,24 +965,37 @@ namespace POS.Core.Repositories
                 PaddingLength = paddingLength,
                 UpdatedAt = DateTime.Now
             };
-
-            await context.DocumentSequences.AddAsync(sequence);
-
+            context.DocumentSequences.Add(sequence);
             return sequence;
         }
 
-        private static bool IsExpiredByDate(GiftVoucher voucher)
+        private static bool IsExpiredByDate(GiftVoucher voucher) =>
+            voucher.ExpiryDate.HasValue &&
+            voucher.ExpiryDate.Value.Date < DateTime.Today &&
+            !GiftVoucherStatusCodes.IsTerminal(voucher.Status) &&
+            !GiftVoucherStatusCodes.Equals(voucher.Status, GiftVoucherStatusCodes.Blocked);
+
+        private static string DisplayStatus(GiftVoucher voucher)
         {
-            return voucher.ExpiryDate.HasValue &&
-                   voucher.ExpiryDate.Value.Date < DateTime.Today &&
-                   !voucher.Status.Equals("Redeemed", StringComparison.OrdinalIgnoreCase) &&
-                   !voucher.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) &&
-                   !voucher.Status.Equals("Blocked", StringComparison.OrdinalIgnoreCase);
+            if (IsExpiredByDate(voucher))
+                return GiftVoucherStatusCodes.Expired;
+            if (GiftVoucherStatusCodes.IsVoided(voucher.Status))
+                return GiftVoucherStatusCodes.Voided;
+            return voucher.Status;
         }
 
-        private static string NormalizeText(string? value)
+        private static decimal Money(decimal value) =>
+            Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+        private static string RequiredText(string? value, string message)
         {
-            return (value ?? string.Empty).Trim();
+            string safe = NormalizeText(value);
+            if (string.IsNullOrWhiteSpace(safe))
+                throw new InvalidOperationException(message);
+            return safe;
         }
+
+        private static string NormalizeText(string? value) =>
+            (value ?? string.Empty).Trim();
     }
 }

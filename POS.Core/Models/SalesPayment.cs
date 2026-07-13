@@ -64,6 +64,9 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal GiftVoucherForfeitedAmount { get; set; } = 0m;
 
+        [MaxLength(100)]
+        public string GiftVoucherAuthorizedBy { get; set; } = string.Empty;
+
         [ForeignKey(nameof(SalesHeaderId))]
         public virtual SalesHeader? SalesHeader { get; set; }
     }

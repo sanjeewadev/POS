@@ -142,6 +142,12 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal NetTotal { get; set; } = 0m;
 
+        // Face value of one-time gift vouchers issued on this receipt.
+        // This remains part of the amount payable but is excluded from VAT turnover
+        // and merchandise revenue calculations.
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal GiftVoucherIssueTotal { get; set; } = 0m;
+
         // Physical cash handling summary.
         [Column(TypeName = "decimal(18,2)")]
         public decimal AmountTendered { get; set; } = 0m;

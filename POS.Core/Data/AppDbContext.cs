@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
@@ -1535,6 +1535,19 @@ namespace POS.Core.Data
                 entity.Property(r => r.TotalRefundAmount)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(r => r.AccountCreditAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.CashRefundAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.GiftVoucherRefundAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(r => r.ReplacementGiftVoucherNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
                 entity.Property(r => r.RefundMethod)
                     .IsRequired()
                     .HasMaxLength(30)
@@ -1579,10 +1592,19 @@ namespace POS.Core.Data
                     .HasForeignKey(r => r.OriginalSalesHeaderId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(r => r.ReplacementGiftVoucher)
+                    .WithMany()
+                    .HasForeignKey(r => r.ReplacementGiftVoucherId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(r => r.ReturnNo)
                     .IsUnique();
 
                 entity.HasIndex(r => r.OriginalSalesHeaderId);
+
+                entity.HasIndex(r => r.ReplacementGiftVoucherId);
+
+                entity.HasIndex(r => r.ReplacementGiftVoucherNo);
 
                 entity.HasIndex(r => r.DocumentType);
 
@@ -3139,6 +3161,9 @@ namespace POS.Core.Data
                 entity.Property(s => s.NetTotal)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(s => s.GiftVoucherIssueTotal)
+                    .HasColumnType("decimal(18,2)");
+
                 entity.Property(s => s.AmountTendered)
                     .HasColumnType("decimal(18,2)");
 
@@ -3755,6 +3780,9 @@ namespace POS.Core.Data
                 entity.Property(p => p.GiftVoucherForfeitedAmount)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(p => p.GiftVoucherAuthorizedBy)
+                    .HasMaxLength(100);
+
                 entity.HasIndex(p => p.GiftVoucherId);
 
                 entity.HasIndex(p => p.GiftVoucherNo);
@@ -3798,6 +3826,16 @@ namespace POS.Core.Data
 
                 entity.Property(v => v.PrintedBy)
                     .HasMaxLength(100);
+
+                entity.Property(v => v.PrintCount)
+                    .HasDefaultValue(0);
+
+                entity.Property(v => v.LastPrintedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(v => v.StatusBeforeBlock)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
 
                 entity.Property(v => v.SoldInvoiceNo)
                     .HasMaxLength(50)
@@ -3924,6 +3962,14 @@ namespace POS.Core.Data
                     .HasMaxLength(50)
                     .UseCollation("NOCASE");
 
+                entity.Property(t => t.ReferenceReturnNo)
+                    .HasMaxLength(50)
+                    .UseCollation("NOCASE");
+
+                entity.Property(t => t.ReferenceKey)
+                    .HasMaxLength(120)
+                    .UseCollation("NOCASE");
+
                 entity.Property(t => t.CashierName)
                     .HasMaxLength(100);
 
@@ -3932,6 +3978,9 @@ namespace POS.Core.Data
                     .UseCollation("NOCASE");
 
                 entity.Property(t => t.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(t => t.AuthorizedBy)
                     .HasMaxLength(100);
 
                 entity.Property(t => t.Remarks)
@@ -3947,6 +3996,16 @@ namespace POS.Core.Data
                     .HasForeignKey(t => t.SalesHeaderId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                entity.HasOne(t => t.SalesPayment)
+                    .WithMany()
+                    .HasForeignKey(t => t.SalesPaymentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(t => t.CustomerReturnHeader)
+                    .WithMany()
+                    .HasForeignKey(t => t.CustomerReturnHeaderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(t => t.GiftVoucherId);
 
                 entity.HasIndex(t => t.TransactionDate);
@@ -3959,7 +4018,16 @@ namespace POS.Core.Data
 
                 entity.HasIndex(t => t.ReferenceInvoiceNo);
 
+                entity.HasIndex(t => t.ReferenceReturnNo);
+
+                entity.HasIndex(t => t.ReferenceKey)
+                    .IsUnique();
+
                 entity.HasIndex(t => t.SalesHeaderId);
+
+                entity.HasIndex(t => t.SalesPaymentId);
+
+                entity.HasIndex(t => t.CustomerReturnHeaderId);
             });
 
             // =========================================================

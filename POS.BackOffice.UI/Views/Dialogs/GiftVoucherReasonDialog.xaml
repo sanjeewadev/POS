@@ -1,0 +1,24 @@
+<Window x:Class="POS.BackOffice.UI.Views.Dialogs.GiftVoucherReasonDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Gift Voucher Authorization"
+        Width="470" Height="250"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#D4D0C8">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="ActionText" FontSize="18" FontWeight="Bold" Foreground="#003366"/>
+        <TextBlock Grid.Row="1" Margin="0,8,0,8" Text="Enter a clear operational reason. This action is permanently audited." TextWrapping="Wrap"/>
+        <TextBox x:Name="ReasonBox" Grid.Row="2" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="255" VerticalScrollBarVisibility="Auto" Padding="8"/>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="CANCEL" Width="95" Height="32" Margin="0,0,8,0" Click="Cancel_Click"/>
+            <Button Content="CONFIRM" Width="105" Height="32" Background="#003366" Foreground="White" FontWeight="Bold" Click="Confirm_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

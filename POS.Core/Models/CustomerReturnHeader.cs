@@ -53,6 +53,19 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal CashRefundAmount { get; set; }
 
+        // For merchandise originally funded by a one-time gift voucher, returns
+        // issue a new one-time replacement voucher instead of reactivating the old one.
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal GiftVoucherRefundAmount { get; set; }
+
+        public int? ReplacementGiftVoucherId { get; set; }
+
+        [MaxLength(50)]
+        public string ReplacementGiftVoucherNo { get; set; } = string.Empty;
+
+        [ForeignKey(nameof(ReplacementGiftVoucherId))]
+        public virtual GiftVoucher? ReplacementGiftVoucher { get; set; }
+
         [Required]
         [MaxLength(30)]
         public string RefundMethod { get; set; } = "Cash";
