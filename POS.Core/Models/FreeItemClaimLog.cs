@@ -112,11 +112,11 @@ namespace POS.Core.Models
         // =========================================================
         // CLAIM STATUS
         // =========================================================
-        // Pending / Submitted / Settled / Rejected / Written Off / Cancelled
+        // Draft / Submitted / Settled / Rejected
 
         [Required]
         [MaxLength(30)]
-        public string ClaimStatus { get; set; } = "Pending";
+        public string ClaimStatus { get; set; } = "Draft";
 
         [MaxLength(100)]
         public string ClaimReferenceNo { get; set; } = string.Empty;
@@ -171,6 +171,22 @@ namespace POS.Core.Models
 
         public DateTime? FreeApprovedAt { get; set; }
 
+        public int? FreeApprovedByUserId { get; set; }
+
+        [MaxLength(30)]
+        public string FreeApprovedRole { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        public string FreeIssueAppliedBy { get; set; } = string.Empty;
+
+        public DateTime? FreeIssueAppliedAt { get; set; }
+
+        public string FreeIssueRuleSnapshotJson { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(30)]
+        public string FreeIssueSnapshotStatus { get; set; } = "LegacyUnknown";
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [MaxLength(100)]
@@ -199,8 +215,11 @@ namespace POS.Core.Models
         // =========================================================
 
         [NotMapped]
-        public bool IsPending =>
-            ClaimStatus.Equals("Pending", StringComparison.OrdinalIgnoreCase);
+        public bool IsDraft =>
+            ClaimStatus.Equals("Draft", StringComparison.OrdinalIgnoreCase);
+
+        [NotMapped]
+        public bool IsPending => IsDraft;
 
         [NotMapped]
         public bool IsSubmitted =>
@@ -228,6 +247,6 @@ namespace POS.Core.Models
 
         [NotMapped]
         public string DisplayClaimStatus =>
-            string.IsNullOrWhiteSpace(ClaimStatus) ? "Pending" : ClaimStatus;
+            string.IsNullOrWhiteSpace(ClaimStatus) ? "Draft" : ClaimStatus;
     }
 }

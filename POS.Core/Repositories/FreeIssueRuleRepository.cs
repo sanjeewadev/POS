@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using System;
@@ -25,6 +26,16 @@ namespace POS.Core.Repositories
         public string AppliesToType { get; set; } = string.Empty;
 
         public string DisplayAppliesTo { get; set; } = string.Empty;
+
+        public int? CategoryId { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+        public int? SubCategoryId { get; set; }
+        public string SubCategoryName { get; set; } = string.Empty;
+        public int? ItemParentId { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public int? ItemVariantId { get; set; }
+        public string SkuCode { get; set; } = string.Empty;
+        public string Barcode { get; set; } = string.Empty;
 
         public int? SupplierId { get; set; }
 
@@ -54,6 +65,8 @@ namespace POS.Core.Repositories
 
         public bool RequiresManagerApproval { get; set; }
 
+        public bool RequiresAdminApproval { get; set; }
+
         public bool AllowCashierWithoutApproval { get; set; }
 
         public decimal ManagerApprovalThreshold { get; set; }
@@ -75,6 +88,8 @@ namespace POS.Core.Repositories
 
         public bool RequiresManagerApproval { get; set; }
 
+        public bool RequiresAdminApproval { get; set; }
+
         public decimal ClaimValue { get; set; }
 
         public decimal TodayUsedQty { get; set; }
@@ -89,6 +104,15 @@ namespace POS.Core.Repositories
         public decimal TodayQty { get; set; }
 
         public decimal TodayValue { get; set; }
+    }
+
+
+    public class FreeIssueLookupDto
+    {
+        public int Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string DisplayText => string.IsNullOrWhiteSpace(Code) ? Name : $"{Code} - {Name}";
     }
 
     public class FreeIssueRuleRepository
@@ -212,6 +236,122 @@ namespace POS.Core.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<FreeIssueLookupDto>> GetSupplierLookupsAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.Suppliers
+                .AsNoTracking()
+                .Where(s => !s.IsDeactivated)
+                .OrderBy(s => s.SupplierName)
+                .Select(s => new FreeIssueLookupDto
+                {
+                    Id = s.Id,
+                    Code = s.SupplierCode,
+                    Name = s.SupplierName
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<FreeIssueLookupDto>> GetCategoryLookupsAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.Categories
+                .AsNoTracking()
+                .Where(c => !c.IsDeactivated)
+                .OrderBy(c => c.DisplayOrder)
+                .ThenBy(c => c.CategoryName)
+                .Select(c => new FreeIssueLookupDto
+                {
+                    Id = c.Id,
+                    Code = c.CategoryCode,
+                    Name = c.CategoryName
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<FreeIssueLookupDto>> GetSubCategoryLookupsAsync()
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.SubCategories
+                .AsNoTracking()
+                .Where(c => !c.IsDeactivated)
+                .OrderBy(c => c.DisplayOrder)
+                .ThenBy(c => c.SubCategoryName)
+                .Select(c => new FreeIssueLookupDto
+                {
+                    Id = c.Id,
+                    Code = c.SubCategoryCode,
+                    Name = c.SubCategoryName
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<FreeIssueLookupDto>> GetItemParentLookupsAsync(string searchTerm = "", int take = 500)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            string search = NormalizeText(searchTerm);
+
+            var query = context.ItemParents
+                .AsNoTracking()
+                .Where(i => !i.IsDeactivated);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string upper = search.ToUpperInvariant();
+                query = query.Where(i =>
+                    i.ItemCode.ToUpper().Contains(upper) ||
+                    i.ItemName.ToUpper().Contains(upper));
+            }
+
+            return await query
+                .OrderBy(i => i.ItemName)
+                .Take(Math.Max(1, take))
+                .Select(i => new FreeIssueLookupDto
+                {
+                    Id = i.Id,
+                    Code = i.ItemCode,
+                    Name = i.ItemName
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<FreeIssueLookupDto>> GetItemVariantLookupsAsync(string searchTerm = "", int take = 500)
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            string search = NormalizeText(searchTerm);
+
+            var query = context.ItemVariants
+                .Include(v => v.ItemParent)
+                .AsNoTracking()
+                .Where(v => !v.IsDeactivated && !v.ItemParent.IsDeactivated);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string upper = search.ToUpperInvariant();
+                query = query.Where(v =>
+                    v.SkuCode.ToUpper().Contains(upper) ||
+                    (v.Barcode ?? string.Empty).ToUpper().Contains(upper) ||
+                    v.ItemParent.ItemName.ToUpper().Contains(upper));
+            }
+
+            return await query
+                .OrderBy(v => v.ItemParent.ItemName)
+                .ThenBy(v => v.SkuCode)
+                .Take(Math.Max(1, take))
+                .Select(v => new FreeIssueLookupDto
+                {
+                    Id = v.Id,
+                    Code = v.SkuCode,
+                    Name = string.IsNullOrWhiteSpace(v.VariantDescription) || v.VariantDescription == "Standard"
+                        ? v.ItemParent.ItemName
+                        : v.ItemParent.ItemName + " - " + v.VariantDescription
+                })
+                .ToListAsync();
+        }
+
         // =========================================================
         // SAVE / STATUS
         // =========================================================
@@ -331,6 +471,7 @@ namespace POS.Core.Repositories
             int? categoryId,
             int? subCategoryId,
             int? supplierId,
+            IReadOnlyCollection<int>? supplierIds,
             string skuCode,
             string barcode)
         {
@@ -353,14 +494,15 @@ namespace POS.Core.Repositories
 
             return activeRules
                 .Where(r => DoesRuleApplyToItem(
-                    r,
-                    itemVariantId,
-                    itemParentId,
-                    categoryId,
-                    subCategoryId,
-                    supplierId,
-                    safeSku,
-                    safeBarcode))
+                        r,
+                        itemVariantId,
+                        itemParentId,
+                        categoryId,
+                        subCategoryId,
+                        supplierId,
+                        safeSku,
+                        safeBarcode) ||
+                    DoesSupplierTargetApply(r, supplierIds))
                 .ToList();
         }
 
@@ -369,8 +511,17 @@ namespace POS.Core.Repositories
             decimal requestedQty,
             decimal originalUnitPrice,
             decimal costPrice,
+            int? itemVariantId = null,
+            int? itemParentId = null,
+            int? categoryId = null,
+            int? subCategoryId = null,
+            int? supplierId = null,
+            IReadOnlyCollection<int>? supplierIds = null,
+            string skuCode = "",
+            string barcode = "",
             decimal alreadyInInvoiceQty = 0m,
-            decimal alreadyInInvoiceValue = 0m)
+            decimal alreadyInInvoiceValue = 0m,
+            DateTime? usageDate = null)
         {
             if (ruleId <= 0)
             {
@@ -409,36 +560,40 @@ namespace POS.Core.Repositories
                 };
             }
 
-            DateTime today = DateTime.Today;
+            DateTime effectiveDate = (usageDate ?? DateTime.Now).Date;
 
             if (!rule.IsActive)
-            {
-                return new FreeIssueRuleValidationResult
-                {
-                    IsAllowed = false,
-                    Rule = rule,
-                    Message = "Free issue rule is inactive."
-                };
-            }
+                return Denied(rule, "Free issue rule is inactive.");
 
-            if (rule.ValidFrom.Date > today)
-            {
-                return new FreeIssueRuleValidationResult
-                {
-                    IsAllowed = false,
-                    Rule = rule,
-                    Message = "Free issue rule is not active yet."
-                };
-            }
+            if (rule.ValidFrom.Date > effectiveDate)
+                return Denied(rule, "Free issue rule is not active yet.");
 
-            if (rule.ValidTo.HasValue && rule.ValidTo.Value.Date < today)
+            if (rule.ValidTo.HasValue && rule.ValidTo.Value.Date < effectiveDate)
+                return Denied(rule, "Free issue rule has expired.");
+
+            bool hasItemContext =
+                itemVariantId.HasValue ||
+                itemParentId.HasValue ||
+                categoryId.HasValue ||
+                subCategoryId.HasValue ||
+                supplierId.HasValue ||
+                supplierIds?.Count > 0 ||
+                !string.IsNullOrWhiteSpace(skuCode) ||
+                !string.IsNullOrWhiteSpace(barcode);
+
+            if (hasItemContext &&
+                !DoesRuleApplyToItem(
+                    rule,
+                    itemVariantId,
+                    itemParentId,
+                    categoryId,
+                    subCategoryId,
+                    supplierId,
+                    NormalizeText(skuCode),
+                    NormalizeText(barcode)) &&
+                !DoesSupplierTargetApply(rule, supplierIds))
             {
-                return new FreeIssueRuleValidationResult
-                {
-                    IsAllowed = false,
-                    Rule = rule,
-                    Message = "Free issue rule has expired."
-                };
+                return Denied(rule, "The selected free issue rule does not apply to this item.");
             }
 
             decimal requestedValue = Math.Round(requestedQty * originalUnitPrice, 2);
@@ -446,26 +601,20 @@ namespace POS.Core.Repositories
             if (rule.MaxQtyPerInvoice > 0m &&
                 alreadyInInvoiceQty + requestedQty > rule.MaxQtyPerInvoice)
             {
-                return new FreeIssueRuleValidationResult
-                {
-                    IsAllowed = false,
-                    Rule = rule,
-                    Message = $"Free issue quantity exceeds invoice limit. Limit: {rule.MaxQtyPerInvoice:N3}."
-                };
+                return Denied(
+                    rule,
+                    $"Free issue quantity exceeds invoice limit. Limit: {rule.MaxQtyPerInvoice:N3}.");
             }
 
             if (rule.MaxValuePerInvoice > 0m &&
                 alreadyInInvoiceValue + requestedValue > rule.MaxValuePerInvoice)
             {
-                return new FreeIssueRuleValidationResult
-                {
-                    IsAllowed = false,
-                    Rule = rule,
-                    Message = $"Free issue value exceeds invoice limit. Limit: Rs. {rule.MaxValuePerInvoice:N2}."
-                };
+                return Denied(
+                    rule,
+                    $"Free issue value exceeds invoice limit. Limit: Rs. {rule.MaxValuePerInvoice:N2}.");
             }
 
-            var todayUsage = await GetTodayUsageAsync(context, rule.Id);
+            var todayUsage = await GetUsageAsync(context, rule.Id, effectiveDate);
 
             if (rule.MaxQtyPerDay > 0m &&
                 todayUsage.TodayQty + requestedQty > rule.MaxQtyPerDay)
@@ -493,31 +642,63 @@ namespace POS.Core.Repositories
                 };
             }
 
-            decimal claimValue = CalculateClaimValue(rule, requestedQty, originalUnitPrice, costPrice);
-            bool requiresManagerApproval = rule.RequiresManagerApproval;
+            decimal claimValue = CalculateClaimValue(
+                rule,
+                requestedQty,
+                originalUnitPrice,
+                costPrice);
 
-            if (rule.ManagerApprovalThreshold > 0m &&
-                requestedValue >= rule.ManagerApprovalThreshold)
-            {
-                requiresManagerApproval = true;
-            }
+            (bool requiresManager, bool requiresAdmin) =
+                ResolveApprovalRequirement(rule, requestedValue);
 
-            if (rule.AllowCashierWithoutApproval)
-                requiresManagerApproval = false;
+            string message = requiresAdmin
+                ? "Free issue rule is valid, but Administrator approval is required."
+                : requiresManager
+                    ? "Free issue rule is valid, but Manager approval is required."
+                    : "Free issue rule is valid.";
 
             return new FreeIssueRuleValidationResult
             {
                 IsAllowed = true,
                 Rule = rule,
-                RequiresManagerApproval = requiresManagerApproval,
+                RequiresManagerApproval = requiresManager,
+                RequiresAdminApproval = requiresAdmin,
                 ClaimValue = claimValue,
                 TodayUsedQty = todayUsage.TodayQty,
                 TodayUsedValue = todayUsage.TodayValue,
-                Message = requiresManagerApproval
-                    ? "Free issue rule is valid, but manager approval is required."
-                    : "Free issue rule is valid."
+                Message = message
             };
         }
+
+        public static (bool RequiresManager, bool RequiresAdmin) ResolveApprovalRequirement(
+            FreeIssueRule rule,
+            decimal requestedSellingValue)
+        {
+            if (rule == null)
+                return (false, false);
+
+            if (rule.AllowCashierWithoutApproval)
+                return (false, false);
+
+            if (rule.RequiresAdminApproval)
+                return (false, true);
+
+            bool requiresManager = rule.RequiresManagerApproval ||
+                (rule.ManagerApprovalThreshold > 0m &&
+                 requestedSellingValue >= rule.ManagerApprovalThreshold);
+
+            return (requiresManager, false);
+        }
+
+        private static FreeIssueRuleValidationResult Denied(
+            FreeIssueRule rule,
+            string message) =>
+            new()
+            {
+                IsAllowed = false,
+                Rule = rule,
+                Message = message
+            };
 
         public static decimal CalculateClaimValue(
             FreeIssueRule rule,
@@ -644,11 +825,12 @@ namespace POS.Core.Repositories
         // HELPERS
         // =========================================================
 
-        private static async Task<FreeIssueRuleUsageDto> GetTodayUsageAsync(
+        internal static async Task<FreeIssueRuleUsageDto> GetUsageAsync(
             AppDbContext context,
-            int ruleId)
+            int ruleId,
+            DateTime date)
         {
-            DateTime from = DateTime.Today;
+            DateTime from = date.Date;
             DateTime to = from.AddDays(1);
 
             var rows = await context.SalesLines
@@ -656,6 +838,8 @@ namespace POS.Core.Repositories
                 .Where(l =>
                     l.IsFreeItem &&
                     l.FreeIssueRuleId == ruleId &&
+                    l.SalesHeader.Status == "Completed" &&
+                    !l.SalesHeader.IsVoided &&
                     l.CreatedAt >= from &&
                     l.CreatedAt < to)
                 .Select(l => new
@@ -673,7 +857,17 @@ namespace POS.Core.Repositories
             };
         }
 
-        private static bool DoesRuleApplyToItem(
+        private static bool DoesSupplierTargetApply(
+            FreeIssueRule rule,
+            IReadOnlyCollection<int>? supplierIds)
+        {
+            return rule.AppliesToType.Equals("Supplier", StringComparison.OrdinalIgnoreCase) &&
+                   rule.SupplierId.HasValue &&
+                   supplierIds != null &&
+                   supplierIds.Contains(rule.SupplierId.Value);
+        }
+
+        public static bool DoesRuleApplyToItem(
             FreeIssueRule rule,
             int? itemVariantId,
             int? itemParentId,
@@ -745,6 +939,15 @@ namespace POS.Core.Repositories
                 ReasonName = rule.ReasonName,
                 AppliesToType = rule.AppliesToType,
                 DisplayAppliesTo = rule.DisplayAppliesTo,
+                CategoryId = rule.CategoryId,
+                CategoryName = rule.CategoryName,
+                SubCategoryId = rule.SubCategoryId,
+                SubCategoryName = rule.SubCategoryName,
+                ItemParentId = rule.ItemParentId,
+                ItemName = rule.ItemName,
+                ItemVariantId = rule.ItemVariantId,
+                SkuCode = rule.SkuCode,
+                Barcode = rule.Barcode,
                 SupplierId = rule.SupplierId,
                 SupplierName = rule.SupplierName,
                 SupplierPromotionReference = rule.SupplierPromotionReference,
@@ -759,6 +962,7 @@ namespace POS.Core.Repositories
                 MaxValuePerInvoice = rule.MaxValuePerInvoice,
                 MaxValuePerDay = rule.MaxValuePerDay,
                 RequiresManagerApproval = rule.RequiresManagerApproval,
+                RequiresAdminApproval = rule.RequiresAdminApproval,
                 AllowCashierWithoutApproval = rule.AllowCashierWithoutApproval,
                 ManagerApprovalThreshold = rule.ManagerApprovalThreshold,
                 CreatedBy = rule.CreatedBy,
@@ -803,8 +1007,30 @@ namespace POS.Core.Repositories
             if (string.IsNullOrWhiteSpace(rule.RuleName))
                 throw new InvalidOperationException("Rule name is required.");
 
+            if (string.IsNullOrWhiteSpace(rule.ReasonCode) || string.IsNullOrWhiteSpace(rule.ReasonName))
+                throw new InvalidOperationException("Free Issue reason is required.");
+
             if (rule.ValidTo.HasValue && rule.ValidTo.Value.Date < rule.ValidFrom.Date)
                 throw new InvalidOperationException("Valid To date cannot be earlier than Valid From date.");
+
+            if (rule.MaxQtyPerInvoice < 0m ||
+                rule.MaxQtyPerDay < 0m ||
+                rule.MaxValuePerInvoice < 0m ||
+                rule.MaxValuePerDay < 0m ||
+                rule.ManagerApprovalThreshold < 0m)
+            {
+                throw new InvalidOperationException("Free issue limits and approval threshold cannot be negative.");
+            }
+
+            if (rule.AllowCashierWithoutApproval &&
+                (rule.RequiresManagerApproval || rule.RequiresAdminApproval))
+            {
+                throw new InvalidOperationException(
+                    "Cashier-without-approval cannot be combined with Manager or Administrator approval.");
+            }
+
+            if (rule.RequiresAdminApproval)
+                rule.RequiresManagerApproval = false;
 
             if (rule.IsSupplierClaim)
             {
@@ -846,11 +1072,7 @@ namespace POS.Core.Repositories
         {
             string text = NormalizeText(value);
 
-            if (text.Equals("SupplierClaim", StringComparison.OrdinalIgnoreCase) ||
-                text.Equals("Supplier Recoverable", StringComparison.OrdinalIgnoreCase))
-                return "SupplierClaim";
-
-            return "ShopCost";
+            return FreeIssueTypeCodes.Normalize(text);
         }
 
         private static string NormalizeClaimValueMode(string? value)

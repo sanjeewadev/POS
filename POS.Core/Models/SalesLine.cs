@@ -210,6 +210,22 @@ namespace POS.Core.Models
 
         public DateTime? FreeApprovedAt { get; set; }
 
+        [MaxLength(100)]
+        public string FreeIssueAppliedBy { get; set; } = string.Empty;
+
+        public DateTime? FreeIssueAppliedAt { get; set; }
+
+        public int? FreeApprovedByUserId { get; set; }
+
+        [MaxLength(30)]
+        public string FreeApprovedRole { get; set; } = string.Empty;
+
+        public string FreeIssueRuleSnapshotJson { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(30)]
+        public string FreeIssueSnapshotStatus { get; set; } = "LegacyUnknown";
+
         // Original selling price before New Price override or Free Issue.
         // For normal sale without override/free issue, this may equal UnitPrice.
         [Column(TypeName = "decimal(18,2)")]
@@ -236,7 +252,7 @@ namespace POS.Core.Models
 
         public int? SupplierClaimId { get; set; }
 
-        // Pending / Submitted / Settled / Rejected / Written Off / Cancelled
+        // Draft / Submitted / Settled / Rejected (older Written Off / Cancelled values remain historical only)
         [MaxLength(30)]
         public string SupplierClaimStatus { get; set; } = string.Empty;
 

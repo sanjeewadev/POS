@@ -19,6 +19,20 @@ namespace POS.Cashier.UI.Models
         private int _itemBatchId;
 
         [ObservableProperty]
+        private int _itemParentId;
+
+        [ObservableProperty]
+        private int _categoryId;
+
+        [ObservableProperty]
+        private int _subCategoryId;
+
+        [ObservableProperty]
+        private int _primarySupplierId;
+
+        public List<int> SupplierIds { get; set; } = new();
+
+        [ObservableProperty]
         private string _itemCode = string.Empty;
 
         [ObservableProperty]
@@ -365,6 +379,24 @@ namespace POS.Cashier.UI.Models
 
         [ObservableProperty]
         private DateTime? _freeApprovedAt;
+
+        [ObservableProperty]
+        private string _freeIssueAppliedBy = string.Empty;
+
+        [ObservableProperty]
+        private DateTime? _freeIssueAppliedAt;
+
+        [ObservableProperty]
+        private int _freeApprovedByUserId;
+
+        [ObservableProperty]
+        private string _freeApprovedRole = string.Empty;
+
+        [ObservableProperty]
+        private string _freeIssueRuleSnapshotJson = string.Empty;
+
+        [ObservableProperty]
+        private string _freeIssueSnapshotStatus = FreeIssueSnapshotStatusCodes.LegacyUnknown;
 
         [ObservableProperty]
         private decimal _originalUnitPrice = 0m;

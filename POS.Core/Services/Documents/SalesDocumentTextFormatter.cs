@@ -202,6 +202,28 @@ namespace POS.Core.Services.Documents
                 {
                     AppendWrapped(text, "One-time gift voucher issue - excluded from VAT taxable supplies.", columns);
                 }
+                else if (line.IsFreeItem)
+                {
+                    string freeLabel = FirstNonEmpty(
+                        line.FreeIssueRuleName,
+                        line.FreeReasonText,
+                        "Free Issue");
+                    AppendWrapped(text, $"FREE ISSUE - {freeLabel}", columns);
+                    AppendWrapped(text, "Customer value and VAT: Rs. 0.00", columns);
+
+                    if (includeTaxColumns)
+                    {
+                        string category = FirstNonEmpty(
+                            line.TaxNameSnapshot,
+                            line.TaxCategoryCodeSnapshot,
+                            "Tax");
+                        string rate = line.TaxRatePercentSnapshot.HasValue
+                            ? $"{line.TaxRatePercentSnapshot.Value:0.####}%"
+                            : "0%";
+                        AppendTwoColumns(text, $"{category} {rate}", FormatMoney(0m, settings), columns);
+                        AppendTwoColumns(text, "Taxable", FormatMoney(0m, settings), columns);
+                    }
+                }
                 else if (includeTaxColumns)
                 {
                     string category = FirstNonEmpty(

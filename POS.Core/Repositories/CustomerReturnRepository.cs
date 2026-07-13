@@ -424,6 +424,13 @@ namespace POS.Core.Repositories
                     CustomerReturnLine savedLine = returnHeader.Lines
                         .Single(line => line.SalesLineId == source.Id);
 
+                    await FreeItemClaimRepository.CreateReturnAdjustmentAsync(
+                        context,
+                        source,
+                        savedLine,
+                        creditNoteNo,
+                        request.CashierName);
+
                     if (string.Equals(
                             plan.ItemType,
                             ItemTypeCodes.StockItem,
@@ -576,6 +583,8 @@ namespace POS.Core.Repositories
             if (giftVoucherRefundAmount > 0m) methodCount++;
             if (cashRefundAmount > 0m) methodCount++;
 
+            if (methodCount == 0)
+                return "No Refund";
             if (methodCount > 1)
                 return "Split";
             if (accountCreditAmount > 0m)
@@ -770,8 +779,6 @@ namespace POS.Core.Repositories
             if (line.IsGiftVoucherSale)
                 return "Gift voucher sale lines cannot be returned in this workflow.";
 
-            if (line.IsFreeItem)
-                return "Free-item promotional lines cannot be returned in this workflow.";
 
             if (!line.ItemVariantId.HasValue)
                 return "The sale line is not linked to a normal Stock Item or Service.";

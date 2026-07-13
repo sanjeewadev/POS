@@ -97,6 +97,8 @@ namespace POS.Core.Data
 
         public DbSet<FreeItemClaimLog> FreeItemClaimLogs { get; set; }
 
+        public DbSet<FreeItemClaimAdjustment> FreeItemClaimAdjustments { get; set; }
+
         // Keep these because some existing repositories may already use these names.
         public DbSet<SupplierReturnHeader> SupplierReturnHeaders { get; set; } = null!;
         public DbSet<SupplierReturnLine> SupplierReturnLines { get; set; } = null!;
@@ -3620,6 +3622,22 @@ namespace POS.Core.Data
                 entity.Property(l => l.FreeApprovedBy)
                     .HasMaxLength(100);
 
+                entity.Property(l => l.FreeIssueAppliedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(l => l.FreeApprovedRole)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(l => l.FreeIssueRuleSnapshotJson)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(l => l.FreeIssueSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("LegacyUnknown")
+                    .UseCollation("NOCASE");
+
                 entity.Property(l => l.OriginalUnitPrice)
                     .HasColumnType("decimal(18,2)");
 
@@ -3654,6 +3672,8 @@ namespace POS.Core.Data
                 entity.HasIndex(l => l.FreeIssueRuleId);
                 entity.HasIndex(l => l.FreeIssueType);
                 entity.HasIndex(l => l.FreeReasonCode);
+                entity.HasIndex(l => l.FreeIssueSnapshotStatus);
+                entity.HasIndex(l => l.FreeApprovedByUserId);
                 entity.HasIndex(l => l.IsSupplierRecoverable);
                 entity.HasIndex(l => l.SupplierId);
                 entity.HasIndex(l => l.SupplierClaimId);
@@ -4114,7 +4134,8 @@ namespace POS.Core.Data
                 entity.Property(r => r.Remarks)
                     .HasMaxLength(500);
 
-                entity.HasIndex(r => r.RuleName);
+                entity.HasIndex(r => r.RuleName)
+                    .IsUnique();
 
                 entity.HasIndex(r => r.FreeIssueType);
 
@@ -4316,6 +4337,22 @@ namespace POS.Core.Data
                 entity.Property(c => c.FreeApprovedBy)
                     .HasMaxLength(100);
 
+                entity.Property(c => c.FreeApprovedRole)
+                    .HasMaxLength(30)
+                    .UseCollation("NOCASE");
+
+                entity.Property(c => c.FreeIssueAppliedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(c => c.FreeIssueRuleSnapshotJson)
+                    .HasDefaultValue(string.Empty);
+
+                entity.Property(c => c.FreeIssueSnapshotStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("LegacyUnknown")
+                    .UseCollation("NOCASE");
+
                 entity.Property(c => c.CreatedBy)
                     .HasMaxLength(100);
 
@@ -4337,7 +4374,8 @@ namespace POS.Core.Data
 
                 entity.HasIndex(c => c.SalesHeaderId);
 
-                entity.HasIndex(c => c.SalesLineId);
+                entity.HasIndex(c => c.SalesLineId)
+                    .IsUnique();
 
                 entity.HasIndex(c => c.InvoiceNo);
 
@@ -4376,6 +4414,36 @@ namespace POS.Core.Data
                 entity.HasIndex(c => c.WrittenOffAt);
 
                 entity.HasIndex(c => c.CancelledAt);
+            });
+
+            modelBuilder.Entity<FreeItemClaimAdjustment>(entity =>
+            {
+                entity.Property(a => a.QuantityReturned)
+                    .HasColumnType("decimal(18,3)");
+
+                entity.Property(a => a.ClaimValueReduction)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(a => a.CreatedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(a => a.Remarks)
+                    .HasMaxLength(300);
+
+                entity.HasOne(a => a.FreeItemClaimLog)
+                    .WithMany()
+                    .HasForeignKey(a => a.FreeItemClaimLogId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.CustomerReturnLine)
+                    .WithMany()
+                    .HasForeignKey(a => a.CustomerReturnLineId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(a => a.FreeItemClaimLogId);
+
+                entity.HasIndex(a => a.CustomerReturnLineId)
+                    .IsUnique();
             });
 
             modelBuilder.Entity<StoreSettings>(entity =>

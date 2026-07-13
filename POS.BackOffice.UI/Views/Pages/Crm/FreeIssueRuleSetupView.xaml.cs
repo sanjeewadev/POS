@@ -13,31 +13,23 @@ namespace POS.BackOffice.UI.Views.Pages.Crm
         public FreeIssueRuleSetupView()
         {
             InitializeComponent();
-
             Loaded += FreeIssueRuleSetupView_Loaded;
-
-            if (App.Services != null)
-            {
-                ViewModel = App.Services.GetRequiredService<FreeIssueRuleSetupViewModel>();
-                DataContext = ViewModel;
-            }
-            else
-            {
-                MessageBox.Show(
-                    "Application services are not available.",
-                    "Free Issue Rule Setup",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
         }
 
         private async void FreeIssueRuleSetupView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (ViewModel == null)
-                return;
-
             try
             {
+                ViewModel = DataContext as FreeIssueRuleSetupViewModel;
+                if (ViewModel == null && App.Services != null)
+                {
+                    ViewModel = App.Services.GetRequiredService<FreeIssueRuleSetupViewModel>();
+                    DataContext = ViewModel;
+                }
+
+                if (ViewModel == null)
+                    throw new InvalidOperationException("Free Issue Rule Setup is not available.");
+
                 await ViewModel.InitializeAsync();
             }
             catch (Exception ex)

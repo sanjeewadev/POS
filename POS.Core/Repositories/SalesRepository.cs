@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
+using POS.Core.Enums;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Services.Tax;
@@ -32,8 +33,7 @@ namespace POS.Core.Repositories
             if (lines == null || !lines.Any())
                 throw new InvalidOperationException("Cannot checkout an empty cart.");
 
-            if (payments == null || !payments.Any())
-                throw new InvalidOperationException("At least one payment is required.");
+            payments ??= new List<SalesPayment>();
 
             NormalizeSalesHeader(header);
             NormalizeSalesLines(lines);
@@ -97,6 +97,7 @@ namespace POS.Core.Repositories
 
                 await ApplyCustomerSnapshotAsync(context, header);
                 await ApplyStoreTaxSnapshotAsync(context, header);
+                await ValidateAndApplyFreeIssueRulesAsync(context, header, lines);
 
                 RecalculateHeaderTotals(header, lines);
 
@@ -597,15 +598,6 @@ namespace POS.Core.Repositories
                     !row.Line.IsFreeItem)
                 .ToList();
 
-            bool hasUnresolvedSpecialLine = lines.Any(line => line.IsFreeItem);
-
-            if (hasUnresolvedSpecialLine &&
-                header.InvoiceDiscountAmount != 0m)
-            {
-                throw new InvalidOperationException(
-                    "Invoice discount cannot be applied to a sale containing gift-voucher or free-issue lines.");
-            }
-
             foreach (SalesLine line in lines)
             {
                 if (line.IsGiftVoucherSale)
@@ -633,7 +625,7 @@ namespace POS.Core.Repositories
 
                 if (line.IsFreeItem)
                 {
-                    ApplyUnresolvedItemTaxSnapshot(
+                    ApplyZeroValueFreeIssueTaxSnapshot(
                         line,
                         profile);
 
@@ -643,7 +635,7 @@ namespace POS.Core.Repositories
 
             if (normalLines.Count == 0)
             {
-                if (lines.All(line => line.IsGiftVoucherSale))
+                if (lines.All(line => line.IsGiftVoucherSale || line.IsFreeItem))
                 {
                     header.TaxableAmountTotal = 0m;
                     header.TotalVatAmount = 0m;
@@ -728,12 +720,6 @@ namespace POS.Core.Repositories
                     lineResult);
             }
 
-            if (hasUnresolvedSpecialLine)
-            {
-                ClearHeaderTaxSnapshot(header);
-                return;
-            }
-
             decimal merchandiseGross = Math.Round(
                 header.GrossTotal - header.GiftVoucherIssueTotal,
                 2);
@@ -815,7 +801,7 @@ namespace POS.Core.Repositories
                 TaxSnapshotStatuses.Complete;
         }
 
-        private static void ApplyUnresolvedItemTaxSnapshot(
+        private static void ApplyZeroValueFreeIssueTaxSnapshot(
             SalesLine line,
             SalesTaxProfile profile)
         {
@@ -843,17 +829,10 @@ namespace POS.Core.Repositories
             line.IsTaxInclusiveSnapshot =
                 true;
 
-            line.TaxableAmountSnapshot =
-                null;
-
-            line.VatAmountSnapshot =
-                null;
-
-            line.TaxInclusiveAmountSnapshot =
-                null;
-
-            line.TaxSnapshotStatus =
-                TaxSnapshotStatuses.LegacyUnknown;
+            line.TaxableAmountSnapshot = 0m;
+            line.VatAmountSnapshot = 0m;
+            line.TaxInclusiveAmountSnapshot = 0m;
+            line.TaxSnapshotStatus = TaxSnapshotStatuses.Complete;
         }
 
         private static void ClearTaxSnapshotForSpecialLine(
@@ -1017,12 +996,6 @@ namespace POS.Core.Repositories
             {
                 throw new InvalidOperationException(
                     "Selected item is not configured as a Service.");
-            }
-
-            if (line.IsFreeItem)
-            {
-                throw new InvalidOperationException(
-                    "Free-issue VAT treatment for Services is not implemented. Use a normal priced Service until the approved free-issue rules are added.");
             }
 
             if (line.ItemBatchId.HasValue &&
@@ -1361,6 +1334,12 @@ namespace POS.Core.Repositories
             line.FreeReasonCode = NormalizeText(line.FreeReasonCode).ToUpperInvariant();
             line.FreeReasonText = NormalizeText(line.FreeReasonText);
             line.FreeApprovedBy = NormalizeText(line.FreeApprovedBy);
+            line.FreeApprovedRole = NormalizeText(line.FreeApprovedRole);
+            line.FreeIssueAppliedBy = NormalizeText(line.FreeIssueAppliedBy);
+            line.FreeIssueRuleSnapshotJson = line.FreeIssueRuleSnapshotJson?.Trim() ?? string.Empty;
+            line.FreeIssueSnapshotStatus = string.IsNullOrWhiteSpace(line.FreeIssueSnapshotStatus)
+                ? FreeIssueSnapshotStatusCodes.LegacyUnknown
+                : NormalizeText(line.FreeIssueSnapshotStatus);
             line.SupplierName = NormalizeText(line.SupplierName);
             line.SupplierPromotionReference = NormalizeText(line.SupplierPromotionReference);
             line.SupplierClaimReferenceNo = NormalizeText(line.SupplierClaimReferenceNo);
@@ -1406,7 +1385,7 @@ namespace POS.Core.Repositories
                     throw new InvalidOperationException("Supplier claim value must be greater than zero for supplier recoverable free item.");
 
                 if (string.IsNullOrWhiteSpace(line.SupplierClaimStatus))
-                    line.SupplierClaimStatus = "Pending";
+                    line.SupplierClaimStatus = SupplierClaimStatusCodes.Draft;
             }
             else
             {
@@ -1420,16 +1399,8 @@ namespace POS.Core.Repositories
             }
         }
 
-        private static string NormalizeFreeIssueType(string? value)
-        {
-            string text = NormalizeText(value);
-
-            if (text.Equals("SupplierClaim", StringComparison.OrdinalIgnoreCase) ||
-                text.Equals("Supplier Recoverable", StringComparison.OrdinalIgnoreCase))
-                return "SupplierClaim";
-
-            return "ShopCost";
-        }
+        private static string NormalizeFreeIssueType(string? value) =>
+            FreeIssueTypeCodes.Normalize(value);
 
         private static void PrepareProductSaleLineForPersistence(
             ItemBatch batch,
@@ -1464,6 +1435,12 @@ namespace POS.Core.Repositories
                 variant.CostPrice > 0m
                     ? variant.CostPrice
                     : variant.AverageCost;
+
+            if (line.IsFreeItem)
+            {
+                PrepareFreeIssueProductLine(line);
+                return;
+            }
 
             FinalizePreparedNormalSaleLine(
                 variant,
@@ -1604,10 +1581,8 @@ namespace POS.Core.Repositories
                     line.SupplierClaimValue = Math.Round(line.CostPrice * line.Quantity, 2);
 
                 if (string.IsNullOrWhiteSpace(line.SupplierClaimStatus))
-                    line.SupplierClaimStatus = "Pending";
+                    line.SupplierClaimStatus = SupplierClaimStatusCodes.Draft;
 
-                if (string.IsNullOrWhiteSpace(line.SupplierClaimReferenceNo))
-                    line.SupplierClaimReferenceNo = $"FI-{DateTime.Now:yyyyMMddHHmmss}";
             }
             else
             {
@@ -1695,9 +1670,6 @@ namespace POS.Core.Repositories
 
         private static void NormalizePayments(List<SalesPayment> payments)
         {
-            if (!payments.Any())
-                throw new InvalidOperationException("At least one payment is required.");
-
             foreach (var payment in payments)
             {
                 payment.PaymentType = NormalizeText(payment.PaymentType);
@@ -1929,6 +1901,299 @@ namespace POS.Core.Repositories
         // =========================================================
         // FREE ISSUE CHECKOUT SUPPORT
         // =========================================================
+
+        private static async Task ValidateAndApplyFreeIssueRulesAsync(
+            AppDbContext context,
+            SalesHeader header,
+            IReadOnlyList<SalesLine> lines)
+        {
+            List<SalesLine> freeLines = lines
+                .Where(line => line.IsFreeItem)
+                .ToList();
+
+            if (freeLines.Count == 0)
+                return;
+
+            int[] ruleIds = freeLines
+                .Select(line => line.FreeIssueRuleId ?? 0)
+                .Where(id => id > 0)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToArray();
+
+            if (ruleIds.Length == 0 || freeLines.Any(line => !line.FreeIssueRuleId.HasValue || line.FreeIssueRuleId.Value <= 0))
+                throw new InvalidOperationException("Every Free Issue line must have a valid rule.");
+
+            // Acquire the SQLite write lock before reading aggregate usage. This keeps
+            // daily limits safe when two terminals check out at the same time.
+            foreach (int ruleId in ruleIds)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"UPDATE FreeIssueRules SET UpdatedAt = UpdatedAt WHERE Id = {ruleId}");
+            }
+
+            Dictionary<int, FreeIssueRule> rules = await context.FreeIssueRules
+                .Where(rule => ruleIds.Contains(rule.Id))
+                .ToDictionaryAsync(rule => rule.Id);
+
+            if (rules.Count != ruleIds.Length)
+                throw new InvalidOperationException("One or more Free Issue rules no longer exist.");
+
+            int[] variantIds = freeLines
+                .Select(line => line.ItemVariantId ?? 0)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+
+            Dictionary<int, ItemVariant> variants = await context.ItemVariants
+                .AsNoTracking()
+                .Include(variant => variant.ItemParent)
+                .Include(variant => variant.ItemSuppliers)
+                .Where(variant => variantIds.Contains(variant.Id))
+                .ToDictionaryAsync(variant => variant.Id);
+
+            int[] approverIds = freeLines
+                .Select(line => line.FreeApprovedByUserId ?? 0)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+            Dictionary<int, User> approvers = await context.Users
+                .AsNoTracking()
+                .Where(user => approverIds.Contains(user.Id))
+                .ToDictionaryAsync(user => user.Id);
+
+            int[] freeBatchIds = freeLines
+                .Select(line => line.ItemBatchId ?? 0)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+            Dictionary<int, ItemBatch> freeBatches = await context.ItemBatches
+                .AsNoTracking()
+                .Where(batch => freeBatchIds.Contains(batch.Id))
+                .ToDictionaryAsync(batch => batch.Id);
+
+            var dailyUsage = new Dictionary<int, FreeIssueRuleUsageDto>();
+            foreach (int ruleId in ruleIds)
+            {
+                dailyUsage[ruleId] = await FreeIssueRuleRepository.GetUsageAsync(
+                    context,
+                    ruleId,
+                    header.TransactionDate.Date);
+            }
+
+            var invoiceQty = new Dictionary<int, decimal>();
+            var invoiceValue = new Dictionary<int, decimal>();
+
+            foreach (SalesLine line in freeLines)
+            {
+                int ruleId = line.FreeIssueRuleId!.Value;
+                FreeIssueRule rule = rules[ruleId];
+
+                if (!line.ItemVariantId.HasValue || !variants.TryGetValue(line.ItemVariantId.Value, out ItemVariant? variant))
+                    throw new InvalidOperationException($"Free Issue item was not found for '{line.ItemDescription}'.");
+
+                DateTime saleDate = header.TransactionDate.Date;
+                if (!rule.IsActive)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' is inactive.");
+                if (rule.ValidFrom.Date > saleDate)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' is not active yet.");
+                if (rule.ValidTo.HasValue && rule.ValidTo.Value.Date < saleDate)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' has expired.");
+
+                bool applies;
+                if (string.Equals(rule.AppliesToType, "Supplier", StringComparison.OrdinalIgnoreCase))
+                {
+                    applies = variant.ItemSuppliers.Any(link =>
+                        FreeIssueRuleRepository.DoesRuleApplyToItem(
+                            rule,
+                            variant.Id,
+                            variant.ItemParentId,
+                            variant.ItemParent.CategoryId,
+                            variant.ItemParent.SubCategoryId,
+                            link.SupplierId,
+                            variant.SkuCode,
+                            variant.Barcode));
+                }
+                else
+                {
+                    int? primarySupplierId = variant.ItemSuppliers
+                        .OrderByDescending(link => link.IsPrimary)
+                        .Select(link => (int?)link.SupplierId)
+                        .FirstOrDefault();
+
+                    applies = FreeIssueRuleRepository.DoesRuleApplyToItem(
+                        rule,
+                        variant.Id,
+                        variant.ItemParentId,
+                        variant.ItemParent.CategoryId,
+                        variant.ItemParent.SubCategoryId,
+                        primarySupplierId,
+                        variant.SkuCode,
+                        variant.Barcode);
+                }
+
+                if (!applies)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' does not apply to '{line.ItemDescription}'.");
+
+                ItemBatch? freeBatch = null;
+                if (string.Equals(variant.ItemParent.ItemType, ItemTypeCodes.StockItem, StringComparison.Ordinal))
+                {
+                    if (!line.ItemBatchId.HasValue ||
+                        !freeBatches.TryGetValue(line.ItemBatchId.Value, out freeBatch) ||
+                        freeBatch.ItemVariantId != variant.Id)
+                    {
+                        throw new InvalidOperationException($"Free Issue stock batch is invalid for '{line.ItemDescription}'.");
+                    }
+
+                    line.CostPrice = freeBatch.CostPrice;
+                }
+                else
+                {
+                    line.CostPrice = variant.CostPrice > 0m ? variant.CostPrice : variant.AverageCost;
+                }
+
+                decimal quantity = Math.Round(line.Quantity, 3);
+                decimal originalUnitPrice = ResolveFreeIssueOriginalUnitPrice(
+                    header,
+                    variant,
+                    freeBatch);
+                line.OriginalUnitPrice = originalUnitPrice;
+
+                if (quantity <= 0m)
+                    throw new InvalidOperationException("Free Issue quantity must be greater than zero.");
+
+                decimal sellingValue = Math.Round(quantity * originalUnitPrice, 2);
+                decimal nextInvoiceQty = invoiceQty.GetValueOrDefault(ruleId) + quantity;
+                decimal nextInvoiceValue = invoiceValue.GetValueOrDefault(ruleId) + sellingValue;
+                FreeIssueRuleUsageDto used = dailyUsage[ruleId];
+
+                if (rule.MaxQtyPerInvoice > 0m && nextInvoiceQty > rule.MaxQtyPerInvoice)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' exceeds its invoice quantity limit.");
+                if (rule.MaxValuePerInvoice > 0m && nextInvoiceValue > rule.MaxValuePerInvoice)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' exceeds its invoice value limit.");
+                if (rule.MaxQtyPerDay > 0m && used.TodayQty + nextInvoiceQty > rule.MaxQtyPerDay)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' exceeds its daily quantity limit.");
+                if (rule.MaxValuePerDay > 0m && used.TodayValue + nextInvoiceValue > rule.MaxValuePerDay)
+                    throw new InvalidOperationException($"Free Issue rule '{rule.RuleName}' exceeds its daily value limit.");
+
+                (bool requiresManager, bool requiresAdmin) =
+                    FreeIssueRuleRepository.ResolveApprovalRequirement(rule, sellingValue);
+
+                if (requiresAdmin)
+                {
+                    if (!line.FreeApprovedByUserId.HasValue ||
+                        !line.FreeApprovedAt.HasValue ||
+                        !approvers.TryGetValue(line.FreeApprovedByUserId.Value, out User? approver) ||
+                        !approver.IsActive ||
+                        approver.Role != UserRole.Admin)
+                    {
+                        throw new InvalidOperationException($"Administrator approval is required for Free Issue rule '{rule.RuleName}'.");
+                    }
+
+                    line.FreeApprovedBy = approver.Username;
+                    line.FreeApprovedRole = approver.Role.ToString();
+                }
+                else if (requiresManager)
+                {
+                    if (!line.FreeApprovedByUserId.HasValue ||
+                        !line.FreeApprovedAt.HasValue ||
+                        !approvers.TryGetValue(line.FreeApprovedByUserId.Value, out User? approver) ||
+                        !approver.IsActive ||
+                        (approver.Role != UserRole.Manager && approver.Role != UserRole.Admin))
+                    {
+                        throw new InvalidOperationException($"Manager approval is required for Free Issue rule '{rule.RuleName}'.");
+                    }
+
+                    line.FreeApprovedBy = approver.Username;
+                    line.FreeApprovedRole = approver.Role.ToString();
+                }
+                else
+                {
+                    line.FreeApprovedBy = string.Empty;
+                    line.FreeApprovedByUserId = null;
+                    line.FreeApprovedRole = string.Empty;
+                    line.FreeApprovedAt = null;
+                }
+
+                line.FreeIssueRuleName = rule.RuleName;
+                line.FreeIssueType = FreeIssueTypeCodes.Normalize(rule.FreeIssueType);
+                line.FreeReasonCode = rule.ReasonCode;
+                line.FreeReasonText = string.IsNullOrWhiteSpace(rule.ReasonName) ? rule.RuleName : rule.ReasonName;
+                line.FreeIssueAppliedBy = header.CashierName;
+                line.FreeIssueAppliedAt = header.TransactionDate;
+                line.FreeIssueRuleSnapshotJson = FreeIssueRuleSnapshot.FromRule(rule).ToJson();
+                line.FreeIssueSnapshotStatus = FreeIssueSnapshotStatusCodes.Complete;
+                line.FreeIssueSellingValue = sellingValue;
+                line.FreeIssueCostValue = Math.Round(line.CostPrice * quantity, 2);
+                line.IsSupplierRecoverable = line.FreeIssueType == FreeIssueTypeCodes.SupplierClaim;
+
+                if (line.IsSupplierRecoverable)
+                {
+                    if (!rule.SupplierId.HasValue || rule.SupplierId.Value <= 0)
+                        throw new InvalidOperationException($"Supplier-funded rule '{rule.RuleName}' has no supplier.");
+
+                    line.SupplierId = rule.SupplierId;
+                    line.SupplierName = rule.SupplierName;
+                    line.SupplierPromotionReference = rule.SupplierPromotionReference;
+                    line.SupplierClaimValue = FreeIssueRuleRepository.CalculateClaimValue(
+                        rule,
+                        quantity,
+                        originalUnitPrice,
+                        line.CostPrice);
+                    if (line.SupplierClaimValue <= 0m)
+                        throw new InvalidOperationException($"Supplier claim value for rule '{rule.RuleName}' must be greater than zero.");
+                    line.SupplierClaimStatus = SupplierClaimStatusCodes.Draft;
+                    line.SupplierClaimReferenceNo = string.Empty;
+                }
+                else
+                {
+                    line.SupplierId = null;
+                    line.SupplierName = string.Empty;
+                    line.SupplierPromotionReference = string.Empty;
+                    line.SupplierClaimId = null;
+                    line.SupplierClaimStatus = string.Empty;
+                    line.SupplierClaimReferenceNo = string.Empty;
+                    line.SupplierClaimValue = 0m;
+                }
+
+                invoiceQty[ruleId] = nextInvoiceQty;
+                invoiceValue[ruleId] = nextInvoiceValue;
+            }
+        }
+
+
+        private static decimal ResolveFreeIssueOriginalUnitPrice(
+            SalesHeader header,
+            ItemVariant variant,
+            ItemBatch? batch)
+        {
+            decimal price;
+            if (header.IsWholesaleSale)
+            {
+                price = variant.WholesalePrice > 0m
+                    ? variant.WholesalePrice
+                    : variant.RetailPrice > 0m
+                        ? variant.RetailPrice
+                        : batch?.WholesalePrice > 0m
+                            ? batch.WholesalePrice
+                            : batch?.RetailPrice ?? 0m;
+            }
+            else
+            {
+                price = variant.RetailPrice > 0m
+                    ? variant.RetailPrice
+                    : batch?.RetailPrice ?? 0m;
+            }
+
+            if (price <= 0m)
+            {
+                string mode = header.IsWholesaleSale ? "wholesale" : "retail";
+                throw new InvalidOperationException(
+                    $"A positive {mode} selling price is required for Free Issue item '{variant.FullDisplayName}'.");
+            }
+
+            return Math.Round(price, 2);
+        }
 
         private static async Task ProcessFreeItemSupplierClaimsAsync(
             AppDbContext context,

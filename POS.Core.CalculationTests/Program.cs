@@ -1,5 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
@@ -201,7 +203,32 @@ namespace POS.Core.CalculationTests
                 ("Voucher issue is excluded from sales revenue", VoucherIssueIsExcludedFromSalesRevenue),
                 ("Voucher-only receipt cannot format Tax Invoice", VoucherOnlyReceiptCannotFormatTaxInvoice),
                 ("Mixed Tax Invoice identifies voucher issue as non-VAT", MixedTaxInvoiceIdentifiesVoucherIssueAsNonVat),
-                ("Legacy Cancelled voucher displays as Voided", LegacyCancelledVoucherDisplaysAsVoided)
+                ("Legacy Cancelled voucher displays as Voided", LegacyCancelledVoucherDisplaysAsVoided),
+                ("Free Issue date and target eligibility", FreeIssueDateAndTargetEligibility),
+                ("Free Issue quantity and value limits", FreeIssueQuantityAndValueLimits),
+                ("Free Issue line split conserves quantity", FreeIssueLineSplitConservesQuantity),
+                ("Free Issue daily limit is concurrency safe", FreeIssueDailyLimitIsConcurrencySafe),
+                ("Free Issue approval rules are explicit", FreeIssueApprovalRulesAreExplicit),
+                ("Free Issue checkout verifies authenticated approver", FreeIssueCheckoutVerifiesAuthenticatedApprover),
+                ("Free Issue checkout enforces administrator role", FreeIssueCheckoutEnforcesAdministratorRole),
+                ("Free Issue snapshot is immutable", FreeIssueSnapshotIsImmutable),
+                ("Shop-funded Free Issue deducts stock once", ShopFundedFreeIssueDeductsStockOnce),
+                ("Supplier-funded Free Issue creates one claim", SupplierFundedFreeIssueCreatesOneClaim),
+                ("Free Service creates no inventory movement", FreeServiceCreatesNoInventoryMovement),
+                ("All-free sale completes without payment", AllFreeSaleCompletesWithoutPayment),
+                ("Free Issue VAT Option A stores zero tax", FreeIssueVatOptionAStoresZeroTax),
+                ("Free Issue Tax Invoice remains formatable", FreeIssueTaxInvoiceRemainsFormatable),
+                ("Supplier claim lifecycle allows approved transitions", SupplierClaimLifecycleAllowsApprovedTransitions),
+                ("Supplier claim lifecycle blocks invalid transitions", SupplierClaimLifecycleBlocksInvalidTransitions),
+                ("Supplier claim transition is concurrency safe", SupplierClaimTransitionIsConcurrencySafe),
+                ("Free Issue return refunds zero and adjusts claim", FreeIssueReturnRefundsZeroAndAdjustsClaim),
+                ("Supplier claim creation is idempotent", SupplierClaimCreationIsIdempotent),
+                ("Supplier claim CSV escapes and formats values", SupplierClaimCsvEscapesAndFormatsValues),
+                ("Free Issue checkout rollback preserves stock", FreeIssueCheckoutRollbackPreservesStock),
+                ("Free Issue rule names are unique", FreeIssueRuleNamesAreUnique),
+                ("Phase 8E migration applies from empty database", Phase8EMigrationAppliesFromEmptyDatabase),
+                ("Phase 8E migration upgrades Phase 8D baseline", Phase8EMigrationUpgradesPhase8DBaseline),
+                ("Phase 8E migration duplicate preflight rolls back", Phase8EMigrationDuplicatePreflightRollsBack)
             };
 
             try
@@ -213,7 +240,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger and one-time Gift Voucher lifecycle checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue and Supplier Claim checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -223,6 +250,1040 @@ namespace POS.Core.CalculationTests
                 Console.Error.WriteLine(ex.ToString());
                 return 1;
             }
+        }
+
+        private static void FreeIssueDateAndTargetEligibility()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Supplier target",
+                FreeIssueTypeCodes.ShopCost,
+                "Supplier",
+                validFrom: DateTime.Today.AddDays(-1),
+                validTo: DateTime.Today);
+
+            var repository = new FreeIssueRuleRepository(factory);
+            List<FreeIssueRule> matching = repository.GetApplicableRulesAsync(
+                scenario.StockVariantId,
+                scenario.StockParentId,
+                categoryId: null,
+                subCategoryId: null,
+                supplierId: null,
+                supplierIds: new[] { scenario.SupplierId },
+                skuCode: scenario.StockSku,
+                barcode: "TEST-STOCK-BARCODE").GetAwaiter().GetResult();
+
+            AssertTrue(matching.Any(row => row.Id == rule.Id), "supplier target eligibility");
+
+            FreeIssueRule categoryRule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Category target",
+                FreeIssueTypeCodes.ShopCost,
+                "Category");
+            matching = repository.GetApplicableRulesAsync(
+                scenario.StockVariantId,
+                scenario.StockParentId,
+                scenario.CategoryId,
+                null,
+                scenario.SupplierId,
+                new[] { scenario.SupplierId },
+                scenario.StockSku,
+                "TEST-STOCK-BARCODE").GetAwaiter().GetResult();
+            AssertTrue(matching.Any(row => row.Id == categoryRule.Id), "category target eligibility");
+
+            using AppDbContext context = factory.CreateDbContext();
+            rule.ValidFrom = DateTime.Today.AddDays(1);
+            context.FreeIssueRules.Update(rule);
+            context.SaveChanges();
+
+            matching = repository.GetApplicableRulesAsync(
+                scenario.StockVariantId,
+                scenario.StockParentId,
+                null,
+                null,
+                scenario.SupplierId,
+                new[] { scenario.SupplierId },
+                scenario.StockSku,
+                "TEST-STOCK-BARCODE").GetAwaiter().GetResult();
+            AssertFalse(matching.Any(row => row.Id == rule.Id), "future rule exclusion");
+        }
+
+        private static void FreeIssueQuantityAndValueLimits()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Limited rule",
+                FreeIssueTypeCodes.ShopCost,
+                "ItemVariant",
+                maxQtyPerInvoice: 1m,
+                maxValuePerInvoice: 1180m);
+            var repository = new FreeIssueRuleRepository(factory);
+
+            FreeIssueRuleValidationResult valid = repository.ValidateRuleUsageAsync(
+                rule.Id,
+                1m,
+                1180m,
+                600m,
+                itemVariantId: scenario.StockVariantId,
+                itemParentId: scenario.StockParentId,
+                supplierId: scenario.SupplierId,
+                supplierIds: new[] { scenario.SupplierId },
+                skuCode: scenario.StockSku,
+                barcode: "TEST-STOCK-BARCODE").GetAwaiter().GetResult();
+            AssertTrue(valid.IsAllowed, "quantity at limit");
+
+            FreeIssueRuleValidationResult invalid = repository.ValidateRuleUsageAsync(
+                rule.Id,
+                1m,
+                1180m,
+                600m,
+                itemVariantId: scenario.StockVariantId,
+                itemParentId: scenario.StockParentId,
+                supplierId: scenario.SupplierId,
+                supplierIds: new[] { scenario.SupplierId },
+                skuCode: scenario.StockSku,
+                barcode: "TEST-STOCK-BARCODE",
+                alreadyInInvoiceQty: 1m,
+                alreadyInInvoiceValue: 1180m).GetAwaiter().GetResult();
+            AssertFalse(invalid.IsAllowed, "aggregate invoice limit");
+        }
+
+        private static void FreeIssueLineSplitConservesQuantity()
+        {
+            FreeIssueQuantitySplit partial = FreeIssueQuantitySplitter.Split(5m, 2m);
+            AssertMoney(3m, partial.PaidQuantity, "paid split quantity");
+            AssertMoney(2m, partial.FreeQuantity, "free split quantity");
+            AssertMoney(5m, partial.PaidQuantity + partial.FreeQuantity, "conserved split quantity");
+
+            FreeIssueQuantitySplit complete = FreeIssueQuantitySplitter.Split(1m, 1m);
+            AssertMoney(0m, complete.PaidQuantity, "all-free paid quantity");
+            AssertMoney(1m, complete.FreeQuantity, "all-free quantity");
+
+            AssertThrows(
+                () => FreeIssueQuantitySplitter.Split(1m, 0m),
+                "cannot exceed the line quantity");
+            AssertThrows(
+                () => FreeIssueQuantitySplitter.Split(1m, 2m),
+                "cannot exceed the line quantity");
+        }
+
+        private static void FreeIssueDailyLimitIsConcurrencySafe()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Concurrent daily limit",
+                FreeIssueTypeCodes.ShopCost,
+                "ItemVariant",
+                maxQtyPerDay: 1m);
+
+            bool AttemptCheckout()
+            {
+                try
+                {
+                    var repository = new SalesRepository(factory);
+                    SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m);
+                    header.PaymentMethod = "No Charge";
+                    SalesLine free = CreateFreeIssueLine(
+                        scenario.StockVariantId,
+                        scenario.StockBatchId,
+                        scenario.StockSku,
+                        "Test Stock Item",
+                        rule,
+                        1m,
+                        1180m,
+                        600m,
+                        false,
+                        scenario.SupplierId);
+
+                    repository.ProcessCheckoutAsync(
+                        header,
+                        new List<SalesLine> { free },
+                        new List<SalesPayment>()).GetAwaiter().GetResult();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            bool[] results = Task.WhenAll(
+                    Task.Run(AttemptCheckout),
+                    Task.Run(AttemptCheckout))
+                .GetAwaiter()
+                .GetResult();
+
+            AssertEqual(1, results.Count(success => success), "concurrent daily-limit success count");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertEqual(1, context.SalesHeaders.Count(), "concurrent daily-limit sale count");
+            AssertMoney(4m, context.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock, "concurrent daily-limit stock");
+        }
+
+        private static void FreeIssueApprovalRulesAreExplicit()
+        {
+            var rule = new FreeIssueRule
+            {
+                RequiresManagerApproval = true,
+                RequiresAdminApproval = false,
+                AllowCashierWithoutApproval = false
+            };
+            (bool manager, bool admin) = FreeIssueRuleRepository.ResolveApprovalRequirement(rule, 100m);
+            AssertTrue(manager, "manager approval");
+            AssertFalse(admin, "manager rule is not admin rule");
+
+            rule.RequiresAdminApproval = true;
+            (manager, admin) = FreeIssueRuleRepository.ResolveApprovalRequirement(rule, 100m);
+            AssertFalse(manager, "admin supersedes manager");
+            AssertTrue(admin, "administrator approval");
+
+            rule.AllowCashierWithoutApproval = true;
+            (manager, admin) = FreeIssueRuleRepository.ResolveApprovalRequirement(rule, 100m);
+            AssertFalse(manager || admin, "cashier exception");
+        }
+
+        private static void FreeIssueCheckoutVerifiesAuthenticatedApprover()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Manager approved",
+                FreeIssueTypeCodes.ShopCost,
+                "ItemVariant");
+
+            int managerId;
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                FreeIssueRule savedRule = context.FreeIssueRules.Single(row => row.Id == rule.Id);
+                savedRule.AllowCashierWithoutApproval = false;
+                savedRule.RequiresManagerApproval = true;
+                var manager = new User
+                {
+                    FirstName = "Test",
+                    LastName = "Manager",
+                    Username = "manager.test",
+                    PasswordHash = "TEST",
+                    PasswordSalt = "TEST",
+                    Role = UserRole.Manager,
+                    IsActive = true
+                };
+                context.Users.Add(manager);
+                context.SaveChanges();
+                managerId = manager.Id;
+            }
+
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 1180m);
+            SalesLine paid = CreateRepositoryTestLine(
+                scenario.StockVariantId,
+                scenario.StockBatchId,
+                scenario.StockSku,
+                "Test Stock Item",
+                1m,
+                1180m);
+            SalesLine free = CreateFreeIssueLine(
+                scenario.StockVariantId,
+                scenario.StockBatchId,
+                scenario.StockSku,
+                "Test Stock Item",
+                rule,
+                1m,
+                1180m,
+                600m,
+                false,
+                scenario.SupplierId);
+            free.FreeApprovedByUserId = managerId;
+            free.FreeApprovedAt = DateTime.Now;
+            free.FreeApprovedBy = "spoofed-name";
+            free.FreeApprovedRole = "Cashier";
+            free.OriginalUnitPrice = 1m;
+
+            SalesHeader sale = repository.ProcessCheckoutAsync(
+                header,
+                new List<SalesLine> { paid, free },
+                new List<SalesPayment> { CreateCashPayment(1180m) }).GetAwaiter().GetResult();
+
+            SalesLine saved = sale.SalesLines.Single(row => row.IsFreeItem);
+            AssertEqual(managerId, saved.FreeApprovedByUserId.GetValueOrDefault(), "approver user ID");
+            AssertEqual("manager.test", saved.FreeApprovedBy, "authoritative approver username");
+            AssertEqual(UserRole.Manager.ToString(), saved.FreeApprovedRole, "authoritative approver role");
+            AssertMoney(1180m, saved.OriginalUnitPrice, "authoritative free selling price");
+            AssertMoney(1180m, saved.FreeIssueSellingValue, "authoritative free selling value");
+        }
+
+        private static void FreeIssueCheckoutEnforcesAdministratorRole()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Administrator approved",
+                FreeIssueTypeCodes.ShopCost,
+                "ItemVariant");
+
+            int managerId;
+            int administratorId;
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                FreeIssueRule savedRule = context.FreeIssueRules.Single(row => row.Id == rule.Id);
+                savedRule.AllowCashierWithoutApproval = false;
+                savedRule.RequiresManagerApproval = false;
+                savedRule.RequiresAdminApproval = true;
+                var manager = new User
+                {
+                    FirstName = "Test",
+                    LastName = "Manager",
+                    Username = "manager.admin-check",
+                    PasswordHash = "TEST",
+                    PasswordSalt = "TEST",
+                    Role = UserRole.Manager,
+                    IsActive = true
+                };
+                var administrator = new User
+                {
+                    FirstName = "Test",
+                    LastName = "Administrator",
+                    Username = "admin.free-issue",
+                    PasswordHash = "TEST",
+                    PasswordSalt = "TEST",
+                    Role = UserRole.Admin,
+                    IsActive = true
+                };
+                context.Users.AddRange(manager, administrator);
+                context.SaveChanges();
+                managerId = manager.Id;
+                administratorId = administrator.Id;
+            }
+
+            var repository = new SalesRepository(factory);
+            SalesLine managerApprovedLine = CreateFreeIssueLine(
+                scenario.StockVariantId,
+                scenario.StockBatchId,
+                scenario.StockSku,
+                "Test Stock Item",
+                rule,
+                1m,
+                1180m,
+                600m,
+                false,
+                scenario.SupplierId);
+            managerApprovedLine.FreeApprovedByUserId = managerId;
+            managerApprovedLine.FreeApprovedAt = DateTime.Now;
+
+            AssertThrows(
+                () => repository.ProcessCheckoutAsync(
+                    CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m),
+                    new List<SalesLine> { managerApprovedLine },
+                    new List<SalesPayment>()).GetAwaiter().GetResult(),
+                "Administrator approval is required");
+
+            SalesLine administratorApprovedLine = CreateFreeIssueLine(
+                scenario.StockVariantId,
+                scenario.StockBatchId,
+                scenario.StockSku,
+                "Test Stock Item",
+                rule,
+                1m,
+                1180m,
+                600m,
+                false,
+                scenario.SupplierId);
+            administratorApprovedLine.FreeApprovedByUserId = administratorId;
+            administratorApprovedLine.FreeApprovedAt = DateTime.Now;
+
+            SalesHeader sale = repository.ProcessCheckoutAsync(
+                CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m),
+                new List<SalesLine> { administratorApprovedLine },
+                new List<SalesPayment>()).GetAwaiter().GetResult();
+
+            SalesLine saved = sale.SalesLines.Single(row => row.IsFreeItem);
+            AssertEqual("admin.free-issue", saved.FreeApprovedBy, "administrator username");
+            AssertEqual(UserRole.Admin.ToString(), saved.FreeApprovedRole, "administrator role");
+        }
+
+        private static void FreeIssueSnapshotIsImmutable()
+        {
+            var rule = new FreeIssueRule
+            {
+                Id = 42,
+                RuleName = "Original Rule",
+                FreeIssueType = FreeIssueTypeCodes.SupplierClaim,
+                SupplierId = 7,
+                SupplierName = "Original Supplier",
+                AppliesToType = "ItemVariant",
+                ItemVariantId = 10,
+                ValidFrom = new DateTime(2026, 7, 1),
+                MaxQtyPerInvoice = 2m,
+                RequiresManagerApproval = true
+            };
+
+            string json = FreeIssueRuleSnapshot.FromRule(rule).ToJson();
+            rule.RuleName = "Changed Rule";
+            rule.SupplierName = "Changed Supplier";
+
+            AssertContains(json, "Original Rule", "rule snapshot name");
+            AssertContains(json, "Original Supplier", "rule snapshot supplier");
+            AssertFalse(json.Contains("Changed Rule", StringComparison.Ordinal), "snapshot remains immutable");
+        }
+
+        private static void ShopFundedFreeIssueDeductsStockOnce()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "Shop stock", FreeIssueTypeCodes.ShopCost, "ItemVariant");
+            SalesHeader sale = CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: false);
+
+            using AppDbContext context = factory.CreateDbContext();
+            decimal stock = context.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock;
+            AssertMoney(3m, stock, "paid plus free stock deduction");
+            SalesLine freeLine = sale.SalesLines.Single(row => row.IsFreeItem);
+            AssertMoney(0m, freeLine.LineTotal, "free line payable");
+            AssertFalse(context.FreeItemClaimLogs.Any(), "shop-funded claim absence");
+        }
+
+        private static void SupplierFundedFreeIssueCreatesOneClaim()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "Supplier stock", FreeIssueTypeCodes.SupplierClaim, "ItemVariant");
+            SalesHeader sale = CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: true);
+
+            using AppDbContext context = factory.CreateDbContext();
+            List<FreeItemClaimLog> claims = context.FreeItemClaimLogs.ToList();
+            AssertEqual(1, claims.Count, "one supplier claim");
+            AssertEqual(SupplierClaimStatusCodes.Draft, claims[0].ClaimStatus, "initial claim status");
+            AssertMoney(600m, claims[0].ClaimValue, "claim cost value");
+            AssertContains(claims[0].ClaimReferenceNo, sale.InvoiceNo, "deterministic claim reference");
+        }
+
+        private static void FreeServiceCreatesNoInventoryMovement()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Free service",
+                FreeIssueTypeCodes.ShopCost,
+                "ItemVariant",
+                itemVariantId: scenario.ServiceVariantId);
+
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 1180m);
+            var paid = CreateRepositoryTestLine(scenario.ServiceVariantId, null, scenario.ServiceSku, "Installation Service", 1m, 1180m);
+            var free = CreateFreeIssueLine(scenario.ServiceVariantId, null, scenario.ServiceSku, "Installation Service", rule, 1m, 1180m, 400m, false, scenario.SupplierId);
+            SalesHeader sale = repository.ProcessCheckoutAsync(
+                header,
+                new List<SalesLine> { paid, free },
+                new List<SalesPayment> { CreateCashPayment(1180m) }).GetAwaiter().GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertFalse(context.InventoryTransactions.Any(row => row.ItemVariantId == scenario.ServiceVariantId), "service inventory absence");
+            AssertTrue(sale.SalesLines.Single(row => row.IsFreeItem).ItemBatchId == null, "service has no batch");
+        }
+
+        private static void AllFreeSaleCompletesWithoutPayment()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "No charge Free Issue",
+                FreeIssueTypeCodes.ShopCost,
+                "ItemVariant");
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m);
+            header.PaymentMethod = "No Charge";
+            SalesLine free = CreateFreeIssueLine(
+                scenario.StockVariantId,
+                scenario.StockBatchId,
+                scenario.StockSku,
+                "Test Stock Item",
+                rule,
+                1m,
+                1180m,
+                600m,
+                false,
+                scenario.SupplierId);
+
+            SalesHeader sale = repository.ProcessCheckoutAsync(
+                header,
+                new List<SalesLine> { free },
+                new List<SalesPayment>()).GetAwaiter().GetResult();
+
+            AssertMoney(0m, sale.NetTotal, "all-free payable");
+            AssertEqual(0, sale.SalesPayments.Count, "all-free payment count");
+            using AppDbContext context = factory.CreateDbContext();
+            AssertMoney(4m, context.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock, "all-free stock deduction");
+        }
+
+        private static void FreeIssueVatOptionAStoresZeroTax()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "VAT zero free", FreeIssueTypeCodes.ShopCost, "ItemVariant");
+            SalesHeader sale = CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: false);
+            SalesLine freeLine = sale.SalesLines.Single(row => row.IsFreeItem);
+
+            AssertEqual(TaxSnapshotStatuses.Complete, freeLine.TaxSnapshotStatus, "free tax snapshot status");
+            AssertMoney(0m, freeLine.TaxableAmountSnapshot ?? -1m, "free taxable amount");
+            AssertMoney(0m, freeLine.VatAmountSnapshot ?? -1m, "free VAT amount");
+            AssertMoney(0m, freeLine.TaxInclusiveAmountSnapshot ?? -1m, "free tax inclusive amount");
+            AssertMoney(180m, sale.TotalVatAmount ?? -1m, "paid line VAT only");
+        }
+
+        private static void FreeIssueTaxInvoiceRemainsFormatable()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "Tax invoice free", FreeIssueTypeCodes.ShopCost, "ItemVariant");
+            SalesHeader sale = CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: false);
+            sale.TaxInvoiceNo = "TI-TEST-0001";
+
+            using AppDbContext context = factory.CreateDbContext();
+            StoreSettings settings = context.StoreSettings.AsNoTracking().Single();
+            string text = new SalesDocumentTextFormatter().FormatTaxInvoice(
+                sale,
+                settings,
+                DateTime.UtcNow,
+                80,
+                "ORIGINAL");
+            AssertContains(text, "FREE ISSUE", "Tax Invoice free label");
+            AssertContains(text, "0.00", "Tax Invoice zero value");
+        }
+
+        private static void SupplierClaimLifecycleAllowsApprovedTransitions()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "Claim lifecycle", FreeIssueTypeCodes.SupplierClaim, "ItemVariant");
+            CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: true);
+
+            var repository = new FreeItemClaimRepository(factory);
+            int claimId;
+            using (AppDbContext context = factory.CreateDbContext())
+                claimId = context.FreeItemClaimLogs.Select(row => row.Id).Single();
+
+            repository.MarkSubmittedAsync(claimId, "Manager", "Submitted").GetAwaiter().GetResult();
+            repository.MarkSettledAsync(claimId, "Manager", "Credit Note", "CN-100", "Settled").GetAwaiter().GetResult();
+
+            using AppDbContext verify = factory.CreateDbContext();
+            FreeItemClaimLog claim = verify.FreeItemClaimLogs.Single(row => row.Id == claimId);
+            AssertEqual(SupplierClaimStatusCodes.Settled, claim.ClaimStatus, "settled status");
+            AssertEqual("CN-100", claim.SettlementReferenceNo, "settlement reference");
+        }
+
+        private static void SupplierClaimLifecycleBlocksInvalidTransitions()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "Claim invalid", FreeIssueTypeCodes.SupplierClaim, "ItemVariant");
+            CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: true);
+
+            var repository = new FreeItemClaimRepository(factory);
+            int claimId;
+            using (AppDbContext context = factory.CreateDbContext())
+                claimId = context.FreeItemClaimLogs.Select(row => row.Id).Single();
+
+            AssertThrows(
+                () => repository.MarkSettledAsync(claimId, "Manager", "Credit Note", "CN-100").GetAwaiter().GetResult(),
+                "cannot change");
+        }
+
+        private static void SupplierClaimTransitionIsConcurrencySafe()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Concurrent claim transition",
+                FreeIssueTypeCodes.SupplierClaim,
+                "ItemVariant");
+            CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: true);
+
+            int claimId;
+            using (AppDbContext context = factory.CreateDbContext())
+                claimId = context.FreeItemClaimLogs.Select(row => row.Id).Single();
+
+            bool AttemptSubmit()
+            {
+                try
+                {
+                    var repository = new FreeItemClaimRepository(factory);
+                    repository.MarkSubmittedAsync(claimId, "Manager", "Concurrent submit")
+                        .GetAwaiter()
+                        .GetResult();
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            bool[] results = Task.WhenAll(
+                    Task.Run(AttemptSubmit),
+                    Task.Run(AttemptSubmit))
+                .GetAwaiter()
+                .GetResult();
+
+            AssertEqual(1, results.Count(success => success), "concurrent claim-transition success count");
+            using AppDbContext verify = factory.CreateDbContext();
+            AssertEqual(
+                SupplierClaimStatusCodes.Submitted,
+                verify.FreeItemClaimLogs.Single(row => row.Id == claimId).ClaimStatus,
+                "concurrent claim-transition final status");
+        }
+
+        private static void FreeIssueReturnRefundsZeroAndAdjustsClaim()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "Claim return", FreeIssueTypeCodes.SupplierClaim, "ItemVariant");
+            SalesHeader sale = CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: true);
+            SalesLine freeLine = sale.SalesLines.Single(row => row.IsFreeItem);
+
+            var repository = new CustomerReturnRepository(factory, new CustomerReturnAllocationCalculator());
+            CustomerReturnProcessResult result = repository.ProcessReturnAsync(new CustomerReturnRequest
+            {
+                SalesHeaderId = sale.Id,
+                ShiftSessionId = scenario.ShiftSessionId,
+                TerminalNo = "T01",
+                CashierName = "Test Cashier",
+                AuthorizedBy = "Manager",
+                ReturnReason = "Free item returned",
+                Lines = new List<CustomerReturnRequestLine>
+                {
+                    new() { SalesLineId = freeLine.Id, Quantity = 1m }
+                }
+            }).GetAwaiter().GetResult();
+
+            AssertMoney(0m, result.TotalRefundAmount, "free return refund");
+            AssertEqual("No Refund", result.ReturnHeader.RefundMethod, "free return method");
+            using AppDbContext context = factory.CreateDbContext();
+            FreeItemClaimAdjustment adjustment = context.FreeItemClaimAdjustments.Single();
+            AssertMoney(1m, adjustment.QuantityReturned, "claim returned quantity");
+            AssertMoney(600m, adjustment.ClaimValueReduction, "claim value reduction");
+            AssertMoney(4m, context.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock, "free stock restored");
+        }
+
+        private static void SupplierClaimCreationIsIdempotent()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(factory, scenario, "Claim idempotent", FreeIssueTypeCodes.SupplierClaim, "ItemVariant");
+            SalesHeader sale = CompleteFreeIssueStockSale(factory, scenario, rule, supplierFunded: true);
+
+            using AppDbContext context = factory.CreateDbContext();
+            SalesHeader header = context.SalesHeaders.Single(row => row.Id == sale.Id);
+            SalesLine line = context.SalesLines.Single(row => row.SalesHeaderId == sale.Id && row.IsFreeItem);
+            FreeItemClaimRepository.CreateSupplierClaimFromSaleLineAsync(context, header, line).GetAwaiter().GetResult();
+            context.SaveChanges();
+            AssertEqual(1, context.FreeItemClaimLogs.Count(), "idempotent claim count");
+        }
+
+        private static void SupplierClaimCsvEscapesAndFormatsValues()
+        {
+            string csv = new SupplierClaimCsvFormatter().Format(new List<SupplierClaimExportRow>
+            {
+                new()
+                {
+                    SupplierName = "Supplier, \"One\"",
+                    PromotionReference = "PROMO-1",
+                    ClaimStatus = SupplierClaimStatusCodes.Draft,
+                    ClaimReferenceNo = "FI-1",
+                    InvoiceNo = "INV-1",
+                    InvoiceDate = new DateTime(2026, 7, 13),
+                    ItemDescription = "Free Item",
+                    OriginalQuantity = 1.25m,
+                    ReturnedQuantity = 0.25m,
+                    NetQuantity = 1m,
+                    OriginalClaimValue = 600m,
+                    ClaimValueReduction = 120m,
+                    NetClaimValue = 480m,
+                    Remarks = "Line 1\nLine 2"
+                }
+            });
+
+            AssertContains(csv, "\"Supplier, \"\"One\"\"\"", "CSV quoted supplier");
+            AssertContains(csv, "1.25", "CSV invariant quantity");
+            AssertContains(csv, "480.00", "CSV invariant money");
+            AssertContains(csv, "\"Line 1\nLine 2\"", "CSV embedded newline");
+        }
+
+        private static void FreeIssueCheckoutRollbackPreservesStock()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            FreeIssueRule rule = AddFreeIssueRule(
+                factory,
+                scenario,
+                "Rollback limit",
+                FreeIssueTypeCodes.ShopCost,
+                "ItemVariant",
+                maxQtyPerDay: 0.5m);
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 1180m);
+            SalesLine paid = CreateRepositoryTestLine(scenario.StockVariantId, scenario.StockBatchId, scenario.StockSku, "Test Stock Item", 1m, 1180m);
+            SalesLine free = CreateFreeIssueLine(scenario.StockVariantId, scenario.StockBatchId, scenario.StockSku, "Test Stock Item", rule, 1m, 1180m, 600m, false, scenario.SupplierId);
+
+            AssertThrows(
+                () => repository.ProcessCheckoutAsync(
+                    header,
+                    new List<SalesLine> { paid, free },
+                    new List<SalesPayment> { CreateCashPayment(1180m) }).GetAwaiter().GetResult(),
+                "daily quantity limit");
+
+            using AppDbContext context = factory.CreateDbContext();
+            AssertMoney(5m, context.ItemBatches.Single(row => row.Id == scenario.StockBatchId).CurrentStock, "rollback stock");
+            AssertEqual(0, context.SalesHeaders.Count(), "rollback sale count");
+            AssertEqual(0, context.FreeItemClaimLogs.Count(), "rollback claim count");
+        }
+
+        private static void FreeIssueRuleNamesAreUnique()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            var repository = new FreeIssueRuleRepository(factory);
+            FreeIssueRule first = BuildFreeIssueRule(scenario, "Unique Rule", FreeIssueTypeCodes.ShopCost, "ItemVariant");
+            repository.SaveRuleAsync(first, "Admin").GetAwaiter().GetResult();
+            FreeIssueRule duplicate = BuildFreeIssueRule(scenario, "unique rule", FreeIssueTypeCodes.ShopCost, "ItemVariant");
+            AssertThrows(
+                () => repository.SaveRuleAsync(duplicate, "Admin").GetAwaiter().GetResult(),
+                "same name");
+        }
+
+
+        private static void Phase8EMigrationAppliesFromEmptyDatabase()
+        {
+            using var factory = new MigrationTestDbContextFactory();
+            using AppDbContext context = factory.CreateDbContext();
+
+            context.Database.Migrate();
+
+            string[] applied = context.Database.GetAppliedMigrations().ToArray();
+            AssertTrue(
+                applied.Contains("20260713120000_AddFreeIssueSupplierClaimCompletion"),
+                "Phase 8E migration applied from empty database");
+            AssertTrue(
+                SqliteObjectExists(context, "table", "FreeItemClaimAdjustments"),
+                "claim adjustment table exists");
+            AssertTrue(
+                SqliteObjectExists(context, "index", "IX_FreeItemClaimLogs_SalesLineId"),
+                "claim sale-line index exists");
+        }
+
+        private static void Phase8EMigrationUpgradesPhase8DBaseline()
+        {
+            using var factory = new MigrationTestDbContextFactory();
+            using AppDbContext context = factory.CreateDbContext();
+            IMigrator migrator = context.GetService<IMigrator>();
+
+            migrator.Migrate("20260713000000_AddOneTimeGiftVoucherLifecycleCompletion");
+            AssertFalse(
+                context.Database.GetAppliedMigrations()
+                    .Contains("20260713120000_AddFreeIssueSupplierClaimCompletion"),
+                "Phase 8E migration not yet applied");
+
+            migrator.Migrate();
+
+            AssertTrue(
+                context.Database.GetAppliedMigrations()
+                    .Contains("20260713120000_AddFreeIssueSupplierClaimCompletion"),
+                "Phase 8E migration upgraded Phase 8D database");
+            AssertTrue(
+                SqliteColumnExists(context, "SalesLines", "FreeIssueRuleSnapshotJson"),
+                "sale-line rule snapshot column exists");
+            AssertTrue(
+                SqliteColumnExists(context, "FreeItemClaimLogs", "FreeApprovedByUserId"),
+                "claim approver user column exists");
+        }
+
+        private static void Phase8EMigrationDuplicatePreflightRollsBack()
+        {
+            using var factory = new MigrationTestDbContextFactory();
+            using (AppDbContext context = factory.CreateDbContext())
+            {
+                IMigrator migrator = context.GetService<IMigrator>();
+                migrator.Migrate("20260713000000_AddOneTimeGiftVoucherLifecycleCompletion");
+
+                context.FreeIssueRules.AddRange(
+                    new FreeIssueRule
+                    {
+                        RuleName = "Duplicate Migration Rule",
+                        FreeIssueType = FreeIssueTypeCodes.ShopCost,
+                        ReasonCode = "MIGRATION_TEST",
+                        ReasonName = "Migration Test",
+                        AppliesToType = "All",
+                        ValidFrom = DateTime.Today,
+                        IsActive = true,
+                        AllowCashierWithoutApproval = true,
+                        ClaimValueMode = "Cost",
+                        CreatedAt = DateTime.Now,
+                        CreatedBy = "Migration Test",
+                        UpdatedBy = string.Empty,
+                        Remarks = string.Empty
+                    },
+                    new FreeIssueRule
+                    {
+                        RuleName = "duplicate migration rule",
+                        FreeIssueType = FreeIssueTypeCodes.ShopCost,
+                        ReasonCode = "MIGRATION_TEST_2",
+                        ReasonName = "Migration Test 2",
+                        AppliesToType = "All",
+                        ValidFrom = DateTime.Today,
+                        IsActive = true,
+                        AllowCashierWithoutApproval = true,
+                        ClaimValueMode = "Cost",
+                        CreatedAt = DateTime.Now,
+                        CreatedBy = "Migration Test",
+                        UpdatedBy = string.Empty,
+                        Remarks = string.Empty
+                    });
+                context.SaveChanges();
+
+                bool failed = false;
+                try
+                {
+                    migrator.Migrate();
+                }
+                catch (SqliteException)
+                {
+                    failed = true;
+                }
+                catch (DbUpdateException ex) when (ex.InnerException is SqliteException)
+                {
+                    failed = true;
+                }
+
+                AssertTrue(failed, "duplicate rule migration failure");
+            }
+
+            using AppDbContext verify = factory.CreateDbContext();
+            AssertFalse(
+                verify.Database.GetAppliedMigrations()
+                    .Contains("20260713120000_AddFreeIssueSupplierClaimCompletion"),
+                "failed migration history rollback");
+            AssertFalse(
+                SqliteObjectExists(verify, "table", "FreeItemClaimAdjustments"),
+                "failed migration schema rollback");
+        }
+
+        private static bool SqliteObjectExists(
+            AppDbContext context,
+            string objectType,
+            string objectName)
+        {
+            using var command = context.Database.GetDbConnection().CreateCommand();
+            if (command.Connection?.State != System.Data.ConnectionState.Open)
+                command.Connection?.Open();
+            command.CommandText =
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = $type AND name = $name;";
+            var typeParameter = command.CreateParameter();
+            typeParameter.ParameterName = "$type";
+            typeParameter.Value = objectType;
+            command.Parameters.Add(typeParameter);
+            var nameParameter = command.CreateParameter();
+            nameParameter.ParameterName = "$name";
+            nameParameter.Value = objectName;
+            command.Parameters.Add(nameParameter);
+            return Convert.ToInt32(command.ExecuteScalar()) == 1;
+        }
+
+        private static bool SqliteColumnExists(
+            AppDbContext context,
+            string tableName,
+            string columnName)
+        {
+            using var command = context.Database.GetDbConnection().CreateCommand();
+            if (command.Connection?.State != System.Data.ConnectionState.Open)
+                command.Connection?.Open();
+            string safeTableName = tableName.Replace("\"", "\"\"");
+            command.CommandText = $"PRAGMA table_info(\"{safeTableName}\");";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private static FreeIssueRule AddFreeIssueRule(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario,
+            string name,
+            string freeIssueType,
+            string appliesToType,
+            DateTime? validFrom = null,
+            DateTime? validTo = null,
+            decimal maxQtyPerInvoice = 0m,
+            decimal maxQtyPerDay = 0m,
+            decimal maxValuePerInvoice = 0m,
+            decimal maxValuePerDay = 0m,
+            int? itemVariantId = null)
+        {
+            FreeIssueRule rule = BuildFreeIssueRule(
+                scenario,
+                name,
+                freeIssueType,
+                appliesToType,
+                itemVariantId);
+            rule.ValidFrom = validFrom ?? DateTime.Today.AddDays(-1);
+            rule.ValidTo = validTo;
+            rule.MaxQtyPerInvoice = maxQtyPerInvoice;
+            rule.MaxQtyPerDay = maxQtyPerDay;
+            rule.MaxValuePerInvoice = maxValuePerInvoice;
+            rule.MaxValuePerDay = maxValuePerDay;
+
+            using AppDbContext context = factory.CreateDbContext();
+            context.FreeIssueRules.Add(rule);
+            context.SaveChanges();
+            return rule;
+        }
+
+        private static FreeIssueRule BuildFreeIssueRule(
+            RepositoryTestScenario scenario,
+            string name,
+            string freeIssueType,
+            string appliesToType,
+            int? itemVariantId = null)
+        {
+            var rule = new FreeIssueRule
+            {
+                RuleName = name,
+                FreeIssueType = freeIssueType,
+                ReasonCode = "TEST_FREE",
+                ReasonName = "Test Free Issue",
+                AppliesToType = appliesToType,
+                ValidFrom = DateTime.Today.AddDays(-1),
+                IsActive = true,
+                RequiresManagerApproval = false,
+                RequiresAdminApproval = false,
+                AllowCashierWithoutApproval = true,
+                ClaimValueMode = "Cost",
+                CreatedBy = "Test",
+                UpdatedBy = "Test"
+            };
+
+            if (appliesToType.Equals("Supplier", StringComparison.OrdinalIgnoreCase))
+            {
+                rule.SupplierId = scenario.SupplierId;
+                rule.SupplierName = "Test Supplier";
+            }
+            else if (appliesToType.Equals("Category", StringComparison.OrdinalIgnoreCase))
+            {
+                rule.CategoryId = scenario.CategoryId;
+                rule.CategoryName = "Test Sales";
+            }
+            else
+            {
+                rule.ItemVariantId = itemVariantId ?? scenario.StockVariantId;
+                rule.SkuCode = itemVariantId == scenario.ServiceVariantId ? scenario.ServiceSku : scenario.StockSku;
+                rule.ItemName = itemVariantId == scenario.ServiceVariantId ? "Installation Service" : "Test Stock Item";
+            }
+
+            if (freeIssueType == FreeIssueTypeCodes.SupplierClaim)
+            {
+                rule.SupplierId = scenario.SupplierId;
+                rule.SupplierName = "Test Supplier";
+                rule.SupplierPromotionReference = "PROMO-TEST";
+            }
+
+            return rule;
+        }
+
+        private static SalesLine CreateFreeIssueLine(
+            int itemVariantId,
+            int? itemBatchId,
+            string sku,
+            string description,
+            FreeIssueRule rule,
+            decimal quantity,
+            decimal originalUnitPrice,
+            decimal costPrice,
+            bool supplierFunded,
+            int supplierId)
+        {
+            return new SalesLine
+            {
+                ItemVariantId = itemVariantId,
+                ItemBatchId = itemBatchId,
+                SkuCode = sku,
+                Barcode = sku,
+                ItemDescription = description,
+                BatchNo = itemBatchId.HasValue ? "TEST-BATCH" : string.Empty,
+                Uom = itemBatchId.HasValue ? "PCS" : "JOB",
+                Quantity = quantity,
+                UnitPrice = 0m,
+                OriginalUnitPrice = originalUnitPrice,
+                CostPrice = costPrice,
+                IsFreeItem = true,
+                FreeIssueRuleId = rule.Id,
+                FreeIssueRuleName = rule.RuleName,
+                FreeIssueType = supplierFunded ? FreeIssueTypeCodes.SupplierClaim : FreeIssueTypeCodes.ShopCost,
+                FreeReasonCode = rule.ReasonCode,
+                FreeReasonText = rule.ReasonName,
+                FreeIssueAppliedBy = "Test Cashier",
+                FreeIssueAppliedAt = DateTime.Now,
+                FreeIssueRuleSnapshotJson = FreeIssueRuleSnapshot.FromRule(rule).ToJson(),
+                FreeIssueSnapshotStatus = FreeIssueSnapshotStatusCodes.Complete,
+                FreeIssueCostValue = Math.Round(costPrice * quantity, 2),
+                FreeIssueSellingValue = Math.Round(originalUnitPrice * quantity, 2),
+                IsSupplierRecoverable = supplierFunded,
+                SupplierId = supplierFunded ? supplierId : null,
+                SupplierName = supplierFunded ? "Test Supplier" : string.Empty,
+                SupplierPromotionReference = supplierFunded ? "PROMO-TEST" : string.Empty,
+                SupplierClaimStatus = supplierFunded ? SupplierClaimStatusCodes.Draft : string.Empty,
+                SupplierClaimValue = supplierFunded ? Math.Round(costPrice * quantity, 2) : 0m
+            };
+        }
+
+        private static SalesHeader CompleteFreeIssueStockSale(
+            RepositoryTestDbContextFactory factory,
+            RepositoryTestScenario scenario,
+            FreeIssueRule rule,
+            bool supplierFunded)
+        {
+            var repository = new SalesRepository(factory);
+            SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 1180m);
+            SalesLine paid = CreateRepositoryTestLine(
+                scenario.StockVariantId,
+                scenario.StockBatchId,
+                scenario.StockSku,
+                "Test Stock Item",
+                1m,
+                1180m);
+            SalesLine free = CreateFreeIssueLine(
+                scenario.StockVariantId,
+                scenario.StockBatchId,
+                scenario.StockSku,
+                "Test Stock Item",
+                rule,
+                1m,
+                1180m,
+                600m,
+                supplierFunded,
+                scenario.SupplierId);
+
+            return repository.ProcessCheckoutAsync(
+                header,
+                new List<SalesLine> { paid, free },
+                new List<SalesPayment> { CreateCashPayment(1180m) }).GetAwaiter().GetResult();
         }
 
         private static void ExclusiveStandardVat()
@@ -4352,8 +5413,18 @@ namespace POS.Core.CalculationTests
                     DisplayOrder = 10
                 };
 
+            var supplier = new Supplier
+            {
+                SupplierCode = "TEST-SUP",
+                SupplierName = "Test Supplier",
+                Phone1 = "0110000000",
+                HasVat = true,
+                VatNumber = "SUP-VAT"
+            };
+
             context.Categories.Add(category);
             context.TaxCategories.Add(standardTax);
+            context.Suppliers.Add(supplier);
             context.SaveChanges();
 
             var stockParent =
@@ -4427,6 +5498,25 @@ namespace POS.Core.CalculationTests
 
             context.SaveChanges();
 
+            context.ItemSuppliers.AddRange(
+                new ItemSupplier
+                {
+                    ItemVariantId = stockVariant.Id,
+                    SupplierId = supplier.Id,
+                    IsPrimary = true,
+                    SupplierItemCode = "SUP-STOCK",
+                    LastCostPrice = 600m
+                },
+                new ItemSupplier
+                {
+                    ItemVariantId = serviceVariant.Id,
+                    SupplierId = supplier.Id,
+                    IsPrimary = true,
+                    SupplierItemCode = "SUP-SERVICE",
+                    LastCostPrice = 400m
+                });
+            context.SaveChanges();
+
             var stockBatch =
                 new ItemBatch
                 {
@@ -4491,12 +5581,14 @@ namespace POS.Core.CalculationTests
             return new RepositoryTestScenario
             {
                 ShiftSessionId = shift.Id,
+                CategoryId = category.Id,
                 StockParentId = stockParent.Id,
                 StockVariantId = stockVariant.Id,
                 StockBatchId = stockBatch.Id,
                 StockSku = stockVariant.SkuCode,
                 ServiceParentId = serviceParent.Id,
                 ServiceVariantId = serviceVariant.Id,
+                SupplierId = supplier.Id,
                 ServiceSku = serviceVariant.SkuCode,
                 ServiceBarcode = serviceVariant.Barcode
             };
@@ -4578,6 +5670,8 @@ namespace POS.Core.CalculationTests
         {
             public int ShiftSessionId { get; init; }
 
+            public int CategoryId { get; init; }
+
             public int StockParentId { get; init; }
 
             public int StockVariantId { get; init; }
@@ -4591,11 +5685,46 @@ namespace POS.Core.CalculationTests
 
             public int ServiceVariantId { get; init; }
 
+            public int SupplierId { get; init; }
+
             public string ServiceSku { get; init; } =
                 string.Empty;
 
             public string ServiceBarcode { get; init; } =
                 string.Empty;
+        }
+
+
+        private sealed class MigrationTestDbContextFactory : IDisposable
+        {
+            private readonly string _databasePath;
+            private readonly DbContextOptions<AppDbContext> _options;
+
+            public MigrationTestDbContextFactory()
+            {
+                _databasePath = Path.Combine(
+                    Path.GetTempPath(),
+                    $"pos-phase8e-migration-{Guid.NewGuid():N}.db");
+                _options = new DbContextOptionsBuilder<AppDbContext>()
+                    .UseSqlite($"Data Source={_databasePath}")
+                    .Options;
+            }
+
+            public AppDbContext CreateDbContext() => new(_options);
+
+            public void Dispose()
+            {
+                SqliteConnection.ClearAllPools();
+                DeleteIfPresent(_databasePath);
+                DeleteIfPresent(_databasePath + "-shm");
+                DeleteIfPresent(_databasePath + "-wal");
+            }
+
+            private static void DeleteIfPresent(string path)
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
         }
 
         private sealed class RepositoryTestDbContextFactory :

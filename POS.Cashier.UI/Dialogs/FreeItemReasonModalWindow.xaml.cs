@@ -2,6 +2,7 @@
 using POS.Cashier.UI.Models;
 using POS.Cashier.UI.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
 
@@ -10,32 +11,28 @@ namespace POS.Cashier.UI.Dialogs
     public partial class FreeItemReasonModalWindow : Window
     {
         private readonly CartItem _selectedItem;
+        private readonly IReadOnlyCollection<CartItem> _cartItems;
+        private readonly string _cashierName;
 
         public FreeItemReasonModalViewModel? ViewModel { get; private set; }
-
         public FreeItemApplyResult? Result => ViewModel?.Result;
 
-        public FreeItemReasonModalWindow(CartItem selectedItem)
+        public FreeItemReasonModalWindow(
+            CartItem selectedItem,
+            IReadOnlyCollection<CartItem> cartItems,
+            string cashierName)
         {
             InitializeComponent();
-
             _selectedItem = selectedItem ?? throw new ArgumentNullException(nameof(selectedItem));
+            _cartItems = cartItems ?? Array.Empty<CartItem>();
+            _cashierName = cashierName ?? string.Empty;
 
-            if (App.Services != null)
-            {
-                ViewModel = App.Services.GetRequiredService<FreeItemReasonModalViewModel>();
-                DataContext = ViewModel;
+            if (App.Services == null)
+                throw new InvalidOperationException("Application services are not available.");
 
-                ViewModel.ActionCompleted += OnActionCompleted;
-            }
-            else
-            {
-                MessageBox.Show(
-                    "Application services are not available.",
-                    "Free Item",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
+            ViewModel = App.Services.GetRequiredService<FreeItemReasonModalViewModel>();
+            DataContext = ViewModel;
+            ViewModel.ActionCompleted += OnActionCompleted;
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -45,15 +42,18 @@ namespace POS.Cashier.UI.Dialogs
 
             try
             {
-                await ViewModel.InitializeAsync(_selectedItem);
+                await ViewModel.InitializeAsync(_selectedItem, _cartItems, _cashierName);
+                QuantityTextBox.Focus();
+                QuantityTextBox.SelectAll();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Failed to initialize Free Item dialog.\n\n{ex.Message}",
-                    "Free Item",
+                    $"Failed to initialize Free Issue dialog.\n\n{ex.Message}",
+                    "Free Issue",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+                DialogResult = false;
             }
         }
 
@@ -69,7 +69,7 @@ namespace POS.Cashier.UI.Dialogs
                 return;
             }
 
-            if (e.Key == Key.Enter)
+            if (e.Key == Key.Enter && Keyboard.FocusedElement is not System.Windows.Controls.ComboBox)
             {
                 ViewModel.ConfirmCommand.Execute(null);
                 e.Handled = true;

@@ -203,6 +203,16 @@ namespace POS.Core.Repositories
     {
         public int VariantId { get; set; }
 
+        public int ItemParentId { get; set; }
+
+        public int CategoryId { get; set; }
+
+        public int? SubCategoryId { get; set; }
+
+        public int? PrimarySupplierId { get; set; }
+
+        public List<int> SupplierIds { get; set; } = new();
+
         public string ItemCode { get; set; } = string.Empty;
 
         public string SkuCode { get; set; } = string.Empty;
@@ -1920,6 +1930,7 @@ namespace POS.Core.Repositories
                 .Include(v => v.ItemParent)
                     .ThenInclude(p => p.UnitOfMeasure)
                 .Include(v => v.ItemBatches)
+                .Include(v => v.ItemSuppliers)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(v =>
                     v.Id == variantId &&
@@ -1960,6 +1971,7 @@ namespace POS.Core.Repositories
                 .Include(v => v.ItemParent)
                     .ThenInclude(p => p.UnitOfMeasure)
                 .Include(v => v.ItemBatches)
+                .Include(v => v.ItemSuppliers)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(v =>
                     !v.IsDeactivated &&
@@ -2030,6 +2042,19 @@ namespace POS.Core.Repositories
             return new CashierSellableItemDto
             {
                 VariantId = variant.Id,
+                ItemParentId = variant.ItemParentId,
+                CategoryId = variant.ItemParent?.CategoryId ?? 0,
+                SubCategoryId = variant.ItemParent?.SubCategoryId,
+                PrimarySupplierId = variant.ItemSuppliers?
+                    .OrderByDescending(link => link.IsPrimary)
+                    .ThenBy(link => link.Id)
+                    .Select(link => (int?)link.SupplierId)
+                    .FirstOrDefault(),
+                SupplierIds = variant.ItemSuppliers?
+                    .Select(link => link.SupplierId)
+                    .Distinct()
+                    .OrderBy(id => id)
+                    .ToList() ?? new List<int>(),
 
                 ItemCode = variant.ItemParent?.ItemCode ?? string.Empty,
                 SkuCode = variant.SkuCode,

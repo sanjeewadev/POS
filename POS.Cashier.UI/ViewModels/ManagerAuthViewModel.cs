@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Services;
+using POS.Core.Enums;
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -24,6 +25,15 @@ namespace POS.Cashier.UI.ViewModels
 
         [ObservableProperty]
         private string _authorizedUsername = string.Empty;
+
+        [ObservableProperty]
+        private int? _authorizedUserId;
+
+        [ObservableProperty]
+        private string _authorizedRole = string.Empty;
+
+        [ObservableProperty]
+        private bool _requireAdministrator;
 
         // The View (Window) will listen to this event so it knows when to close
         public event Action<bool>? AuthenticationCompleted;
@@ -50,12 +60,25 @@ namespace POS.Cashier.UI.ViewModels
 
                 if (result.Success)
                 {
+                    if (RequireAdministrator && result.Role != UserRole.Admin)
+                    {
+                        AuthorizedUsername = string.Empty;
+                        AuthorizedUserId = null;
+                        AuthorizedRole = string.Empty;
+                        ErrorMessage = "Administrator credentials are required for this action.";
+                        return;
+                    }
+
                     AuthorizedUsername = result.Username;
+                    AuthorizedUserId = result.UserId;
+                    AuthorizedRole = result.Role?.ToString() ?? string.Empty;
                     AuthenticationCompleted?.Invoke(true);
                 }
                 else
                 {
                     AuthorizedUsername = string.Empty;
+                    AuthorizedUserId = null;
+                    AuthorizedRole = string.Empty;
                     ErrorMessage = result.Message;
                 }
             }

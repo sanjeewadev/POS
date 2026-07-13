@@ -66,7 +66,7 @@ namespace POS.Cashier.UI.ViewModels
             IsPaymentModeActive &&
             Cart.Any() &&
             BalanceDue <= 0m &&
-            PaymentLines.Any();
+            (PaymentLines.Any() || NetValue <= 0m);
 
         [ObservableProperty] private string _terminalNo = "Pending...";
         [ObservableProperty] private string _terminalDisplayName = "Terminal";
@@ -502,12 +502,10 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (Cart.Any(item =>
-                    item.IsGiftVoucherSale ||
-                    item.IsFreeItem))
+            if (Cart.Any(item => item.IsGiftVoucherSale))
             {
                 _ = ShowNotificationAsync(
-                    "Invoice discount is available only for normal Stock Item and Service lines.",
+                    "Invoice discount cannot be applied while a Gift Voucher issue line is in the cart.",
                     "#F59E0B");
                 TerminalInput = string.Empty;
                 return;
@@ -955,9 +953,7 @@ namespace POS.Cashier.UI.ViewModels
 
             RecalculateTotals();
 
-            if (Cart.All(item =>
-                    !item.IsGiftVoucherSale &&
-                    !item.IsFreeItem) &&
+            if (!Cart.Any(item => item.IsGiftVoucherSale) &&
                 !IsTaxCalculationReady)
             {
                 _ = ShowNotificationAsync(
@@ -986,7 +982,7 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            var belowMinimumLine = Cart.FirstOrDefault(c => c.IsBelowMinimumPrice);
+            var belowMinimumLine = Cart.FirstOrDefault(c => !c.IsFreeItem && c.IsBelowMinimumPrice);
             if (belowMinimumLine != null && !IsManagerModeActive)
             {
                 _ = ShowNotificationAsync($"Price below minimum: {belowMinimumLine.Description}", "#EF4444");
@@ -997,8 +993,10 @@ namespace POS.Cashier.UI.ViewModels
             TerminalInputMode = "PAYMENT";
             TerminalInput = string.Empty;
             RecalculatePaymentTotals();
-            PaymentStatusText = "Payment mode active. Enter amount and select payment type.";
-            PaymentStatusColor = "#003366";
+            PaymentStatusText = NetValue <= 0m
+                ? "No payment required. Press Enter to confirm."
+                : "Payment mode active. Enter amount and select payment type.";
+            PaymentStatusColor = NetValue <= 0m ? "#10B981" : "#003366";
             _ = ShowNotificationAsync("Payment mode active.", "#3B82F6");
         }
 
@@ -1303,7 +1301,7 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (!PaymentLines.Any())
+            if (!PaymentLines.Any() && NetValue > 0m)
             {
                 _ = ShowNotificationAsync("No payment entered.", "#EF4444");
                 return;
@@ -1349,6 +1347,11 @@ namespace POS.Cashier.UI.ViewModels
             {
                 PaymentStatusText = $"Balance due: Rs. {BalanceDue:N2}";
                 PaymentStatusColor = "#D97706";
+            }
+            else if (NetValue <= 0m && PaymentLines.Count == 0)
+            {
+                PaymentStatusText = "No payment required. Press Enter to confirm.";
+                PaymentStatusColor = "#10B981";
             }
             else
             {
@@ -1743,6 +1746,11 @@ namespace POS.Cashier.UI.ViewModels
             {
                 ItemVariantId = item.VariantId,
                 ItemBatchId = selectedBatch.ItemBatchId,
+                ItemParentId = item.ItemParentId,
+                CategoryId = item.CategoryId,
+                SubCategoryId = item.SubCategoryId ?? 0,
+                PrimarySupplierId = item.PrimarySupplierId ?? 0,
+                SupplierIds = item.SupplierIds.ToList(),
                 ItemCode = item.ItemCode,
                 SkuCode = item.SkuCode,
                 Barcode = string.IsNullOrWhiteSpace(item.Barcode) ? item.SkuCode : item.Barcode,
@@ -1834,6 +1842,11 @@ namespace POS.Cashier.UI.ViewModels
             {
                 ItemVariantId = item.VariantId,
                 ItemBatchId = 0,
+                ItemParentId = item.ItemParentId,
+                CategoryId = item.CategoryId,
+                SubCategoryId = item.SubCategoryId ?? 0,
+                PrimarySupplierId = item.PrimarySupplierId ?? 0,
+                SupplierIds = item.SupplierIds.ToList(),
                 ItemCode = item.ItemCode,
                 SkuCode = item.SkuCode,
                 Barcode = string.IsNullOrWhiteSpace(item.Barcode)
@@ -2001,74 +2014,181 @@ namespace POS.Cashier.UI.ViewModels
         {
             if (cartItem == null || result == null)
             {
-                _ = ShowNotificationAsync("Free issue result is missing.", "#EF4444");
+                _ = ShowNotificationAsync("Free Issue result is missing.", "#EF4444");
                 return;
             }
 
             if (IsPaymentModeActive)
             {
-                _ = ShowNotificationAsync("Cancel payment mode before applying free issue.", "#F59E0B");
+                _ = ShowNotificationAsync("Cancel payment mode before applying Free Issue.", "#F59E0B");
                 return;
             }
 
-            if (cartItem.IsService)
+            if (cartItem.IsGiftVoucherSale || cartItem.IsFreeItem || cartItem.Quantity <= 0m || result.FreeIssueRuleId <= 0)
+            {
+                _ = ShowNotificationAsync("Free Issue cannot be applied to this line.", "#EF4444");
+                return;
+            }
+
+            if (cartItem.IsManualDiscount || cartItem.IsRuleDiscount || cartItem.IsPriceOverridden || cartItem.DiscountAmount > 0m)
             {
                 _ = ShowNotificationAsync(
-                    "Free issue cannot be applied to a Service.",
+                    "Remove the discount or price override before applying Free Issue.",
+                    "#F59E0B");
+                return;
+            }
+
+            decimal freeQuantity = Math.Round(result.FreeQuantity, 3);
+            if (freeQuantity <= 0m || freeQuantity > cartItem.Quantity)
+            {
+                _ = ShowNotificationAsync(
+                    $"Free quantity must be between 0.001 and {cartItem.Quantity:N3}.",
                     "#EF4444");
                 return;
             }
 
-            if (cartItem.IsGiftVoucherSale || cartItem.Quantity <= 0m || result.FreeIssueRuleId <= 0)
-            {
-                _ = ShowNotificationAsync("Free issue cannot be applied to this line.", "#EF4444");
-                return;
-            }
-
-            string freeIssueType = string.IsNullOrWhiteSpace(result.FreeIssueType) ? "ShopCost" : result.FreeIssueType.Trim();
-            bool isSupplierRecoverable = freeIssueType.Equals("SupplierClaim", StringComparison.OrdinalIgnoreCase);
+            string freeIssueType = FreeIssueTypeCodes.Normalize(result.FreeIssueType);
+            bool isSupplierRecoverable = freeIssueType == FreeIssueTypeCodes.SupplierClaim;
 
             if (isSupplierRecoverable && (!result.SupplierId.HasValue || result.SupplierId.Value <= 0))
             {
-                _ = ShowNotificationAsync("Supplier is required for supplier recoverable free issue.", "#EF4444");
+                _ = ShowNotificationAsync(
+                    "Supplier is required for a supplier-funded Free Issue.",
+                    "#EF4444");
                 return;
             }
 
-            decimal originalUnitPrice = result.OriginalUnitPrice > 0m ? Math.Round(result.OriginalUnitPrice, 2) : Math.Round(cartItem.UnitPrice > 0m ? cartItem.UnitPrice : cartItem.RetailPrice, 2);
-            decimal costValue = result.FreeIssueCostValue > 0m ? Math.Round(result.FreeIssueCostValue, 2) : Math.Round(cartItem.CostPrice * cartItem.Quantity, 2);
-            decimal sellingValue = result.FreeIssueSellingValue > 0m ? Math.Round(result.FreeIssueSellingValue, 2) : Math.Round(originalUnitPrice * cartItem.Quantity, 2);
-            decimal claimValue = isSupplierRecoverable ? Math.Round(result.ClaimValue, 2) : 0m;
+            if (result.RequiresAdminApproval &&
+                !string.Equals(result.ApprovedRole, FreeIssueApprovalRoleCodes.Administrator, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(result.ApprovedRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                _ = ShowNotificationAsync("Administrator approval is required.", "#EF4444");
+                return;
+            }
 
-            cartItem.OriginalUnitPrice = originalUnitPrice;
-            cartItem.UnitPrice = 0m;
-            cartItem.DiscountPercentage = 0m;
-            cartItem.ManualDiscountAmount = 0m;
-            cartItem.DiscountMode = "None";
-            cartItem.IsManualDiscount = false;
-            cartItem.IsPriceOverridden = false;
-            cartItem.PriceOverrideAmount = 0m;
-            cartItem.PriceOverrideApprovedBy = string.Empty;
-            cartItem.PriceOverrideApprovedAt = null;
-            cartItem.IsFreeItem = true;
-            cartItem.FreeIssueRuleId = result.FreeIssueRuleId;
-            cartItem.FreeIssueRuleName = result.FreeIssueRuleName ?? string.Empty;
-            cartItem.FreeIssueType = isSupplierRecoverable ? "SupplierClaim" : "ShopCost";
-            cartItem.FreeReasonCode = result.FreeReasonCode ?? string.Empty;
-            cartItem.FreeReasonText = result.FreeReasonText ?? string.Empty;
-            cartItem.FreeApprovedBy = result.ApprovedBy ?? string.Empty;
-            cartItem.FreeApprovedAt = result.ApprovedAt;
-            cartItem.FreeIssueCostValue = costValue;
-            cartItem.FreeIssueSellingValue = sellingValue;
-            cartItem.IsSupplierRecoverable = isSupplierRecoverable;
-            cartItem.SupplierId = result.SupplierId ?? 0;
-            cartItem.SupplierName = result.SupplierName ?? string.Empty;
-            cartItem.SupplierPromotionReference = result.SupplierPromotionReference ?? string.Empty;
-            cartItem.SupplierClaimReferenceNo = result.SupplierClaimReferenceNo ?? string.Empty;
-            cartItem.SupplierClaimStatus = isSupplierRecoverable ? "Pending" : string.Empty;
-            cartItem.SupplierClaimValue = claimValue;
+            if ((result.RequiresManagerApproval || result.RequiresAdminApproval) &&
+                (result.ApprovedByUserId.GetValueOrDefault() <= 0 || string.IsNullOrWhiteSpace(result.ApprovedBy)))
+            {
+                _ = ShowNotificationAsync("Authenticated approval is required.", "#EF4444");
+                return;
+            }
 
+            FreeIssueQuantitySplit quantitySplit = FreeIssueQuantitySplitter.Split(
+                cartItem.Quantity,
+                freeQuantity);
+
+            CartItem freeLine;
+            if (quantitySplit.PaidQuantity > 0m)
+            {
+                int paidLineIndex = Cart.IndexOf(cartItem);
+                cartItem.Quantity = quantitySplit.PaidQuantity;
+                freeLine = CreateFreeIssueSplitLine(cartItem, quantitySplit.FreeQuantity);
+                Cart.Insert(Math.Max(0, paidLineIndex + 1), freeLine);
+            }
+            else
+            {
+                freeLine = cartItem;
+            }
+
+            decimal originalUnitPrice = result.OriginalUnitPrice > 0m
+                ? Math.Round(result.OriginalUnitPrice, 2)
+                : Math.Round(freeLine.UnitPrice > 0m ? freeLine.UnitPrice : freeLine.RetailPrice, 2);
+            decimal costValue = Math.Round(freeLine.CostPrice * freeQuantity, 2);
+            decimal sellingValue = Math.Round(originalUnitPrice * freeQuantity, 2);
+            decimal claimValue = isSupplierRecoverable
+                ? Math.Round(result.ClaimValue, 2)
+                : 0m;
+
+            freeLine.Quantity = freeQuantity;
+            freeLine.OriginalUnitPrice = originalUnitPrice;
+            freeLine.UnitPrice = 0m;
+            freeLine.DiscountPercentage = 0m;
+            freeLine.ManualDiscountAmount = 0m;
+            freeLine.DiscountMode = "None";
+            freeLine.IsManualDiscount = false;
+            freeLine.IsRuleDiscount = false;
+            freeLine.DiscountRuleId = 0;
+            freeLine.DiscountRuleName = string.Empty;
+            freeLine.IsPriceOverridden = false;
+            freeLine.PriceOverrideAmount = 0m;
+            freeLine.PriceOverrideApprovedBy = string.Empty;
+            freeLine.PriceOverrideApprovedAt = null;
+            freeLine.IsFreeItem = true;
+            freeLine.FreeIssueRuleId = result.FreeIssueRuleId;
+            freeLine.FreeIssueRuleName = result.FreeIssueRuleName ?? string.Empty;
+            freeLine.FreeIssueType = freeIssueType;
+            freeLine.FreeReasonCode = result.FreeReasonCode ?? string.Empty;
+            freeLine.FreeReasonText = result.FreeReasonText ?? string.Empty;
+            freeLine.FreeApprovedBy = result.ApprovedBy ?? string.Empty;
+            freeLine.FreeApprovedAt = result.ApprovedAt;
+            freeLine.FreeApprovedByUserId = result.ApprovedByUserId ?? 0;
+            freeLine.FreeApprovedRole = result.ApprovedRole ?? string.Empty;
+            freeLine.FreeIssueAppliedBy = string.IsNullOrWhiteSpace(result.AppliedBy)
+                ? CashierName
+                : result.AppliedBy.Trim();
+            freeLine.FreeIssueAppliedAt = result.AppliedAt == default ? DateTime.Now : result.AppliedAt;
+            freeLine.FreeIssueRuleSnapshotJson = result.RuleSnapshotJson ?? string.Empty;
+            freeLine.FreeIssueSnapshotStatus = result.SnapshotStatus ?? FreeIssueSnapshotStatusCodes.LegacyUnknown;
+            freeLine.FreeIssueCostValue = costValue;
+            freeLine.FreeIssueSellingValue = sellingValue;
+            freeLine.IsSupplierRecoverable = isSupplierRecoverable;
+            freeLine.SupplierId = result.SupplierId ?? 0;
+            freeLine.SupplierName = result.SupplierName ?? string.Empty;
+            freeLine.SupplierPromotionReference = result.SupplierPromotionReference ?? string.Empty;
+            freeLine.SupplierClaimId = 0;
+            freeLine.SupplierClaimReferenceNo = string.Empty;
+            freeLine.SupplierClaimStatus = isSupplierRecoverable
+                ? SupplierClaimStatusCodes.Draft
+                : string.Empty;
+            freeLine.SupplierClaimValue = claimValue;
+
+            SelectedCartItem = freeLine;
             RecalculateTotals();
-            _ = ShowNotificationAsync(isSupplierRecoverable ? $"Free item applied as supplier recoverable claim: Rs. {claimValue:N2}" : $"Free item applied as shop cost: Rs. {costValue:N2}", "#10B981");
+            _ = ShowNotificationAsync(
+                isSupplierRecoverable
+                    ? $"Supplier-funded Free Issue applied: {freeQuantity:N3} / Claim Rs. {claimValue:N2}"
+                    : $"Shop-funded Free Issue applied: {freeQuantity:N3} / Cost Rs. {costValue:N2}",
+                "#10B981");
+        }
+
+        private static CartItem CreateFreeIssueSplitLine(CartItem source, decimal quantity)
+        {
+            return new CartItem
+            {
+                ItemVariantId = source.ItemVariantId,
+                ItemBatchId = source.ItemBatchId,
+                ItemParentId = source.ItemParentId,
+                CategoryId = source.CategoryId,
+                SubCategoryId = source.SubCategoryId,
+                PrimarySupplierId = source.PrimarySupplierId,
+                SupplierIds = source.SupplierIds.ToList(),
+                ItemCode = source.ItemCode,
+                SkuCode = source.SkuCode,
+                Barcode = source.Barcode,
+                Description = source.Description,
+                VariantDescription = source.VariantDescription,
+                Uom = source.Uom,
+                ItemType = source.ItemType,
+                TaxProfile = source.TaxProfile,
+                BatchNo = source.BatchNo,
+                ExpiryDate = source.ExpiryDate,
+                ReceivedDate = source.ReceivedDate,
+                AvailableBatchStock = source.AvailableBatchStock,
+                CostPrice = source.CostPrice,
+                RetailPrice = source.RetailPrice,
+                WholesalePrice = source.WholesalePrice,
+                MinimumPrice = source.MinimumPrice,
+                MaximumPrice = source.MaximumPrice,
+                UnitPrice = source.UnitPrice,
+                OriginalUnitPrice = source.OriginalUnitPrice > 0m ? source.OriginalUnitPrice : source.UnitPrice,
+                Quantity = quantity,
+                DiscountPercentage = 0m,
+                ManualDiscountAmount = 0m,
+                DiscountMode = "None",
+                IsManualDiscount = false,
+                IsRuleDiscount = false,
+                IsPriceOverridden = false
+            };
         }
 
         public void RemoveSelectedItem()
@@ -2146,17 +2266,16 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            bool hasSpecialLine = Cart.Any(item =>
-                item.IsGiftVoucherSale ||
-                item.IsFreeItem);
+            bool hasGiftVoucherLine = Cart.Any(item => item.IsGiftVoucherSale);
+            bool hasFreeIssueLine = Cart.Any(item => item.IsFreeItem);
 
-            if (hasSpecialLine)
+            if (hasGiftVoucherLine)
             {
                 if (InvoiceDiscountAmount != 0m)
                 {
                     InvoiceDiscountAmount = 0m;
                     _ = ShowNotificationAsync(
-                        "Invoice discount was cleared because the cart contains a voucher or free line.",
+                        "Invoice discount was cleared because the cart contains a Gift Voucher issue line.",
                         "#F59E0B");
                 }
 
@@ -2168,24 +2287,115 @@ namespace POS.Cashier.UI.ViewModels
                     item.TaxInclusiveAmount = item.LineAmount;
                 }
 
-                GrossValue = Math.Round(
-                    Cart.Sum(item => item.GrossAmount),
-                    2);
-                LineDiscountTotal = Math.Round(
-                    Cart.Sum(item => item.DiscountAmount),
-                    2);
+                GrossValue = Math.Round(Cart.Sum(item => item.GrossAmount), 2);
+                LineDiscountTotal = Math.Round(Cart.Sum(item => item.DiscountAmount), 2);
                 TotalDiscount = LineDiscountTotal;
-                NetValue = Math.Round(
-                    Cart.Sum(item => item.LineAmount),
-                    2);
+                NetValue = Math.Round(Cart.Sum(item => item.LineAmount), 2);
                 TaxableAmountTotal = 0m;
                 TotalVatAmount = 0m;
                 ZeroRatedAmount = 0m;
                 ExemptAmount = 0m;
                 OutOfScopeAmount = 0m;
                 IsTaxCalculationReady = false;
-                TaxSummaryStatusText =
-                    "VAT summary unavailable for voucher/free lines";
+                TaxSummaryStatusText = "VAT summary finalized at checkout for Gift Voucher issue lines";
+
+                if (IsPaymentModeActive)
+                    RecalculatePaymentTotals();
+
+                return;
+            }
+
+            if (hasFreeIssueLine)
+            {
+                decimal availableForInvoiceDiscountWithFreeLines = Math.Round(
+                    Cart.Where(item => !item.IsFreeItem).Sum(item => item.LineAmount),
+                    2);
+
+                if (InvoiceDiscountAmount > availableForInvoiceDiscountWithFreeLines)
+                {
+                    InvoiceDiscountAmount = 0m;
+                    _ = ShowNotificationAsync(
+                        "Invoice discount was cleared because the paid cart value changed.",
+                        "#F59E0B");
+                }
+
+                try
+                {
+                    List<(CartItem Item, int Index)> paidLines = Cart
+                        .Select((item, index) => (Item: item, Index: index))
+                        .Where(row => !row.Item.IsFreeItem)
+                        .ToList();
+
+                    foreach (CartItem freeItem in Cart.Where(item => item.IsFreeItem))
+                    {
+                        freeItem.InvoiceDiscountAllocation = 0m;
+                        freeItem.TaxableAmount = 0m;
+                        freeItem.VatAmount = 0m;
+                        freeItem.TaxInclusiveAmount = 0m;
+                    }
+
+                    if (paidLines.Count == 0)
+                    {
+                        GrossValue = 0m;
+                        LineDiscountTotal = 0m;
+                        TotalDiscount = 0m;
+                        NetValue = 0m;
+                        TaxableAmountTotal = 0m;
+                        TotalVatAmount = 0m;
+                        ZeroRatedAmount = 0m;
+                        ExemptAmount = 0m;
+                        OutOfScopeAmount = 0m;
+                        IsTaxCalculationReady = true;
+                        TaxSummaryStatusText = "Free Issue — zero customer value and zero VAT";
+                    }
+                    else
+                    {
+                        List<SalesTaxLineInput> inputs = paidLines
+                            .Select(row => new SalesTaxLineInput
+                            {
+                                LineKey = row.Index,
+                                ItemVariantId = row.Item.ItemVariantId,
+                                Quantity = row.Item.Quantity,
+                                VatInclusiveUnitPrice = row.Item.UnitPrice,
+                                LineDiscountAmount = row.Item.DiscountAmount,
+                                TaxProfile = row.Item.TaxProfile
+                            })
+                            .ToList();
+
+                        SalesTaxDocumentResult result = _salesTaxService.CalculateDocument(
+                            inputs,
+                            InvoiceDiscountAmount,
+                            _isVatRegisteredStore);
+
+                        foreach (SalesTaxLineResult lineResult in result.Lines)
+                        {
+                            CartItem item = Cart[lineResult.LineKey];
+                            item.InvoiceDiscountAllocation = lineResult.InvoiceDiscountAllocation;
+                            item.TaxableAmount = lineResult.TaxableAmount;
+                            item.VatAmount = lineResult.VatAmount;
+                            item.TaxInclusiveAmount = lineResult.TaxInclusiveAmount;
+                        }
+
+                        GrossValue = result.GrossTotal;
+                        LineDiscountTotal = result.LineDiscountTotal;
+                        TotalDiscount = result.TotalDiscount;
+                        NetValue = result.NetTotal;
+                        TaxableAmountTotal = result.StandardRatedAmount;
+                        TotalVatAmount = result.TotalVat;
+                        ZeroRatedAmount = result.ZeroRatedAmount;
+                        ExemptAmount = result.ExemptAmount;
+                        OutOfScopeAmount = result.OutOfScopeAmount;
+                        IsTaxCalculationReady = true;
+                        TaxSummaryStatusText = _isVatRegisteredStore
+                            ? "VAT-inclusive paid lines; Free Issue value and VAT are zero"
+                            : "Non-VAT store; Free Issue value is zero";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    IsTaxCalculationReady = false;
+                    TaxSummaryStatusText = ex.Message;
+                }
 
                 if (IsPaymentModeActive)
                     RecalculatePaymentTotals();
@@ -2326,9 +2536,7 @@ namespace POS.Cashier.UI.ViewModels
 
             RecalculateTotals();
 
-            if (Cart.All(item =>
-                    !item.IsGiftVoucherSale &&
-                    !item.IsFreeItem) &&
+            if (!Cart.Any(item => item.IsGiftVoucherSale) &&
                 !IsTaxCalculationReady)
             {
                 _ = ShowNotificationAsync(
@@ -2337,7 +2545,7 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
 
-            if (!PaymentLines.Any())
+            if (!PaymentLines.Any() && NetValue > 0m)
             {
                 _ = ShowNotificationAsync("No payment entered.", "#EF4444");
                 return false;
@@ -2387,7 +2595,7 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
 
-            var belowMinimumLine = Cart.FirstOrDefault(c => !c.IsGiftVoucherSale && c.IsBelowMinimumPrice);
+            var belowMinimumLine = Cart.FirstOrDefault(c => !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsBelowMinimumPrice);
             if (belowMinimumLine != null && !IsManagerModeActive)
             {
                 _ = ShowNotificationAsync($"Price below minimum: {belowMinimumLine.Description}", "#EF4444");
@@ -2400,7 +2608,11 @@ namespace POS.Cashier.UI.ViewModels
             {
                 await FlushCartPersistenceAsync();
 
-                string paymentMethod = PaymentLines.Count == 1 ? PaymentLines.First().DisplayPaymentType : "Split";
+                string paymentMethod = PaymentLines.Count == 0
+                    ? "No Charge"
+                    : PaymentLines.Count == 1
+                        ? PaymentLines.First().DisplayPaymentType
+                        : "Split";
                 CustomerSearchDto? activeCustomer = ActiveB2BCustomer;
                 string customerName = activeCustomer == null ? "Walk-In" : activeCustomer.DisplayName;
                 string customerCompanyName = activeCustomer?.CompanyName ?? string.Empty;
@@ -2492,6 +2704,12 @@ namespace POS.Cashier.UI.ViewModels
                     FreeReasonText = c.IsFreeItem ? c.FreeReasonText : string.Empty,
                     FreeApprovedBy = c.IsFreeItem ? c.FreeApprovedBy : string.Empty,
                     FreeApprovedAt = c.IsFreeItem ? c.FreeApprovedAt : null,
+                    FreeIssueAppliedBy = c.IsFreeItem ? c.FreeIssueAppliedBy : string.Empty,
+                    FreeIssueAppliedAt = c.IsFreeItem ? c.FreeIssueAppliedAt : null,
+                    FreeApprovedByUserId = c.IsFreeItem && c.FreeApprovedByUserId > 0 ? c.FreeApprovedByUserId : null,
+                    FreeApprovedRole = c.IsFreeItem ? c.FreeApprovedRole : string.Empty,
+                    FreeIssueRuleSnapshotJson = c.IsFreeItem ? c.FreeIssueRuleSnapshotJson : string.Empty,
+                    FreeIssueSnapshotStatus = c.IsFreeItem ? c.FreeIssueSnapshotStatus : FreeIssueSnapshotStatusCodes.LegacyUnknown,
                     FreeIssueCostValue = c.IsFreeItem ? c.FreeIssueCostValue : 0m,
                     FreeIssueSellingValue = c.IsFreeItem ? c.FreeIssueSellingValue : 0m,
                     IsSupplierRecoverable = c.IsFreeItem && c.IsSupplierRecoverable,

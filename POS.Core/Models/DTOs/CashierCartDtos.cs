@@ -66,6 +66,11 @@ namespace POS.Core.Models.DTOs
         public string LineType { get; set; } = string.Empty;
         public int ItemVariantId { get; set; }
         public int ItemBatchId { get; set; }
+        public int ItemParentId { get; set; }
+        public int CategoryId { get; set; }
+        public int SubCategoryId { get; set; }
+        public int PrimarySupplierId { get; set; }
+        public List<int> SupplierIds { get; set; } = new();
         public string ItemCode { get; set; } = string.Empty;
         public string SkuCode { get; set; } = string.Empty;
         public string Barcode { get; set; } = string.Empty;
@@ -101,6 +106,12 @@ namespace POS.Core.Models.DTOs
         public string FreeReasonText { get; set; } = string.Empty;
         public string FreeApprovedBy { get; set; } = string.Empty;
         public DateTime? FreeApprovedAt { get; set; }
+        public string FreeIssueAppliedBy { get; set; } = string.Empty;
+        public DateTime? FreeIssueAppliedAt { get; set; }
+        public int FreeApprovedByUserId { get; set; }
+        public string FreeApprovedRole { get; set; } = string.Empty;
+        public string FreeIssueRuleSnapshotJson { get; set; } = string.Empty;
+        public string FreeIssueSnapshotStatus { get; set; } = string.Empty;
         public decimal OriginalUnitPrice { get; set; }
         public decimal FreeIssueCostValue { get; set; }
         public decimal FreeIssueSellingValue { get; set; }

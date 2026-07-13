@@ -1998,7 +1998,8 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("ItemVariantId");
 
-                    b.HasIndex("RuleName");
+                    b.HasIndex("RuleName")
+                        .IsUnique();
 
                     b.HasIndex("SkuCode");
 
@@ -2088,6 +2089,23 @@ namespace POS.Core.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("FreeApprovedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FreeApprovedRole")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<DateTime?>("FreeIssueAppliedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FreeIssueAppliedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("FreeIssueCostValue")
                         .HasColumnType("decimal(18,2)");
 
@@ -2098,6 +2116,20 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("FreeIssueRuleSnapshotJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("FreeIssueSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
 
                     b.Property<decimal>("FreeIssueSellingValue")
                         .HasColumnType("decimal(18,2)");
@@ -2284,7 +2316,8 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("SalesHeaderId");
 
-                    b.HasIndex("SalesLineId");
+                    b.HasIndex("SalesLineId")
+                        .IsUnique();
 
                     b.HasIndex("SettledAt");
 
@@ -2299,6 +2332,47 @@ namespace POS.Core.Migrations
                     b.HasIndex("WrittenOffAt");
 
                     b.ToTable("FreeItemClaimLogs");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.FreeItemClaimAdjustment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("ClaimValueReduction")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomerReturnLineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FreeItemClaimLogId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("QuantityReturned")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerReturnLineId")
+                        .IsUnique();
+
+                    b.HasIndex("FreeItemClaimLogId");
+
+                    b.ToTable("FreeItemClaimAdjustments");
                 });
 
             modelBuilder.Entity("POS.Core.Models.GiftVoucher", b =>
@@ -4402,6 +4476,23 @@ namespace POS.Core.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("FreeApprovedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FreeApprovedRole")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<DateTime?>("FreeIssueAppliedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FreeIssueAppliedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("FreeIssueCostValue")
                         .HasColumnType("decimal(18,2)");
 
@@ -4412,6 +4503,20 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("FreeIssueRuleSnapshotJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("FreeIssueSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
 
                     b.Property<decimal>("FreeIssueSellingValue")
                         .HasColumnType("decimal(18,2)");
@@ -4638,7 +4743,11 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("ExpiryDate");
 
+                    b.HasIndex("FreeApprovedByUserId");
+
                     b.HasIndex("FreeIssueRuleId");
+
+                    b.HasIndex("FreeIssueSnapshotStatus");
 
                     b.HasIndex("FreeIssueType");
 
@@ -6948,6 +7057,25 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("ItemVariant");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.FreeItemClaimAdjustment", b =>
+                {
+                    b.HasOne("POS.Core.Models.CustomerReturnLine", "CustomerReturnLine")
+                        .WithMany()
+                        .HasForeignKey("CustomerReturnLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("POS.Core.Models.FreeItemClaimLog", "FreeItemClaimLog")
+                        .WithMany()
+                        .HasForeignKey("FreeItemClaimLogId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CustomerReturnLine");
+
+                    b.Navigation("FreeItemClaimLog");
                 });
 
             modelBuilder.Entity("POS.Core.Models.FreeItemClaimLog", b =>

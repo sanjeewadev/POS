@@ -2161,7 +2161,7 @@ namespace POS.Cashier.UI.Views
             }
         }
 
-        private void FreeBtn_Click(object sender, RoutedEventArgs e)
+        private async void FreeBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel == null)
                 return;
@@ -2216,7 +2216,11 @@ namespace POS.Cashier.UI.Views
 
             try
             {
-                var dialog = new FreeItemReasonModalWindow(ViewModel.SelectedCartItem)
+                CartItem selectedItem = ViewModel.SelectedCartItem;
+                var dialog = new FreeItemReasonModalWindow(
+                    selectedItem,
+                    ViewModel.Cart.ToList(),
+                    ViewModel.CashierName)
                 {
                     Owner = this
                 };
@@ -2225,9 +2229,39 @@ namespace POS.Cashier.UI.Views
 
                 if (result == true && dialog.Result != null)
                 {
-                    ViewModel.ApplyFreeItemLogic(
-                        ViewModel.SelectedCartItem,
-                        dialog.Result);
+                    FreeItemApplyResult applyResult = dialog.Result;
+
+                    if (applyResult.RequiresManagerApproval || applyResult.RequiresAdminApproval)
+                    {
+                        ManagerAuthViewModel authViewModel =
+                            App.Services!.GetRequiredService<ManagerAuthViewModel>();
+                        authViewModel.RequireAdministrator = applyResult.RequiresAdminApproval;
+
+                        var authDialog = new ManagerAuthDialogView(authViewModel)
+                        {
+                            Owner = this,
+                            Title = applyResult.RequiresAdminApproval
+                                ? "Administrator Approval — Free Issue"
+                                : "Manager Approval — Free Issue"
+                        };
+
+                        bool? authenticated = authDialog.ShowDialog();
+                        if (authenticated != true || string.IsNullOrWhiteSpace(authViewModel.AuthorizedUsername))
+                        {
+                            await ViewModel.ShowNotificationAsync(
+                                "Free Issue was not applied because approval was cancelled.",
+                                "#F59E0B");
+                            ResetTerminalActionMode();
+                            return;
+                        }
+
+                        applyResult.ApprovedBy = authViewModel.AuthorizedUsername;
+                        applyResult.ApprovedByUserId = authViewModel.AuthorizedUserId;
+                        applyResult.ApprovedRole = authViewModel.AuthorizedRole;
+                        applyResult.ApprovedAt = DateTime.Now;
+                    }
+
+                    ViewModel.ApplyFreeItemLogic(selectedItem, applyResult);
                 }
 
                 ResetTerminalActionMode();

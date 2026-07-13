@@ -1,52 +1,50 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Cashier.UI.Models;
+using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace POS.Cashier.UI.ViewModels
 {
-    public class FreeItemApplyResult
+    public sealed class FreeItemApplyResult
     {
         public int FreeIssueRuleId { get; set; }
-
         public string FreeIssueRuleName { get; set; } = string.Empty;
-
         public string FreeIssueType { get; set; } = string.Empty;
-
         public string FreeReasonCode { get; set; } = string.Empty;
-
         public string FreeReasonText { get; set; } = string.Empty;
-
         public int? SupplierId { get; set; }
-
         public string SupplierName { get; set; } = string.Empty;
-
         public string SupplierPromotionReference { get; set; } = string.Empty;
-
-        public string SupplierClaimReferenceNo { get; set; } = string.Empty;
-
         public decimal ClaimValue { get; set; }
-
+        public decimal FreeQuantity { get; set; }
+        public bool RequiresManagerApproval { get; set; }
+        public bool RequiresAdminApproval { get; set; }
         public string ApprovedBy { get; set; } = string.Empty;
-
+        public int? ApprovedByUserId { get; set; }
+        public string ApprovedRole { get; set; } = string.Empty;
         public DateTime? ApprovedAt { get; set; }
-
+        public string AppliedBy { get; set; } = string.Empty;
+        public DateTime AppliedAt { get; set; }
+        public string RuleSnapshotJson { get; set; } = string.Empty;
+        public string SnapshotStatus { get; set; } = FreeIssueSnapshotStatusCodes.LegacyUnknown;
         public decimal OriginalUnitPrice { get; set; }
-
         public decimal FreeIssueCostValue { get; set; }
-
         public decimal FreeIssueSellingValue { get; set; }
     }
 
     public partial class FreeItemReasonModalViewModel : ObservableObject
     {
         private readonly FreeIssueRuleRepository _ruleRepository;
-
         private CartItem? _selectedCartItem;
+        private IReadOnlyCollection<CartItem> _cartItems = Array.Empty<CartItem>();
+        private string _cashierName = string.Empty;
 
         public ObservableCollection<FreeIssueRule> ApplicableRules { get; } = new();
 
@@ -66,34 +64,34 @@ namespace POS.Cashier.UI.ViewModels
         private string _batchNo = string.Empty;
 
         [ObservableProperty]
-        private decimal _quantity = 0m;
+        private decimal _quantity;
 
         [ObservableProperty]
-        private decimal _costPrice = 0m;
+        private decimal _maximumQuantity;
 
         [ObservableProperty]
-        private decimal _originalUnitPrice = 0m;
+        private decimal _costPrice;
 
         [ObservableProperty]
-        private decimal _freeIssueCostValue = 0m;
+        private decimal _originalUnitPrice;
 
         [ObservableProperty]
-        private decimal _freeIssueSellingValue = 0m;
+        private decimal _freeIssueCostValue;
 
         [ObservableProperty]
-        private decimal _claimValue = 0m;
+        private decimal _freeIssueSellingValue;
 
         [ObservableProperty]
-        private bool _requiresManagerApproval = false;
+        private decimal _claimValue;
 
         [ObservableProperty]
-        private string _approvedBy = string.Empty;
+        private bool _requiresManagerApproval;
 
         [ObservableProperty]
-        private string _claimReferenceNo = string.Empty;
+        private bool _requiresAdminApproval;
 
         [ObservableProperty]
-        private bool _isBusy = false;
+        private bool _isBusy;
 
         [ObservableProperty]
         private string _statusText = "Select a free issue rule.";
@@ -102,10 +100,9 @@ namespace POS.Cashier.UI.ViewModels
         private string _statusColorHex = "#374151";
 
         [ObservableProperty]
-        private bool _canConfirm = false;
+        private bool _canConfirm;
 
         public FreeItemApplyResult? Result { get; private set; }
-
         public Action<bool>? ActionCompleted;
 
         public FreeItemReasonModalViewModel(FreeIssueRuleRepository ruleRepository)
@@ -113,17 +110,17 @@ namespace POS.Cashier.UI.ViewModels
             _ruleRepository = ruleRepository;
         }
 
-        partial void OnSelectedRuleChanged(FreeIssueRule? value)
-        {
-            _ = ValidateSelectedRuleAsync();
-        }
+        partial void OnSelectedRuleChanged(FreeIssueRule? value) => _ = ValidateSelectedRuleAsync();
+        partial void OnQuantityChanged(decimal value) => _ = ValidateSelectedRuleAsync();
 
-        public async Task InitializeAsync(CartItem selectedCartItem)
+        public async Task InitializeAsync(
+            CartItem selectedCartItem,
+            IReadOnlyCollection<CartItem> cartItems,
+            string cashierName)
         {
-            if (selectedCartItem == null)
-                throw new ArgumentNullException(nameof(selectedCartItem));
-
-            _selectedCartItem = selectedCartItem;
+            _selectedCartItem = selectedCartItem ?? throw new ArgumentNullException(nameof(selectedCartItem));
+            _cartItems = cartItems ?? Array.Empty<CartItem>();
+            _cashierName = (cashierName ?? string.Empty).Trim();
 
             Result = null;
             ApplicableRules.Clear();
@@ -131,92 +128,54 @@ namespace POS.Cashier.UI.ViewModels
             ItemDescription = selectedCartItem.Description;
             Barcode = selectedCartItem.Barcode;
             SkuCode = selectedCartItem.SkuCode;
-            BatchNo = selectedCartItem.BatchNo;
-            Quantity = Math.Round(selectedCartItem.Quantity, 3);
+            BatchNo = selectedCartItem.IsService ? "Service / No stock" : selectedCartItem.BatchNo;
+            MaximumQuantity = Math.Round(selectedCartItem.Quantity, 3);
+            Quantity = MaximumQuantity;
             CostPrice = Math.Round(selectedCartItem.CostPrice, 2);
-
             OriginalUnitPrice = selectedCartItem.UnitPrice > 0m
                 ? Math.Round(selectedCartItem.UnitPrice, 2)
                 : Math.Round(selectedCartItem.RetailPrice, 2);
 
-            FreeIssueCostValue = Math.Round(CostPrice * Quantity, 2);
-            FreeIssueSellingValue = Math.Round(OriginalUnitPrice * Quantity, 2);
-
-            ApprovedBy = string.Empty;
-            ClaimReferenceNo = string.Empty;
-            ClaimValue = 0m;
-            RequiresManagerApproval = false;
-            CanConfirm = false;
-
+            ResetCalculatedValues();
             await LoadApplicableRulesAsync();
         }
 
         [RelayCommand]
-        private async Task RefreshRulesAsync()
-        {
-            await LoadApplicableRulesAsync();
-        }
+        private Task RefreshRulesAsync() => LoadApplicableRulesAsync();
 
         [RelayCommand]
         private async Task ConfirmAsync()
         {
-            if (_selectedCartItem == null)
+            if (_selectedCartItem == null || SelectedRule == null)
             {
-                SetStatus("No selected cart item.", "#EF4444");
+                SetStatus("Select an applicable free issue rule.", "#B91C1C");
                 return;
             }
 
-            if (SelectedRule == null)
-            {
-                SetStatus("Please select a free issue rule.", "#F59E0B");
-                return;
-            }
-
-            var validation = await ValidateSelectedRuleAsync();
-
-            if (!validation)
+            if (!await ValidateSelectedRuleAsync())
                 return;
 
-            if (RequiresManagerApproval && string.IsNullOrWhiteSpace(ApprovedBy))
-            {
-                SetStatus("Manager approval name/code is required.", "#F59E0B");
-                return;
-            }
-
-            string claimReference = (ClaimReferenceNo ?? string.Empty).Trim();
-
-            if (SelectedRule.IsSupplierClaim && string.IsNullOrWhiteSpace(claimReference))
-            {
-                claimReference = string.IsNullOrWhiteSpace(SelectedRule.SupplierPromotionReference)
-                    ? $"FI-{DateTime.Now:yyyyMMddHHmmss}"
-                    : SelectedRule.SupplierPromotionReference;
-            }
-
+            DateTime appliedAt = DateTime.Now;
             Result = new FreeItemApplyResult
             {
                 FreeIssueRuleId = SelectedRule.Id,
                 FreeIssueRuleName = SelectedRule.RuleName,
-                FreeIssueType = SelectedRule.FreeIssueType,
+                FreeIssueType = FreeIssueTypeCodes.Normalize(SelectedRule.FreeIssueType),
                 FreeReasonCode = SelectedRule.ReasonCode,
                 FreeReasonText = string.IsNullOrWhiteSpace(SelectedRule.ReasonName)
                     ? SelectedRule.RuleName
                     : SelectedRule.ReasonName,
-
                 SupplierId = SelectedRule.SupplierId,
                 SupplierName = SelectedRule.SupplierName,
                 SupplierPromotionReference = SelectedRule.SupplierPromotionReference,
-                SupplierClaimReferenceNo = claimReference,
-
                 ClaimValue = ClaimValue,
-
-                ApprovedBy = RequiresManagerApproval
-                    ? ApprovedBy.Trim()
-                    : string.Empty,
-
-                ApprovedAt = RequiresManagerApproval
-                    ? DateTime.Now
-                    : null,
-
+                FreeQuantity = Quantity,
+                RequiresManagerApproval = RequiresManagerApproval,
+                RequiresAdminApproval = RequiresAdminApproval,
+                AppliedBy = _cashierName,
+                AppliedAt = appliedAt,
+                RuleSnapshotJson = FreeIssueRuleSnapshot.FromRule(SelectedRule).ToJson(),
+                SnapshotStatus = FreeIssueSnapshotStatusCodes.Complete,
                 OriginalUnitPrice = OriginalUnitPrice,
                 FreeIssueCostValue = FreeIssueCostValue,
                 FreeIssueSellingValue = FreeIssueSellingValue
@@ -226,10 +185,7 @@ namespace POS.Cashier.UI.ViewModels
         }
 
         [RelayCommand]
-        private void Cancel()
-        {
-            ActionCompleted?.Invoke(false);
-        }
+        private void Cancel() => ActionCompleted?.Invoke(false);
 
         private async Task LoadApplicableRulesAsync()
         {
@@ -242,32 +198,26 @@ namespace POS.Cashier.UI.ViewModels
                 SelectedRule = null;
 
                 var rules = await _ruleRepository.GetApplicableRulesAsync(
-                    itemVariantId: _selectedCartItem.ItemVariantId > 0 ? _selectedCartItem.ItemVariantId : null,
-                    itemParentId: null,
-                    categoryId: null,
-                    subCategoryId: null,
-                    supplierId: null,
+                    itemVariantId: PositiveOrNull(_selectedCartItem.ItemVariantId),
+                    itemParentId: PositiveOrNull(_selectedCartItem.ItemParentId),
+                    categoryId: PositiveOrNull(_selectedCartItem.CategoryId),
+                    subCategoryId: PositiveOrNull(_selectedCartItem.SubCategoryId),
+                    supplierId: PositiveOrNull(_selectedCartItem.PrimarySupplierId),
+                    supplierIds: _selectedCartItem.SupplierIds,
                     skuCode: _selectedCartItem.SkuCode,
                     barcode: _selectedCartItem.Barcode);
 
-                foreach (var rule in rules)
+                foreach (FreeIssueRule rule in rules)
                     ApplicableRules.Add(rule);
 
                 if (ApplicableRules.Count == 0)
                 {
-                    SetStatus(
-                        "No active free issue rule found for this item. Manager/admin rule setup is required.",
-                        "#EF4444");
-
+                    SetStatus("No active free issue rule applies to this item.", "#B91C1C");
                     CanConfirm = false;
                     return;
                 }
 
                 SelectedRule = ApplicableRules[0];
-
-                SetStatus(
-                    $"Found {ApplicableRules.Count} applicable free issue rule(s).",
-                    "#10B981");
             });
         }
 
@@ -279,43 +229,71 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
 
+            decimal safeQuantity = Math.Round(Quantity, 3);
+            if (safeQuantity <= 0m || safeQuantity > MaximumQuantity)
+            {
+                ResetCalculatedValues();
+                SetStatus($"Free quantity must be between 0.001 and {MaximumQuantity:N3}.", "#B91C1C");
+                return false;
+            }
+
             try
             {
-                var result = await _ruleRepository.ValidateRuleUsageAsync(
-                    SelectedRule.Id,
-                    Quantity,
-                    OriginalUnitPrice,
-                    CostPrice);
+                decimal alreadyQty = _cartItems
+                    .Where(c => !ReferenceEquals(c, _selectedCartItem) && c.IsFreeItem && c.FreeIssueRuleId == SelectedRule.Id)
+                    .Sum(c => c.Quantity);
+                decimal alreadyValue = _cartItems
+                    .Where(c => !ReferenceEquals(c, _selectedCartItem) && c.IsFreeItem && c.FreeIssueRuleId == SelectedRule.Id)
+                    .Sum(c => c.FreeIssueSellingValue);
 
-                if (!result.IsAllowed)
+                FreeIssueRuleValidationResult validation = await _ruleRepository.ValidateRuleUsageAsync(
+                    SelectedRule.Id,
+                    safeQuantity,
+                    OriginalUnitPrice,
+                    CostPrice,
+                    itemVariantId: PositiveOrNull(_selectedCartItem.ItemVariantId),
+                    itemParentId: PositiveOrNull(_selectedCartItem.ItemParentId),
+                    categoryId: PositiveOrNull(_selectedCartItem.CategoryId),
+                    subCategoryId: PositiveOrNull(_selectedCartItem.SubCategoryId),
+                    supplierId: PositiveOrNull(_selectedCartItem.PrimarySupplierId),
+                    supplierIds: _selectedCartItem.SupplierIds,
+                    skuCode: _selectedCartItem.SkuCode,
+                    barcode: _selectedCartItem.Barcode,
+                    alreadyInInvoiceQty: alreadyQty,
+                    alreadyInInvoiceValue: alreadyValue);
+
+                if (!validation.IsAllowed)
                 {
-                    ClaimValue = 0m;
-                    RequiresManagerApproval = false;
-                    CanConfirm = false;
-                    SetStatus(result.Message, "#EF4444");
+                    ResetCalculatedValues();
+                    SetStatus(validation.Message, "#B91C1C");
                     return false;
                 }
 
-                ClaimValue = result.ClaimValue;
-                RequiresManagerApproval = result.RequiresManagerApproval;
-
+                FreeIssueCostValue = Math.Round(CostPrice * safeQuantity, 2);
+                FreeIssueSellingValue = Math.Round(OriginalUnitPrice * safeQuantity, 2);
+                ClaimValue = validation.ClaimValue;
+                RequiresManagerApproval = validation.RequiresManagerApproval;
+                RequiresAdminApproval = validation.RequiresAdminApproval;
                 CanConfirm = true;
-
-                if (RequiresManagerApproval)
-                    SetStatus(result.Message, "#F59E0B");
-                else
-                    SetStatus(result.Message, "#10B981");
-
+                SetStatus(validation.Message, RequiresManagerApproval || RequiresAdminApproval ? "#92400E" : "#166534");
                 return true;
             }
             catch (Exception ex)
             {
-                ClaimValue = 0m;
-                RequiresManagerApproval = false;
-                CanConfirm = false;
-                SetStatus(ex.Message, "#EF4444");
+                ResetCalculatedValues();
+                SetStatus(ex.Message, "#B91C1C");
                 return false;
             }
+        }
+
+        private void ResetCalculatedValues()
+        {
+            FreeIssueCostValue = 0m;
+            FreeIssueSellingValue = 0m;
+            ClaimValue = 0m;
+            RequiresManagerApproval = false;
+            RequiresAdminApproval = false;
+            CanConfirm = false;
         }
 
         private async Task RunBusyAsync(Func<Task> action)
@@ -330,7 +308,7 @@ namespace POS.Cashier.UI.ViewModels
             }
             catch (Exception ex)
             {
-                SetStatus(ex.Message, "#EF4444");
+                SetStatus(ex.Message, "#B91C1C");
             }
             finally
             {
@@ -343,5 +321,7 @@ namespace POS.Cashier.UI.ViewModels
             StatusText = message;
             StatusColorHex = color;
         }
+
+        private static int? PositiveOrNull(int value) => value > 0 ? value : null;
     }
 }
