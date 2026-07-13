@@ -239,7 +239,7 @@
                                             ShowDecimal="True"
                                             ShowDoubleZero="True"
                                             MaxLength="12"
-                                            ClearValue=""
+                                            ClearText=""
                                             SelectAllOnFirstKey="True"
                                             EnterPressed="TenderNumpad_EnterPressed"/>
         </Grid>

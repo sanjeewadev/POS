@@ -174,7 +174,7 @@ namespace POS.Core.Repositories
                     HasExpiryTracking = b.ItemVariant.ItemParent.HasExpiryTracking || b.ItemVariant.ItemParent.HasBatchExpiry,
                     IsGeneralStockBucket = (b.BatchNo ?? string.Empty).ToUpper() == GeneralBatchNo,
 
-                    BatchNo = b.BatchNo,
+                    BatchNo = b.BatchNo ?? string.Empty,
                     InternalBatchBarcode = b.InternalBatchBarcode ?? string.Empty,
                     ExpiryDate = b.ExpiryDate,
 

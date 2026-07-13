@@ -1096,8 +1096,11 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            foreach (var item in itemsToAdd.Where(i => i.RequiresExpiry && !i.ExpiryDate.HasValue && MatrixExpiryDate.HasValue))
-                item.ExpiryDate = MatrixExpiryDate.Value.Date;
+            if (MatrixExpiryDate is DateTime matrixExpiryDate)
+            {
+                foreach (var item in itemsToAdd.Where(i => i.RequiresExpiry && !i.ExpiryDate.HasValue))
+                    item.ExpiryDate = matrixExpiryDate.Date;
+            }
 
             var errors = new List<string>();
 

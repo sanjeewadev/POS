@@ -99,17 +99,17 @@ namespace POS.Cashier.UI.Components
             set => SetValue(MaxLengthProperty, value);
         }
 
-        public static readonly DependencyProperty ClearValueProperty =
+        public static readonly DependencyProperty ClearTextProperty =
             DependencyProperty.Register(
-                nameof(ClearValue),
+                nameof(ClearText),
                 typeof(string),
                 typeof(TenderNumpadControl),
                 new PropertyMetadata(string.Empty));
 
-        public string ClearValue
+        public string ClearText
         {
-            get => (string)GetValue(ClearValueProperty);
-            set => SetValue(ClearValueProperty, value);
+            get => (string)GetValue(ClearTextProperty);
+            set => SetValue(ClearTextProperty, value);
         }
 
         public static readonly DependencyProperty SelectAllOnFirstKeyProperty =
@@ -174,7 +174,7 @@ namespace POS.Cashier.UI.Components
                     break;
 
                 case "CLR":
-                    TargetText = ClearValue;
+                    TargetText = ClearText;
                     _isFirstKeyPress = true;
                     KeyPressed?.Invoke(this, EventArgs.Empty);
                     break;
@@ -261,13 +261,13 @@ namespace POS.Cashier.UI.Components
 
             if (string.IsNullOrEmpty(current))
             {
-                TargetText = ClearValue;
+                TargetText = ClearText;
                 return;
             }
 
             if (current.Length <= 1)
             {
-                TargetText = ClearValue;
+                TargetText = ClearText;
                 return;
             }
 

@@ -2248,8 +2248,9 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Invoice number is required before activating sold gift vouchers.");
 
             var duplicateVoucher = voucherSaleLines
-                .Where(l => l.GiftVoucherId.HasValue && l.GiftVoucherId.Value > 0)
-                .GroupBy(l => l.GiftVoucherId.Value)
+                .Select(l => l.GiftVoucherId.GetValueOrDefault())
+                .Where(id => id > 0)
+                .GroupBy(id => id)
                 .FirstOrDefault(g => g.Count() > 1);
 
             if (duplicateVoucher != null)
@@ -2257,9 +2258,7 @@ namespace POS.Core.Repositories
 
             foreach (var line in voucherSaleLines)
             {
-                ValidateGiftVoucherSaleLineBeforeActivation(line);
-
-                int giftVoucherId = line.GiftVoucherId.Value;
+                int giftVoucherId = ValidateGiftVoucherSaleLineBeforeActivation(line);
 
                 var voucher = await context.GiftVouchers
                     .FirstOrDefaultAsync(v => v.Id == giftVoucherId);
@@ -2305,8 +2304,9 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Invoice number is required before redeeming gift vouchers.");
 
             var duplicateVoucher = giftVoucherPayments
-                .Where(p => p.GiftVoucherId.HasValue && p.GiftVoucherId.Value > 0)
-                .GroupBy(p => p.GiftVoucherId.Value)
+                .Select(p => p.GiftVoucherId.GetValueOrDefault())
+                .Where(id => id > 0)
+                .GroupBy(id => id)
                 .FirstOrDefault(g => g.Count() > 1);
 
             if (duplicateVoucher != null)
@@ -2314,11 +2314,11 @@ namespace POS.Core.Repositories
 
             foreach (var payment in giftVoucherPayments)
             {
-                ValidateGiftVoucherPaymentBeforeRedeem(payment);
+                int giftVoucherId = ValidateGiftVoucherPaymentBeforeRedeem(payment);
 
                 await GiftVoucherRepository.MarkVoucherRedeemedAsync(
                     context,
-                    payment.GiftVoucherId.Value,
+                    giftVoucherId,
                     payment.Amount,
                     payment.GiftVoucherForfeitedAmount,
                     header,
@@ -2339,9 +2339,9 @@ namespace POS.Core.Repositories
                    payment.PaymentType.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void ValidateGiftVoucherSaleLineBeforeActivation(SalesLine line)
+        private static int ValidateGiftVoucherSaleLineBeforeActivation(SalesLine line)
         {
-            if (!line.GiftVoucherId.HasValue || line.GiftVoucherId.Value <= 0)
+            if (line.GiftVoucherId is not int giftVoucherId || giftVoucherId <= 0)
                 throw new InvalidOperationException("Gift voucher sale line is missing voucher reference.");
 
             if (line.Quantity != 1m)
@@ -2363,11 +2363,13 @@ namespace POS.Core.Repositories
             {
                 throw new InvalidOperationException("Discount or New Price cannot be applied to gift voucher sale line.");
             }
+
+            return giftVoucherId;
         }
 
-        private static void ValidateGiftVoucherPaymentBeforeRedeem(SalesPayment payment)
+        private static int ValidateGiftVoucherPaymentBeforeRedeem(SalesPayment payment)
         {
-            if (!payment.GiftVoucherId.HasValue || payment.GiftVoucherId.Value <= 0)
+            if (payment.GiftVoucherId is not int giftVoucherId || giftVoucherId <= 0)
                 throw new InvalidOperationException("Gift voucher payment is missing voucher reference.");
 
             if (payment.Amount <= 0m)
@@ -2394,6 +2396,8 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException(
                     "Manager authorization is required for gift voucher forfeiture.");
             }
+
+            return giftVoucherId;
         }
 
         // =========================================================

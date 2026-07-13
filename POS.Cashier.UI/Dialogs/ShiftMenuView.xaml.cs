@@ -44,18 +44,25 @@ namespace POS.Cashier.UI.Dialogs
         private static System.Windows.Media.SolidColorBrush Brush(string value) =>
             new((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(value));
 
+        private static IServiceProvider GetServices()
+        {
+            return App.Services
+                ?? throw new InvalidOperationException("Cashier services are not initialized.");
+        }
+
         private async void XReportBtn_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                TillRepository till = App.Services!.GetRequiredService<TillRepository>();
+                IServiceProvider services = GetServices();
+                TillRepository till = services.GetRequiredService<TillRepository>();
                 ShiftCashSummaryDto summary = await till.GetShiftCashSummaryAsync(_viewModel.CurrentShiftId, false)
                     ?? throw new InvalidOperationException("The active shift summary could not be loaded.");
 
                 var dialog = new ShiftSummaryDialog(
                     summary,
-                    App.Services.GetRequiredService<IReceiptPrintService>(),
-                    App.Services.GetRequiredService<ShiftReportTextFormatter>(),
+                    services.GetRequiredService<IReceiptPrintService>(),
+                    services.GetRequiredService<ShiftReportTextFormatter>(),
                     _viewModel.ReceiptPrinterName,
                     _viewModel.ReceiptPaperWidth)
                 {
@@ -79,7 +86,8 @@ namespace POS.Cashier.UI.Dialogs
 
             try
             {
-                TillRepository till = App.Services!.GetRequiredService<TillRepository>();
+                IServiceProvider services = GetServices();
+                TillRepository till = services.GetRequiredService<TillRepository>();
                 if (await till.HasOpenCartsAsync(_viewModel.CurrentShiftId))
                 {
                     MessageBox.Show(
@@ -108,7 +116,7 @@ namespace POS.Cashier.UI.Dialogs
                 string authorizedBy = string.Empty;
                 if (variance != 0m)
                 {
-                    ManagerAuthViewModel authViewModel = App.Services.GetRequiredService<ManagerAuthViewModel>();
+                    ManagerAuthViewModel authViewModel = services.GetRequiredService<ManagerAuthViewModel>();
                     var authDialog = new ManagerAuthDialogView(authViewModel) { Owner = this };
                     if (authDialog.ShowDialog() != true)
                         return;
@@ -133,9 +141,9 @@ namespace POS.Cashier.UI.Dialogs
                     if (string.IsNullOrWhiteSpace(_viewModel.ReceiptPrinterName))
                         throw new InvalidOperationException("No receipt printer is configured.");
 
-                    string text = App.Services.GetRequiredService<ShiftReportTextFormatter>()
+                    string text = services.GetRequiredService<ShiftReportTextFormatter>()
                         .FormatZReport(closed, _viewModel.ReceiptPaperWidth);
-                    await App.Services.GetRequiredService<IReceiptPrintService>()
+                    await services.GetRequiredService<IReceiptPrintService>()
                         .PrintTextAsync(text, _viewModel.ReceiptPrinterName, "POS Z Report");
                 }
                 catch (Exception printEx)
@@ -169,7 +177,8 @@ namespace POS.Cashier.UI.Dialogs
         {
             try
             {
-                CustomerCreditRepository repository = App.Services!.GetRequiredService<CustomerCreditRepository>();
+                IServiceProvider services = GetServices();
+                CustomerCreditRepository repository = services.GetRequiredService<CustomerCreditRepository>();
                 var dialog = new CustomerAccountPaymentDialog(
                     repository,
                     _viewModel.CurrentShiftId,

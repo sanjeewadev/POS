@@ -509,7 +509,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (!IsCodeReadOnly)
                 {
-                    ParentPrefix = $"{NormalizeCode(value.CategoryCode)}-";
+                    ParentPrefix = $"{NormalizeCode(SelectedParentCode)}-";
                 }
             }
             else

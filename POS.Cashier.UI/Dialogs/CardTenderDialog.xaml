@@ -259,7 +259,7 @@
                                             ShowDecimal="{Binding ActiveShowDecimal}"
                                             ShowDoubleZero="{Binding ActiveShowDoubleZero}"
                                             MaxLength="{Binding ActiveMaxLength}"
-                                            ClearValue=""
+                                            ClearText=""
                                             SelectAllOnFirstKey="True"
                                             EnterPressed="TenderNumpad_EnterPressed"/>
         </Grid>
