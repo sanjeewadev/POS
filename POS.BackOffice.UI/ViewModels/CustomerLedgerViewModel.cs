@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,12 +8,14 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Documents;
+using POS.Core.Services.Exports;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -23,6 +25,9 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly CustomerCreditRepository _creditRepository;
         private readonly AuthService _authService;
         private readonly CustomerStatementTextFormatter _statementFormatter;
+        private readonly CustomerPaymentReceiptTextFormatter _paymentReceiptFormatter;
+        private readonly ExportDialogService _exportDialogService;
+        private readonly ExportAuthorizationService _exportAuthorization;
 
         public ObservableCollection<CustomerMaster> AvailableCustomers { get; } = new();
         public ObservableCollection<CustomerLedgerStatementRowDto> LedgerEntries { get; } = new();
@@ -42,6 +47,10 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private DateTime? _filterStartDate = DateTime.Today.AddDays(-30);
         [ObservableProperty] private DateTime? _filterEndDate = DateTime.Today;
         [ObservableProperty] private string _statusText = "Select a customer account.";
+        [ObservableProperty] private int? _lastPaymentReceiptId;
+        [ObservableProperty] private string _lastPaymentReceiptNo = string.Empty;
+
+        public bool HasLastPaymentReceipt => LastPaymentReceiptId.HasValue;
 
         public bool IsCustomerSelected => SelectedCustomer != null;
         public decimal CurrentBalance => CurrentSummary?.CurrentBalance ?? 0m;
@@ -53,12 +62,18 @@ namespace POS.BackOffice.UI.ViewModels
             CustomerRepository customerRepository,
             CustomerCreditRepository creditRepository,
             AuthService authService,
-            CustomerStatementTextFormatter statementFormatter)
+            CustomerStatementTextFormatter statementFormatter,
+            CustomerPaymentReceiptTextFormatter paymentReceiptFormatter,
+            ExportDialogService exportDialogService,
+            ExportAuthorizationService exportAuthorization)
         {
             _customerRepository = customerRepository;
             _creditRepository = creditRepository;
             _authService = authService;
             _statementFormatter = statementFormatter;
+            _paymentReceiptFormatter = paymentReceiptFormatter ?? throw new ArgumentNullException(nameof(paymentReceiptFormatter));
+            _exportDialogService = exportDialogService ?? throw new ArgumentNullException(nameof(exportDialogService));
+            _exportAuthorization = exportAuthorization ?? throw new ArgumentNullException(nameof(exportAuthorization));
             _ = LoadCustomersAsync();
         }
 
@@ -161,6 +176,32 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
+        private void ExportStatementPdf()
+        {
+            try
+            {
+                _exportAuthorization.EnsureBulkFinancialExportAllowed();
+                if (CurrentSummary == null || !LedgerEntries.Any())
+                    throw new InvalidOperationException("No customer statement data is available to export.");
+
+                string text = _statementFormatter.Format(CurrentSummary, FilterStartDate, FilterEndDate);
+                string period = $"{FilterStartDate:yyyy-MM-dd} to {FilterEndDate:yyyy-MM-dd}";
+                _exportDialogService.SaveTextPdf(
+                    "Save Customer Statement PDF",
+                    ExportFileNameHelper.Create("Customer_Statement", CurrentSummary.CustomerCode, "pdf"),
+                    "CUSTOMER ACCOUNT STATEMENT",
+                    $"{CurrentSummary.CustomerCode} - {CurrentSummary.CustomerName} | {period}",
+                    text,
+                    _exportAuthorization.CurrentUsername,
+                    "Customer ledger statement generated from saved ledger entries.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Customer Statement PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        [RelayCommand]
         private async Task OpenReceivePaymentDialogAsync()
         {
             if (SelectedCustomer == null)
@@ -205,6 +246,11 @@ namespace POS.BackOffice.UI.ViewModels
                         Remarks = "Received from Customer Ledger"
                     });
 
+                LastPaymentReceiptId = result.ReceiptId;
+                LastPaymentReceiptNo = result.ReceiptNo;
+                OnPropertyChanged(nameof(HasLastPaymentReceipt));
+                ExportLastPaymentReceiptPdfCommand.NotifyCanExecuteChanged();
+
                 MessageBox.Show(
                     $"Payment saved.\nReceipt: {result.ReceiptNo}\nRemaining balance: Rs. {result.RemainingBalance:N2}",
                     "Receive Payment",
@@ -219,6 +265,35 @@ namespace POS.BackOffice.UI.ViewModels
                 MessageBox.Show(ex.Message, "Receive Payment", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        [RelayCommand(CanExecute = nameof(CanExportLastPaymentReceipt))]
+        private async Task ExportLastPaymentReceiptPdfAsync()
+        {
+            if (!LastPaymentReceiptId.HasValue)
+                return;
+
+            try
+            {
+                _exportAuthorization.EnsureOperationalDocumentAllowed();
+                CustomerPaymentReceiptDocumentDto document =
+                    await _creditRepository.GetPaymentReceiptDocumentAsync(LastPaymentReceiptId.Value);
+                string text = _paymentReceiptFormatter.Format(document);
+                _exportDialogService.SaveTextPdf(
+                    "Save Customer Payment Receipt PDF",
+                    ExportFileNameHelper.Create("Customer_Payment_Receipt", document.ReceiptNo, "pdf"),
+                    "CUSTOMER PAYMENT RECEIPT",
+                    document.ReceiptNo,
+                    text,
+                    _exportAuthorization.CurrentUsername,
+                    "Payment allocations reconcile to the saved customer receipt amount.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Payment Receipt PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private bool CanExportLastPaymentReceipt() => LastPaymentReceiptId.HasValue;
 
         private async Task RefreshSelectedCustomerAsync()
         {

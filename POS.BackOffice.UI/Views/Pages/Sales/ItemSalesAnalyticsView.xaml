@@ -16,6 +16,8 @@
                 <TextBlock Text="To" VerticalAlignment="Center" Margin="10,0,4,0"/><DatePicker SelectedDate="{Binding EndDate}" Width="120" Height="25"/>
                 <TextBlock Text="Item / SKU / Category" VerticalAlignment="Center" Margin="10,0,4,0"/><TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="230" Height="25" Padding="4,2"/>
                 <Button Content="Load" Command="{Binding LoadCommand}" Style="{StaticResource CompactButton}"/><Button Content="Reset" Command="{Binding ResetCommand}" Style="{StaticResource CompactButton}"/>
+                <Button Content="Save PDF" Command="{Binding ExportPdfCommand}" Width="86" Height="27" Margin="5,0,0,0" ToolTip="Manager or Administrator access required."/>
+                <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" Width="90" Height="27" Margin="5,0,0,0" ToolTip="Manager or Administrator access required."/>
             </WrapPanel>
         </Border>
         <UniformGrid Grid.Row="2" Columns="8" Margin="0,0,0,6">

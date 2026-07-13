@@ -101,6 +101,8 @@
                     <Button Content="Current Month"
                             Command="{Binding ResetFiltersCommand}"
                             Style="{StaticResource ClassicButton}"/>
+                <Button Content="Save PDF" Command="{Binding ExportPdfCommand}" Width="86" Height="28" Margin="5,0,0,0" ToolTip="Manager or Administrator access required."/>
+                <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" Width="90" Height="28" Margin="5,0,0,0" ToolTip="Manager or Administrator access required."/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center">

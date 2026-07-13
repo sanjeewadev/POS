@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -240,7 +240,23 @@ namespace POS.Core.CalculationTests
                 ("Phase 9A Security Audit aggregates operational events", Phase9AOperationalPageTests.SecurityAuditAggregatesOperationalEvents),
                 ("Phase 9A Security Audit search filters events", Phase9AOperationalPageTests.SecurityAuditSearchFiltersEvents),
                 ("Phase 9A Supplier Reports filter and reconcile", Phase9AOperationalPageTests.SupplierReportsFilterAndReconcile),
-                ("Phase 9A operational repositories reject invalid date ranges", Phase9AOperationalPageTests.OperationalRepositoriesRejectInvalidDateRanges)
+                ("Phase 9A operational repositories reject invalid date ranges", Phase9AOperationalPageTests.OperationalRepositoriesRejectInvalidDateRanges),
+                ("Phase 9B CSV escapes Unicode quotes commas and line breaks", Phase9BExportDashboardTests.CsvEscapesUnicodeQuotesCommasAndLineBreaks),
+                ("Phase 9B CSV rejects mismatched rows", Phase9BExportDashboardTests.CsvRejectsMismatchedRows),
+                ("Phase 9B export file names are safe", Phase9BExportDashboardTests.ExportFileNamesAreSafe),
+                ("Phase 9B Purchase Order PDF uses saved document values", Phase9BExportDashboardTests.PurchaseOrderPdfUsesSavedDocumentValues),
+                ("Phase 9B item sales exports Services without stock", Phase9BExportDashboardTests.ItemSalesExportsServicesWithoutStock),
+                ("Phase 9B Financial Summary keeps Gift Voucher value separate", Phase9BExportDashboardTests.FinancialSummaryExportKeepsVoucherSeparate),
+                ("Phase 9B Supplier Summary combines all sources", Phase9BExportDashboardTests.SupplierSummaryCombinesAllSources),
+                ("Phase 9B VAT exports use immutable snapshot rows", Phase9BExportDashboardTests.VatExportsUseSnapshotRows),
+                ("Phase 9B Supplier Claim statement uses net amounts", Phase9BExportDashboardTests.SupplierClaimStatementUsesNetAmounts),
+                ("Phase 9B customer payment receipt allocations reconcile", Phase9BExportDashboardTests.PaymentReceiptAllocationsReconcile),
+                ("Phase 9B Stock Balance CSV uses shared formatting", Phase9BExportDashboardTests.StockBalanceCsvUsesSharedFormatting),
+                ("Phase 9B text PDF has a valid structure", Phase9BExportDashboardTests.PdfTextExportCreatesValidPdf),
+                ("Phase 9B table PDF supports multiple pages", Phase9BExportDashboardTests.PdfTableExportSupportsMultiplePages),
+                ("Phase 9B export authorization enforces roles", Phase9BExportDashboardTests.ExportAuthorizationEnforcesRoles),
+                ("Phase 9B Dashboard excludes Services from stock alerts", Phase9BExportDashboardTests.DashboardExcludesServicesFromStockAlerts),
+                ("Phase 9B empty exports create no output", Phase9BExportDashboardTests.EmptyExportsCreateNoOutput)
             };
 
             try
@@ -252,7 +268,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim and Phase 9A operational reporting checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
                 return 0;
             }
             catch (Exception ex)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -338,6 +338,77 @@ namespace POS.Core.Repositories
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        public async Task<CustomerPaymentReceiptDocumentDto> GetPaymentReceiptDocumentAsync(int receiptId)
+        {
+            if (receiptId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(receiptId));
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            CustomerPaymentReceipt receipt = await context.CustomerPaymentReceipts
+                .AsNoTracking()
+                .Include(row => row.CustomerMaster)
+                .FirstOrDefaultAsync(row => row.Id == receiptId)
+                ?? throw new InvalidOperationException("Customer payment receipt was not found.");
+
+            List<CustomerLedgerAllocation> allocations = await context.CustomerLedgerAllocations
+                .AsNoTracking()
+                .Include(row => row.DebitLedger)
+                .Where(row => row.CustomerPaymentReceiptId == receiptId)
+                .OrderBy(row => row.Id)
+                .ToListAsync();
+
+            StoreSettings? settings = await context.StoreSettings
+                .AsNoTracking()
+                .Where(row => row.IsActive)
+                .OrderBy(row => row.Id)
+                .FirstOrDefaultAsync();
+
+            decimal remainingBalance = await context.CustomerLedgers
+                .AsNoTracking()
+                .Where(row => row.CustomerMasterId == receipt.CustomerMasterId)
+                .SumAsync(row => (decimal?)(row.DebitAmount - row.CreditAmount)) ?? 0m;
+
+            string address = string.Join(", ", new[]
+            {
+                settings?.AddressLine1,
+                settings?.AddressLine2,
+                settings?.City,
+                settings?.PostalCode
+            }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+            return new CustomerPaymentReceiptDocumentDto
+            {
+                StoreName = string.IsNullOrWhiteSpace(settings?.StoreName)
+                    ? settings?.LegalName ?? "Store"
+                    : settings.StoreName,
+                StoreAddress = address,
+                StorePhone = settings?.Phone ?? string.Empty,
+                ReceiptNo = receipt.ReceiptNo,
+                PaymentDate = receipt.PaymentDate,
+                CustomerCode = receipt.CustomerMaster?.CustomerCode ?? string.Empty,
+                CustomerName = receipt.CustomerMaster == null
+                    ? string.Empty
+                    : string.IsNullOrWhiteSpace(receipt.CustomerMaster.CompanyName)
+                        ? receipt.CustomerMaster.FullName
+                        : receipt.CustomerMaster.CompanyName,
+                PaymentMethod = receipt.PaymentMethod,
+                Amount = Money(receipt.Amount),
+                ReferenceNo = receipt.ReferenceNo,
+                BankOrCardType = receipt.BankOrCardType,
+                DestinationAccount = receipt.DestinationAccount,
+                ProcessedBy = receipt.ProcessedBy,
+                TerminalNo = receipt.TerminalNo,
+                Remarks = receipt.Remarks,
+                RemainingBalance = Money(remainingBalance),
+                Allocations = allocations.Select(row => new CustomerLedgerAllocationDto
+                {
+                    InvoiceNo = row.DebitLedger?.DocumentRef ?? string.Empty,
+                    Amount = Money(row.Amount)
+                }).ToList()
+            };
         }
 
         private static CustomerCreditValidationDto BuildValidation(CustomerMaster? customer, decimal requestedAmount)

@@ -848,7 +848,7 @@
                             Margin="0,0,10,0"/>
 
                     <Button Content="Export CSV"
-                            Command="{Binding ExportExcelCommand}"
+                            Command="{Binding ExportCsvCommand}"
                             Style="{StaticResource ExcelBtn}"
                             Height="34"
                             Padding="20,0"/>

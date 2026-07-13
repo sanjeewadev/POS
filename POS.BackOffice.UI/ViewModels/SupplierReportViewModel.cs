@@ -1,7 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
+using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services.Exports;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -13,6 +16,10 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class SupplierReportViewModel : ViewModelBase
     {
         private readonly SupplierReportRepository _repository;
+        private readonly StoreSettingsRepository _storeSettingsRepository;
+        private readonly OperationalExportBuilder _exportBuilder;
+        private readonly ExportDialogService _exportDialog;
+        private readonly ExportAuthorizationService _authorization;
 
         [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-30);
         [ObservableProperty] private DateTime _endDate = DateTime.Today;
@@ -32,10 +39,25 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<SupplierReturnSummaryDto> SupplierReturns { get; } = new();
         public bool IsEmpty => !IsBusy && OutstandingSummaries.Count == 0 && PurchasingVolumes.Count == 0 && SupplierReturns.Count == 0;
 
-        public SupplierReportViewModel(SupplierReportRepository repository)
+        public SupplierReportViewModel(
+            SupplierReportRepository repository,
+            StoreSettingsRepository storeSettingsRepository,
+            OperationalExportBuilder exportBuilder,
+            ExportDialogService exportDialog,
+            ExportAuthorizationService authorization)
         {
             _repository = repository;
+            _storeSettingsRepository = storeSettingsRepository;
+            _exportBuilder = exportBuilder;
+            _exportDialog = exportDialog;
+            _authorization = authorization;
             _ = LoadAsync();
+        }
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            ExportPdfCommand.NotifyCanExecuteChanged();
+            ExportCsvCommand.NotifyCanExecuteChanged();
         }
 
         [RelayCommand]
@@ -58,9 +80,9 @@ namespace POS.BackOffice.UI.ViewModels
                 OutstandingSummaries.Clear();
                 PurchasingVolumes.Clear();
                 SupplierReturns.Clear();
-                foreach (var row in outstanding) OutstandingSummaries.Add(row);
-                foreach (var row in purchases) PurchasingVolumes.Add(row);
-                foreach (var row in returns) SupplierReturns.Add(row);
+                foreach (SupplierOutstandingSummaryDto row in outstanding) OutstandingSummaries.Add(row);
+                foreach (SupplierPurchaseVolumeDto row in purchases) PurchasingVolumes.Add(row);
+                foreach (SupplierReturnSummaryDto row in returns) SupplierReturns.Add(row);
 
                 TotalCompanyDebt = Math.Round(outstanding.Where(row => row.NetOutstanding > 0m).Sum(row => row.NetOutstanding), 2);
                 TotalPurchaseValue = Math.Round(purchases.Sum(row => row.TotalGrnValue), 2);
@@ -80,8 +102,53 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsBusy = false;
                 OnPropertyChanged(nameof(IsEmpty));
+                ExportPdfCommand.NotifyCanExecuteChanged();
+                ExportCsvCommand.NotifyCanExecuteChanged();
             }
         }
+
+        [RelayCommand(CanExecute = nameof(CanExport))]
+        private async Task ExportPdfAsync()
+        {
+            try
+            {
+                _authorization.EnsureBulkFinancialExportAllowed();
+                StoreSettings settings = await _storeSettingsRepository.GetActiveAsync()
+                    ?? StoreSettingsRepository.CreateDefaultSettings();
+                PdfTableDocumentDto document = _exportBuilder.BuildSupplierSummary(
+                    OutstandingSummaries.ToList(), PurchasingVolumes.ToList(), SupplierReturns.ToList(),
+                    StartDate, EndDate, OperationalExportBuilder.StoreHeading(settings), _authorization.CurrentUsername);
+                _exportDialog.SaveTablePdf(
+                    "Save Supplier Summary PDF",
+                    ExportFileNameHelper.Build($"Supplier_Summary_{StartDate:yyyyMMdd}_{EndDate:yyyyMMdd}", ".pdf"),
+                    document);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Supplier Summary PDF", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanExport))]
+        private async Task ExportCsvAsync()
+        {
+            try
+            {
+                _authorization.EnsureBulkFinancialExportAllowed();
+                string csv = _exportBuilder.BuildSupplierSummaryCsv(
+                    OutstandingSummaries.ToList(), PurchasingVolumes.ToList(), SupplierReturns.ToList());
+                await _exportDialog.SaveCsvAsync(
+                    "Save Supplier Summary CSV",
+                    ExportFileNameHelper.Build($"Supplier_Summary_{StartDate:yyyyMMdd}_{EndDate:yyyyMMdd}", ".csv"),
+                    csv);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Supplier Summary CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private bool CanExport() => !IsBusy && !IsEmpty;
 
         [RelayCommand]
         private async Task ResetAsync()

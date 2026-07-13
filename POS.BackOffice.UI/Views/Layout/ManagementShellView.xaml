@@ -85,7 +85,7 @@
             </MenuItem>
 
             <MenuItem Header="_Purchasing">
-                <MenuItem Header="Purchase Order DB"
+                <MenuItem Header="Purchase Order History"
                           Command="{Binding NavigateToPurchaseOrderDashboardCommand}"/>
                 <MenuItem Header="Purchase Order"
                           Command="{Binding NavigateToPurchaseOrderCommand}"/>

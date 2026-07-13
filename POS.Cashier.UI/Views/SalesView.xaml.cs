@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Models;
 using POS.Cashier.UI.Services;
@@ -1299,7 +1299,7 @@ namespace POS.Cashier.UI.Views
             ReturnFocusToTerminalInput();
         }
 
-        private void UnsupportedPaymentBtn_Click(object sender, RoutedEventArgs e)
+        private void AlternatePaymentBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel == null)
                 return;
@@ -1320,7 +1320,7 @@ namespace POS.Cashier.UI.Views
             }
 
             _ = ViewModel.ShowNotificationAsync(
-                $"{buttonText} will be added after Cash/Card/Cheque workflow is stable.",
+                $"{buttonText} is not available for this transaction.",
                 "#F59E0B");
 
             ReturnFocusToTerminalInput();
@@ -1694,12 +1694,6 @@ namespace POS.Cashier.UI.Views
                 _isDialogOpen = false;
                 ReturnFocusToTerminalInput();
             }
-        }
-
-        private void ReportsBtn_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Reports dialog coming soon.");
-            ReturnFocusToTerminalInput();
         }
 
         // =========================================================
@@ -2497,8 +2491,9 @@ namespace POS.Cashier.UI.Views
                 await ViewModel.BuildDocumentPreviewAsync(document);
 
             var dialog = new SalesDocumentPreviewDialog(
-                "Sales Receipt Preview",
-                preview)
+                "Sales Receipt",
+                preview,
+                document.DocumentNumber)
             {
                 Owner = this
             };
@@ -2561,8 +2556,9 @@ namespace POS.Cashier.UI.Views
                 await ViewModel.BuildDocumentPreviewAsync(document);
 
             var previewDialog = new SalesDocumentPreviewDialog(
-                "Tax Invoice Preview",
-                preview)
+                "Tax Invoice",
+                preview,
+                document.DocumentNumber)
             {
                 Owner = this
             };

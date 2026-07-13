@@ -1,15 +1,15 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
 using POS.Core.Configuration;
+using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Documents;
+using POS.Core.Services.Exports;
+using POS.BackOffice.UI.Services;
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace POS.BackOffice.UI.ViewModels
@@ -18,6 +18,9 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly FreeItemClaimRepository _claimRepository;
         private readonly AuthService _authService;
+        private readonly OperationalExportBuilder _exportBuilder;
+        private readonly ExportDialogService _exportDialog;
+        private readonly ExportAuthorizationService _authorization;
 
         public ObservableCollection<FreeItemClaimSearchDto> Claims { get; } = new();
         public ObservableCollection<FreeIssueLookupDto> Suppliers { get; } = new();
@@ -57,10 +60,16 @@ namespace POS.BackOffice.UI.ViewModels
 
         public SupplierClaimsViewModel(
             FreeItemClaimRepository claimRepository,
-            AuthService authService)
+            AuthService authService,
+            OperationalExportBuilder exportBuilder,
+            ExportDialogService exportDialog,
+            ExportAuthorizationService authorization)
         {
             _claimRepository = claimRepository ?? throw new ArgumentNullException(nameof(claimRepository));
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _exportBuilder = exportBuilder ?? throw new ArgumentNullException(nameof(exportBuilder));
+            _exportDialog = exportDialog ?? throw new ArgumentNullException(nameof(exportDialog));
+            _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
         }
 
         partial void OnSelectedClaimChanged(FreeItemClaimSearchDto? value)
@@ -135,40 +144,36 @@ namespace POS.BackOffice.UI.ViewModels
         {
             await RunBusyAsync(async () =>
             {
+                _authorization.EnsureBulkFinancialExportAllowed();
                 var rows = await _claimRepository.GetSupplierClaimExportRowsAsync(
-                    StartDate,
-                    EndDate,
-                    SelectedSupplier?.Id,
-                    SelectedStatus,
-                    SearchText);
-
+                    StartDate, EndDate, SelectedSupplier?.Id, SelectedStatus, SearchText);
                 if (rows.Count == 0)
                     throw new InvalidOperationException("There are no supplier claims to export for the selected filters.");
 
-                var dialog = new SaveFileDialog
-                {
-                    Title = "Export Supplier Claims",
-                    Filter = "CSV files (*.csv)|*.csv",
-                    FileName = $"Supplier_Claims_{DateTime.Now:yyyyMMdd_HHmm}.csv",
-                    AddExtension = true,
-                    DefaultExt = ".csv",
-                    OverwritePrompt = true
-                };
-
-                if (dialog.ShowDialog() != true)
-                {
-                    SetStatus("CSV export cancelled.", "#374151");
-                    return;
-                }
-
                 string csv = new SupplierClaimCsvFormatter().Format(rows);
-                await File.WriteAllTextAsync(
-                    dialog.FileName,
-                    csv,
-                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-                SetStatus($"Exported {rows.Count} claim(s) to CSV.", "#166534");
+                string? path = await _exportDialog.SaveCsvAsync(
+                    "Save Supplier Claims CSV",
+                    ExportFileNameHelper.Build($"Supplier_Claims_{DateTime.Now:yyyyMMdd_HHmm}", ".csv"),
+                    csv);
+                SetStatus(path == null ? "CSV export cancelled." : $"Exported {rows.Count} claim(s) to CSV.",
+                    path == null ? "#374151" : "#166534");
             });
         }
+
+        [RelayCommand]
+        private Task ExportPdfAsync() => RunBusyAsync(() =>
+        {
+            _authorization.EnsureBulkFinancialExportAllowed();
+            PdfTableDocumentDto document = _exportBuilder.BuildSupplierClaimStatement(
+                Claims.ToList(), StartDate, EndDate, _authorization.CurrentUsername);
+            string? path = _exportDialog.SaveTablePdf(
+                "Save Supplier Claim Statement PDF",
+                ExportFileNameHelper.Build($"Supplier_Claims_{DateTime.Now:yyyyMMdd_HHmm}", ".pdf"),
+                document);
+            SetStatus(path == null ? "PDF export cancelled." : $"Exported {Claims.Count} claim(s) to PDF.",
+                path == null ? "#374151" : "#166534");
+            return Task.CompletedTask;
+        });
 
         private async Task LoadSuppliersAsync()
         {

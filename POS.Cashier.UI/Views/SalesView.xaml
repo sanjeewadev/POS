@@ -976,7 +976,6 @@
                             <ContextMenu>
                                 <MenuItem Header="Lock Terminal (F12)" Click="LockTerminalBtn_Click"/>
                                 <Separator/>
-                                <MenuItem Header="Reports" Click="ReportsBtn_Click"/>
                                 <MenuItem Header="Shift Menu (F11)" Click="ShiftMenuBtn_Click"/>
                             </ContextMenu>
                         </Button.ContextMenu>
@@ -1036,12 +1035,13 @@
                         <Button Background="{StaticResource PaymentDarkOrangeBrush}"
                                 Foreground="Black"
                                 Content="Credit Note"
-                                Click="UnsupportedPaymentBtn_Click"/>
+                                Visibility="Collapsed"
+                                IsEnabled="False"/>
 
                         <Button Background="{StaticResource PaymentOrangeBrush}"
                                 Foreground="Black"
                                 Content="Cheque"
-                                Click="UnsupportedPaymentBtn_Click"/>
+                                Click="AlternatePaymentBtn_Click"/>
 
                         <Button Background="{StaticResource LoyaltyBgBrush}"
                                 Foreground="#FACC15"
@@ -1053,7 +1053,7 @@
                                 Foreground="Black"
                                 Content="Gift Voucher"
                                 FontSize="12"
-                                Click="UnsupportedPaymentBtn_Click"/>
+                                Click="AlternatePaymentBtn_Click"/>
                     </UniformGrid>
 
                     <Button Grid.Column="1"

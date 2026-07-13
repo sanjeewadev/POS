@@ -1,17 +1,15 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services.Exports;
+using POS.BackOffice.UI.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -20,6 +18,9 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly StockBalanceRepository _stockRepository;
         private readonly CategoryRepository _categoryRepository;
         private readonly SupplierRepository _supplierRepository;
+        private readonly OperationalExportBuilder _exportBuilder;
+        private readonly ExportDialogService _exportDialog;
+        private readonly ExportAuthorizationService _authorization;
 
         private bool _suppressAutoRefresh;
 
@@ -118,11 +119,17 @@ namespace POS.BackOffice.UI.ViewModels
         public StockBalanceViewModel(
             StockBalanceRepository stockRepository,
             CategoryRepository categoryRepository,
-            SupplierRepository supplierRepository)
+            SupplierRepository supplierRepository,
+            OperationalExportBuilder exportBuilder,
+            ExportDialogService exportDialog,
+            ExportAuthorizationService authorization)
         {
             _stockRepository = stockRepository ?? throw new ArgumentNullException(nameof(stockRepository));
             _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
             _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
+            _exportBuilder = exportBuilder ?? throw new ArgumentNullException(nameof(exportBuilder));
+            _exportDialog = exportDialog ?? throw new ArgumentNullException(nameof(exportDialog));
+            _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
 
             _ = InitializeAsync();
         }
@@ -244,7 +251,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             RefreshCommand.NotifyCanExecuteChanged();
             ClearFiltersCommand.NotifyCanExecuteChanged();
-            ExportExcelCommand.NotifyCanExecuteChanged();
+            ExportCsvCommand.NotifyCanExecuteChanged();
         }
 
         // =========================================================
@@ -371,257 +378,24 @@ namespace POS.BackOffice.UI.ViewModels
 
         // =========================================================
         // EXPORT
-        // Keep method name ExportExcel because existing XAML binds
-        // to ExportExcelCommand.
         // =========================================================
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
-        private void ExportExcel()
+        private async Task ExportCsvAsync()
         {
             try
             {
-                if (!StockBalances.Any())
-                {
-                    MessageBox.Show(
-                        "There is no stock balance data to export.",
-                        "Export",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                    return;
-                }
-
-                var dialog = new SaveFileDialog
-                {
-                    Title = "Export Stock Balance CSV",
-                    Filter = "CSV File (*.csv)|*.csv",
-                    FileName = $"Stock_Balance_{DateTime.Now:yyyyMMdd_HHmm}.csv"
-                };
-
-                if (dialog.ShowDialog() != true)
-                    return;
-
-                string csv = BuildCsvExport();
-
-                File.WriteAllText(
-                    dialog.FileName,
-                    csv,
-                    new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-
-                MessageBox.Show(
-                    $"Stock balance exported successfully.\n\nRows: {TotalLineItems}\nBatch rows: {TotalBatchCount}\nStock buckets: {TotalStockBucketCount}",
-                    "Export Complete",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _authorization.EnsureBulkFinancialExportAllowed();
+                string csv = _exportBuilder.BuildStockBalanceCsv(StockBalances.ToList());
+                await _exportDialog.SaveCsvAsync(
+                    "Save Stock Balance CSV",
+                    ExportFileNameHelper.Build($"Stock_Balance_{DateTime.Now:yyyyMMdd_HHmm}", ".csv"),
+                    csv);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Export failed:\n\n{ex.Message}",
-                    "Export Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show(ex.Message, "Stock Balance CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
-        }
-
-        private string BuildCsvExport()
-        {
-            var builder = new StringBuilder();
-
-            builder.AppendLine(CsvRow(
-                "Record Type",
-                "Tracking",
-                "Cost Method",
-                "Item Code",
-                "SKU",
-                "Item Barcode",
-                "Description",
-                "Variant",
-                "UOM",
-                "Category",
-                "Supplier",
-                "Stock Status",
-                "Total Qty On Hand",
-                "Unit Cost",
-                "Unit Retail",
-                "Unit Wholesale",
-                "Total Cost Value",
-                "Total Retail Value",
-                "Total Wholesale Value",
-                "Potential Gross Profit",
-                "Markup Percent",
-                "Visible Batch Count",
-                "Stock Bucket Count",
-                "Earliest Expiry Date",
-                "Last Received Date",
-                "Detail Row Type",
-                "Batch No",
-                "GRN Batch Barcode",
-                "Batch Stock",
-                "Batch Stock Status",
-                "Batch Cost",
-                "Batch Retail",
-                "Batch Wholesale",
-                "Batch Cost Value",
-                "Batch Retail Value",
-                "Batch Wholesale Value",
-                "Batch Received Date",
-                "Batch Expiry Date",
-                "Batch Expiry Status",
-                "Days To Expire",
-                "Barcode Printed Count",
-                "Last Barcode Printed At",
-                "Last Barcode Printed By",
-                "Printed Status"));
-
-            foreach (var item in StockBalances)
-            {
-                if (item.Batches.Any())
-                {
-                    foreach (var batch in item.Batches)
-                        builder.AppendLine(BuildCsvLine(item, batch));
-                }
-                else
-                {
-                    builder.AppendLine(BuildCsvLine(item, null));
-                }
-            }
-
-            builder.AppendLine();
-            builder.AppendLine(CsvRow("SUMMARY"));
-            builder.AppendLine(CsvRow("Total Line Items", TotalLineItems.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Average-Cost Lines", AverageCostLineCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Batch-Tracked Lines", BatchTrackedLineCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Batch + Expiry Lines", BatchExpiryLineCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Visible Batch Rows", TotalBatchCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Stock Buckets", TotalStockBucketCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Negative Lines", NegativeLineCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Zero Stock Lines", ZeroStockLineCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Expired Batch Lines", ExpiredBatchCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Expiring Soon Batch Lines", ExpiringSoonBatchCount.ToString(CultureInfo.InvariantCulture)));
-            builder.AppendLine(CsvRow("Total Physical Qty", FormatQty(TotalPhysicalQty)));
-            builder.AppendLine(CsvRow("Total Asset Value", FormatMoney(TotalAssetValue)));
-            builder.AppendLine(CsvRow("Projected Retail Value", FormatMoney(ProjectedRevenue)));
-            builder.AppendLine(CsvRow("Projected Wholesale Value", FormatMoney(ProjectedWholesaleValue)));
-            builder.AppendLine(CsvRow("Projected Gross Profit", FormatMoney(ProjectedGrossProfit)));
-
-            return builder.ToString();
-        }
-
-        private static string BuildCsvLine(
-            StockBalanceDto item,
-            ItemBatchDto? batch)
-        {
-            return CsvRow(
-                batch == null ? "ITEM" : "STOCK ROW",
-                item.TrackingText,
-                item.CostMethodText,
-                item.ItemCode,
-                item.SkuCode,
-                item.Barcode,
-                item.Description,
-                item.VariantDescription,
-                item.Uom,
-                item.CategoryName,
-                item.PrimarySupplierName,
-                item.StockStatus,
-                FormatQty(item.TotalQtyOnHand),
-                FormatMoney(item.UnitCost),
-                FormatMoney(item.UnitRetail),
-                FormatMoney(item.UnitWholesale),
-                FormatMoney(item.TotalCostValue),
-                FormatMoney(item.TotalRetailValue),
-                FormatMoney(item.TotalWholesaleValue),
-                FormatMoney(item.PotentialGrossProfit),
-                FormatPercent(item.MarkupPercent),
-                item.BatchCount.ToString(CultureInfo.InvariantCulture),
-                item.StockBucketCount.ToString(CultureInfo.InvariantCulture),
-                FormatDate(item.EarliestExpiryDate),
-                FormatDate(item.LastReceivedDate),
-                batch?.RowTypeText ?? string.Empty,
-                batch?.BatchDisplayText ?? string.Empty,
-                batch?.BarcodeDisplayText ?? string.Empty,
-                batch == null ? string.Empty : FormatQty(batch.CurrentStock),
-                batch?.StockStatus ?? string.Empty,
-                batch == null ? string.Empty : FormatMoney(batch.CostPrice),
-                batch == null ? string.Empty : FormatMoney(batch.RetailPrice),
-                batch == null ? string.Empty : FormatMoney(batch.WholesalePrice),
-                batch == null ? string.Empty : FormatMoney(batch.TotalBatchCost),
-                batch == null ? string.Empty : FormatMoney(batch.TotalBatchRetail),
-                batch == null ? string.Empty : FormatMoney(batch.TotalBatchWholesale),
-                batch == null ? string.Empty : FormatDate(batch.ReceivedDate),
-                batch == null ? string.Empty : FormatDate(batch.ExpiryDate),
-                batch?.ExpiryStatus ?? string.Empty,
-                batch?.DaysToExpire?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                batch?.BarcodePrintedCount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                batch == null ? string.Empty : FormatDateTime(batch.LastBarcodePrintedAt),
-                batch?.LastBarcodePrintedBy ?? string.Empty,
-                batch?.PrintedStatusText ?? string.Empty);
-        }
-
-        private static string CsvRow(params string[] values)
-        {
-            return string.Join(",", values.Select(Csv));
-        }
-
-        private static string Csv(string value)
-        {
-            value ??= string.Empty;
-
-            value = value
-                .Replace("\r\n", " ")
-                .Replace('\r', ' ')
-                .Replace('\n', ' ')
-                .Trim();
-
-            if (RequiresCsvProtection(value))
-                value = "'" + value;
-
-            if (value.Contains(',') || value.Contains('"') || value.Contains('\t'))
-                return $"\"{value.Replace("\"", "\"\"")}\"";
-
-            return value;
-        }
-
-        private static bool RequiresCsvProtection(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            char first = value[0];
-
-            return first == '=' ||
-                   first == '+' ||
-                   first == '-' ||
-                   first == '@';
-        }
-
-        private static string FormatQty(decimal value)
-        {
-            return value.ToString("0.###", CultureInfo.InvariantCulture);
-        }
-
-        private static string FormatMoney(decimal value)
-        {
-            return value.ToString("0.00", CultureInfo.InvariantCulture);
-        }
-
-        private static string FormatPercent(decimal value)
-        {
-            return value.ToString("0.##", CultureInfo.InvariantCulture);
-        }
-
-        private static string FormatDate(DateTime? value)
-        {
-            return value.HasValue
-                ? value.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-                : string.Empty;
-        }
-
-        private static string FormatDateTime(DateTime? value)
-        {
-            return value.HasValue
-                ? value.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
-                : string.Empty;
         }
 
         private bool CanRunCommand()

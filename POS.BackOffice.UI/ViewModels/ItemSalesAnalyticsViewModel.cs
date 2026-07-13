@@ -1,7 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
+using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services.Exports;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -13,6 +16,10 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class ItemSalesAnalyticsViewModel : ViewModelBase
     {
         private readonly SalesAnalyticsRepository _repository;
+        private readonly StoreSettingsRepository _storeSettingsRepository;
+        private readonly OperationalExportBuilder _exportBuilder;
+        private readonly ExportDialogService _exportDialog;
+        private readonly ExportAuthorizationService _authorization;
 
         [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-30);
         [ObservableProperty] private DateTime _endDate = DateTime.Today;
@@ -36,15 +43,26 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<ItemSalesTransactionDto> Transactions { get; } = new();
         public bool IsEmpty => !IsBusy && Items.Count == 0;
 
-        public ItemSalesAnalyticsViewModel(SalesAnalyticsRepository repository)
+        public ItemSalesAnalyticsViewModel(
+            SalesAnalyticsRepository repository,
+            StoreSettingsRepository storeSettingsRepository,
+            OperationalExportBuilder exportBuilder,
+            ExportDialogService exportDialog,
+            ExportAuthorizationService authorization)
         {
             _repository = repository;
+            _storeSettingsRepository = storeSettingsRepository;
+            _exportBuilder = exportBuilder;
+            _exportDialog = exportDialog;
+            _authorization = authorization;
             _ = LoadAsync();
         }
 
-        partial void OnSelectedItemChanged(ItemPerformanceDto? value)
+        partial void OnSelectedItemChanged(ItemPerformanceDto? value) => _ = LoadTransactionsAsync(value?.ItemVariantId);
+        partial void OnIsBusyChanged(bool value)
         {
-            _ = LoadTransactionsAsync(value?.ItemVariantId);
+            ExportPdfCommand.NotifyCanExecuteChanged();
+            ExportCsvCommand.NotifyCanExecuteChanged();
         }
 
         [RelayCommand]
@@ -65,11 +83,11 @@ namespace POS.BackOffice.UI.ViewModels
                 TopSellers.Clear();
                 SlowOrNonSellingItems.Clear();
 
-                foreach (var row in result.Items)
+                foreach (ItemPerformanceDto row in result.Items)
                     Items.Add(row);
-                foreach (var row in result.Items.Where(row => row.NetQuantity > 0m).OrderByDescending(row => row.NetQuantity).Take(20))
+                foreach (ItemPerformanceDto row in result.Items.Where(row => row.NetQuantity > 0m).OrderByDescending(row => row.NetQuantity).Take(20))
                     TopSellers.Add(row);
-                foreach (var row in result.Items.Where(row => row.IsSlowOrNonSelling).OrderBy(row => row.LastSaleDate).Take(50))
+                foreach (ItemPerformanceDto row in result.Items.Where(row => row.IsSlowOrNonSelling).OrderBy(row => row.LastSaleDate).Take(50))
                     SlowOrNonSellingItems.Add(row);
 
                 GrossSales = result.Summary.GrossSales;
@@ -93,8 +111,53 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsBusy = false;
                 OnPropertyChanged(nameof(IsEmpty));
+                ExportPdfCommand.NotifyCanExecuteChanged();
+                ExportCsvCommand.NotifyCanExecuteChanged();
             }
         }
+
+        [RelayCommand(CanExecute = nameof(CanExport))]
+        private async Task ExportPdfAsync()
+        {
+            try
+            {
+                _authorization.EnsureBulkFinancialExportAllowed();
+                StoreSettings settings = await _storeSettingsRepository.GetActiveAsync()
+                    ?? StoreSettingsRepository.CreateDefaultSettings();
+                PdfTableDocumentDto document = _exportBuilder.BuildItemSales(
+                    Items.ToList(), StartDate, EndDate,
+                    OperationalExportBuilder.StoreHeading(settings),
+                    _authorization.CurrentUsername);
+                _exportDialog.SaveTablePdf(
+                    "Save Item Sales Analysis PDF",
+                    ExportFileNameHelper.Build($"Item_Sales_{StartDate:yyyyMMdd}_{EndDate:yyyyMMdd}", ".pdf"),
+                    document);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Item Sales PDF", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanExport))]
+        private async Task ExportCsvAsync()
+        {
+            try
+            {
+                _authorization.EnsureBulkFinancialExportAllowed();
+                string csv = _exportBuilder.BuildItemSalesCsv(Items.ToList());
+                await _exportDialog.SaveCsvAsync(
+                    "Save Item Sales Analysis CSV",
+                    ExportFileNameHelper.Build($"Item_Sales_{StartDate:yyyyMMdd}_{EndDate:yyyyMMdd}", ".csv"),
+                    csv);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Item Sales CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private bool CanExport() => !IsBusy && Items.Count > 0;
 
         private async Task LoadTransactionsAsync(int? itemVariantId)
         {
@@ -105,7 +168,7 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 var rows = await _repository.GetItemTransactionsAsync(itemVariantId.Value, StartDate, EndDate);
-                foreach (var row in rows)
+                foreach (ItemSalesTransactionDto row in rows)
                     Transactions.Add(row);
             }
             catch (Exception ex)

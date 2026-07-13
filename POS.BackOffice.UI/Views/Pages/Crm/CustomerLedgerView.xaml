@@ -1,4 +1,4 @@
-<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.CustomerLedgerView"
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.CustomerLedgerView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="#D4D0C8" FontFamily="Segoe UI" FontSize="12">
@@ -192,9 +192,13 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 
-                    <Button Command="{Binding PrintStatementCommand}" Content="🖨️ PRINT / PDF STATEMENT" Style="{StaticResource ClassicBtn}" Height="35" Margin="0,0,15,0" Padding="20,0"/>
+                    <Button Command="{Binding PrintStatementCommand}" Content="PRINT STATEMENT" Style="{StaticResource ClassicBtn}" Height="35" Margin="0,0,15,0" Padding="20,0"/>
 
-                    <Button Command="{Binding OpenReceivePaymentDialogCommand}" Content="💵 RECEIVE PAYMENT" Foreground="White" FontWeight="Heavy" FontSize="13" BorderThickness="0" Height="35" Padding="25,0" Cursor="Hand">
+                    <Button Command="{Binding ExportStatementPdfCommand}" Content="SAVE STATEMENT PDF" Style="{StaticResource ClassicBtn}" Height="35" Margin="0,0,10,0" Padding="18,0"/>
+
+                    <Button Command="{Binding ExportLastPaymentReceiptPdfCommand}" Content="SAVE LAST PAYMENT RECEIPT" Style="{StaticResource ClassicBtn}" Height="35" Margin="0,0,10,0" Padding="16,0"/>
+
+                    <Button Command="{Binding OpenReceivePaymentDialogCommand}" Content="RECEIVE PAYMENT" Foreground="White" FontWeight="Heavy" FontSize="13" BorderThickness="0" Height="35" Padding="25,0" Cursor="Hand">
                         <Button.Style>
                             <Style TargetType="Button">
                                 <Setter Property="Background" Value="#059669"/>

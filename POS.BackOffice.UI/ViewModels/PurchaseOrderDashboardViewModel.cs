@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services.Exports;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -16,6 +17,10 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly PoRepository _poRepository;
         private readonly SupplierRepository _supplierRepository;
         private readonly IMessageBoxService _messageBoxService;
+        private readonly StoreSettingsRepository _storeSettingsRepository;
+        private readonly OperationalExportBuilder _exportBuilder;
+        private readonly ExportDialogService _exportDialogService;
+        private readonly ExportAuthorizationService _exportAuthorization;
 
         private bool _isInitialized;
 
@@ -76,11 +81,19 @@ namespace POS.BackOffice.UI.ViewModels
         public PurchaseOrderDashboardViewModel(
             PoRepository poRepository,
             SupplierRepository supplierRepository,
-            IMessageBoxService messageBoxService)
+            IMessageBoxService messageBoxService,
+            StoreSettingsRepository storeSettingsRepository,
+            OperationalExportBuilder exportBuilder,
+            ExportDialogService exportDialogService,
+            ExportAuthorizationService exportAuthorization)
         {
             _poRepository = poRepository ?? throw new ArgumentNullException(nameof(poRepository));
             _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
             _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
+            _storeSettingsRepository = storeSettingsRepository ?? throw new ArgumentNullException(nameof(storeSettingsRepository));
+            _exportBuilder = exportBuilder ?? throw new ArgumentNullException(nameof(exportBuilder));
+            _exportDialogService = exportDialogService ?? throw new ArgumentNullException(nameof(exportDialogService));
+            _exportAuthorization = exportAuthorization ?? throw new ArgumentNullException(nameof(exportAuthorization));
 
             FilterStartDate = DateTime.Now.AddDays(-30);
             FilterEndDate = DateTime.Now;
@@ -540,15 +553,32 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanPrintPo))]
-        private void PrintPo()
+        private async Task PrintPoAsync()
         {
             if (ViewingPoDetails == null)
                 return;
 
-            _messageBoxService.ShowInformation(
-                $"PDF export for {ViewingPoDetails.PoNumber} is not connected yet.\n\n" +
-                "We will connect PDF export after PO save, dashboard, GRN posting, and GRN history are stable.",
-                "PDF Export");
+            try
+            {
+                _exportAuthorization.EnsureOperationalDocumentAllowed();
+                StoreSettings settings = await _storeSettingsRepository.GetActiveAsync()
+                    ?? StoreSettingsRepository.CreateDefaultSettings();
+                var document = _exportBuilder.BuildPurchaseOrder(
+                    ViewingPoDetails,
+                    settings,
+                    _exportAuthorization.CurrentUsername);
+
+                _exportDialogService.SaveTablePdf(
+                    "Save Purchase Order PDF",
+                    ExportFileNameHelper.Create("Purchase_Order", ViewingPoDetails.PoNumber, "pdf"),
+                    document);
+                StatusMessage = $"Purchase Order {ViewingPoDetails.PoNumber} PDF export completed or cancelled.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Purchase Order PDF export failed.";
+                _messageBoxService.ShowError(ex.Message, "PDF Export");
+            }
         }
 
         // =========================================================

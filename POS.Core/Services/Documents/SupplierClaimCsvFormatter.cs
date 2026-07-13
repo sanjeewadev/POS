@@ -1,9 +1,9 @@
 using POS.Core.Repositories;
+using POS.Core.Services.Exports;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 
 namespace POS.Core.Services.Documents
 {
@@ -36,27 +36,32 @@ namespace POS.Core.Services.Documents
             "Remarks"
         };
 
+        private readonly CsvExportService _csv;
+
+        public SupplierClaimCsvFormatter(CsvExportService? csv = null)
+        {
+            _csv = csv ?? new CsvExportService();
+        }
+
         public string Format(IReadOnlyCollection<SupplierClaimExportRow> rows)
         {
             if (rows == null)
                 throw new ArgumentNullException(nameof(rows));
 
-            var csv = new StringBuilder();
-            csv.AppendLine(string.Join(",", Header.Select(Escape)));
-
-            foreach (SupplierClaimExportRow row in rows)
-            {
-                csv.AppendLine(string.Join(",",
-                    Escape(row.SupplierName),
-                    Escape(row.PromotionReference),
-                    Escape(row.ClaimStatus),
-                    Escape(row.ClaimReferenceNo),
-                    Escape(row.InvoiceNo),
-                    Escape(row.InvoiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-                    Escape(row.Barcode),
-                    Escape(row.SkuCode),
-                    Escape(row.ItemDescription),
-                    Escape(row.BatchNo),
+            return _csv.Format(
+                Header,
+                rows.Select(row => (IReadOnlyList<string?>)new string?[]
+                {
+                    row.SupplierName,
+                    row.PromotionReference,
+                    row.ClaimStatus,
+                    row.ClaimReferenceNo,
+                    row.InvoiceNo,
+                    row.InvoiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    row.Barcode,
+                    row.SkuCode,
+                    row.ItemDescription,
+                    row.BatchNo,
                     Number(row.OriginalQuantity, "0.###"),
                     Number(row.ReturnedQuantity, "0.###"),
                     Number(row.NetQuantity, "0.###"),
@@ -65,22 +70,12 @@ namespace POS.Core.Services.Documents
                     Number(row.OriginalClaimValue, "0.00"),
                     Number(row.ClaimValueReduction, "0.00"),
                     Number(row.NetClaimValue, "0.00"),
-                    Escape(row.FreeReasonText),
-                    Escape(row.CashierName),
-                    Escape(row.ApprovedBy),
-                    Escape(row.TerminalNo),
-                    Escape(row.Remarks)));
-            }
-
-            return csv.ToString();
-        }
-
-        private static string Escape(string? value)
-        {
-            string text = (value ?? string.Empty)
-                .Replace("\r\n", "\n", StringComparison.Ordinal)
-                .Replace('\r', '\n');
-            return $"\"{text.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+                    row.FreeReasonText,
+                    row.CashierName,
+                    row.ApprovedBy,
+                    row.TerminalNo,
+                    row.Remarks
+                }));
         }
 
         private static string Number(decimal value, string format) =>

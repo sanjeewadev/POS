@@ -197,7 +197,6 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(nameof(IsDetailsOpen));
 
             CloseDetailsCommand.NotifyCanExecuteChanged();
-            PrintGrnCommand.NotifyCanExecuteChanged();
         }
 
         partial void OnIsBusyChanged(bool value)
@@ -208,7 +207,6 @@ namespace POS.BackOffice.UI.ViewModels
             ClearFiltersCommand.NotifyCanExecuteChanged();
             ViewDetailsCommand.NotifyCanExecuteChanged();
             CloseDetailsCommand.NotifyCanExecuteChanged();
-            PrintGrnCommand.NotifyCanExecuteChanged();
         }
 
         // =========================================================
@@ -348,27 +346,6 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         private bool CanCloseDetails()
-        {
-            return !IsBusy && ViewingGrnDetails != null;
-        }
-
-        // =========================================================
-        // PRINT / EXPORT PLACEHOLDER
-        // =========================================================
-
-        [RelayCommand(CanExecute = nameof(CanPrintGrn))]
-        private void PrintGrn()
-        {
-            if (ViewingGrnDetails == null)
-                return;
-
-            _messageBoxService.ShowInformation(
-                $"PDF export for {ViewingGrnDetails.GrnNumber} is not connected yet.\n\n" +
-                "We will connect GRN print/export after PO, GRN posting, PO Dashboard, and GRN Dashboard are stable.",
-                "GRN Export");
-        }
-
-        private bool CanPrintGrn()
         {
             return !IsBusy && ViewingGrnDetails != null;
         }

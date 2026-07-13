@@ -10,6 +10,7 @@ using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Documents;
+using POS.Core.Services.Exports;
 using POS.Core.Services.Licensing;
 using POS.Core.Services.Returns;
 using System;
@@ -65,6 +66,8 @@ namespace POS.Cashier.UI
             services.AddSingleton<CustomerCreditNoteTextFormatter>();
             services.AddSingleton<ShiftReportTextFormatter>();
             services.AddSingleton<CustomerReturnAllocationCalculator>();
+            services.AddSingleton<PdfExportService>();
+            services.AddTransient<ExportAuthorizationService>();
 
             services.AddTransient<
                 IReceiptPrintService,

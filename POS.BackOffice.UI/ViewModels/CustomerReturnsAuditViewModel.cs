@@ -1,9 +1,11 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using POS.Core.Services.Documents;
+using POS.Core.Services.Exports;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -16,6 +18,8 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly CustomerReturnRepository _repository;
         private readonly StoreSettingsRepository _storeSettingsRepository;
         private readonly CustomerCreditNoteTextFormatter _formatter;
+        private readonly ExportDialogService _exportDialogService;
+        private readonly ExportAuthorizationService _exportAuthorization;
 
         [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-30);
         [ObservableProperty] private DateTime _endDate = DateTime.Today;
@@ -33,11 +37,15 @@ namespace POS.BackOffice.UI.ViewModels
         public CustomerReturnsAuditViewModel(
             CustomerReturnRepository repository,
             StoreSettingsRepository storeSettingsRepository,
-            CustomerCreditNoteTextFormatter formatter)
+            CustomerCreditNoteTextFormatter formatter,
+            ExportDialogService exportDialogService,
+            ExportAuthorizationService exportAuthorization)
         {
             _repository = repository;
             _storeSettingsRepository = storeSettingsRepository;
             _formatter = formatter;
+            _exportDialogService = exportDialogService ?? throw new ArgumentNullException(nameof(exportDialogService));
+            _exportAuthorization = exportAuthorization ?? throw new ArgumentNullException(nameof(exportAuthorization));
             _ = LoadAsync();
         }
 
@@ -134,11 +142,47 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
+
+        [RelayCommand(CanExecute = nameof(CanPreviewCreditNote))]
+        private async Task ExportCreditNotePdfAsync()
+        {
+            if (SelectedReturn == null)
+                return;
+
+            try
+            {
+                _exportAuthorization.EnsureOperationalDocumentAllowed();
+                var document = await _repository.GetReturnDocumentAsync(SelectedReturn.Id);
+                if (document == null)
+                    throw new InvalidOperationException("The selected Credit Note could not be found.");
+
+                var settings = await _storeSettingsRepository.GetActiveAsync()
+                    ?? StoreSettingsRepository.CreateDefaultSettings();
+                string text = _formatter.FormatCreditNote(document, settings, 80);
+                string reference = document.CreditNoteNo ?? document.ReturnNo;
+
+                _exportDialogService.SaveTextPdf(
+                    "Save Customer Credit Note PDF",
+                    ExportFileNameHelper.Create("Customer_Credit_Note", reference, "pdf"),
+                    "CUSTOMER CREDIT NOTE",
+                    reference,
+                    text,
+                    _exportAuthorization.CurrentUsername,
+                    "Generated from the saved customer-return and tax snapshots.");
+                StatusMessage = $"Credit Note {reference} PDF export completed or cancelled.";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Credit Note PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private bool CanPreviewCreditNote() => SelectedReturn != null;
 
         partial void OnSelectedReturnChanged(CustomerReturnHistoryRowDto? oldValue, CustomerReturnHistoryRowDto? newValue)
         {
             PreviewCreditNoteCommand.NotifyCanExecuteChanged();
+            ExportCreditNotePdfCommand.NotifyCanExecuteChanged();
             _ = LoadDetailsAsync(newValue?.Id);
         }
     }

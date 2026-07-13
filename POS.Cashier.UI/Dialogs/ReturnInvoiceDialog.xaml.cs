@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -71,8 +71,9 @@ namespace POS.Cashier.UI.Dialogs
                         result.ReturnHeader);
 
                 var previewDialog = new SalesDocumentPreviewDialog(
-                    $"Credit Note {result.CreditNoteNo}",
-                    preview)
+                    "Customer Credit Note",
+                    preview,
+                    result.CreditNoteNo)
                 {
                     Owner = this
                 };

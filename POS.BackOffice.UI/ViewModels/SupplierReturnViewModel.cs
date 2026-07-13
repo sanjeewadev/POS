@@ -849,7 +849,9 @@ namespace POS.BackOffice.UI.ViewModels
                     await _returnRepository.PostSupplierReturnAsync(header, lines);
 
                 string documentText = _debitNoteFormatter.Format(postResult.DebitNote);
-                var preview = new SupplierDebitNotePreviewDialog(documentText)
+                var preview = new SupplierDebitNotePreviewDialog(
+                    documentText,
+                    postResult.DebitNote.DebitNoteNumber)
                 {
                     Owner = Application.Current?.MainWindow
                 };

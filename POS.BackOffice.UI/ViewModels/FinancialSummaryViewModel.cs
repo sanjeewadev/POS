@@ -1,7 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.BackOffice.UI.Services;
+using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services.Exports;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -12,6 +15,11 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class FinancialSummaryViewModel : ViewModelBase
     {
         private readonly FinancialAnalyticsRepository _repository;
+        private readonly StoreSettingsRepository _storeSettingsRepository;
+        private readonly OperationalExportBuilder _exportBuilder;
+        private readonly ExportDialogService _exportDialog;
+        private readonly ExportAuthorizationService _authorization;
+        private FinancialSummaryDto? _currentSummary;
 
         [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-30);
         [ObservableProperty] private DateTime _endDate = DateTime.Today;
@@ -39,9 +47,18 @@ namespace POS.BackOffice.UI.ViewModels
 
         public ObservableCollection<FinancialTenderTotalDto> TenderTotals { get; } = new();
 
-        public FinancialSummaryViewModel(FinancialAnalyticsRepository repository)
+        public FinancialSummaryViewModel(
+            FinancialAnalyticsRepository repository,
+            StoreSettingsRepository storeSettingsRepository,
+            OperationalExportBuilder exportBuilder,
+            ExportDialogService exportDialog,
+            ExportAuthorizationService authorization)
         {
             _repository = repository;
+            _storeSettingsRepository = storeSettingsRepository;
+            _exportBuilder = exportBuilder;
+            _exportDialog = exportDialog;
+            _authorization = authorization;
             _ = LoadAsync();
         }
 
@@ -59,6 +76,7 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 FinancialSummaryDto result = await _repository.GetFinancialSummaryAsync(StartDate, EndDate);
+                _currentSummary = result;
                 GrossMerchandiseSales = result.GrossMerchandiseSales;
                 TotalDiscounts = result.TotalDiscounts;
                 MerchandiseSalesAfterDiscounts = result.MerchandiseSalesAfterDiscounts;
@@ -80,21 +98,54 @@ namespace POS.BackOffice.UI.ViewModels
                 AverageSaleValue = result.AverageSaleValue;
 
                 TenderTotals.Clear();
-                foreach (var row in result.TenderTotals)
+                foreach (FinancialTenderTotalDto row in result.TenderTotals)
                     TenderTotals.Add(row);
 
                 StatusMessage = "Operational summary loaded. This is not a full accounting profit and loss statement.";
             }
             catch (Exception ex)
             {
+                _currentSummary = null;
                 StatusMessage = "Financial Summary could not be loaded.";
                 MessageBox.Show(ex.Message, "Financial Summary", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
                 IsBusy = false;
+                ExportPdfCommand.NotifyCanExecuteChanged();
             }
         }
+
+        [RelayCommand(CanExecute = nameof(CanExport))]
+        private async Task ExportPdfAsync()
+        {
+            try
+            {
+                _authorization.EnsureBulkFinancialExportAllowed();
+                FinancialSummaryDto summary = _currentSummary
+                    ?? throw new InvalidOperationException("Load the Financial Summary before exporting.");
+                StoreSettings settings = await _storeSettingsRepository.GetActiveAsync()
+                    ?? StoreSettingsRepository.CreateDefaultSettings();
+                PdfTableDocumentDto document = _exportBuilder.BuildFinancialSummary(
+                    summary,
+                    StartDate,
+                    EndDate,
+                    OperationalExportBuilder.StoreHeading(settings),
+                    _authorization.CurrentUsername);
+                _exportDialog.SaveTablePdf(
+                    "Save Financial Summary PDF",
+                    ExportFileNameHelper.Build($"Financial_Summary_{StartDate:yyyyMMdd}_{EndDate:yyyyMMdd}", ".pdf"),
+                    document);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Financial Summary Export", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private bool CanExport() => !IsBusy && _currentSummary != null;
+
+        partial void OnIsBusyChanged(bool value) => ExportPdfCommand.NotifyCanExecuteChanged();
 
         [RelayCommand]
         private async Task ResetAsync()

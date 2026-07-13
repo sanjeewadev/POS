@@ -14,6 +14,7 @@ using POS.Core.Services;
 using POS.Core.Services.Backup;
 using POS.Core.Services.Licensing;
 using POS.Core.Services.Documents;
+using POS.Core.Services.Exports;
 using POS.Core.Services.Returns;
 using POS.Hardware.Services;
 using System;
@@ -50,6 +51,7 @@ namespace POS.BackOffice.UI
             // UI SERVICES
             // ==========================================
             services.AddSingleton<IMessageBoxService, MessageBoxService>();
+            services.AddSingleton<ExportDialogService>();
 
             // ==========================================
             // SECURITY / AUTHENTICATION
@@ -101,6 +103,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<LicenseRepository>();
             services.AddTransient<TaxRateRepository>();
             services.AddTransient<VatReportRepository>();
+            services.AddTransient<DashboardRepository>();
 
             // ==========================================
             // CORE SERVICES
@@ -108,6 +111,11 @@ namespace POS.BackOffice.UI
             services.AddTransient<POS.Core.Services.IBarcodePrintService, WpfBarcodePrintService>();
             services.AddTransient<BackupService>();
             services.AddSingleton<CustomerStatementTextFormatter>();
+            services.AddSingleton<CustomerPaymentReceiptTextFormatter>();
+            services.AddSingleton<CsvExportService>();
+            services.AddSingleton<PdfExportService>();
+            services.AddSingleton<OperationalExportBuilder>();
+            services.AddTransient<ExportAuthorizationService>();
             services.AddSingleton<GiftVoucherTextFormatter>();
             services.AddSingleton<
                 ITerminalHardwareService,

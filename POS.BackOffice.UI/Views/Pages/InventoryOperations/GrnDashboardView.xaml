@@ -465,13 +465,6 @@
                         </Border>
                     </StackPanel>
 
-                    <Button Grid.Column="2"
-                            Content="EXPORT PDF"
-                            Command="{Binding PrintGrnCommand}"
-                            Style="{StaticResource ActionBtn}"
-                            Background="#D97706"
-                            BorderBrush="#B45309"
-                            Padding="20,0"/>
                 </Grid>
             </Border>
 

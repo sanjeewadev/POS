@@ -65,6 +65,7 @@
                 <Button Content="Settle" Click="Settle_Click" IsEnabled="{Binding CanSettle}" Style="{StaticResource ClassicButton}"/>
                 <Button Content="Reject" Click="Reject_Click" IsEnabled="{Binding CanReject}" Style="{StaticResource ClassicButton}"/>
                 <Button Content="Export CSV" Command="{Binding ExportCsvCommand}" Style="{StaticResource ClassicButton}"/>
+                <Button Content="Save PDF" Command="{Binding ExportPdfCommand}" Style="{StaticResource ClassicButton}" ToolTip="Manager or Administrator access required."/>
                 <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColorHex}" Margin="12,5,0,0" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
