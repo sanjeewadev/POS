@@ -22,6 +22,8 @@
                 <ResourceDictionary Source="Resources/Colors.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
             <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
                 <pages:DashboardView />
             </DataTemplate>
