@@ -107,7 +107,10 @@ namespace POS.Core.Repositories
         public async Task<decimal> GetCurrentFloatBalanceAsync(int shiftId)
         {
             ShiftCashSummaryDto? summary = await GetShiftCashSummaryAsync(shiftId);
-            return summary?.ExpectedCash ?? 0m;
+            if (summary == null)
+                return 0m;
+
+            return CalculateCurrentFloat(summary);
         }
 
         public async Task<bool> InjectFloatAsync(int shiftId, decimal amount, string managerName)
@@ -224,6 +227,17 @@ namespace POS.Core.Repositories
                 if (movementType == CashMovementTypeCodes.PaidOut)
                 {
                     ShiftCashSummaryDto current = await BuildLiveSummaryAsync(context, shift);
+
+                    if (CashMovementReasonCodes.IsFloatOut(reason))
+                    {
+                        decimal currentFloat = CalculateCurrentFloat(current);
+                        if (amount > currentFloat)
+                        {
+                            throw new InvalidOperationException(
+                                $"Cannot remove Rs. {amount:N2} as Float Out. The current float balance is only Rs. {currentFloat:N2}.");
+                        }
+                    }
+
                     if (amount > current.ExpectedCash)
                     {
                         throw new InvalidOperationException(
@@ -656,6 +670,14 @@ namespace POS.Core.Repositories
                 Variance = RoundMoney(shift.Variance),
                 IsSnapshot = false
             };
+        }
+
+        private static decimal CalculateCurrentFloat(ShiftCashSummaryDto summary)
+        {
+            return RoundMoney(
+                summary.OpeningCash +
+                summary.FloatInTotal -
+                summary.FloatOutTotal);
         }
 
         private static ShiftCashSummaryDto FromSnapshot(ShiftCloseSnapshot snapshot)

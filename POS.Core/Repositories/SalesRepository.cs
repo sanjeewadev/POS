@@ -98,6 +98,7 @@ namespace POS.Core.Repositories
                 await ApplyCustomerSnapshotAsync(context, header);
                 await ApplyStoreTaxSnapshotAsync(context, header);
                 await ValidateAndApplyFreeIssueRulesAsync(context, header, lines);
+                await ValidateApprovalIdentitiesAsync(context, lines);
 
                 RecalculateHeaderTotals(header, lines);
 
@@ -198,7 +199,8 @@ namespace POS.Core.Repositories
 
                         PrepareServiceSaleLineForPersistence(
                             serviceVariant,
-                            line);
+                            line,
+                            header.IsWholesaleSale);
 
                         await context.SalesLines.AddAsync(line);
                         continue;
@@ -238,7 +240,10 @@ namespace POS.Core.Repositories
                     }
 
                     ValidateBatchForSale(batch, line);
-                    PrepareProductSaleLineForPersistence(batch, line);
+                    PrepareProductSaleLineForPersistence(
+                        batch,
+                        line,
+                        header.IsWholesaleSale);
 
                     batch.CurrentStock = Math.Round(
                         batch.CurrentStock -
@@ -1402,9 +1407,87 @@ namespace POS.Core.Repositories
         private static string NormalizeFreeIssueType(string? value) =>
             FreeIssueTypeCodes.Normalize(value);
 
+        private static async Task ValidateApprovalIdentitiesAsync(
+            AppDbContext context,
+            IReadOnlyCollection<SalesLine> lines)
+        {
+            string[] approvalNames = lines
+                .Where(line => !line.IsGiftVoucherSale && !line.IsFreeItem)
+                .SelectMany(line => new[]
+                {
+                    NormalizeText(line.PriceOverrideApprovedBy),
+                    NormalizeText(line.DiscountApprovedBy)
+                })
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.ToUpperInvariant())
+                .Distinct()
+                .ToArray();
+
+            Dictionary<string, User> usersByName = approvalNames.Length == 0
+                ? new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase)
+                : (await context.Users
+                    .AsNoTracking()
+                    .Where(user => approvalNames.Contains(user.Username.ToUpper()))
+                    .ToListAsync())
+                    .GroupBy(user => user.Username, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (SalesLine line in lines.Where(line => !line.IsGiftVoucherSale && !line.IsFreeItem))
+            {
+                string priceApproverName = NormalizeText(line.PriceOverrideApprovedBy);
+                if (!string.IsNullOrWhiteSpace(priceApproverName))
+                {
+                    if (!usersByName.TryGetValue(priceApproverName, out User? approver) ||
+                        approver == null ||
+                        !approver.IsActive ||
+                        (approver.Role != UserRole.Manager && approver.Role != UserRole.Admin))
+                    {
+                        throw new InvalidOperationException(
+                            $"An active Manager or Administrator must approve the New Price for item '{line.ItemDescription}'.");
+                    }
+
+                    line.PriceOverrideApprovedBy = approver.Username;
+                }
+
+                if (!line.IsRuleDiscount ||
+                    (!line.DiscountRequiresManagerApproval && !line.DiscountRequiresAdminApproval))
+                {
+                    continue;
+                }
+
+                string discountApproverName = NormalizeText(line.DiscountApprovedBy);
+                if (!usersByName.TryGetValue(discountApproverName, out User? discountApprover) ||
+                    discountApprover == null ||
+                    !discountApprover.IsActive)
+                {
+                    string requiredRole = line.DiscountRequiresAdminApproval
+                        ? "Administrator"
+                        : "Manager or Administrator";
+                    throw new InvalidOperationException(
+                        $"An active {requiredRole} must approve the discount for item '{line.ItemDescription}'.");
+                }
+
+                bool roleAllowed = line.DiscountRequiresAdminApproval
+                    ? discountApprover.Role == UserRole.Admin
+                    : discountApprover.Role == UserRole.Manager || discountApprover.Role == UserRole.Admin;
+
+                if (!roleAllowed)
+                {
+                    string requiredRole = line.DiscountRequiresAdminApproval
+                        ? "Administrator"
+                        : "Manager or Administrator";
+                    throw new InvalidOperationException(
+                        $"An active {requiredRole} must approve the discount for item '{line.ItemDescription}'.");
+                }
+
+                line.DiscountApprovedBy = discountApprover.Username;
+            }
+        }
+
         private static void PrepareProductSaleLineForPersistence(
             ItemBatch batch,
-            SalesLine line)
+            SalesLine line,
+            bool isWholesaleSale)
         {
             line.ItemVariantId = batch.ItemVariantId;
             line.ItemBatchId = batch.Id;
@@ -1420,12 +1503,14 @@ namespace POS.Core.Repositories
 
             FinalizePreparedNormalSaleLine(
                 batch.ItemVariant,
-                line);
+                line,
+                isWholesaleSale);
         }
 
         private static void PrepareServiceSaleLineForPersistence(
             ItemVariant variant,
-            SalesLine line)
+            SalesLine line,
+            bool isWholesaleSale)
         {
             line.ItemVariantId = variant.Id;
             line.ItemBatchId = null;
@@ -1444,13 +1529,20 @@ namespace POS.Core.Repositories
 
             FinalizePreparedNormalSaleLine(
                 variant,
-                line);
+                line,
+                isWholesaleSale);
         }
 
         private static void FinalizePreparedNormalSaleLine(
             ItemVariant? variant,
-            SalesLine line)
+            SalesLine line,
+            bool isWholesaleSale)
         {
+            ValidateCataloguePrice(
+                variant,
+                line,
+                isWholesaleSale);
+
             if (line.TaxSnapshotStatus ==
                 TaxSnapshotStatuses.Complete)
             {
@@ -1469,6 +1561,40 @@ namespace POS.Core.Repositories
             ValidateMinimumPrice(
                 variant,
                 line);
+        }
+
+        private static void ValidateCataloguePrice(
+            ItemVariant? variant,
+            SalesLine line,
+            bool isWholesaleSale)
+        {
+            if (variant == null)
+                throw new InvalidOperationException("Current item price could not be verified.");
+
+            decimal currentPrice = Math.Round(
+                isWholesaleSale && variant.WholesalePrice > 0m
+                    ? variant.WholesalePrice
+                    : variant.RetailPrice,
+                2);
+
+            if (line.IsPriceOverridden)
+            {
+                decimal approvedOriginalPrice = Math.Round(line.OriginalUnitPrice, 2);
+                if (Math.Abs(approvedOriginalPrice - currentPrice) > 0.01m)
+                {
+                    throw new InvalidOperationException(
+                        $"Catalogue price changed for item '{line.ItemDescription}'. Re-enter and re-approve the New Price.");
+                }
+
+                return;
+            }
+
+            decimal submittedPrice = Math.Round(line.UnitPrice, 2);
+            if (Math.Abs(submittedPrice - currentPrice) > 0.01m)
+            {
+                throw new InvalidOperationException(
+                    $"Catalogue price changed for item '{line.ItemDescription}'. Current price is Rs. {currentPrice:N2}. Refresh the cart before checkout.");
+            }
         }
 
         private static void ValidateMinimumPrice(
@@ -1689,6 +1815,21 @@ namespace POS.Core.Repositories
 
                 if (payment.Amount <= 0m)
                     throw new InvalidOperationException("Payment amount must be greater than zero.");
+
+                if (payment.PaymentType.Equals(PaymentTypeCodes.Card, StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrWhiteSpace(payment.ReferenceNo))
+                {
+                    throw new InvalidOperationException("Card payment reference is required.");
+                }
+
+                if (payment.PaymentType.Equals(PaymentTypeCodes.Cheque, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.IsNullOrWhiteSpace(payment.ReferenceNo))
+                        throw new InvalidOperationException("Cheque payment reference is required.");
+
+                    if (string.IsNullOrWhiteSpace(payment.BankOrCardType))
+                        throw new InvalidOperationException("Cheque bank or branch is required.");
+                }
 
                 if (IsGiftVoucherPayment(payment))
                     ValidateGiftVoucherPaymentBeforeRedeem(payment);

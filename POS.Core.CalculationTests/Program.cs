@@ -5641,6 +5641,17 @@ namespace POS.Core.CalculationTests
             };
         }
 
+        private static void SetVariantRetailPrice(
+            RepositoryTestDbContextFactory factory,
+            int itemVariantId,
+            decimal retailPrice)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            ItemVariant variant = context.ItemVariants.Single(row => row.Id == itemVariantId);
+            variant.RetailPrice = Math.Round(retailPrice, 2);
+            context.SaveChanges();
+        }
+
         private static SalesLine CreateRepositoryTestLine(
             int itemVariantId,
             int? itemBatchId,
@@ -7655,6 +7666,7 @@ namespace POS.Core.CalculationTests
             using var factory = new RepositoryTestDbContextFactory();
             RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
             GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            SetVariantRetailPrice(factory, scenario.ServiceVariantId, 800m);
             var repository = new SalesRepository(factory);
 
             AssertThrows(
@@ -7687,6 +7699,7 @@ namespace POS.Core.CalculationTests
             using var factory = new RepositoryTestDbContextFactory();
             RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
             GiftVoucher voucher = CreateGiftVoucherTestVoucher(factory, 1000m, GiftVoucherStatusCodes.Active);
+            SetVariantRetailPrice(factory, scenario.ServiceVariantId, 800m);
             var repository = new SalesRepository(factory);
 
             AssertThrows(
@@ -8218,6 +8231,7 @@ namespace POS.Core.CalculationTests
             string authorizedBy = "",
             Guid? checkoutToken = null)
         {
+            SetVariantRetailPrice(factory, scenario.ServiceVariantId, appliedAmount);
             var repository = new SalesRepository(factory);
             SalesHeader header = CreateRepositoryTestHeader(scenario.ShiftSessionId, 0m);
             header.PaymentMethod = PaymentTypeCodes.GiftVoucher;
@@ -8304,7 +8318,7 @@ namespace POS.Core.CalculationTests
                 Phone = "0770000000",
                 Email = "credit@example.test",
                 CompanyName = "Credit Test Company",
-                CustomerType = "Wholesale",
+                CustomerType = "Retail",
                 IsCreditEnabled = isCreditEnabled,
                 CreditStatus = creditStatus,
                 CreditLimit = creditLimit,

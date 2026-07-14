@@ -656,7 +656,35 @@ namespace POS.Cashier.UI.Views
             }
 
             ViewModel.ClearTerminalInput();
-            ViewModel.ApplyNewPriceToSelected(newPrice);
+
+            string approvedBy = string.Empty;
+            CartItem? selectedItem = ViewModel.SelectedCartItem;
+            if (selectedItem != null &&
+                selectedItem.MinimumPrice > 0m &&
+                newPrice < selectedItem.MinimumPrice)
+            {
+                ManagerAuthViewModel authViewModel = App.Services!
+                    .GetRequiredService<ManagerAuthViewModel>();
+                var authDialog = new ManagerAuthDialogView(authViewModel)
+                {
+                    Owner = this
+                };
+
+                _isDialogOpen = true;
+                try
+                {
+                    if (authDialog.ShowDialog() != true)
+                        return;
+                }
+                finally
+                {
+                    _isDialogOpen = false;
+                }
+
+                approvedBy = authViewModel.AuthorizedUsername;
+            }
+
+            ViewModel.ApplyNewPriceToSelected(newPrice, approvedBy);
         }
 
         private void MoveCartSelection(int direction)

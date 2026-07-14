@@ -802,7 +802,8 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            if (item.MinimumPrice > 0m && newPrice < item.MinimumPrice && !IsManagerModeActive)
+            bool requiresManagerApproval = item.MinimumPrice > 0m && newPrice < item.MinimumPrice;
+            if (requiresManagerApproval && string.IsNullOrWhiteSpace(approvedBy))
             {
                 _ = ShowNotificationAsync($"Manager approval required. Minimum price is Rs. {item.MinimumPrice:N2}.", "#EF4444");
                 return;
@@ -833,9 +834,9 @@ namespace POS.Cashier.UI.ViewModels
             item.IsPriceOverridden = true;
             item.PriceOverrideAmount = Math.Round(originalPrice - newPrice, 2);
 
-            if (item.MinimumPrice > 0m && newPrice < item.MinimumPrice)
+            if (requiresManagerApproval)
             {
-                item.PriceOverrideApprovedBy = string.IsNullOrWhiteSpace(approvedBy) ? "Manager Mode" : approvedBy.Trim();
+                item.PriceOverrideApprovedBy = approvedBy.Trim();
                 item.PriceOverrideApprovedAt = DateTime.Now;
             }
             else
@@ -937,6 +938,17 @@ namespace POS.Cashier.UI.ViewModels
             _ = ShowNotificationAsync($"Discount rule applied: Rs. {discountAmount:N2}", "#10B981");
         }
 
+        private static bool HasBelowMinimumApproval(CartItem item)
+        {
+            if (item.IsPriceOverridden)
+                return !string.IsNullOrWhiteSpace(item.PriceOverrideApprovedBy) && item.PriceOverrideApprovedAt.HasValue;
+
+            if (item.IsRuleDiscount)
+                return !string.IsNullOrWhiteSpace(item.DiscountApprovedBy) && item.DiscountApprovedAt.HasValue;
+
+            return false;
+        }
+
         public void EnterPaymentMode()
         {
             if (!Cart.Any())
@@ -983,7 +995,7 @@ namespace POS.Cashier.UI.ViewModels
             }
 
             var belowMinimumLine = Cart.FirstOrDefault(c => !c.IsFreeItem && c.IsBelowMinimumPrice);
-            if (belowMinimumLine != null && !IsManagerModeActive)
+            if (belowMinimumLine != null && !HasBelowMinimumApproval(belowMinimumLine))
             {
                 _ = ShowNotificationAsync($"Price below minimum: {belowMinimumLine.Description}", "#EF4444");
                 return;
@@ -2596,7 +2608,7 @@ namespace POS.Cashier.UI.ViewModels
             }
 
             var belowMinimumLine = Cart.FirstOrDefault(c => !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsBelowMinimumPrice);
-            if (belowMinimumLine != null && !IsManagerModeActive)
+            if (belowMinimumLine != null && !HasBelowMinimumApproval(belowMinimumLine))
             {
                 _ = ShowNotificationAsync($"Price below minimum: {belowMinimumLine.Description}", "#EF4444");
                 return false;
@@ -2792,6 +2804,11 @@ namespace POS.Cashier.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Checkout transaction failed",
+                    ex);
+
                 _ = ShowNotificationAsync($"Transaction failed: {ex.Message}", "#EF4444");
                 return false;
             }

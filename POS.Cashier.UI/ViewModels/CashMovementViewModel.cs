@@ -1,8 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Extensions.DependencyInjection;
-using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.Messages;
 using POS.Cashier.UI.Services;
 using POS.Core.Configuration;
@@ -92,11 +90,7 @@ namespace POS.Cashier.UI.ViewModels
             }
 
             bool isPaidOut = string.Equals(MovementType, CashMovementTypeCodes.PaidOut, StringComparison.OrdinalIgnoreCase);
-            ManagerAuthViewModel authViewModel = App.Services!.GetRequiredService<ManagerAuthViewModel>();
-            var authDialog = new ManagerAuthDialogView(authViewModel);
-            if (authDialog.ShowDialog() != true)
-                return;
-            string authorizedBy = authViewModel.AuthorizedUsername;
+            string authorizedBy = _cashierName;
 
             try
             {
