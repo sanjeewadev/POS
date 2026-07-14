@@ -32,6 +32,14 @@ internal static class SourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task HiddenCreditNotePlaceholderIsRemovedAsync()
+    {
+        string view = Read("POS.Cashier.UI", "Views", "SalesView.xaml");
+        AuditAssert.False(view.Contains("Content=\"Credit Note\"", StringComparison.Ordinal),
+            "The hidden disabled Credit Note payment placeholder is still present on SalesView.");
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");

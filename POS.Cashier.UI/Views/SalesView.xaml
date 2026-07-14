@@ -1034,12 +1034,6 @@
                                 FontWeight="Bold"
                                 Click="PayBtn_Click"/>
 
-                        <Button Background="{StaticResource PaymentDarkOrangeBrush}"
-                                Foreground="Black"
-                                Content="Credit Note"
-                                Visibility="Collapsed"
-                                IsEnabled="False"/>
-
                         <Button Background="{StaticResource PaymentOrangeBrush}"
                                 Foreground="Black"
                                 Content="Cheque"
