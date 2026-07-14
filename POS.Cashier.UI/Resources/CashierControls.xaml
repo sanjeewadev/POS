@@ -1,0 +1,254 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Shared, lightweight Cashier controls.
+        The visual direction is a compact classic desktop POS: square borders,
+        restrained colours, native WPF controls and no animation or effects.
+    -->
+
+    <Style x:Key="CashierFieldLabel" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierSectionTitle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierHeaderBrush}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierMutedText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierMutedTextBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierShortcutHint" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierHeaderHintBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTextBox" TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource CashierInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="7,4"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource CashierPrimaryBrush}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource CashierTextBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierInputFocusBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource CashierPrimaryBrush}"/>
+                <Setter Property="BorderThickness" Value="2"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource CashierDisabledBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource CashierMutedTextBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierPasswordBox" TargetType="PasswordBox">
+        <Setter Property="Background" Value="{StaticResource CashierInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="7,4"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style.Triggers>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierInputFocusBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource CashierPrimaryBrush}"/>
+                <Setter Property="BorderThickness" Value="2"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierButton" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource CashierNeutralButtonBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderDarkBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="MinWidth" Value="92"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="ButtonBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.92"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.80"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource CashierFocusBrush}"/>
+                            <Setter TargetName="ButtonBorder" Property="BorderThickness" Value="2"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource CashierDisabledBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource CashierDisabledTextBrush}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="CashierPrimaryButton" TargetType="Button" BasedOn="{StaticResource CashierButton}">
+        <Setter Property="Background" Value="{StaticResource CashierPrimaryBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierPrimaryDarkBrush}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierPrimaryHoverBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierSuccessButton" TargetType="Button" BasedOn="{StaticResource CashierButton}">
+        <Setter Property="Background" Value="{StaticResource CashierSuccessBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierSuccessDarkBrush}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierProtectedButton" TargetType="Button" BasedOn="{StaticResource CashierButton}">
+        <Setter Property="Background" Value="{StaticResource CashierWarningBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierWarningDarkBrush}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierDangerButton" TargetType="Button" BasedOn="{StaticResource CashierButton}">
+        <Setter Property="Background" Value="{StaticResource CashierDangerBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierDangerDarkBrush}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierMoneyInputTextBox" TargetType="TextBox" BasedOn="{StaticResource CashierTextBox}">
+        <Setter Property="MinHeight" Value="48"/>
+        <Setter Property="FontSize" Value="26"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="Background" Value="{StaticResource CashierInputFocusBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierMoneyTextBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+
+    <Style x:Key="CashierDataGridHeader" TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="{StaticResource CashierGridHeaderBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="7,5"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierDataGridCell" TargetType="DataGridCell">
+        <Setter Property="Padding" Value="6,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierSelectionBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource CashierSelectionTextBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierDataGridRow" TargetType="DataGridRow">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierSelectionBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource CashierSelectionTextBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierDataGrid" TargetType="DataGrid">
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="RowHeaderWidth" Value="0"/>
+        <Setter Property="GridLinesVisibility" Value="All"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource CashierGridLineBrush}"/>
+        <Setter Property="VerticalGridLinesBrush" Value="{StaticResource CashierGridLineBrush}"/>
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="CanUserAddRows" Value="False"/>
+        <Setter Property="CanUserDeleteRows" Value="False"/>
+        <Setter Property="CanUserResizeRows" Value="False"/>
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="SelectionMode" Value="Single"/>
+        <Setter Property="SelectionUnit" Value="FullRow"/>
+        <Setter Property="RowHeight" Value="32"/>
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource CashierAlternateRowBrush}"/>
+        <Setter Property="HeadersVisibility" Value="Column"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="EnableRowVirtualization" Value="True"/>
+        <Setter Property="EnableColumnVirtualization" Value="True"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="ColumnHeaderStyle" Value="{StaticResource CashierDataGridHeader}"/>
+        <Setter Property="CellStyle" Value="{StaticResource CashierDataGridCell}"/>
+        <Setter Property="RowStyle" Value="{StaticResource CashierDataGridRow}"/>
+    </Style>
+
+    <Style x:Key="CashierNumpadButton" TargetType="Button" BasedOn="{StaticResource CashierButton}">
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="54"/>
+        <Setter Property="Margin" Value="2"/>
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Background" Value="{StaticResource CashierKeyBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderDarkBrush}"/>
+    </Style>
+
+    <Style x:Key="CashierNumpadActionButton" TargetType="Button" BasedOn="{StaticResource CashierNumpadButton}">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontSize" Value="16"/>
+    </Style>
+
+</ResourceDictionary>

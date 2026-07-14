@@ -5,6 +5,7 @@
         Height="360"
         Width="520"
         WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
         ResizeMode="NoResize"
         WindowStyle="None"
         Background="#F4F7FB"
@@ -36,7 +37,7 @@
                       Height="42"
                       FontSize="16"
                       SelectionChanged="ReasonComboBox_SelectionChanged">
-                <ComboBoxItem Tag="CustomerChangedMind" Content="Customer Changed Mind" IsSelected="True"/>
+                <ComboBoxItem Tag="CustomerChangedMind" Content="Customer Changed Mind"/>
                 <ComboBoxItem Tag="WrongItems" Content="Wrong Items"/>
                 <ComboBoxItem Tag="PricingIssue" Content="Pricing Issue"/>
                 <ComboBoxItem Tag="PaymentNotAvailable" Content="Payment Not Available"/>

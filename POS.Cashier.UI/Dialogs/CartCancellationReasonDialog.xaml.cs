@@ -12,11 +12,13 @@ namespace POS.Cashier.UI.Dialogs
         public CartCancellationReasonDialog()
         {
             InitializeComponent();
+            ReasonComboBox.SelectedIndex = 0;
         }
 
         private void ReasonComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            ValidationText.Text = string.Empty;
+            if (ValidationText != null)
+                ValidationText.Text = string.Empty;
         }
 
         private void BackButton_Click(object sender, RoutedEventArgs e)
