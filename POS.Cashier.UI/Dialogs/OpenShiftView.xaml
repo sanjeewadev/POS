@@ -2,9 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Start Cashier Shift"
-        Height="410"
+        Height="350"
         Width="520"
-        MinHeight="410"
+        MinHeight="350"
         MinWidth="520"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
@@ -55,7 +55,6 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="45"/>
                     <RowDefinition Height="45"/>
-                    <RowDefinition Height="45"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
@@ -92,35 +91,20 @@
                          Background="#F1F5F9"
                          BorderBrush="#CBD5E1"/>
 
-                <TextBlock Grid.Row="2"
-                           Text="Opening cash"
-                           FontWeight="SemiBold"
-                           Foreground="#334155"
-                           VerticalAlignment="Center"/>
-
-                <TextBox Grid.Row="2"
-                         Grid.Column="1"
-                         Text="{Binding OpeningCash, UpdateSourceTrigger=PropertyChanged, StringFormat=F2}"
-                         Height="32"
-                         Padding="8,0"
-                         HorizontalContentAlignment="Right"
-                         VerticalContentAlignment="Center"
-                         BorderBrush="#CBD5E1"/>
-
-                <Border Grid.Row="3"
+                <Border Grid.Row="2"
                         Grid.ColumnSpan="2"
                         Background="#EFF6FF"
                         BorderBrush="#93C5FD"
                         BorderThickness="1"
                         Padding="10"
                         Margin="0,8,0,0">
-                    <TextBlock Text="Enter the physical opening cash already placed in this drawer. Later Float In and Float Out actions are recorded separately."
+                    <TextBlock Text="The shift starts with Rs. 0.00 opening cash. Use FLOAT CASH after opening when cash is added to the drawer."
                                Foreground="#1E3A8A"
                                FontWeight="SemiBold"
                                TextWrapping="Wrap"/>
                 </Border>
 
-                <TextBlock Grid.Row="4"
+                <TextBlock Grid.Row="3"
                            Grid.ColumnSpan="2"
                            Text="{Binding ErrorMessage}"
                            Foreground="#B91C1C"

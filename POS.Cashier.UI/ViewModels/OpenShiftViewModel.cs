@@ -18,9 +18,6 @@ namespace POS.Cashier.UI.ViewModels
         private string _cashierName = string.Empty;
 
         [ObservableProperty]
-        private decimal _openingCash;
-
-        [ObservableProperty]
         private string _errorMessage = string.Empty;
 
         [ObservableProperty]
@@ -44,7 +41,6 @@ namespace POS.Cashier.UI.ViewModels
             CashierName =
                 (cashierName ?? string.Empty).Trim();
 
-            OpeningCash = 0m;
             ErrorMessage = string.Empty;
             CreatedShift = null;
         }
@@ -70,12 +66,6 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
 
-            if (OpeningCash < 0m)
-            {
-                ErrorMessage = "Opening cash cannot be negative.";
-                return false;
-            }
-
             try
             {
                 IsBusy = true;
@@ -85,10 +75,7 @@ namespace POS.Cashier.UI.ViewModels
                         .CreateNewShiftAsync(
                             TerminalNo,
                             CashierName,
-                            decimal.Round(
-                                OpeningCash,
-                                2,
-                                MidpointRounding.AwayFromZero));
+                            0m);
 
                 return true;
             }
