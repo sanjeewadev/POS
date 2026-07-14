@@ -161,7 +161,7 @@
         <!-- BODY -->
         <ScrollViewer Grid.Row="2"
                       VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
+                      HorizontalScrollBarVisibility="Auto">
             <StackPanel>
 
                 <!-- OPERATING STATUS -->

@@ -7,121 +7,17 @@
              d:DesignHeight="760"
              d:DesignWidth="1200"
              Loaded="UserControl_Loaded"
-             Background="#D4D0C8"
+             Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
 
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
-        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CFE8FF"/>
-        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
-        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E5F3FF"/>
-        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
-
-        <Style TargetType="TextBlock" x:Key="HeaderLabel">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#003366"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="InlineLabel">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
-        </Style>
-
-        <Style TargetType="TextBox" x:Key="ClassicInput">
-            <Setter Property="Height" Value="25"/>
-            <Setter Property="Padding" Value="5,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Style.Triggers>
-                <Trigger Property="IsReadOnly" Value="True">
-                    <Setter Property="Background" Value="#E5E5E5"/>
-                    <Setter Property="Foreground" Value="#555555"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" Value="#E5E5E5"/>
-                    <Setter Property="Foreground" Value="#555555"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="ClassicBtn">
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#CCCCCC"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Opacity" Value="0.55"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005555"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003333"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#007777"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Border" x:Key="ClassicGroupBox">
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="BorderThickness" Value="0,0,1,1"/>
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
-        </Style>
-
-        <Style TargetType="DataGridCell" x:Key="BaseCell">
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="4,0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#CFE8FF"/>
-                    <Setter Property="Foreground" Value="Black"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="RightText">
+        <Style x:Key="RightText" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Padding" Value="0,0,6,0"/>
         </Style>
-
-        <Style TargetType="TextBlock" x:Key="CenterText">
+        <Style x:Key="CenterText" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -129,328 +25,236 @@
 
     <Grid Margin="8">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="430"/>
-            <ColumnDefinition Width="8"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="440" MinWidth="360" MaxWidth="520"/>
+            <ColumnDefinition Width="6"/>
+            <ColumnDefinition Width="*" MinWidth="520"/>
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT: SUPPLIER FORM -->
+        <!-- EDITOR -->
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Style="{StaticResource ClassicGroupBox}">
+            <ScrollViewer Grid.Row="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="0,0,4,0">
                 <StackPanel>
-                    <Grid Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <Border Style="{DynamicResource BoPanel}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="1. SUPPLIER MASTER"
+                                           Style="{DynamicResource BoSectionHeader}"
+                                           Margin="0"/>
+                                <Border Grid.Column="1"
+                                        Background="#DEFF9A"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        Padding="10,2">
+                                    <TextBlock Text="{Binding SupplierStatusText}"
+                                               FontWeight="Bold"
+                                               Foreground="Black"/>
+                                </Border>
+                            </Grid>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="1. SUPPLIER MASTER"
-                                   Style="{StaticResource HeaderLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                        <Border Grid.Column="1"
-                                Background="#DEFF9A"
-                                BorderBrush="#A0A0A0"
-                                BorderThickness="1"
-                                Padding="10,2">
-                            <TextBlock Text="{Binding SupplierStatusText, Mode=OneWay}"
-                                       FontWeight="Bold"
-                                       Foreground="Black"/>
-                        </Border>
-                    </Grid>
+                                <TextBlock Grid.Row="0" Text="Supplier Code *" Style="{DynamicResource BoInlineLabel}" Foreground="DarkRed"/>
+                                <TextBox Grid.Row="0" Grid.Column="1"
+                                         Text="{Binding SupplierCode, UpdateSourceTrigger=PropertyChanged}"
+                                         IsReadOnly="{Binding IsSupplierCodeReadOnly}"
+                                         Style="{DynamicResource BoInputTextBox}"
+                                         FontWeight="Bold" MaxLength="20" Margin="0,0,0,6"/>
 
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Row="1" Text="Supplier Name *" Style="{DynamicResource BoInlineLabel}" Foreground="DarkRed"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
+                                         Text="{Binding SupplierName, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}"
+                                         FontWeight="Bold" MaxLength="150" Margin="0,0,0,6"/>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="Supplier Code *"
-                                   Style="{StaticResource InlineLabel}"
-                                   Foreground="DarkRed"/>
+                                <TextBlock Grid.Row="2" Text="Company Name" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
+                                         Text="{Binding CompanyName, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}" MaxLength="150" Margin="0,0,0,6"/>
 
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding SupplierCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 IsReadOnly="{Binding IsSupplierCodeReadOnly}"
-                                 Style="{StaticResource ClassicInput}"
-                                 FontWeight="Bold"
-                                 MaxLength="20"
-                                 ToolTip="Supplier code is locked after save."/>
-                    </Grid>
+                                <TextBlock Grid.Row="3" Text="Contact Person" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="3" Grid.Column="1"
+                                         Text="{Binding ContactPerson, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}" MaxLength="100" Margin="0,0,0,6"/>
 
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Row="4" Text="Primary Phone *" Style="{DynamicResource BoInlineLabel}" Foreground="DarkRed"/>
+                                <TextBox Grid.Row="4" Grid.Column="1"
+                                         Text="{Binding Phone1, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}" MaxLength="20" Margin="0,0,0,6"/>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="Supplier Name *"
-                                   Style="{StaticResource InlineLabel}"
-                                   Foreground="DarkRed"/>
+                                <TextBlock Grid.Row="5" Text="Second Phone" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="5" Grid.Column="1"
+                                         Text="{Binding Phone2, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}" MaxLength="20" Margin="0,0,0,6"/>
 
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding SupplierName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 FontWeight="Bold"
-                                 MaxLength="150"/>
-                    </Grid>
+                                <TextBlock Grid.Row="6" Text="Email" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="6" Grid.Column="1"
+                                         Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}" MaxLength="100" Margin="0,0,0,6"/>
 
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Row="7" Text="Address" Style="{DynamicResource BoInlineLabel}" VerticalAlignment="Top" Margin="0,5,6,0"/>
+                                <TextBox Grid.Row="7" Grid.Column="1"
+                                         Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}"
+                                         Height="52" TextWrapping="Wrap" AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto" MaxLength="250"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="Company Name"
-                                   Style="{StaticResource InlineLabel}"/>
+                    <Border Style="{DynamicResource BoPanel}">
+                        <StackPanel>
+                            <TextBlock Text="2. FINANCE / VAT SETUP" Style="{DynamicResource BoSectionHeader}"/>
 
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding CompanyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 MaxLength="150"/>
-                    </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Row="0" Text="VAT Status" Style="{DynamicResource BoInlineLabel}"/>
+                                <CheckBox Grid.Row="0" Grid.Column="1"
+                                          Content="VAT Registered Supplier"
+                                          IsChecked="{Binding HasVat}"
+                                          FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"
+                                          VerticalAlignment="Center" Margin="0,0,0,7"/>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="Contact Person"
-                                   Style="{StaticResource InlineLabel}"/>
+                                <TextBlock Grid.Row="1" Text="VAT Reg. No" Style="{DynamicResource BoInlineLabel}" Foreground="DarkRed"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
+                                         Text="{Binding VatNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsVatNumberInputEnabled}"
+                                         Style="{DynamicResource BoInputTextBox}"
+                                         FontWeight="Bold" MaxLength="50" Margin="0,0,0,4"/>
 
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ContactPerson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 MaxLength="50"/>
-                    </Grid>
+                                <TextBlock Grid.Row="2" Grid.Column="1"
+                                           Text="VAT number is required only for VAT-registered suppliers."
+                                           Style="{DynamicResource BoHelpText}" Margin="0,0,0,8"/>
 
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Row="3" Text="Credit Days" Style="{DynamicResource BoInlineLabel}"/>
+                                <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,0,7">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding DefaultCreditDays, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{DynamicResource BoInputTextBox}"
+                                             HorizontalContentAlignment="Center" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="1" Text="Used for PO/GRN due dates."
+                                               Style="{DynamicResource BoHelpText}"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </Grid>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="Primary Phone *"
-                                   Style="{StaticResource InlineLabel}"
-                                   Foreground="DarkRed"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding Phone1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 MaxLength="20"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Second Phone"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding Phone2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 MaxLength="20"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Email"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 MaxLength="100"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Address"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 Height="50"
-                                 TextWrapping="Wrap"
-                                 AcceptsReturn="True"
-                                 VerticalScrollBarVisibility="Auto"
-                                 MaxLength="250"/>
-                    </Grid>
+                                <TextBlock Grid.Row="4" Text="Current Balance" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="4" Grid.Column="1"
+                                         Text="{Binding CurrentBalance, StringFormat=N2}"
+                                         IsReadOnly="True"
+                                         Style="{DynamicResource BoInputTextBox}"
+                                         HorizontalContentAlignment="Right" FontWeight="Bold"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-            </Border>
+            </ScrollViewer>
 
-            <Border Grid.Row="1" Style="{StaticResource ClassicGroupBox}">
-                <StackPanel>
-                    <TextBlock Text="2. FINANCE / VAT SETUP"
-                               Style="{StaticResource HeaderLabel}"/>
-
-                    <CheckBox Content="VAT Registered Supplier"
-                              IsChecked="{Binding HasVat, Mode=TwoWay}"
-                              FontWeight="Bold"
-                              Foreground="#003366"
-                              Margin="120,0,0,8"
-                              ToolTip="If unticked, PO and GRN must force VAT to zero for this supplier."/>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="VAT Reg. No"
-                                   Style="{StaticResource InlineLabel}"
-                                   Foreground="DarkRed"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding VatNumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 IsEnabled="{Binding IsVatNumberInputEnabled}"
-                                 Style="{StaticResource ClassicInput}"
-                                 FontWeight="Bold"
-                                 MaxLength="50"
-                                 ToolTip="Required only for VAT registered suppliers."/>
-                    </Grid>
-
-                    <TextBlock Text="VAT number is mandatory when VAT Registered Supplier is ticked. If supplier is not VAT registered, PO/GRN VAT must be zero."
-                               Foreground="#666666"
-                               FontSize="10.5"
-                               FontStyle="Italic"
-                               TextWrapping="Wrap"
-                               Margin="120,0,0,8"/>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="100"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Credit Days"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding DefaultCreditDays, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 HorizontalContentAlignment="Center"
-                                 FontWeight="Bold"/>
-
-                        <TextBlock Grid.Column="2"
-                                   Text="Used to calculate PO/GRN due date."
-                                   Foreground="#666666"
-                                   FontSize="10.5"
-                                   FontStyle="Italic"
-                                   VerticalAlignment="Center"
-                                   Margin="8,0,0,0"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Current Balance"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding CurrentBalance, Mode=OneWay, StringFormat=N2}"
-                                 IsReadOnly="True"
-                                 Style="{StaticResource ClassicInput}"
-                                 HorizontalContentAlignment="Right"
-                                 FontWeight="Bold"/>
-                    </Grid>
-
-                    <CheckBox Content="Deactivate / Suspend Supplier"
-                              IsChecked="{Binding IsDeactivated, Mode=TwoWay}"
-                              FontWeight="Bold"
-                              Foreground="DarkRed"
-                              Margin="120,3,0,0"
-                              ToolTip="Suspended suppliers are hidden from new PO/GRN selections but old history remains."/>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Row="2"
-                    Background="#F0F0F0"
-                    BorderBrush="#A0A0A0"
-                    BorderThickness="1"
-                    Padding="8">
-
+            <Border Grid.Row="1" Style="{DynamicResource BoActionFooter}">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <WrapPanel Grid.Row="0" HorizontalAlignment="Left">
                         <Button Content="DELETE UNUSED"
                                 Command="{Binding DeleteSupplierCommand}"
-                                Style="{StaticResource ClassicBtn}"
-                                Foreground="DarkRed"
-                                BorderBrush="DarkRed"
+                                Style="{DynamicResource BoDangerButton}"
                                 Margin="0,0,6,0"
-                                ToolTip="Permanent delete only if supplier has no linked records and zero balance."/>
+                                ToolTip="Permanent delete is allowed only when no linked records or balance exist."/>
 
                         <Button Content="DEACTIVATE"
                                 Command="{Binding DeactivateSupplierCommand}"
-                                Style="{StaticResource ClassicBtn}"
-                                Foreground="DarkRed"
-                                BorderBrush="DarkRed"
-                                Margin="0,0,6,0"/>
+                                Margin="0,0,6,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource BoDangerButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedSupplier}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDeactivated}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
 
                         <Button Content="REACTIVATE"
                                 Command="{Binding ReactivateSupplierCommand}"
-                                Style="{StaticResource ClassicBtn}"
-                                Foreground="#005500"
-                                BorderBrush="#005500"/>
-                    </StackPanel>
+                                Margin="0,0,6,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource BoSuccessButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedSupplier}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDeactivated}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </WrapPanel>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <Button Content="CLEAR"
-                                Command="{Binding ClearCommand}"
-                                Style="{StaticResource ClassicBtn}"
-                                Width="80"
-                                Margin="0,0,6,0"/>
-
-                        <Button Content="SAVE SUPPLIER"
-                                Command="{Binding SaveCommand}"
-                                Style="{StaticResource ActionBtn}"
-                                Width="125"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,7,0,0">
+                        <Button Content="CLEAR" Command="{Binding ClearCommand}"
+                                Style="{DynamicResource BoButton}" Width="82" Margin="0,0,6,0"/>
+                        <Button Content="SAVE SUPPLIER" Command="{Binding SaveCommand}"
+                                Style="{DynamicResource BoPrimaryButton}" Width="132"/>
                     </StackPanel>
                 </Grid>
             </Border>
         </Grid>
 
-        <!-- RIGHT: DATABASE GRID -->
+        <GridSplitter Grid.Column="1"
+                      Width="6"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="{DynamicResource BorderBrush}"
+                      ShowsPreview="True"/>
+
+        <!-- DATABASE -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -458,12 +262,8 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0"
-                    Background="#003366"
-                    BorderBrush="#002244"
-                    BorderThickness="1"
-                    Padding="8">
-
+            <Border Grid.Row="0" Background="{DynamicResource HeaderTextBrush}"
+                    BorderBrush="#002244" BorderThickness="1" Padding="7" Margin="0,0,0,5">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -473,136 +273,43 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0"
-                               Text="SUPPLIER DATABASE"
-                               Foreground="White"
-                               FontWeight="Bold"
-                               FontSize="13"
-                               VerticalAlignment="Center"
-                               Margin="0,0,12,0"/>
-
-                    <TextBox Grid.Column="1"
-                             Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"
-                             Height="25"
-                             Margin="0,0,8,0"
-                             ToolTip="Search supplier code, name, company, phone, email, or VAT number.">
+                    <TextBlock Text="SUPPLIER DATABASE" Foreground="White" FontWeight="Bold" FontSize="13"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{DynamicResource BoInputTextBox}" Height="25" Margin="0,0,8,0">
                         <TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
                         </TextBox.InputBindings>
                     </TextBox>
-
-                    <CheckBox Grid.Column="2"
-                              Content="Include Suspended"
-                              IsChecked="{Binding IncludeDeactivated, Mode=TwoWay}"
-                              Foreground="White"
-                              FontWeight="SemiBold"
-                              VerticalAlignment="Center"
-                              Margin="0,0,10,0"/>
-
-                    <Button Grid.Column="3"
-                            Content="SEARCH / REFRESH"
-                            Command="{Binding RefreshCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="25"
-                            Padding="10,0"
-                            Margin="0,0,6,0"/>
-
-                    <Button Grid.Column="4"
-                            Content="CLEAR SEARCH"
-                            Command="{Binding ClearSearchCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="25"
-                            Padding="10,0"/>
+                    <CheckBox Grid.Column="2" Content="Include Suspended" IsChecked="{Binding IncludeDeactivated}"
+                              Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Button Grid.Column="3" Content="REFRESH" Command="{Binding RefreshCommand}"
+                            Style="{DynamicResource BoButton}" Height="25" MinWidth="78" Margin="0,0,5,0"/>
+                    <Button Grid.Column="4" Content="CLEAR" Command="{Binding ClearSearchCommand}"
+                            Style="{DynamicResource BoButton}" Height="25" MinWidth="70"/>
                 </Grid>
             </Border>
 
             <DataGrid Grid.Row="1"
                       ItemsSource="{Binding Suppliers}"
                       SelectedItem="{Binding SelectedSupplier, Mode=TwoWay}"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      IsReadOnly="True"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      HorizontalGridLinesBrush="#E0E0E0"
-                      VerticalGridLinesBrush="#E0E0E0"
-                      RowHeight="28"
-                      Background="White"
-                      BorderBrush="#A0A0A0"
-                      BorderThickness="1"
-                      SelectionMode="Single"
-                      AlternatingRowBackground="#F9F9F9"
-                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                      ScrollViewer.VerticalScrollBarVisibility="Auto">
-
-                <DataGrid.Resources>
-                    <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
-                </DataGrid.Resources>
-
+                      Style="{DynamicResource BoDataGrid}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Code"
-                                        Binding="{Binding SupplierCode, Mode=OneWay}"
-                                        Width="85"
-                                        IsReadOnly="True"/>
-
-                    <DataGridTextColumn Header="Supplier Name"
-                                        Binding="{Binding SupplierName, Mode=OneWay}"
-                                        Width="190"
-                                        IsReadOnly="True"
-                                        FontWeight="Bold"/>
-
-                    <DataGridTextColumn Header="Company"
-                                        Binding="{Binding CompanyName, Mode=OneWay}"
-                                        Width="175"
-                                        IsReadOnly="True"/>
-
-                    <DataGridTextColumn Header="Phone"
-                                        Binding="{Binding Phone1, Mode=OneWay}"
-                                        Width="110"
-                                        IsReadOnly="True"/>
-
-                    <DataGridTextColumn Header="VAT Status"
-                                        Binding="{Binding VatStatusText, Mode=OneWay}"
-                                        Width="120"
-                                        IsReadOnly="True"/>
-
-                    <DataGridTextColumn Header="VAT No"
-                                        Binding="{Binding VatNumber, Mode=OneWay}"
-                                        Width="130"
-                                        IsReadOnly="True"/>
-
-                    <DataGridTextColumn Header="Credit Days"
-                                        Binding="{Binding DefaultCreditDays, Mode=OneWay}"
-                                        Width="85"
-                                        IsReadOnly="True"
-                                        ElementStyle="{StaticResource CenterText}"/>
-
-                    <DataGridTextColumn Header="Balance"
-                                        Binding="{Binding CurrentBalance, Mode=OneWay, StringFormat=N2}"
-                                        Width="95"
-                                        IsReadOnly="True"
-                                        ElementStyle="{StaticResource RightText}"/>
-
-                    <DataGridTextColumn Header="Status"
-                                        Binding="{Binding StatusText, Mode=OneWay}"
-                                        Width="85"
-                                        IsReadOnly="True"
-                                        ElementStyle="{StaticResource CenterText}"/>
+                    <DataGridTextColumn Header="Code" Binding="{Binding SupplierCode}" Width="82"/>
+                    <DataGridTextColumn Header="Supplier Name" Binding="{Binding SupplierName}" Width="2*" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Company" Binding="{Binding CompanyName}" Width="1.6*"/>
+                    <DataGridTextColumn Header="Phone" Binding="{Binding Phone1}" Width="105"/>
+                    <DataGridTextColumn Header="VAT Status" Binding="{Binding VatStatusText}" Width="105"/>
+                    <DataGridTextColumn Header="VAT No" Binding="{Binding VatNumber}" Width="120"/>
+                    <DataGridTextColumn Header="Credit Days" Binding="{Binding DefaultCreditDays}" Width="82" ElementStyle="{StaticResource CenterText}"/>
+                    <DataGridTextColumn Header="Balance" Binding="{Binding CurrentBalance, StringFormat=N2}" Width="95" ElementStyle="{StaticResource RightText}"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="82" ElementStyle="{StaticResource CenterText}"/>
                 </DataGrid.Columns>
             </DataGrid>
 
-            <Border Grid.Row="2"
-                    Background="#F0F0F0"
-                    BorderBrush="#A0A0A0"
-                    BorderThickness="1"
-                    Padding="8"
-                    Margin="0,6,0,0">
-                <TextBlock Text="{Binding StatusMessage}"
-                           Foreground="#003366"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap"/>
+            <Border Grid.Row="2" Style="{DynamicResource BoActionFooter}" Margin="0,6,0,0">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource HeaderTextBrush}"
+                           FontWeight="SemiBold" TextWrapping="Wrap"/>
             </Border>
         </Grid>
     </Grid>

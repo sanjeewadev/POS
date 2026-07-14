@@ -11,9 +11,9 @@
              FontSize="12">
 
     <UserControl.Resources>
-        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CFE8FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#D0E8E8"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
-        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E5F3FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E4F0F0"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
 
         <Style TargetType="{x:Type TextBlock}" x:Key="HeaderLabel">
@@ -140,7 +140,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#CFE8FF"/>
+                    <Setter Property="Background" Value="#D0E8E8"/>
                     <Setter Property="Foreground" Value="Black"/>
                 </Trigger>
             </Style.Triggers>
@@ -180,9 +180,9 @@
 
     <Grid Margin="8">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="8"/>
-            <ColumnDefinition Width="390"/>
+            <ColumnDefinition Width="*" MinWidth="620"/>
+            <ColumnDefinition Width="6"/>
+            <ColumnDefinition Width="360" MinWidth="320" MaxWidth="440"/>
         </Grid.ColumnDefinitions>
 
         <Grid Grid.Column="0">
@@ -302,6 +302,7 @@
                               Background="White"
                               BorderThickness="0"
                               SelectionMode="Single"
+                              RowStyle="{DynamicResource BoDataGridRow}"
                               AlternatingRowBackground="#F9F9F9"
                               ScrollViewer.HorizontalScrollBarVisibility="Auto"
                               ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -332,7 +333,14 @@
             </Border>
         </Grid>
 
-        <Border Grid.Column="2" Background="#E2EBE9" BorderBrush="#005555" BorderThickness="1" Padding="14">
+        <GridSplitter Grid.Column="1"
+                      Width="6"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="{DynamicResource BorderBrush}"
+                      ShowsPreview="True"/>
+
+        <Border Grid.Column="2" Background="#E2EBE9" BorderBrush="#005555" BorderThickness="1" Padding="10">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -341,12 +349,12 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="RECORD SUPPLIER PAYMENT" FontSize="16" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,12" HorizontalAlignment="Center"/>
+                <TextBlock Grid.Row="0" Text="RECORD SUPPLIER PAYMENT" FontSize="13" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,12" HorizontalAlignment="Center"/>
 
                 <Border Grid.Row="1" Background="White" BorderBrush="#A0A0A0" BorderThickness="1" Padding="10" Margin="0,0,0,14">
                     <StackPanel>
                         <TextBlock Text="Current Outstanding Amount" Foreground="#666666" FontSize="11" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding NetOutstanding, StringFormat=Rs. \{0:N2\}}" FontWeight="Bold" FontSize="24" Foreground="#A94044" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        <TextBlock Text="{Binding NetOutstanding, StringFormat=Rs. \{0:N2\}}" FontWeight="Bold" FontSize="20" Foreground="#A94044" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                     </StackPanel>
                 </Border>
 

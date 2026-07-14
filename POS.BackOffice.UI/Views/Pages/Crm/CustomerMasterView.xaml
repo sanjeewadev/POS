@@ -1,113 +1,37 @@
-﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.CustomerMasterView"
+<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Crm.CustomerMasterView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="#D4D0C8"
+             Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
 
     <UserControl.Resources>
-
-        <Style TargetType="TextBlock" x:Key="HeaderLabel">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#003366"/>
-            <Setter Property="Margin" Value="0,5,0,5"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="InlineLabel">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
+        <Style x:Key="CenterCheckBox" TargetType="CheckBox">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,5,0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
         </Style>
-
-        <Style TargetType="TextBox" x:Key="ClassicInput">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="4,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+        <Style x:Key="RightGridText" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0,0,5,0"/>
         </Style>
-
-        <Style TargetType="ComboBox" x:Key="ClassicCombo">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Background" Value="White"/>
-        </Style>
-
-        <Style TargetType="DatePicker" x:Key="ClassicDate">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Background" Value="White"/>
-        </Style>
-
-        <Style TargetType="Button" x:Key="ClassicBtn">
-            <Setter Property="Height" Value="26"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Padding" Value="15,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#CCCCCC"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005555"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003333"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#007777"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="DangerBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#8B0000"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#5A0000"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#B00000"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Border" x:Key="ClassicGroupBox">
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-
     </UserControl.Resources>
 
-    <Grid Margin="5">
+    <Grid Margin="6">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="3*"/>
-            <RowDefinition Height="2.25*"/>
+            <RowDefinition Height="3*" MinHeight="220"/>
+            <RowDefinition Height="2.3*" MinHeight="260"/>
         </Grid.RowDefinitions>
 
-        <!-- TOP BAR -->
+        <!-- SEARCH AND PAGE ACTIONS -->
         <Border Grid.Row="0"
-                Background="#003366"
-                Padding="10"
+                Background="{DynamicResource HeaderTextBrush}"
                 BorderBrush="#002244"
                 BorderThickness="1"
-                Margin="0,0,0,5">
-
+                Padding="8"
+                Margin="0,0,0,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -116,209 +40,57 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0"
-                           Text="CUSTOMER MASTER (CRM)"
-                           Foreground="White"
-                           FontSize="14"
-                           FontWeight="Bold"
-                           Margin="0,0,20,0"
-                           VerticalAlignment="Center"/>
+                <TextBlock Text="CUSTOMER MASTER (CRM)"
+                           Foreground="White" FontSize="14" FontWeight="Bold"
+                           VerticalAlignment="Center" Margin="0,0,18,0"/>
 
-                <WrapPanel Grid.Column="1"
-                           Orientation="Horizontal"
-                           VerticalAlignment="Center">
-
-                    <TextBlock Text="Filter:"
-                               Foreground="#A0C0E0"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Margin="0,0,5,0"/>
-
+                <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Filter" Foreground="#C8D9E8" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <ComboBox ItemsSource="{Binding TypeFilters}"
                               SelectedItem="{Binding SelectedTypeFilter}"
-                              Style="{StaticResource ClassicCombo}"
-                              Width="145"
-                              Margin="0,0,15,0"/>
-
-                    <TextBlock Text="Search:"
-                               Foreground="#A0C0E0"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Margin="0,0,5,0"/>
-
+                              Style="{DynamicResource BoInputComboBox}"
+                              Width="135" Margin="0,0,12,0"/>
+                    <TextBlock Text="Search" Foreground="#C8D9E8" FontWeight="SemiBold"
+                               VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"
-                             Width="230"
-                             Margin="0,0,10,0"
-                             ToolTip="Search customer code, name, phone, NIC, BR, VAT, company"/>
-
-                    <Button Content="[ F5 - REFRESH ]"
-                            Command="{Binding RefreshDataCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Background="#D0E4F5"
-                            BorderBrush="#003366"
-                            Foreground="#003366"
-                            Height="24"
-                            Padding="10,0"/>
+                             Style="{DynamicResource BoInputTextBox}"
+                             Width="225" Margin="0,0,7,0"/>
+                    <Button Content="REFRESH" Command="{Binding RefreshDataCommand}"
+                            Style="{DynamicResource BoButton}" Height="25"/>
                 </WrapPanel>
 
-                <Button Grid.Column="2"
-                        Content="CLEAR FORM"
-                        Command="{Binding ClearFormCommand}"
-                        Style="{StaticResource ClassicBtn}"
-                        Height="28"
-                        Margin="0,0,8,0"/>
-
-                <Button Grid.Column="3"
-                        Content="+ NEW CUSTOMER"
-                        Command="{Binding AddNewCustomerCommand}"
-                        Style="{StaticResource ClassicBtn}"
-                        Background="#059669"
-                        Foreground="White"
-                        BorderBrush="#047857"
-                        Height="28"/>
+                <Button Grid.Column="2" Content="CLEAR FORM" Command="{Binding ClearFormCommand}"
+                        Style="{DynamicResource BoButton}" Margin="8,0,6,0"/>
+                <Button Grid.Column="3" Content="NEW CUSTOMER" Command="{Binding AddNewCustomerCommand}"
+                        Style="{DynamicResource BoPrimaryButton}"/>
             </Grid>
         </Border>
 
-        <!-- CUSTOMER GRID -->
+        <!-- COMPACT CUSTOMER DATABASE -->
         <DataGrid Grid.Row="1"
                   ItemsSource="{Binding CustomersList}"
                   SelectedItem="{Binding SelectedCustomer}"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  GridLinesVisibility="All"
-                  HorizontalGridLinesBrush="#C0C0C0"
-                  VerticalGridLinesBrush="#D0D0D0"
-                  RowHeight="27"
-                  HeadersVisibility="Column"
-                  Background="White"
-                  BorderBrush="#A0A0A0"
-                  BorderThickness="1"
-                  SelectionMode="Single"
-                  AlternatingRowBackground="#F9F9F9"
-                  IsReadOnly="True"
-                  Margin="0,0,0,5">
-
-            <DataGrid.Resources>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#E0E0E0"/>
-                    <Setter Property="Foreground" Value="Black"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="Padding" Value="5"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
-                    <Setter Property="BorderBrush" Value="#A0A0A0"/>
-                </Style>
-            </DataGrid.Resources>
-
+                  Style="{DynamicResource BoDataGrid}"
+                  Margin="0,0,0,6">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Code"
-                                    Binding="{Binding CustomerCode}"
-                                    Width="110"
-                                    FontWeight="Bold"/>
-
-                <DataGridTextColumn Header="Customer / Company Name"
-                                    Binding="{Binding FullName}"
-                                    Width="*"
-                                    FontWeight="SemiBold"/>
-
-                <DataGridTextColumn Header="Phone"
-                                    Binding="{Binding Phone}"
-                                    Width="115"/>
-
-                <DataGridTextColumn Header="Type"
-                                    Binding="{Binding CustomerType}"
-                                    Width="90"/>
-
-                <DataGridCheckBoxColumn Header="Loyalty / Discount"
-                                        Binding="{Binding IsDiscountEligible}"
-                                        Width="110">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                            <Setter Property="IsHitTestVisible" Value="False"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                </DataGridCheckBoxColumn>
-
-                <DataGridTextColumn Header="Birthday"
-                                    Binding="{Binding Birthday, StringFormat=yyyy-MM-dd}"
-                                    Width="100"/>
-
-                <DataGridTextColumn Header="NIC / BR"
-                                    Binding="{Binding NicNumber}"
-                                    Width="110"/>
-
-                <DataGridCheckBoxColumn Header="Credit"
-                                        Binding="{Binding IsCreditEnabled}"
-                                        Width="65">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                            <Setter Property="IsHitTestVisible" Value="False"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                </DataGridCheckBoxColumn>
-
-                <DataGridTextColumn Header="Credit Status"
-                                    Binding="{Binding CreditStatus}"
-                                    Width="105"/>
-
-                <DataGridTextColumn Header="Credit Limit Rs."
-                                    Binding="{Binding CreditLimit, StringFormat={}{0:N2}}"
-                                    Width="120">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Setter Property="Padding" Value="0,0,4,0"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-
-                <DataGridTextColumn Header="Balance Rs."
-                                    Binding="{Binding CurrentBalance, StringFormat={}{0:N2}}"
-                                    Width="115"
-                                    FontWeight="Bold">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Setter Property="Padding" Value="0,0,4,0"/>
-                            <Setter Property="Foreground" Value="#8B0000"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-
-                <DataGridCheckBoxColumn Header="Locked"
-                                        Binding="{Binding IsCreditLocked}"
-                                        Width="60">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                            <Setter Property="IsHitTestVisible" Value="False"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                </DataGridCheckBoxColumn>
-
-                <DataGridCheckBoxColumn Header="Active"
-                                        Binding="{Binding IsActive}"
-                                        Width="60">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                            <Setter Property="IsHitTestVisible" Value="False"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                </DataGridCheckBoxColumn>
+                <DataGridTextColumn Header="Code" Binding="{Binding CustomerCode}" Width="95" FontWeight="Bold"/>
+                <DataGridTextColumn Header="Customer / Company Name" Binding="{Binding FullName}" Width="2*" MinWidth="210" FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="105"/>
+                <DataGridTextColumn Header="Type" Binding="{Binding CustomerType}" Width="85"/>
+                <DataGridCheckBoxColumn Header="Loyalty / Discount" Binding="{Binding IsDiscountEligible}" Width="105" ElementStyle="{StaticResource CenterCheckBox}"/>
+                <DataGridTextColumn Header="Credit Status" Binding="{Binding CreditStatus}" Width="100"/>
+                <DataGridTextColumn Header="Credit Limit" Binding="{Binding CreditLimit, StringFormat={}{0:N2}}" Width="100" ElementStyle="{StaticResource RightGridText}"/>
+                <DataGridTextColumn Header="Balance" Binding="{Binding CurrentBalance, StringFormat={}{0:N2}}" Width="100" FontWeight="Bold" ElementStyle="{StaticResource RightGridText}"/>
+                <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="55" ElementStyle="{StaticResource CenterCheckBox}"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- SELECTED CUSTOMER FORM -->
+        <!-- EDITOR -->
         <Border Grid.Row="2"
-                Style="{StaticResource ClassicGroupBox}"
-                VerticalAlignment="Stretch"
-                Padding="0">
-
+                Background="{DynamicResource PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1">
             <Grid IsEnabled="{Binding IsCustomerSelected}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -326,414 +98,239 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0"
-                        Background="#E0E0E0"
-                        BorderBrush="#A0A0A0"
-                        BorderThickness="0,0,0,1"
-                        Padding="8,4">
-
+                <Border Grid.Row="0" Background="{DynamicResource DataGridHeaderBackground}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                        Padding="8,5">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="SELECTED CUSTOMER PROFILE"
-                                   Style="{StaticResource HeaderLabel}"
-                                   Margin="0"/>
-
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding CustomerTypeHelpText}"
-                                   Foreground="#555555"
-                                   FontWeight="SemiBold"
-                                   FontSize="11"
-                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="SELECTED CUSTOMER PROFILE" Style="{DynamicResource BoSectionHeader}" Margin="0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding CustomerTypeHelpText}"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
 
-                <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
+                <TabControl Grid.Row="1" Margin="8,5,8,6" Background="{DynamicResource PanelBackgroundBrush}">
+                    <TabControl.Resources>
+                        <Style TargetType="TabItem" BasedOn="{StaticResource BoTabItem}"/>
+                    </TabControl.Resources>
 
-                    <Grid Margin="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1.05*"/>
-                            <ColumnDefinition Width="20"/>
-                            <ColumnDefinition Width="1.05*"/>
-                            <ColumnDefinition Width="20"/>
-                            <ColumnDefinition Width="310"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- DEMOGRAPHICS -->
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="1. BASIC DETAILS"
-                                       FontWeight="Bold"
-                                       Foreground="#003366"
-                                       Margin="0,0,0,10"/>
-
-                            <Grid Margin="0,0,0,8">
+                    <TabItem Header="1. Basic Details">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid Margin="10" MaxWidth="920" HorizontalAlignment="Left">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="105"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="110"/>
+                                    <ColumnDefinition Width="300" MinWidth="220"/>
+                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="95"/>
+                                    <ColumnDefinition Width="300" MinWidth="200"/>
                                 </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                                <TextBlock Text="Account Code:" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding InputCustomerCode}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"
-                                         Background="#E5E5E5"
-                                         FontWeight="Bold"/>
-                            </Grid>
+                                <TextBlock Text="Account Code" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Column="1" Text="{Binding InputCustomerCode}" IsReadOnly="True"
+                                         Style="{DynamicResource BoInputTextBox}" FontWeight="Bold" Margin="0,0,0,8"/>
 
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="105"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="3" Text="Customer Type" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Column="4" Text="{Binding InputCustomerType}" IsReadOnly="True"
+                                         Style="{DynamicResource BoInputTextBox}" Margin="0,0,0,8"/>
 
-                                <TextBlock Text="Full Name *" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
+                                <TextBlock Grid.Row="1" Text="Full Name *" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4"
                                          Text="{Binding InputFullName, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"
-                                         FontWeight="Bold"
-                                         Background="#FFFFE0"/>
-                            </Grid>
+                                         Style="{DynamicResource BoInputTextBox}" FontWeight="Bold"
+                                         Background="{DynamicResource HighlightBackgroundBrush}" Margin="0,0,0,8"/>
 
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="105"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="55"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="Phone *" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
+                                <TextBlock Grid.Row="2" Text="Phone *" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
                                          Text="{Binding InputPhone, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"
-                                         Background="#FFFFE0"
-                                         Margin="0,0,5,0"/>
-
-                                <TextBlock Grid.Column="2" Text="Email:" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="3"
+                                         Style="{DynamicResource BoInputTextBox}"
+                                         Background="{DynamicResource HighlightBackgroundBrush}" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="2" Grid.Column="3" Text="Email" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="2" Grid.Column="4"
                                          Text="{Binding InputEmail, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
+                                         Style="{DynamicResource BoInputTextBox}" Margin="0,0,0,8"/>
 
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="105"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="65"/>
-                                    <ColumnDefinition Width="130"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="Birthday:" Style="{StaticResource InlineLabel}"/>
-                                <DatePicker Grid.Column="1"
+                                <TextBlock Grid.Row="3" Text="Birthday" Style="{DynamicResource BoInlineLabel}"/>
+                                <DatePicker Grid.Row="3" Grid.Column="1"
                                             SelectedDate="{Binding InputBirthday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            Style="{StaticResource ClassicDate}"
-                                            Margin="0,0,8,0"/>
-
-                                <TextBlock Grid.Column="2" Text="NIC:" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="3"
+                                            Style="{DynamicResource BoInputDatePicker}" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="3" Grid.Column="3" Text="NIC" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="3" Grid.Column="4"
                                          Text="{Binding InputNicNumber, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
+                                         Style="{DynamicResource BoInputTextBox}" Margin="0,0,0,8"/>
 
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="105"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="Address:" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
+                                <TextBlock Grid.Row="4" Text="Address" Style="{DynamicResource BoInlineLabel}" VerticalAlignment="Top" Margin="0,5,6,0"/>
+                                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4"
                                          Text="{Binding InputAddress, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"/>
+                                         Style="{DynamicResource BoInputTextBox}" Height="48"
+                                         AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
                             </Grid>
+                        </ScrollViewer>
+                    </TabItem>
 
-                            <Border Background="#F8F8F8"
-                                    BorderBrush="#C0C0C0"
-                                    BorderThickness="1"
-                                    Padding="8"
-                                    Margin="0,8,0,0">
-
-                                <TextBlock Text="Birthday is optional. Later the discount engine can use this field for birthday discounts."
-                                           Foreground="#444"
-                                           TextWrapping="Wrap"
-                                           FontSize="11"/>
-                            </Border>
-                        </StackPanel>
-
-                        <Rectangle Grid.Column="1"
-                                   Width="1"
-                                   Fill="#A0A0A0"
-                                   Margin="9,0"/>
-
-                        <!-- POS / BUSINESS SETTINGS -->
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="2. CUSTOMER TYPE / BUSINESS DETAILS"
-                                       FontWeight="Bold"
-                                       Foreground="#005500"
-                                       Margin="0,0,0,10"/>
-
-                            <Grid Margin="0,0,0,10">
+                    <TabItem Header="2. Business Details">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid Margin="10" MaxWidth="920" HorizontalAlignment="Left">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="145"/>
+                                    <ColumnDefinition Width="340" MinWidth="230"/>
+                                    <ColumnDefinition Width="25"/>
+                                    <ColumnDefinition Width="145"/>
+                                    <ColumnDefinition Width="250" MinWidth="180"/>
                                 </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                                <TextBlock Text="Customer Type *" Style="{StaticResource InlineLabel}"/>
-                                <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding CustomerTypes}"
+                                <TextBlock Text="Customer Type *" Style="{DynamicResource BoInlineLabel}"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding CustomerTypes}"
                                           SelectedItem="{Binding InputCustomerType}"
-                                          Style="{StaticResource ClassicCombo}"
-                                          FontWeight="Bold"
-                                          Background="#FFFFE0"/>
-                            </Grid>
+                                          Style="{DynamicResource BoInputComboBox}"
+                                          FontWeight="Bold" Background="{DynamicResource HighlightBackgroundBrush}" Margin="0,0,0,8"/>
 
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="3" Text="Account Status" Style="{DynamicResource BoInlineLabel}"/>
+                                <CheckBox Grid.Column="4" Content="Account is Active" IsChecked="{Binding InputIsActive}"
+                                          FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,0,8"/>
 
-                                <TextBlock Text="{Binding DiscountEligibilityLabel}"
-                                           Style="{StaticResource InlineLabel}"/>
-
-                                <CheckBox Grid.Column="1"
-                                          IsChecked="{Binding InputIsDiscountEligible}"
-                                          VerticalAlignment="Center"
-                                          FontWeight="Bold"
-                                          Foreground="#005500"
-                                          Content="Allow approved manual discounts for this customer"/>
-                            </Grid>
-
-                            <Rectangle Height="1" Fill="#C0C0C0" Margin="0,3,0,12"/>
-
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="Company:" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
+                                <TextBlock Grid.Row="1" Text="Company" Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
                                          Text="{Binding InputCompanyName, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"
-                                         ToolTip="For Wholesale / B2B customers"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Text="BR No:" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
+                                         Style="{DynamicResource BoInputTextBox}" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="1" Grid.Column="3" Text="BR No." Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="1" Grid.Column="4"
                                          Text="{Binding InputBusinessRegistrationNumber, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"
-                                         ToolTip="Business registration number"/>
-                            </Grid>
+                                         Style="{DynamicResource BoInputTextBox}" Margin="0,0,0,8"/>
 
-                            <Grid Margin="0,0,0,10">
+                                <TextBlock Grid.Row="2" Text="VAT No." Style="{DynamicResource BoInlineLabel}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
+                                         Text="{Binding InputVatNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource BoInputTextBox}" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="3" Text="{Binding DiscountEligibilityLabel}" Style="{DynamicResource BoInlineLabel}"/>
+                                <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="4"
+                                          IsChecked="{Binding InputIsDiscountEligible}"
+                                          Content="Allow approved manual discounts for this customer"
+                                          FontWeight="Bold" Foreground="#005500" VerticalAlignment="Center" Margin="0,0,0,8"/>
+
+                                <Border Grid.Row="4" Grid.ColumnSpan="5"
+                                        Background="#F8F8F8" BorderBrush="{DynamicResource LightBorderBrush}"
+                                        BorderThickness="1" Padding="8">
+                                    <TextBlock Text="Retail customers display this setting as Loyalty; wholesale customers display it as Discount."
+                                               Style="{DynamicResource BoHelpText}"/>
+                                </Border>
+                            </Grid>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <TabItem Header="3. Credit Settings">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid Margin="10" MaxWidth="920" HorizontalAlignment="Left">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="430" MinWidth="320"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="360" MinWidth="260"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="VAT No:" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding InputVatNumber, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
+                                <Border Style="{DynamicResource BoPanel}" Margin="0">
+                                    <StackPanel>
+                                        <CheckBox Content="Credit Enabled"
+                                                  IsChecked="{Binding InputIsCreditEnabled}"
+                                                  FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"
+                                                  Margin="0,0,0,10"/>
+                                        <Grid IsEnabled="{Binding InputIsCreditEnabled}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="115"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
 
-                            <Rectangle Height="1" Fill="#C0C0C0" Margin="0,5,0,12"/>
+                                            <TextBlock Text="Credit Status" Style="{DynamicResource BoInlineLabel}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{Binding CreditStatuses}"
+                                                      SelectedItem="{Binding InputCreditStatus}"
+                                                      Style="{DynamicResource BoInputComboBox}" Margin="0,0,0,8"/>
 
-                            <CheckBox Content="Account is Active"
-                                      IsChecked="{Binding InputIsActive}"
-                                      FontWeight="Bold"
-                                      Foreground="#333"
-                                      Margin="0,0,0,10"/>
+                                            <TextBlock Grid.Row="1" Text="Credit Limit Rs." Style="{DynamicResource BoInlineLabel}"/>
+                                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding InputCreditLimit}"
+                                                     Style="{DynamicResource BoInputTextBox}"
+                                                     HorizontalContentAlignment="Right" FontWeight="Bold"
+                                                     Background="{DynamicResource HighlightBackgroundBrush}" Margin="0,0,0,8"/>
 
-                            <Border Background="#F8F8F8"
-                                    BorderBrush="#C0C0C0"
-                                    BorderThickness="1"
-                                    Padding="8">
+                                            <TextBlock Grid.Row="2" Text="Credit Days" Style="{DynamicResource BoInlineLabel}"/>
+                                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding InputCreditDays}"
+                                                     Style="{DynamicResource BoInputTextBox}"
+                                                     HorizontalContentAlignment="Center"
+                                                     Background="{DynamicResource HighlightBackgroundBrush}" Margin="0,0,0,8"/>
 
-                                <TextBlock Text="Retail customers show this as Loyalty. Wholesale customers show this as Discount. Internally both use IsDiscountEligible."
-                                           Foreground="#444"
-                                           TextWrapping="Wrap"
-                                           FontSize="11"/>
-                            </Border>
-                        </StackPanel>
-
-                        <Rectangle Grid.Column="3"
-                                   Width="1"
-                                   Fill="#A0A0A0"
-                                   Margin="9,0"/>
-
-                        <!-- FINANCIAL CONTROLS -->
-                        <Border Grid.Column="4"
-                                Background="#F8F8F8"
-                                BorderBrush="#C0C0C0"
-                                BorderThickness="1"
-                                Padding="15">
-
-                            <StackPanel>
-                                <TextBlock Text="3. FINANCIAL CONTROLS"
-                                           FontWeight="Bold"
-                                           Foreground="#8B0000"
-                                           Margin="0,0,0,15"/>
-
-                                <CheckBox Content="Credit Enabled"
-                                          IsChecked="{Binding InputIsCreditEnabled}"
-                                          FontWeight="Heavy"
-                                          Foreground="#003366"
-                                          Margin="0,0,0,12"
-                                          ToolTip="Only BackOffice/Admin should enable customer credit"/>
-
-                                <StackPanel IsEnabled="{Binding InputIsCreditEnabled}">
-
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="100"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Text="Status:" Style="{StaticResource InlineLabel}"/>
-                                        <ComboBox Grid.Column="1"
-                                                  ItemsSource="{Binding CreditStatuses}"
-                                                  SelectedItem="{Binding InputCreditStatus}"
-                                                  Style="{StaticResource ClassicCombo}"
-                                                  FontWeight="Bold"/>
-                                    </Grid>
-
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="100"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Text="Limit Rs." Style="{StaticResource InlineLabel}"/>
-                                        <TextBox Grid.Column="1"
-                                                 Text="{Binding InputCreditLimit}"
-                                                 Style="{StaticResource ClassicInput}"
-                                                 HorizontalContentAlignment="Right"
-                                                 FontWeight="Bold"
-                                                 Background="#FFFFE0"/>
-                                    </Grid>
-
-                                    <Grid Margin="0,0,0,15">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="100"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Text="Credit Days:" Style="{StaticResource InlineLabel}"/>
-                                        <TextBox Grid.Column="1"
-                                                 Text="{Binding InputCreditDays}"
-                                                 Style="{StaticResource ClassicInput}"
-                                                 HorizontalContentAlignment="Center"
-                                                 Background="#FFFFE0"/>
-                                    </Grid>
-
-                                    <CheckBox Content="Lock Credit Account"
-                                              IsChecked="{Binding InputIsCreditLocked}"
-                                              FontWeight="Heavy"
-                                              Foreground="#8B0000"
-                                              ToolTip="Prevents cashier from finalizing credit sales"
-                                              Margin="0,0,0,15"
-                                              HorizontalAlignment="Center"/>
-
-                                </StackPanel>
-
-                                <Rectangle Height="2"
-                                           Fill="#A0A0A0"
-                                           Margin="0,5,0,15"/>
-
-                                <TextBlock Text="CURRENT BALANCE"
-                                           FontSize="12"
-                                           FontWeight="Bold"
-                                           Foreground="#555"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,0,0,5"/>
-
-                                <TextBlock Text="{Binding SelectedCurrentBalance, StringFormat=Rs. {0:N2}}"
-                                           FontSize="21"
-                                           FontWeight="Heavy"
-                                           Foreground="#8B0000"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,0,0,18"/>
-
-                                <TextBlock Text="AVAILABLE CREDIT"
-                                           FontSize="12"
-                                           FontWeight="Bold"
-                                           Foreground="#555"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,0,0,5"/>
-
-                                <TextBlock Text="{Binding SelectedAvailableCredit, StringFormat=Rs. {0:N2}}"
-                                           FontSize="21"
-                                           FontWeight="Heavy"
-                                           Foreground="#005500"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,0,0,15"/>
-
-                                <Border Background="#FFF5F5"
-                                        BorderBrush="#D0A0A0"
-                                        BorderThickness="1"
-                                        Padding="8">
-
-                                    <TextBlock Text="Cashier-created customers should not get credit here automatically. Credit must be approved from BackOffice."
-                                               TextWrapping="Wrap"
-                                               Foreground="#8B0000"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"/>
+                                            <CheckBox Grid.Row="3" Grid.Column="1" Content="Lock Credit Account"
+                                                      IsChecked="{Binding InputIsCreditLocked}"
+                                                      FontWeight="Bold" Foreground="DarkRed"/>
+                                        </Grid>
+                                    </StackPanel>
                                 </Border>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </ScrollViewer>
 
-                <!-- FORM FOOTER -->
-                <Border Grid.Row="2"
-                        Background="#E0E0E0"
-                        BorderBrush="#A0A0A0"
-                        BorderThickness="0,1,0,0"
-                        Padding="8">
+                                <Border Grid.Column="2" Style="{DynamicResource BoPanel}" Margin="0">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,12">
+                                            <StackPanel>
+                                                <TextBlock Text="CURRENT BALANCE" Style="{DynamicResource BoKpiLabel}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding SelectedCurrentBalance, StringFormat=Rs. \{0:N2\}}"
+                                                           Style="{DynamicResource BoKpiValue}" Foreground="DarkRed" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel>
+                                                <TextBlock Text="AVAILABLE CREDIT" Style="{DynamicResource BoKpiLabel}" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="{Binding SelectedAvailableCredit, StringFormat=Rs. \{0:N2\}}"
+                                                           Style="{DynamicResource BoKpiValue}" Foreground="#005500" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+                                        <Border Grid.Row="1"
+                                                Background="#FFF5F5" BorderBrush="#D0A0A0" BorderThickness="1" Padding="8">
+                                            <TextBlock Text="Credit must be explicitly approved in BackOffice. Cashier-created customers do not receive credit automatically."
+                                                       Foreground="DarkRed" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
 
+                <Border Grid.Row="2" Style="{DynamicResource BoActionFooter}" BorderThickness="0,1,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0"
-                                   Text="Required fields: Full Name, Phone, Customer Type"
-                                   Foreground="#333"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
-
-                        <Button Grid.Column="2"
-                                Content="CLEAR"
-                                Command="{Binding ClearFormCommand}"
-                                Style="{StaticResource ClassicBtn}"
-                                Height="32"
-                                Padding="25,0"
-                                Margin="0,0,10,0"/>
-
-                        <Button Grid.Column="3"
-                                Content="SAVE CUSTOMER PROFILE"
-                                Command="{Binding SaveCustomerCommand}"
-                                Style="{StaticResource ActionBtn}"
-                                Height="32"
-                                Padding="35,0"/>
+                        <TextBlock Text="Required: Full Name, Phone and Customer Type"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="CLEAR" Command="{Binding ClearFormCommand}"
+                                Style="{DynamicResource BoButton}" Width="90" Margin="0,0,7,0"/>
+                        <Button Grid.Column="2" Content="SAVE CUSTOMER PROFILE" Command="{Binding SaveCustomerCommand}"
+                                Style="{DynamicResource BoPrimaryButton}" Width="185"/>
                     </Grid>
                 </Border>
             </Grid>

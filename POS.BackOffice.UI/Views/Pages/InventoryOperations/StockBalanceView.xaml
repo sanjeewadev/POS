@@ -15,9 +15,9 @@
 
         <conv:SmartQuantityConverter x:Key="SmartQuantityConverter"/>
 
-        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CFE8FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#D0E8E8"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
-        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E5F3FF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E4F0F0"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
 
         <Style TargetType="{x:Type TextBlock}" x:Key="HeaderLabel">
@@ -107,7 +107,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#CFE8FF"/>
+                    <Setter Property="Background" Value="#D0E8E8"/>
                     <Setter Property="Foreground" Value="Black"/>
                 </Trigger>
             </Style.Triggers>
