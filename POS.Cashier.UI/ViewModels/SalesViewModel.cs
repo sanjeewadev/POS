@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -82,6 +82,9 @@ namespace POS.Cashier.UI.ViewModels
         [ObservableProperty] private string _customerName = "Walk-In";
         [ObservableProperty] private int _loyaltyPoints = 0;
         [ObservableProperty] private bool _isWholesaleMode = false;
+
+        public string PricingModeButtonText =>
+            IsWholesaleMode ? "Wholesale" : "Retail";
         [ObservableProperty] private CustomerSearchDto? _activeB2BCustomer;
 
         [ObservableProperty] private bool _isManagerModeActive = false;
@@ -1381,6 +1384,92 @@ namespace POS.Cashier.UI.ViewModels
                 line.LineNo = lineNo++;
         }
 
+        public async Task ReloadCashierAsync()
+        {
+            if (_isCheckoutInProgress)
+            {
+                await ShowNotificationAsync(
+                    "Checkout is already in progress.",
+                    "#F59E0B");
+                return;
+            }
+
+            try
+            {
+                await FlushCartPersistenceAsync();
+                await LoadActiveShiftAsync();
+                RecalculateTotals();
+
+                if (IsPaymentModeActive)
+                    RecalculatePaymentTotals();
+
+                await ShowNotificationAsync(
+                    "Cashier refreshed. The current cart was preserved.",
+                    "#10B981");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Reload Cashier",
+                    ex);
+
+                await ShowNotificationAsync(
+                    $"Refresh failed: {ex.Message}",
+                    "#EF4444");
+            }
+        }
+
+        public void TogglePricingMode()
+        {
+            if (IsPaymentModeActive)
+            {
+                _ = ShowNotificationAsync(
+                    "Cancel payment mode before changing Retail/Wholesale pricing.",
+                    "#F59E0B");
+                return;
+            }
+
+            if (_isCheckoutInProgress)
+                return;
+
+            IsWholesaleMode = !IsWholesaleMode;
+            ApplyPricingModeToCart();
+            RecalculateTotals();
+
+            string mode = IsWholesaleMode ? "WHOLESALE" : "RETAIL";
+            _ = ShowNotificationAsync(
+                $"{mode} PRICE MODE ACTIVE",
+                IsWholesaleMode ? "#3B82F6" : "#10B981");
+        }
+
+        private void ApplyPricingModeToCart()
+        {
+            foreach (CartItem item in Cart)
+            {
+                if (item.IsGiftVoucherSale ||
+                    item.IsFreeItem ||
+                    item.IsManualDiscount ||
+                    item.IsRuleDiscount ||
+                    item.IsPriceOverridden ||
+                    item.DiscountAmount > 0m)
+                {
+                    continue;
+                }
+
+                decimal selectedPrice =
+                    IsWholesaleMode && item.WholesalePrice > 0m
+                        ? item.WholesalePrice
+                        : item.RetailPrice;
+
+                if (selectedPrice <= 0m)
+                    continue;
+
+                item.UnitPrice = selectedPrice;
+                item.OriginalUnitPrice = selectedPrice;
+            }
+        }
+
         public void AttachCustomer(CustomerSearchDto customer)
         {
             if (customer == null)
@@ -2653,7 +2742,7 @@ namespace POS.Cashier.UI.ViewModels
                     CustomerIsDiscountEligible = activeCustomer?.IsDiscountEligible ?? false,
                     CustomerIsCreditEnabled = activeCustomer?.IsCreditEnabled ?? false,
                     CustomerCreditStatus = activeCustomer?.CreditStatus ?? "None",
-                    IsWholesaleSale = activeCustomer?.IsWholesale ?? false,
+                    IsWholesaleSale = IsWholesaleMode,
                     GrossTotal = GrossValue,
                     TotalDiscount = TotalDiscount,
                     InvoiceDiscountAmount =

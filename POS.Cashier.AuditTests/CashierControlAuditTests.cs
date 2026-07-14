@@ -118,6 +118,40 @@ internal static class CashierControlAuditTests
         AuditAssert.Equal(0, verify.SalesHeaders.Count(), "unauthorized price-override sale count");
     }
 
+    public static async Task StockInquiryReturnsStockItemsOnlyAsync()
+    {
+        using var factory = new AuditDbContextFactory();
+        AuditScenario scenario = AuditSeed.CreateScenario(factory, stock: 7.25m);
+
+        IReadOnlyList<POS.Core.Models.DTOs.StockInquiryResultDto> results =
+            await new StockInquiryRepository(factory).SearchAsync("AUD");
+
+        AuditAssert.Equal(1, results.Count, "Stock Inquiry result count");
+        AuditAssert.Equal(scenario.StockVariantId, results[0].ItemVariantId,
+            "Stock Inquiry Stock Item variant");
+        AuditAssert.Money(7.25m, results[0].CurrentStock,
+            "Stock Inquiry quantity");
+    }
+
+    public static async Task WalkInWholesaleModePersistsAsync()
+    {
+        using var factory = new AuditDbContextFactory();
+        AuditScenario scenario = AuditSeed.CreateScenario(factory);
+
+        SalesHeader header = AuditSeed.Header(scenario, 1062m);
+        header.IsWholesaleSale = true;
+
+        SalesHeader saved = await new SalesRepository(factory).ProcessCheckoutAsync(
+            header,
+            new List<SalesLine> { AuditSeed.ServiceLine(scenario, unitPrice: 1062m) },
+            new List<SalesPayment> { AuditSeed.Payment(PaymentTypeCodes.Cash, 1062m) });
+
+        AuditAssert.True(saved.IsWholesaleSale,
+            "Walk-in Wholesale pricing mode was not preserved.");
+        AuditAssert.Money(1062m, saved.SalesLines.Single().UnitPrice,
+            "Walk-in Wholesale unit price");
+    }
+
     public static async Task FloatBalanceExcludesOperationalCashAsync()
     {
         using var factory = new AuditDbContextFactory();

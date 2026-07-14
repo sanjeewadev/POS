@@ -1652,16 +1652,36 @@ namespace POS.Cashier.UI.Views
             ReturnFocusToTerminalInput();
         }
 
+        private async void ReloadBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel == null || _isDialogOpen)
+                return;
+
+            await ViewModel.ReloadCashierAsync();
+            ReturnFocusToTerminalInput();
+        }
+
+        private void PricingModeBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel?.TogglePricingMode();
+            ReturnFocusToTerminalInput();
+        }
+
         private void StockInquiryBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (_isDialogOpen)
+            IServiceProvider? services = App.Services;
+
+            if (_isDialogOpen || services == null)
                 return;
 
             _isDialogOpen = true;
 
             try
             {
-                new StockInquiryDialog
+                StockInquiryViewModel stockInquiryViewModel =
+                    services.GetRequiredService<StockInquiryViewModel>();
+
+                new StockInquiryDialog(stockInquiryViewModel)
                 {
                     Owner = this
                 }.ShowDialog();

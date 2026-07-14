@@ -941,7 +941,8 @@
                             Click="PaidOutBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
-                            Content="Reload"/>
+                            Content="Reload"
+                            Click="ReloadBtn_Click"/>
 
                     <Button Background="{StaticResource ExpressBtnBrush}"
                             Foreground="White"
@@ -966,7 +967,8 @@
                             Click="CustomerBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
-                            Content="Retail"/>
+                            Content="{Binding PricingModeButtonText}"
+                            Click="PricingModeBtn_Click"/>
 
                     <Button x:Name="MoreBtn"
                             Background="{StaticResource SystemBtnBrush}"

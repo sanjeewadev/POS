@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -44,6 +44,7 @@ namespace POS.Cashier.UI.ViewModels
 
         partial void OnIsWholesaleModeChanged(bool value)
         {
+            OnPropertyChanged(nameof(PricingModeButtonText));
             ScheduleCartAutosave();
         }
 

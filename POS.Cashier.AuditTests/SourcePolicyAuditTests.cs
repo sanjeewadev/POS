@@ -2,6 +2,36 @@ namespace POS.Cashier.AuditTests;
 
 internal static class SourcePolicyAuditTests
 {
+    public static Task CashierUtilityButtonsAreWiredAsync()
+    {
+        string view = Read("POS.Cashier.UI", "Views", "SalesView.xaml");
+        AuditAssert.Contains(view, "Click=\"ReloadBtn_Click\"", "Cashier Reload button");
+        AuditAssert.Contains(view, "Content=\"{Binding PricingModeButtonText}\"",
+            "Retail/Wholesale mode button label");
+        AuditAssert.Contains(view, "Click=\"PricingModeBtn_Click\"",
+            "Retail/Wholesale mode button handler");
+
+        string code = Read("POS.Cashier.UI", "Views", "SalesView.xaml.cs");
+        AuditAssert.Contains(code, "ReloadCashierAsync", "Cashier Reload action");
+        AuditAssert.Contains(code, "TogglePricingMode", "Retail/Wholesale action");
+        AuditAssert.Contains(code, "GetRequiredService<StockInquiryViewModel>",
+            "Stock Inquiry ViewModel resolution");
+
+        string stockDialog = Read("POS.Cashier.UI", "Dialogs", "StockInquiryDialog.xaml");
+        AuditAssert.Contains(stockDialog, "Command=\"{Binding CheckStockCommand}\"",
+            "CHECK STOCK command binding");
+
+        string salesViewModel = Read("POS.Cashier.UI", "ViewModels", "SalesViewModel.cs");
+        string reload = ExtractMethodWindow(salesViewModel, "public async Task ReloadCashierAsync()", 5000);
+        AuditAssert.Contains(reload, "FlushCartPersistenceAsync", "Reload cart preservation");
+        AuditAssert.False(reload.Contains("Cart.Clear", StringComparison.Ordinal),
+            "Reload must not clear the current cart.");
+        AuditAssert.Contains(salesViewModel, "IsWholesaleSale = IsWholesaleMode",
+            "selected pricing mode sale snapshot");
+
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");

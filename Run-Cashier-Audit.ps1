@@ -28,6 +28,14 @@ $allowedChangedFiles = @(
     "POS.Core/Repositories/SalesRepository.cs",
     "POS.Core/Repositories/TillRepository.cs",
     "POS.Core.CalculationTests/Program.cs"
+    "POS.Cashier.UI/App.xaml.cs",
+    "POS.Cashier.UI/Dialogs/StockInquiryDialog.xaml",
+    "POS.Cashier.UI/Dialogs/StockInquiryDialog.xaml.cs",
+    "POS.Cashier.UI/ViewModels/SalesViewModel.CartLifecycle.cs",
+    "POS.Cashier.UI/ViewModels/StockInquiryViewModel.cs",
+    "POS.Cashier.UI/Views/SalesView.xaml",
+    "POS.Core/Models/DTOs/StockInquiryDtos.cs",
+    "POS.Core/Repositories/StockInquiryRepository.cs"
 )
 
 $commandResults = [ordered]@{}
@@ -267,7 +275,7 @@ Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')
 - Approved baseline ancestor: $ExpectedBaseline
 - Live database protected path: $liveDbPath
 - Temporary database root: $tempAuditRoot
-- Live database opened by audit tests: **No — tests receive explicit temporary SQLite paths**
+- Live database opened by audit tests: **No â€” tests receive explicit temporary SQLite paths**
 
 ## Command results
 

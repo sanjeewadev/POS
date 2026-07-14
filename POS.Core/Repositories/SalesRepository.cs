@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -499,7 +499,6 @@ namespace POS.Core.Repositories
                 header.CustomerIsDiscountEligible = false;
                 header.CustomerIsCreditEnabled = false;
                 header.CustomerCreditStatus = "None";
-                header.IsWholesaleSale = false;
                 header.CustomerTinSnapshot = string.Empty;
                 header.CustomerVatNoSnapshot = string.Empty;
                 header.CustomerAddressSnapshot = string.Empty;
@@ -545,7 +544,6 @@ namespace POS.Core.Repositories
                 ? "None"
                 : NormalizeText(customer.CreditStatus);
 
-            header.IsWholesaleSale = isWholesale;
             header.CustomerTinSnapshot = string.Empty;
             header.CustomerVatNoSnapshot =
                 NormalizeText(customer.VatRegistrationNumber);

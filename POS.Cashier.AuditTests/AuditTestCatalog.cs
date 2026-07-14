@@ -24,7 +24,10 @@ internal static class AuditTestCatalog
         new("Float Out cannot consume sales cash", AuditGroups.Control, CashierControlAuditTests.FloatOutCannotConsumeSalesCashAsync),
         new("Disabled users cannot authenticate", AuditGroups.Control, CashierControlAuditTests.DisabledUserCannotAuthenticateAsync),
         new("Zero-opening shift and one-open-shift rule are enforced", AuditGroups.Control, CashierControlAuditTests.ZeroOpeningShiftAndSingleOpenShiftAsync),
+        new("Stock inquiry returns Stock Item quantities only", AuditGroups.Control, CashierControlAuditTests.StockInquiryReturnsStockItemsOnlyAsync),
+        new("Walk-in Wholesale mode persists and validates Wholesale price", AuditGroups.Control, CashierControlAuditTests.WalkInWholesaleModePersistsAsync),
 
+        new("Cashier utility buttons are wired", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CashierUtilityButtonsAreWiredAsync),
         new("Paid In and Paid Out UI do not require manager password", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PaidInAndPaidOutDoNotRequireManagerPasswordAsync),
         new("Below-minimum New Price captures manager identity", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PriceOverrideUiCapturesManagerIdentityAsync),
         new("Checkout failure path writes a technical log", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CheckoutFailurePathWritesTechnicalLogAsync),

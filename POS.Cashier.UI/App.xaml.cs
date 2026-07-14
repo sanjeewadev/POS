@@ -95,8 +95,10 @@ namespace POS.Cashier.UI
             services.AddTransient<FreeItemReasonModalViewModel>();
             services.AddTransient<PluSearchViewModel>();
             services.AddTransient<CustomerReturnViewModel>();
+            services.AddTransient<StockInquiryViewModel>();
 
             services.AddTransient<ExpressItemRepository>();
+            services.AddTransient<StockInquiryRepository>();
 
             services.AddTransient<GiftVoucherRepository>();
             services.AddTransient<SellGiftVoucherDialogViewModel>();
