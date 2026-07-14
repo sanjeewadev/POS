@@ -431,12 +431,6 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            if (e.Key == Key.F6)
-            {
-                DiscountRuleBtn_Click(this, new RoutedEventArgs());
-                e.Handled = true;
-                return;
-            }
 
             if (e.Key == Key.F7)
             {
@@ -1426,123 +1420,6 @@ namespace POS.Cashier.UI.Views
         private void NewPriceBtn_Click(object sender, RoutedEventArgs e)
         {
             NewPriceShortcut();
-        }
-
-        private void DiscountRuleBtn_Click(object sender, RoutedEventArgs e)
-        {
-            if (ViewModel == null)
-                return;
-
-            if (BlockDialogIfPaymentMode("applying discount rule"))
-                return;
-
-            if (ViewModel.SelectedCartItem == null)
-            {
-                _ = ViewModel.ShowNotificationAsync(
-                    "Please select an item before applying discount rule.",
-                    "#F59E0B");
-
-                ReturnFocusToTerminalInput();
-                return;
-            }
-
-            if (ViewModel.SelectedCartItem.IsGiftVoucherSale)
-            {
-                _ = ViewModel.ShowNotificationAsync(
-                    "Gift voucher sale line cannot use discount rule.",
-                    "#EF4444");
-
-                ReturnFocusToTerminalInput();
-                return;
-            }
-
-            if (ViewModel.SelectedCartItem.IsFreeItem)
-            {
-                _ = ViewModel.ShowNotificationAsync(
-                    "Free item line cannot use discount rule.",
-                    "#EF4444");
-
-                ReturnFocusToTerminalInput();
-                return;
-            }
-
-            if (ViewModel.SelectedCartItem.IsPriceOverridden)
-            {
-                _ = ViewModel.ShowNotificationAsync(
-                    "Discount rule cannot be applied after New Price.",
-                    "#EF4444");
-
-                ReturnFocusToTerminalInput();
-                return;
-            }
-
-            if (_isDialogOpen)
-                return;
-
-            _isDialogOpen = true;
-
-            if (DimmingCurtain != null)
-                DimmingCurtain.Visibility = Visibility.Visible;
-
-            try
-            {
-                string customerType = GetDiscountCustomerType();
-
-                string approvedBy = ViewModel.IsManagerModeActive
-                    ? ViewModel.CashierName
-                    : string.Empty;
-
-                var dialog = new DiscountRuleDialog(
-                    ViewModel.SelectedCartItem,
-                    customerType,
-                    ViewModel.IsManagerModeActive,
-                    approvedBy)
-                {
-                    Owner = this
-                };
-
-                bool? result = dialog.ShowDialog();
-
-                if (result == true && dialog.Result != null)
-                {
-                    ViewModel.ApplyDiscountRuleToSelected(
-                        ViewModel.SelectedCartItem,
-                        dialog.Result);
-                }
-
-                ResetTerminalActionMode();
-            }
-            catch (Exception ex)
-            {
-                _ = ViewModel.ShowNotificationAsync(
-                    $"Discount rule failed: {ex.Message}",
-                    "#EF4444");
-            }
-            finally
-            {
-                if (DimmingCurtain != null)
-                    DimmingCurtain.Visibility = Visibility.Collapsed;
-
-                _isDialogOpen = false;
-                ReturnFocusToTerminalInput();
-            }
-        }
-
-        private string GetDiscountCustomerType()
-        {
-            if (ViewModel == null)
-                return "Walk-In";
-
-            if (ViewModel.ActiveB2BCustomer == null)
-                return "Walk-In";
-
-            if (ViewModel.ActiveB2BCustomer.IsWholesale)
-                return "Wholesale";
-
-            if (ViewModel.ActiveB2BCustomer.IsDiscountEligible)
-                return "Loyalty";
-
-            return "Retail";
         }
 
         private async void SuspendRecallBtn_Click(object sender, RoutedEventArgs e)

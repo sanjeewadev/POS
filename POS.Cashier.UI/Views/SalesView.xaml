@@ -995,10 +995,6 @@
                             Content="Free"
                             Click="FreeBtn_Click"/>
 
-                    <Button Background="{StaticResource ActionBtnBrush}"
-                            Content="Disc Rule"
-                            FontSize="12"
-                            Click="DiscountRuleBtn_Click"/>
                 </UniformGrid>
 
                 <Grid Grid.Column="1">

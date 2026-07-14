@@ -105,8 +105,6 @@ namespace POS.Cashier.UI
             services.AddTransient<GiftVoucherTenderDialogViewModel>();
             services.AddTransient<FreeIssueRuleRepository>();
             services.AddTransient<FreeItemClaimRepository>();
-            services.AddTransient<DiscountRuleDialogViewModel>();
-            services.AddTransient<DiscountRuleRepository>();
 
             return services.BuildServiceProvider();
         }

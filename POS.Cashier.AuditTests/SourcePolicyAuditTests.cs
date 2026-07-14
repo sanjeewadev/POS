@@ -40,6 +40,44 @@ internal static class SourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task DiscountRuleEntryPointIsRemovedAsync()
+    {
+        string view = Read("POS.Cashier.UI", "Views", "SalesView.xaml");
+        AuditAssert.False(view.Contains("Disc Rule", StringComparison.Ordinal),
+            "Cashier SalesView still exposes the Disc Rule button.");
+        AuditAssert.False(view.Contains("DiscountRuleBtn_Click", StringComparison.Ordinal),
+            "Cashier SalesView still wires the Discount Rule click handler.");
+
+        string code = Read("POS.Cashier.UI", "Views", "SalesView.xaml.cs");
+        AuditAssert.False(code.Contains("DiscountRuleBtn_Click", StringComparison.Ordinal),
+            "Cashier code-behind still exposes the Discount Rule action.");
+        AuditAssert.False(code.Contains("DiscountRuleDialog", StringComparison.Ordinal),
+            "Cashier code-behind still opens the Discount Rule dialog.");
+
+        string salesViewModel = Read("POS.Cashier.UI", "ViewModels", "SalesViewModel.cs");
+        AuditAssert.False(salesViewModel.Contains("ApplyDiscountRuleToSelected", StringComparison.Ordinal),
+            "Cashier SalesViewModel still exposes new Discount Rule application logic.");
+        AuditAssert.False(salesViewModel.Contains("DiscountRuleApplyResult", StringComparison.Ordinal),
+            "Cashier SalesViewModel still depends on the removed Discount Rule dialog result type.");
+        string app = Read("POS.Cashier.UI", "App.xaml.cs");
+        AuditAssert.False(app.Contains("DiscountRuleDialogViewModel", StringComparison.Ordinal),
+            "Cashier startup still registers the removed Discount Rule UI.");
+
+        string dialogXaml = Path.Combine(AuditPaths.RepositoryRoot, "POS.Cashier.UI", "Dialogs", "DiscountRuleDialog.xaml");
+        string dialogCode = Path.Combine(AuditPaths.RepositoryRoot, "POS.Cashier.UI", "Dialogs", "DiscountRuleDialog.xaml.cs");
+        string dialogViewModel = Path.Combine(AuditPaths.RepositoryRoot, "POS.Cashier.UI", "ViewModels", "DiscountRuleDialogViewModel.cs");
+        AuditAssert.False(File.Exists(dialogXaml), "Discount Rule dialog XAML still exists.");
+        AuditAssert.False(File.Exists(dialogCode), "Discount Rule dialog code-behind still exists.");
+        AuditAssert.False(File.Exists(dialogViewModel), "Discount Rule dialog ViewModel still exists.");
+
+        string saleLine = Read("POS.Core", "Models", "SalesLine.cs");
+        string repository = Read("POS.Core", "Repositories", "SalesRepository.cs");
+        AuditAssert.Contains(saleLine, "DiscountRuleId", "historical Discount Rule sale snapshot");
+        AuditAssert.Contains(repository, "DiscountRuleId", "historical Discount Rule persistence");
+
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");

@@ -29,6 +29,7 @@ internal static class AuditTestCatalog
 
         new("Cashier utility buttons are wired", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CashierUtilityButtonsAreWiredAsync),
         new("Hidden Credit Note payment placeholder is removed", AuditGroups.SourcePolicy, SourcePolicyAuditTests.HiddenCreditNotePlaceholderIsRemovedAsync),
+        new("Cashier Discount Rule entry point is removed while historical snapshots remain", AuditGroups.SourcePolicy, SourcePolicyAuditTests.DiscountRuleEntryPointIsRemovedAsync),
         new("Paid In and Paid Out UI do not require manager password", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PaidInAndPaidOutDoNotRequireManagerPasswordAsync),
         new("Below-minimum New Price captures manager identity", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PriceOverrideUiCapturesManagerIdentityAsync),
         new("Checkout failure path writes a technical log", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CheckoutFailurePathWritesTechnicalLogAsync),
