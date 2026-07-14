@@ -2,25 +2,36 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{DynamicResource WindowBackgroundBrush}"
-             FontFamily="Segoe UI" FontSize="12">
+             FontFamily="Segoe UI"
+             FontSize="12">
+
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
-        <Style x:Key="MetricBorder" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
+        <Style x:Key="DashboardMetricCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="3,1,1,1"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,0,7,7"/>
+            <Setter Property="MinHeight" Value="68"/>
+        </Style>
+
+        <Style x:Key="DashboardMetricLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
+
+        <Style x:Key="DashboardMetricValue" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style x:Key="DashboardPanel" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Margin" Value="0,0,6,6"/>
-        </Style>
-        <Style x:Key="DashboardCell" TargetType="DataGridCell">
-            <Setter Property="Padding" Value="4,1"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource LightSelectionBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
@@ -33,70 +44,258 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <DockPanel Grid.Row="0" Margin="0,0,0,7">
+        <!-- Heading -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,8" LastChildFill="False">
             <StackPanel DockPanel.Dock="Left">
-                <TextBlock Text="Operational Dashboard" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"/>
-                <TextBlock Text="Sales, cash, stock, customer credit, supplier balances, shifts, carts and claims" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                <TextBlock Text="Dashboard"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource HeaderTextBrush}"/>
+                <TextBlock Text="A practical overview of sales, cash, stock and open operations"
+                           Foreground="{DynamicResource SecondaryTextBrush}"/>
             </StackPanel>
-            <TextBlock DockPanel.Dock="Right" Text="{Binding StatusMessage}" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}"/>
+            <TextBlock DockPanel.Dock="Right"
+                       Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       VerticalAlignment="Center"
+                       TextAlignment="Right"
+                       TextWrapping="Wrap"
+                       MaxWidth="430"/>
         </DockPanel>
 
-        <Border Grid.Row="1" Background="White" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="7" Margin="0,0,0,7">
-            <WrapPanel>
-                <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <DatePicker SelectedDate="{Binding StartDate}" Width="125" Height="27"/>
-                <TextBlock Text="To" VerticalAlignment="Center" Margin="10,0,4,0"/>
-                <DatePicker SelectedDate="{Binding EndDate}" Width="125" Height="27"/>
-                <Button Content="Refresh" Command="{Binding RefreshCommand}" Width="80" Height="27" Margin="10,0,0,0"/>
-                <Button Content="Today" Command="{Binding TodayCommand}" Width="70" Height="27" Margin="5,0,0,0"/>
-                <Button Content="This Month" Command="{Binding ThisMonthCommand}" Width="90" Height="27" Margin="5,0,0,0"/>
-            </WrapPanel>
+        <!-- Period filter -->
+        <Border Grid.Row="1" Style="{StaticResource BoFilterBar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="125"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="125"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="From" Style="{StaticResource BoInlineLabel}"/>
+                <DatePicker Grid.Column="1" SelectedDate="{Binding StartDate}" Style="{StaticResource BoInputDatePicker}"/>
+                <TextBlock Grid.Column="3" Text="To" Style="{StaticResource BoInlineLabel}"/>
+                <DatePicker Grid.Column="4" SelectedDate="{Binding EndDate}" Style="{StaticResource BoInputDatePicker}"/>
+
+                <Button Grid.Column="6"
+                        Content="Refresh"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource BoPrimaryButton}"
+                        Margin="0,0,6,0"/>
+                <Button Grid.Column="7"
+                        Content="Today"
+                        Command="{Binding TodayCommand}"
+                        Style="{StaticResource BoButton}"
+                        Margin="0,0,6,0"/>
+                <Button Grid.Column="8"
+                        Content="This Month"
+                        Command="{Binding ThisMonthCommand}"
+                        Style="{StaticResource BoButton}"
+                        MinWidth="88"/>
+            </Grid>
         </Border>
 
-        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,2">
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Merchandise Sales" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock Text="{Binding MerchandiseSales, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="15"/></StackPanel></Border>
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Customer Returns" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock Text="{Binding CustomerReturns, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="15"/></StackPanel></Border>
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Net Sales" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock Text="{Binding NetSales, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="15"/></StackPanel></Border>
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Gross Profit" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock Text="{Binding GrossProfit, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="15"/></StackPanel></Border>
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Customer Credit Outstanding" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock Text="{Binding CustomerCreditOutstanding, StringFormat={}Rs. {0:N2}}" FontWeight="Bold"/></StackPanel></Border>
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Supplier Outstanding" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock Text="{Binding SupplierOutstanding, StringFormat={}Rs. {0:N2}}" FontWeight="Bold"/></StackPanel></Border>
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Stock Attention" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock><Run Text="Low "/><Run Text="{Binding LowStockCount}" FontWeight="Bold"/><Run Text="  Negative "/><Run Text="{Binding NegativeStockCount}" FontWeight="Bold"/></TextBlock></StackPanel></Border>
-            <Border Style="{StaticResource MetricBorder}"><StackPanel><TextBlock Text="Open Operations" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock><Run Text="Shifts "/><Run Text="{Binding OpenShiftCount}" FontWeight="Bold"/><Run Text="  Held carts "/><Run Text="{Binding HeldCartCount}" FontWeight="Bold"/></TextBlock><TextBlock><Run Text="Claims Draft "/><Run Text="{Binding DraftSupplierClaimCount}" FontWeight="Bold"/><Run Text="  Submitted "/><Run Text="{Binding SubmittedSupplierClaimCount}" FontWeight="Bold"/></TextBlock></StackPanel></Border>
-        </UniformGrid>
+        <!-- Period summary -->
+        <Grid Grid.Row="2" Margin="0,0,0,1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.6*"/></Grid.ColumnDefinitions>
-            <GroupBox Grid.Column="0" Header="Tender Totals" Margin="0,0,7,0">
-                <DataGrid ItemsSource="{Binding TenderTotals}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" RowHeaderWidth="0" RowHeight="24" CellStyle="{StaticResource DashboardCell}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Tender" Binding="{Binding PaymentType}" Width="*"/>
-                        <DataGridTextColumn Header="Count" Binding="{Binding TransactionCount}" Width="55"/>
-                        <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat=N2}" Width="95"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </GroupBox>
-            <GroupBox Grid.Column="1" Header="Top Five Items / Services" Margin="0,0,7,0">
-                <DataGrid ItemsSource="{Binding TopItems}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" RowHeaderWidth="0" RowHeight="24" CellStyle="{StaticResource DashboardCell}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="#" Binding="{Binding Rank}" Width="30"/>
-                        <DataGridTextColumn Header="Item" Binding="{Binding ItemName}" Width="*"/>
-                        <DataGridTextColumn Header="Qty" Binding="{Binding NetQuantity, StringFormat=N3}" Width="65"/>
-                        <DataGridTextColumn Header="Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="85"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </GroupBox>
-            <GroupBox Grid.Column="2" Header="Operational Attention">
-                <DataGrid ItemsSource="{Binding AttentionItems}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" RowHeaderWidth="0" RowHeight="27" CellStyle="{StaticResource DashboardCell}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Level" Binding="{Binding Severity}" Width="75"/>
-                        <DataGridTextColumn Header="Area" Binding="{Binding Area}" Width="95"/>
-                        <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="55"/>
-                        <DataGridTextColumn Header="Attention" Binding="{Binding Message}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </GroupBox>
+            <TextBlock Grid.Row="0" Text="Period Summary" Style="{StaticResource BoSectionHeader}" Margin="0,1,0,6"/>
+
+            <UniformGrid Grid.Row="1" Columns="4">
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#4A78A8">
+                    <StackPanel>
+                        <TextBlock Text="Merchandise Sales" Style="{StaticResource DashboardMetricLabel}"/>
+                        <TextBlock Text="{Binding MerchandiseSales, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#A94044">
+                    <StackPanel>
+                        <TextBlock Text="Customer Returns" Style="{StaticResource DashboardMetricLabel}"/>
+                        <TextBlock Text="{Binding CustomerReturns, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#005555">
+                    <StackPanel>
+                        <TextBlock Text="Net Sales" Style="{StaticResource DashboardMetricLabel}"/>
+                        <TextBlock Text="{Binding NetSales, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#3D8B40" Margin="0,0,0,7">
+                    <StackPanel>
+                        <TextBlock Text="Gross Profit" Style="{StaticResource DashboardMetricLabel}"/>
+                        <TextBlock Text="{Binding GrossProfit, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <UniformGrid Grid.Row="2" Columns="4">
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#7A5A9E">
+                    <StackPanel>
+                        <TextBlock Text="Customer Credit Outstanding" Style="{StaticResource DashboardMetricLabel}"/>
+                        <TextBlock Text="{Binding CustomerCreditOutstanding, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="14"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#9B6B32">
+                    <StackPanel>
+                        <TextBlock Text="Supplier Outstanding" Style="{StaticResource DashboardMetricLabel}"/>
+                        <TextBlock Text="{Binding SupplierOutstanding, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="14"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#C36B22">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Stock Attention" Style="{StaticResource DashboardMetricLabel}"/>
+                            <TextBlock Text="Stock items requiring review" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,12,0">
+                            <TextBlock Text="Low" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
+                            <TextBlock Text="{Binding LowStockCount}" FontWeight="Bold" FontSize="15" TextAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Negative" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
+                            <TextBlock Text="{Binding NegativeStockCount}" FontWeight="Bold" FontSize="15" TextAlignment="Center" Foreground="#A94044"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#006A6A" Margin="0,0,0,7">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Open Operations" Style="{StaticResource DashboardMetricLabel}"/>
+                            <TextBlock Text="Current operational workload" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="8,0">
+                            <TextBlock Text="Shifts" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
+                            <TextBlock Text="{Binding OpenShiftCount}" FontWeight="Bold" FontSize="14" TextAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Margin="8,0">
+                            <TextBlock Text="Held" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
+                            <TextBlock Text="{Binding HeldCartCount}" FontWeight="Bold" FontSize="14" TextAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Margin="8,0,0,0">
+                            <TextBlock Text="Claims" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
+                            <TextBlock FontWeight="Bold" FontSize="14" TextAlignment="Center">
+                                <Run Text="{Binding DraftSupplierClaimCount}"/><Run Text="/"/><Run Text="{Binding SubmittedSupplierClaimCount}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </UniformGrid>
         </Grid>
 
-        <ProgressBar Grid.Row="4" Height="3" IsIndeterminate="True" Margin="0,6,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}"/>
+        <!-- Operational detail -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.05*" MinWidth="240"/>
+                <ColumnDefinition Width="7"/>
+                <ColumnDefinition Width="1.25*" MinWidth="280"/>
+                <ColumnDefinition Width="7"/>
+                <ColumnDefinition Width="1.55*" MinWidth="340"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource DashboardPanel}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                        <TextBlock Text="Tender Totals" FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"/>
+                    </Border>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding TenderTotals}" Style="{StaticResource BoDataGrid}" BorderThickness="0" RowHeight="25">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Tender" Binding="{Binding PaymentType}" Width="*"/>
+                            <DataGridTextColumn Header="Count" Binding="{Binding TransactionCount}" Width="55"/>
+                            <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat=N2}" Width="95"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" Background="{DynamicResource WindowBackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
+
+            <Border Grid.Column="2" Style="{StaticResource DashboardPanel}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                        <TextBlock Text="Top Items and Services" FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"/>
+                    </Border>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding TopItems}" Style="{StaticResource BoDataGrid}" BorderThickness="0" RowHeight="25">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="#" Binding="{Binding Rank}" Width="30"/>
+                            <DataGridTextColumn Header="Item / Service" Binding="{Binding ItemName}" Width="*"/>
+                            <DataGridTextColumn Header="Qty" Binding="{Binding NetQuantity, StringFormat=N3}" Width="65"/>
+                            <DataGridTextColumn Header="Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="85"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="3" Width="7" HorizontalAlignment="Stretch" Background="{DynamicResource WindowBackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
+
+            <Border Grid.Column="4" Style="{StaticResource DashboardPanel}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                        <DockPanel LastChildFill="False">
+                            <TextBlock Text="Attention Required" FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"/>
+                            <TextBlock DockPanel.Dock="Right" Text="Review high-priority items first" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10.5"/>
+                        </DockPanel>
+                    </Border>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding AttentionItems}" Style="{StaticResource BoDataGrid}" BorderThickness="0" RowHeight="27">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Level" Binding="{Binding Severity}" Width="70"/>
+                            <DataGridTextColumn Header="Area" Binding="{Binding Area}" Width="90"/>
+                            <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="52"/>
+                            <DataGridTextColumn Header="Attention" Binding="{Binding Message}" Width="*" MinWidth="150"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Status / busy indicator -->
+        <Grid Grid.Row="4" Margin="0,7,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <ProgressBar Grid.Row="0"
+                         Height="3"
+                         IsIndeterminate="True"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <TextBlock Grid.Row="1"
+                       Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       HorizontalAlignment="Right"
+                       Margin="0,4,0,0"/>
+        </Grid>
     </Grid>
 </UserControl>
