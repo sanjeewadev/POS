@@ -78,6 +78,83 @@ internal static class SourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task CashierBottomPanelIsCompactAndOrganizedAsync()
+    {
+        string view = Read("POS.Cashier.UI", "Views", "SalesView.xaml");
+        int bottomStart = view.IndexOf("<!-- BOTTOM PANEL -->", StringComparison.Ordinal);
+        AuditAssert.True(bottomStart >= 0, "Cashier bottom panel marker was not found.");
+        string bottom = view.Substring(bottomStart);
+
+        AuditAssert.Contains(bottom, "Columns=\"5\" Rows=\"3\" Margin=\"0,0,1,0\"",
+            "compact left action grid");
+        AuditAssert.Contains(bottom, "Style=\"{StaticResource CompactIconButtonStyle}\"",
+            "compact flat-icon action style");
+        AuditAssert.Contains(bottom, "Content=\"LOYALTY\"",
+            "Loyalty action in the left action grid");
+
+        int loyalty = bottom.IndexOf("Content=\"LOYALTY\"", StringComparison.Ordinal);
+        int paymentPanel = bottom.IndexOf("<Grid Grid.Column=\"1\">", StringComparison.Ordinal);
+        AuditAssert.True(loyalty >= 0 && paymentPanel >= 0 && loyalty < paymentPanel,
+            "Loyalty must remain in the left action grid rather than the payment grid.");
+
+        AuditAssert.Contains(bottom, "Columns=\"3\" Rows=\"2\" Margin=\"0,0,1,0\"",
+            "organized two-row payment grid");
+        AuditAssert.Contains(bottom, "<ColumnDefinition Width=\"4*\"/>",
+            "payment grid width");
+        AuditAssert.Contains(bottom, "<ColumnDefinition Width=\"1.2*\"/>",
+            "larger Sub Total width");
+        AuditAssert.Contains(bottom, "<ColumnDefinition Width=\"1.8*\"/>",
+            "larger PLU and Cash width");
+
+        AuditAssert.Contains(bottom, "Tag=\"&#xE8EF;\"",
+            "Sub Total calculator icon");
+        AuditAssert.Contains(bottom, "Tag=\"&#xEC5A;\"",
+            "PLU barcode icon");
+        AuditAssert.Contains(bottom, "Tag=\"&#xEC59;\"",
+            "Cash drawer icon");
+
+        AuditAssert.Contains(view, "FontSize=\"19\"",
+            "balanced compact action icons");
+        AuditAssert.Contains(view, "FontSize=\"27\"",
+            "balanced primary Cashier icons");
+        AuditAssert.Contains(bottom, "Style=\"{StaticResource CardLogoButtonStyle}\"",
+            "real card-logo button style");
+        AuditAssert.Contains(bottom, "PaymentLogos/mastercard.png",
+            "MasterCard logo resource");
+        AuditAssert.Contains(bottom, "PaymentLogos/visa.png",
+            "VISA logo resource");
+        AuditAssert.Contains(bottom, "PaymentLogos/amex.png",
+            "American Express logo resource");
+        AuditAssert.Contains(view, "<Image Width=\"92\"",
+            "normalized card-logo width");
+        AuditAssert.Contains(view, "Height=\"34\"",
+            "normalized card-logo height");
+        AuditAssert.Contains(bottom, "Content=\"MasterCard\"",
+            "MasterCard label");
+        AuditAssert.Contains(bottom, "Content=\"VISA\"",
+            "VISA label");
+        AuditAssert.Contains(bottom, "Content=\"AMEX\"",
+            "American Express label");
+
+        string logoFolder = Path.Combine(
+            AuditPaths.RepositoryRoot,
+            "POS.Cashier.UI",
+            "Resources",
+            "PaymentLogos");
+        AuditAssert.True(File.Exists(Path.Combine(logoFolder, "mastercard.png")),
+            "MasterCard logo file is missing.");
+        AuditAssert.True(File.Exists(Path.Combine(logoFolder, "visa.png")),
+            "VISA logo file is missing.");
+        AuditAssert.True(File.Exists(Path.Combine(logoFolder, "amex.png")),
+            "American Express logo file is missing.");
+
+        string project = Read("POS.Cashier.UI", "POS.Cashier.UI.csproj");
+        AuditAssert.Contains(project, "Resource Include=\"Resources\\PaymentLogos\\*.png\"",
+            "embedded payment-logo resources");
+
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");

@@ -38,7 +38,11 @@ $allowedChangedFiles = @(
     "POS.Core/Repositories/StockInquiryRepository.cs",
     "POS.Cashier.UI/Dialogs/DiscountRuleDialog.xaml",
     "POS.Cashier.UI/Dialogs/DiscountRuleDialog.xaml.cs",
-    "POS.Cashier.UI/ViewModels/DiscountRuleDialogViewModel.cs"
+    "POS.Cashier.UI/ViewModels/DiscountRuleDialogViewModel.cs",
+    "POS.Cashier.UI/POS.Cashier.UI.csproj",
+    "POS.Cashier.UI/Resources/PaymentLogos/mastercard.png",
+    "POS.Cashier.UI/Resources/PaymentLogos/visa.png",
+    "POS.Cashier.UI/Resources/PaymentLogos/amex.png"
 )
 
 $commandResults = [ordered]@{}

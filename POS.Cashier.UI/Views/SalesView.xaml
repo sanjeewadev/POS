@@ -90,6 +90,151 @@
             </Setter>
         </Style>
 
+        <Style x:Key="CompactIconButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="2,1"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel Margin="1"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="{TemplateBinding Tag}"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="19"
+                                           FontWeight="Normal"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,3"/>
+
+                                <ContentPresenter HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.50"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CardLogoButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="#F8FAFC"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel Margin="8,6,8,5"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Image Width="92"
+                                       Height="34"
+                                       Source="{TemplateBinding Tag}"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,5"/>
+
+                                <TextBlock Text="{TemplateBinding Content}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.50"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryTerminalButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="2,1"/>
+            <Setter Property="FontSize" Value="19"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel Margin="1"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="{TemplateBinding Tag}"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="27"
+                                           FontWeight="Normal"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,2"/>
+
+                                <ContentPresenter HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.50"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- =========================================================
              NATIVE CART TABLE STYLE
              ========================================================= -->
@@ -925,53 +1070,75 @@
                     <ColumnDefinition Width="5*"/>
                 </Grid.ColumnDefinitions>
 
-                <UniformGrid Grid.Column="0" Columns="5" Rows="3" Margin="0,0,2,0">
+                <UniformGrid Grid.Column="0" Columns="5" Rows="3" Margin="0,0,1,0">
 
                     <Button Background="#2563EB"
                             Foreground="White"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE749;"
                             Content="Print"
                             Click="PrintBtn_Click"/>
 
                     <Button Background="{StaticResource SystemBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE74A;"
                             Content="Paid In"
                             Click="PaidInBtn_Click"/>
 
                     <Button Background="{StaticResource SystemBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE74B;"
                             Content="Paid Out"
                             Click="PaidOutBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE72C;"
                             Content="Reload"
                             Click="ReloadBtn_Click"/>
 
                     <Button Background="{StaticResource ExpressBtnBrush}"
                             Foreground="White"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE7BF;"
                             Content="Express Items"
-                            FontSize="12"
+                            FontSize="13"
                             Click="ExpressItemsBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE721;"
                             Content="Stock Inq."
                             Click="StockInquiryBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE7B8;"
                             Content="Sell Voucher"
                             Click="SellVoucherBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE716;"
                             Content="Customer R."
                             Click="CustomerRegisterBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE77B;"
                             Content="Customer"
                             Click="CustomerBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE719;"
                             Content="{Binding PricingModeButtonText}"
                             Click="PricingModeBtn_Click"/>
 
                     <Button x:Name="MoreBtn"
                             Background="{StaticResource SystemBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE712;"
                             Content="More"
                             Click="MoreBtn_Click">
                         <Button.ContextMenu>
@@ -984,75 +1151,89 @@
                     </Button>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE711;"
                             Content="No Sale"
                             Click="NoSaleBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE8EC;"
                             Content="New Price"
                             Click="NewPriceBtn_Click"/>
 
                     <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE735;"
                             Content="Free"
                             Click="FreeBtn_Click"/>
+
+                    <Button Background="{StaticResource LoyaltyBgBrush}"
+                            Foreground="#FACC15"
+                            Style="{StaticResource CompactIconButtonStyle}"
+                            Tag="&#xE734;"
+                            Content="LOYALTY"
+                            FontSize="14"
+                            Click="LoyaltyBtn_Click"/>
 
                 </UniformGrid>
 
                 <Grid Grid.Column="1">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="4.5*"/>
-                        <ColumnDefinition Width="1*"/>
-                        <ColumnDefinition Width="1.6*"/>
+                        <ColumnDefinition Width="4*"/>
+                        <ColumnDefinition Width="1.2*"/>
+                        <ColumnDefinition Width="1.8*"/>
                     </Grid.ColumnDefinitions>
 
-                    <UniformGrid Grid.Column="0" Columns="4" Rows="2" Margin="0,0,2,0">
+                    <UniformGrid Grid.Column="0" Columns="3" Rows="2" Margin="0,0,1,0">
+                        <Button Style="{StaticResource CardLogoButtonStyle}"
+                                Content="MasterCard"
+                                Tag="/POS.Cashier.UI;component/Resources/PaymentLogos/mastercard.png"
+                                ToolTip="MasterCard"
+                                Click="PayBtn_Click"/>
+
+                        <Button Style="{StaticResource CardLogoButtonStyle}"
+                                Content="VISA"
+                                Tag="/POS.Cashier.UI;component/Resources/PaymentLogos/visa.png"
+                                ToolTip="VISA"
+                                Click="PayBtn_Click"/>
+
+                        <Button Style="{StaticResource CardLogoButtonStyle}"
+                                Content="AMEX"
+                                Tag="/POS.Cashier.UI;component/Resources/PaymentLogos/amex.png"
+                                ToolTip="American Express"
+                                Click="PayBtn_Click"/>
+
                         <Button Background="{StaticResource PaymentDarkOrangeBrush}"
                                 Foreground="Black"
+                                Style="{StaticResource CompactIconButtonStyle}"
+                                Tag="&#xE77B;"
                                 Content="Cust Credit"
                                 Click="PayBtn_Click"/>
 
-                        <Button Background="#F8FAFC"
-                                Foreground="#B91C1C"
-                                Content="MasterCard"
-                                FontWeight="SemiBold"
-                                Click="PayBtn_Click"/>
-
-                        <Button Background="#F8FAFC"
-                                Foreground="#1E3A8A"
-                                Content="VISA"
-                                FontSize="16"
-                                FontWeight="Bold"
-                                Click="PayBtn_Click"/>
-
-                        <Button Background="#F8FAFC"
-                                Foreground="#2563EB"
-                                Content="AMEX"
-                                FontSize="15"
-                                FontWeight="Bold"
-                                Click="PayBtn_Click"/>
-
                         <Button Background="{StaticResource PaymentOrangeBrush}"
                                 Foreground="Black"
+                                Style="{StaticResource CompactIconButtonStyle}"
+                                Tag="&#xE7C3;"
                                 Content="Cheque"
                                 Click="AlternatePaymentBtn_Click"/>
 
-                        <Button Background="{StaticResource LoyaltyBgBrush}"
-                                Foreground="#FACC15"
-                                Content="LOYALTY"
-                                FontSize="14"
-                                Click="LoyaltyBtn_Click"/>
-
                         <Button Background="{StaticResource PaymentOrangeBrush}"
                                 Foreground="Black"
+                                Style="{StaticResource CompactIconButtonStyle}"
+                                Tag="&#xE7B8;"
                                 Content="Gift Voucher"
-                                FontSize="12"
+                                FontSize="13"
                                 Click="AlternatePaymentBtn_Click"/>
                     </UniformGrid>
 
                     <Button Grid.Column="1"
                             Background="{StaticResource SubTotalBtnBrush}"
-                            Content="Sub&#x0a;Total"
+                            Style="{StaticResource PrimaryTerminalButtonStyle}"
+                            Tag="&#xE8EF;"
+                            Content="Sub Total"
                             FontSize="18"
-                            Margin="0,0,1,0"
+                            Margin="0,1,1,1"
                             HorizontalContentAlignment="Center"
                             VerticalContentAlignment="Center"
                             Click="SubTotalBtn_Click"/>
@@ -1065,16 +1246,20 @@
 
                         <Button Grid.Row="0"
                                 Background="{StaticResource PluBtnBrush}"
+                                Style="{StaticResource PrimaryTerminalButtonStyle}"
+                                Tag="&#xEC5A;"
                                 Content="PLU"
-                                FontSize="18"
-                                Margin="0,0,0,1"
+                                FontSize="20"
+                                Margin="0,1,1,1"
                                 Click="SeekBtn_Click"/>
 
                         <Button Grid.Row="1"
                                 Background="{StaticResource CashBtnBrush}"
+                                Style="{StaticResource PrimaryTerminalButtonStyle}"
+                                Tag="&#xEC59;"
                                 Content="Cash"
-                                FontSize="26"
-                                FontWeight="Bold"
+                                FontSize="24"
+                                Margin="0,1,1,1"
                                 Click="PayBtn_Click"/>
                     </Grid>
                 </Grid>
