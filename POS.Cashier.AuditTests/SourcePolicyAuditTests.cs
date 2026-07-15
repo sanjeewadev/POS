@@ -87,8 +87,12 @@ internal static class SourcePolicyAuditTests
 
         AuditAssert.Contains(bottom, "Columns=\"5\" Rows=\"3\" Margin=\"0,0,1,0\"",
             "compact left action grid");
-        AuditAssert.Contains(bottom, "Style=\"{StaticResource CompactIconButtonStyle}\"",
-            "compact flat-icon action style");
+        AuditAssert.Contains(view, "x:Key=\"FeatureIconButtonStyle\"",
+            "selected large-icon action style");
+        AuditAssert.Contains(view, "x:Key=\"CompactTextButtonStyle\"",
+            "text-only action style");
+        AuditAssert.Contains(view, "x:Key=\"RightActionIconButtonStyle\"",
+            "right-side selected action icon style");
         AuditAssert.Contains(bottom, "Content=\"LOYALTY\"",
             "Loyalty action in the left action grid");
 
@@ -106,29 +110,47 @@ internal static class SourcePolicyAuditTests
         AuditAssert.Contains(bottom, "<ColumnDefinition Width=\"1.8*\"/>",
             "larger PLU and Cash width");
 
+        AuditAssert.Contains(bottom, "Tag=\"&#xEC59;\"",
+            "Cash checkout icon");
         AuditAssert.Contains(bottom, "Tag=\"&#xE8EF;\"",
             "Sub Total calculator icon");
         AuditAssert.Contains(bottom, "Tag=\"&#xEC5A;\"",
-            "PLU barcode icon");
-        AuditAssert.Contains(bottom, "Tag=\"&#xEC59;\"",
-            "Cash drawer icon");
+            "PLU scanner icon");
+        AuditAssert.Contains(bottom, "Tag=\"&#xE77B;\"",
+            "Customer Credit icon");
+        AuditAssert.Contains(bottom, "Tag=\"&#xE7C3;\"",
+            "Cheque icon");
+        AuditAssert.Contains(bottom, "Tag=\"&#xE7B8;\"",
+            "Gift Voucher icon");
 
-        AuditAssert.Contains(view, "FontSize=\"19\"",
-            "balanced compact action icons");
-        AuditAssert.Contains(view, "FontSize=\"27\"",
-            "balanced primary Cashier icons");
+        AuditAssert.Contains(view, "FontSize=\"28\"",
+            "large selected action icons");
+        AuditAssert.Contains(view, "FontSize=\"34\"",
+            "large Cash checkout icon");
+        AuditAssert.Contains(bottom, "Content=\"Print\"",
+            "Print selected icon action");
+        AuditAssert.Contains(bottom, "Content=\"More\"",
+            "More selected icon action");
+        AuditAssert.Contains(bottom, "Tag=\"&#xE735;\"",
+            "filled Loyalty star");
+        AuditAssert.Contains(view, "Content=\"Seek\"",
+            "Seek selected icon action");
+        AuditAssert.Contains(view, "Content=\"Cancel\"",
+            "Cancel selected icon action");
+        AuditAssert.Contains(view, "Content=\"Enter\"",
+            "Enter selected icon action");
         AuditAssert.Contains(bottom, "Style=\"{StaticResource CardLogoButtonStyle}\"",
             "real card-logo button style");
-        AuditAssert.Contains(bottom, "PaymentLogos/mastercard.png",
-            "MasterCard logo resource");
-        AuditAssert.Contains(bottom, "PaymentLogos/visa.png",
-            "VISA logo resource");
-        AuditAssert.Contains(bottom, "PaymentLogos/amex.png",
-            "American Express logo resource");
-        AuditAssert.Contains(view, "<Image Width=\"92\"",
-            "normalized card-logo width");
-        AuditAssert.Contains(view, "Height=\"34\"",
-            "normalized card-logo height");
+        AuditAssert.Contains(view, "<Border Width=\"82\"",
+            "card-logo display width");
+        AuditAssert.Contains(view, "Height=\"32\"",
+            "card-logo display height");
+        AuditAssert.Contains(bottom, "<ImageBrush ImageSource=\"/POS.Cashier.UI;component/Resources/PaymentLogos/mastercard.png\"",
+            "MasterCard logo brush");
+        AuditAssert.Contains(bottom, "<ImageBrush ImageSource=\"/POS.Cashier.UI;component/Resources/PaymentLogos/visa.png\"",
+            "VISA logo brush");
+        AuditAssert.Contains(bottom, "<ImageBrush ImageSource=\"/POS.Cashier.UI;component/Resources/PaymentLogos/amex.png\"",
+            "American Express logo brush");
         AuditAssert.Contains(bottom, "Content=\"MasterCard\"",
             "MasterCard label");
         AuditAssert.Contains(bottom, "Content=\"VISA\"",
