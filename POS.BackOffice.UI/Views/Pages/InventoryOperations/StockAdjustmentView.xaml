@@ -282,10 +282,12 @@
                         <TextBlock Text="Authorized By *"
                                    Style="{StaticResource InlineLabel}"/>
 
-                        <TextBox Text="{Binding AuthorizedBy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox Text="{Binding AuthorizedBy}"
                                  Style="{StaticResource ClassicInput}"
                                  Width="150"
-                                 Margin="0,4,0,0"/>
+                                 Margin="0,4,0,0"
+                                 IsReadOnly="True"
+                                 ToolTip="Taken from the authenticated Manager or Administrator session."/>
                     </StackPanel>
 
                     <StackPanel Margin="0,0,25,5">
@@ -304,7 +306,7 @@
                             BorderThickness="1"
                             Padding="10,4"
                             VerticalAlignment="Bottom"
-                            Margin="0,4,0,5">
+                            Margin="0,4,10,5">
 
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Busy: "
@@ -316,6 +318,14 @@
                                        FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
+
+                    <Button Content="HISTORY / REVERSAL"
+                            Command="{Binding OpenHistoryCommand}"
+                            Style="{StaticResource ClassicBtn}"
+                            Height="28"
+                            VerticalAlignment="Bottom"
+                            Margin="0,4,0,5"
+                            ToolTip="Search posted adjustments, inspect lines, and perform a controlled Manager/Admin reversal."/>
                 </WrapPanel>
             </StackPanel>
         </Border>
@@ -493,6 +503,19 @@
                                                     IsReadOnly="True"
                                                     ElementStyle="{StaticResource CenterText}"/>
 
+                                <DataGridTextColumn Header="Unit Cost *"
+                                                    Binding="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                                    Width="85"
+                                                    CellStyle="{StaticResource EditableCell}"
+                                                    EditingElementStyle="{StaticResource GridEditBox}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource RightText}">
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Foreground" Value="#005500"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
                                 <DataGridTextColumn Header="Impact"
                                                     Binding="{Binding CostImpact, StringFormat=N2}"
                                                     Width="85"
@@ -553,7 +576,7 @@
                             Height="26"
                             IsEnabled="{Binding IsEntryEnabled}"/>
 
-                    <TextBlock Text="Average-cost adjusts GENERAL. Batch-tracked adjusts exact GRN batch."
+                    <TextBlock Text="Positive variances require a cost. Average-cost adjusts GENERAL; batch-tracked adjusts the exact GRN batch."
                                VerticalAlignment="Center"
                                Foreground="#991B1B"
                                FontWeight="Bold"
@@ -707,11 +730,18 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Unit Cost"
-                                        Binding="{Binding UnitCost, StringFormat=N2}"
-                                        Width="80"
-                                        IsReadOnly="True"
-                                        ElementStyle="{StaticResource RightText}"/>
+                    <DataGridTextColumn Header="Unit Cost *"
+                                        Binding="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                        Width="85"
+                                        CellStyle="{StaticResource EditableCell}"
+                                        EditingElementStyle="{StaticResource GridEditBox}">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource RightText}">
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Foreground" Value="#005500"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
 
                     <DataGridTextColumn Header="Cost Impact"
                                         Binding="{Binding CostImpact, StringFormat=N2}"

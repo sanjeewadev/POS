@@ -160,6 +160,7 @@ namespace POS.BackOffice.UI
             services.AddTransient<GrnViewModel>();
             services.AddTransient<GrnDashboardViewModel>();
             services.AddTransient<StockAdjustmentViewModel>();
+            services.AddTransient<StockAdjustmentHistoryViewModel>();
             services.AddTransient<StockBalanceViewModel>();
             services.AddTransient<SupplierReturnViewModel>();
             services.AddTransient<ExpressItemAdminViewModel>();

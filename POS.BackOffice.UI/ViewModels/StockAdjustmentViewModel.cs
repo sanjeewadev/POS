@@ -10,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
+using POS.BackOffice.UI.Views.Dialogs;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -50,7 +52,9 @@ namespace POS.BackOffice.UI.ViewModels
         public string BatchBarcodeDisplayText => IsGeneralStockBucket ? "-" : InternalBatchBarcode;
 
         public decimal SystemQty { get; set; } = 0m;
-        public decimal UnitCost { get; set; } = 0m;
+
+        [ObservableProperty]
+        private decimal _unitCost = 0m;
 
         [ObservableProperty]
         private decimal _actualQty = 0m;
@@ -78,19 +82,31 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(nameof(CostImpact));
             OnPropertyChanged(nameof(VarianceDirection));
         }
+
+        partial void OnUnitCostChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(CostImpact));
+        }
     }
 
     public partial class StockAdjustmentViewModel : ObservableObject
     {
         private readonly StockAdjustmentRepository _adjustmentRepository;
+        private readonly AuthService _authService;
+        private readonly StockAdjustmentHistoryViewModel _historyViewModel;
 
         // ItemMasterRepository and IDbContextFactory are kept for existing DI registration compatibility.
         public StockAdjustmentViewModel(
             StockAdjustmentRepository adjustmentRepository,
             ItemMasterRepository itemMasterRepository,
-            IDbContextFactory<AppDbContext> contextFactory)
+            IDbContextFactory<AppDbContext> contextFactory,
+            AuthService authService,
+            StockAdjustmentHistoryViewModel historyViewModel)
         {
             _adjustmentRepository = adjustmentRepository ?? throw new ArgumentNullException(nameof(adjustmentRepository));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _historyViewModel = historyViewModel ?? throw new ArgumentNullException(nameof(historyViewModel));
+            AuthorizedBy = GetCurrentUserName();
         }
 
         [ObservableProperty]
@@ -100,7 +116,7 @@ namespace POS.BackOffice.UI.ViewModels
         private string _adjustmentMode = "Physical Count Correction";
 
         [ObservableProperty]
-        private string _authorizedBy = "Admin";
+        private string _authorizedBy = string.Empty;
 
         [ObservableProperty]
         private string _reference = string.Empty;
@@ -292,6 +308,17 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
+                if (item.Variance > 0 && item.UnitCost <= 0)
+                {
+                    MessageBox.Show(
+                        $"Enter a positive Unit Cost for stock increase on '{item.DisplayDescription} / {item.BatchDisplayText}'.",
+                        "Unit Cost Required",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return;
+                }
+
                 if (AdjustmentMode == "Stock Increase" && item.Variance <= 0)
                 {
                     MessageBox.Show(
@@ -453,7 +480,11 @@ namespace POS.BackOffice.UI.ViewModels
                     .Select(CloneLineForSave)
                     .ToList();
 
-                var savedHeader = await _adjustmentRepository.SaveAdjustmentAsync(header, lines, isDraft: false);
+                var savedHeader = await _adjustmentRepository.SaveAdjustmentAsync(
+                    header,
+                    lines,
+                    BuildActor(),
+                    isDraft: false);
 
                 MessageBox.Show(
                     $"Stock adjustment posted successfully.\n\nDocument No: {savedHeader.AdjustmentNo}",
@@ -502,9 +533,23 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
+            if (_authService.CurrentUser == null)
+            {
+                MessageBox.Show("Sign in again before posting a stock adjustment.", "Authorization", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (!_authService.IsManager)
+            {
+                MessageBox.Show("Manager or Administrator privileges are required to post a stock adjustment.", "Authorization", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            AuthorizedBy = GetCurrentUserName();
+
             if (string.IsNullOrWhiteSpace(AuthorizedBy))
             {
-                MessageBox.Show("Authorized By is required.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Authenticated user could not be identified.", "Authorization", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
@@ -584,6 +629,12 @@ namespace POS.BackOffice.UI.ViewModels
                     return false;
                 }
 
+                if (line.UnitCost <= 0)
+                {
+                    MessageBox.Show($"Enter a positive Unit Cost for '{rowName}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+
                 if (string.IsNullOrWhiteSpace(line.ReasonCode))
                 {
                     MessageBox.Show($"Reason code is required for '{rowName}'.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -637,7 +688,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             AdjustmentDate = DateTime.Now;
             AdjustmentMode = "Physical Count Correction";
-            AuthorizedBy = "Admin";
+            AuthorizedBy = GetCurrentUserName();
             Reference = string.Empty;
             Remarks = string.Empty;
             ScanBarcode = string.Empty;
@@ -653,6 +704,49 @@ namespace POS.BackOffice.UI.ViewModels
             IsDocumentLocked = false;
             DocumentStatus = "UNPOSTED";
             StatusMessage = "Ready.";
+        }
+
+        [RelayCommand]
+        private async Task OpenHistoryAsync()
+        {
+            try
+            {
+                await _historyViewModel.InitializeAsync();
+
+                var dialog = new StockAdjustmentHistoryDialog
+                {
+                    DataContext = _historyViewModel,
+                    Owner = Application.Current?.MainWindow
+                };
+
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Stock Adjustment History",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
+        private StockAdjustmentActorContext BuildActor()
+        {
+            var user = _authService.CurrentUser
+                ?? throw new InvalidOperationException("Sign in again before posting a stock adjustment.");
+
+            return new StockAdjustmentActorContext
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Role = user.Role
+            };
+        }
+
+        private string GetCurrentUserName()
+        {
+            return (_authService.CurrentUser?.Username ?? string.Empty).Trim();
         }
 
         private bool CanEditDocument()

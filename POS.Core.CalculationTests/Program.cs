@@ -229,6 +229,13 @@ namespace POS.Core.CalculationTests
                 ("Phase 8E migration applies from empty database", Phase8EMigrationAppliesFromEmptyDatabase),
                 ("Phase 8E migration upgrades Phase 8D baseline", Phase8EMigrationUpgradesPhase8DBaseline),
                 ("Phase 8E migration duplicate preflight rolls back", Phase8EMigrationDuplicatePreflightRollsBack),
+                ("Stock Adjustment requires active Manager or Administrator", StockAdjustmentWorkflowTests.PostingRequiresActiveManagerOrAdministrator),
+                ("Stock Adjustment zero-cost increase rolls back", StockAdjustmentWorkflowTests.ZeroCostIncreaseIsRejectedAtomically),
+                ("Stock Adjustment increase updates cost and value", StockAdjustmentWorkflowTests.IncreaseUsesEnteredCostAndUpdatesAverageValue),
+                ("Stock Adjustment decrease uses authoritative cost", StockAdjustmentWorkflowTests.DecreaseUsesAuthoritativeExistingCost),
+                ("Stock Adjustment history and reversal are idempotent", StockAdjustmentWorkflowTests.HistoryLoadsAndReversalIsIdempotent),
+                ("Stock Adjustment reversal blocks negative stock", StockAdjustmentWorkflowTests.ReversalBlocksWhenLaterUsageWouldMakeStockNegative),
+                ("Stock Adjustment concurrent snapshot cannot double decrement", StockAdjustmentWorkflowTests.ConcurrentSameStockSnapshotNeverDoubleDecrements),
                 ("Phase 9A customer return history filters and loads details", Phase9AOperationalPageTests.CustomerReturnHistoryFiltersAndLoadsDetails),
                 ("Phase 9A cart history shows statuses and lines", Phase9AOperationalPageTests.BackOfficeCartHistoryShowsStatusesAndLines),
                 ("Phase 9A item analytics supports Stock Items and Services", Phase9AOperationalPageTests.ItemAnalyticsSupportsStockAndService),
@@ -268,7 +275,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
                 return 0;
             }
             catch (Exception ex)

@@ -1,15 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
+using POS.Core.Enums;
 using POS.Core.Models;
 
 namespace POS.Core.Repositories
 {
-    public class StockAdjustmentBatchLookupDto
+    public sealed class StockAdjustmentActorContext
+    {
+        public int UserId { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public UserRole Role { get; set; }
+    }
+
+    public sealed class StockAdjustmentBatchLookupDto
     {
         public int ItemVariantId { get; set; }
         public int ItemBatchId { get; set; }
@@ -33,6 +42,48 @@ namespace POS.Core.Repositories
 
         public decimal SystemQty { get; set; }
         public decimal UnitCost { get; set; }
+    }
+
+    public sealed class StockAdjustmentHistoryRowDto
+    {
+        public int Id { get; set; }
+        public string AdjustmentNo { get; set; } = string.Empty;
+        public DateTime AdjustmentDate { get; set; }
+        public string AdjustmentMode { get; set; } = string.Empty;
+        public string AuthorizedBy { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public decimal TotalImpact { get; set; }
+        public decimal TotalIncreaseQty { get; set; }
+        public decimal TotalDecreaseQty { get; set; }
+        public int LineCount { get; set; }
+        public string CancelledBy { get; set; } = string.Empty;
+        public string CancellationReason { get; set; } = string.Empty;
+        public DateTime? CancelledAt { get; set; }
+        public bool CanReverse => string.Equals(Status, "Posted", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public sealed class StockAdjustmentHistoryLineDto
+    {
+        public int Id { get; set; }
+        public string ItemCode { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string VariantDescription { get; set; } = string.Empty;
+        public string BatchNo { get; set; } = string.Empty;
+        public decimal SystemQty { get; set; }
+        public decimal ActualQty { get; set; }
+        public decimal VarianceQty { get; set; }
+        public string ReasonCode { get; set; } = string.Empty;
+        public string LineRemarks { get; set; } = string.Empty;
+        public decimal UnitCost { get; set; }
+        public decimal CostImpact { get; set; }
+        public string LineStatus { get; set; } = string.Empty;
+    }
+
+    public sealed class StockAdjustmentHistoryDetailDto
+    {
+        public StockAdjustmentHistoryRowDto Header { get; set; } = new();
+        public List<StockAdjustmentHistoryLineDto> Lines { get; set; } = new();
     }
 
     public class StockAdjustmentRepository
@@ -76,9 +127,9 @@ namespace POS.Core.Repositories
 
             string upperSearch = search.ToUpperInvariant();
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
 
-            var exactBatchIds = await context.ItemBatches
+            List<int> exactBatchIds = await context.ItemBatches
                 .AsNoTracking()
                 .Where(b =>
                     !b.IsDeactivated &&
@@ -97,7 +148,7 @@ namespace POS.Core.Repositories
             if (exactBatchIds.Any())
                 return await LoadRowsByBatchIdsAsync(context, exactBatchIds);
 
-            var variantIds = await context.ItemVariants
+            List<int> variantIds = await context.ItemVariants
                 .AsNoTracking()
                 .Where(v =>
                     !v.IsDeactivated &&
@@ -117,6 +168,126 @@ namespace POS.Core.Repositories
                 return new List<StockAdjustmentBatchLookupDto>();
 
             return await LoadRowsByVariantIdsAsync(context, variantIds);
+        }
+
+        public async Task<List<StockAdjustmentHistoryRowDto>> SearchHistoryAsync(
+            DateTime fromDate,
+            DateTime toDate,
+            string? searchText,
+            string? status)
+        {
+            DateTime from = fromDate.Date;
+            DateTime toExclusive = toDate.Date.AddDays(1);
+
+            if (toExclusive <= from)
+                throw new InvalidOperationException("History end date must be on or after the start date.");
+
+            string search = NormalizeText(searchText);
+            string statusFilter = NormalizeText(status);
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            IQueryable<StockAdjustmentHeader> query = context.StockAdjustmentHeaders
+                .AsNoTracking()
+                .Where(h => h.AdjustmentDate >= from && h.AdjustmentDate < toExclusive);
+
+            if (!string.IsNullOrWhiteSpace(statusFilter) &&
+                !statusFilter.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(h => h.Status == statusFilter);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string upper = search.ToUpperInvariant();
+                query = query.Where(h =>
+                    h.AdjustmentNo.ToUpper().Contains(upper) ||
+                    (h.Reference ?? string.Empty).ToUpper().Contains(upper) ||
+                    h.AuthorizedBy.ToUpper().Contains(upper));
+            }
+
+            return await query
+                .OrderByDescending(h => h.AdjustmentDate)
+                .ThenByDescending(h => h.Id)
+                .Select(h => new StockAdjustmentHistoryRowDto
+                {
+                    Id = h.Id,
+                    AdjustmentNo = h.AdjustmentNo,
+                    AdjustmentDate = h.AdjustmentDate,
+                    AdjustmentMode = h.AdjustmentMode,
+                    AuthorizedBy = h.AuthorizedBy,
+                    Reference = h.Reference,
+                    Status = h.Status,
+                    TotalImpact = h.TotalImpact,
+                    TotalIncreaseQty = h.TotalIncreaseQty,
+                    TotalDecreaseQty = h.TotalDecreaseQty,
+                    LineCount = h.AdjustmentLines.Count,
+                    CancelledBy = h.CancelledBy,
+                    CancellationReason = h.CancellationReason,
+                    CancelledAt = h.CancelledAt
+                })
+                .ToListAsync();
+        }
+
+        public async Task<StockAdjustmentHistoryDetailDto?> GetHistoryDetailAsync(int adjustmentId)
+        {
+            if (adjustmentId <= 0)
+                return null;
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            StockAdjustmentHistoryRowDto? header = await context.StockAdjustmentHeaders
+                .AsNoTracking()
+                .Where(h => h.Id == adjustmentId)
+                .Select(h => new StockAdjustmentHistoryRowDto
+                {
+                    Id = h.Id,
+                    AdjustmentNo = h.AdjustmentNo,
+                    AdjustmentDate = h.AdjustmentDate,
+                    AdjustmentMode = h.AdjustmentMode,
+                    AuthorizedBy = h.AuthorizedBy,
+                    Reference = h.Reference,
+                    Status = h.Status,
+                    TotalImpact = h.TotalImpact,
+                    TotalIncreaseQty = h.TotalIncreaseQty,
+                    TotalDecreaseQty = h.TotalDecreaseQty,
+                    LineCount = h.AdjustmentLines.Count,
+                    CancelledBy = h.CancelledBy,
+                    CancellationReason = h.CancellationReason,
+                    CancelledAt = h.CancelledAt
+                })
+                .SingleOrDefaultAsync();
+
+            if (header == null)
+                return null;
+
+            List<StockAdjustmentHistoryLineDto> lines = await context.StockAdjustmentLines
+                .AsNoTracking()
+                .Where(l => l.StockAdjustmentHeaderId == adjustmentId)
+                .OrderBy(l => l.Id)
+                .Select(l => new StockAdjustmentHistoryLineDto
+                {
+                    Id = l.Id,
+                    ItemCode = l.ItemVariant.ItemParent.ItemCode,
+                    Description = l.ItemVariant.ItemParent.ItemName,
+                    VariantDescription = l.ItemVariant.VariantDescription,
+                    BatchNo = l.ItemBatch.BatchNo,
+                    SystemQty = l.SystemQty,
+                    ActualQty = l.ActualQty,
+                    VarianceQty = l.VarianceQty,
+                    ReasonCode = l.ReasonCode,
+                    LineRemarks = l.LineRemarks,
+                    UnitCost = l.UnitCost,
+                    CostImpact = l.CostImpact,
+                    LineStatus = l.LineStatus
+                })
+                .ToListAsync();
+
+            return new StockAdjustmentHistoryDetailDto
+            {
+                Header = header,
+                Lines = lines
+            };
         }
 
         private static async Task<List<StockAdjustmentBatchLookupDto>> LoadRowsByBatchIdsAsync(
@@ -190,6 +361,7 @@ namespace POS.Core.Repositories
         public async Task<StockAdjustmentHeader> SaveAdjustmentAsync(
             StockAdjustmentHeader header,
             List<StockAdjustmentLine> lines,
+            StockAdjustmentActorContext actor,
             bool isDraft)
         {
             if (isDraft)
@@ -205,34 +377,36 @@ namespace POS.Core.Repositories
             NormalizeLines(lines);
             ValidateSubmittedLineDuplicates(lines);
 
-            using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
             try
             {
+                User authorizedUser = await ValidateActorAsync(context, actor);
                 DateTime now = DateTime.Now;
 
-                var batchIds = lines
+                List<int> batchIds = lines
                     .Select(l => l.ItemBatchId)
                     .Distinct()
                     .ToList();
 
-                var batchMap = await context.ItemBatches
+                Dictionary<int, ItemBatch> batchMap = await context.ItemBatches
                     .Include(b => b.ItemVariant)
                         .ThenInclude(v => v.ItemParent)
                     .Where(b => batchIds.Contains(b.Id))
                     .ToDictionaryAsync(b => b.Id);
 
+                ApplyAuthorizedUser(header, authorizedUser.Username);
                 ValidateHeader(header);
                 ValidateLines(header, lines, batchMap);
-                RecalculateTotals(header, lines, batchMap);
+                RecalculateTotals(header, lines);
 
                 var targetHeader = new StockAdjustmentHeader
                 {
                     AdjustmentNo = await GenerateDocumentNumberAsync(context, "ADJ"),
                     AdjustmentDate = header.AdjustmentDate,
                     AdjustmentMode = header.AdjustmentMode,
-                    AuthorizedBy = header.AuthorizedBy,
+                    AuthorizedBy = authorizedUser.Username,
                     Reference = header.Reference,
                     Remarks = header.Remarks,
 
@@ -241,8 +415,8 @@ namespace POS.Core.Repositories
                     TotalDecreaseQty = header.TotalDecreaseQty,
 
                     Status = "Posted",
-                    CreatedBy = string.IsNullOrWhiteSpace(header.CreatedBy) ? header.AuthorizedBy : header.CreatedBy,
-                    PostedBy = string.IsNullOrWhiteSpace(header.PostedBy) ? header.AuthorizedBy : header.PostedBy,
+                    CreatedBy = authorizedUser.Username,
+                    PostedBy = authorizedUser.Username,
                     CreatedAt = now,
                     UpdatedAt = now,
                     PostedAt = now
@@ -253,9 +427,9 @@ namespace POS.Core.Repositories
 
                 var savedLines = new List<StockAdjustmentLine>();
 
-                foreach (var sourceLine in lines)
+                foreach (StockAdjustmentLine sourceLine in lines)
                 {
-                    var batch = batchMap[sourceLine.ItemBatchId];
+                    ItemBatch batch = batchMap[sourceLine.ItemBatchId];
 
                     var line = new StockAdjustmentLine
                     {
@@ -284,16 +458,10 @@ namespace POS.Core.Repositories
 
                 await context.SaveChangesAsync();
 
-                foreach (var line in savedLines)
+                foreach (StockAdjustmentLine line in savedLines)
                 {
-                    var batch = batchMap[line.ItemBatchId];
-                    decimal newBatchQty = batch.CurrentStock + line.VarianceQty;
-
-                    if (newBatchQty < 0)
-                        throw new InvalidOperationException($"Posting this adjustment would make stock row '{BuildBatchDisplayName(batch)}' negative.");
-
-                    batch.CurrentStock = newBatchQty;
-                    batch.UpdatedAt = now;
+                    ItemBatch batch = batchMap[line.ItemBatchId];
+                    ApplyPostedStockChange(batch, line, now);
 
                     await context.InventoryTransactions.AddAsync(new InventoryTransaction
                     {
@@ -305,7 +473,7 @@ namespace POS.Core.Repositories
                         ReferenceLineId = line.Id,
                         Quantity = line.VarianceQty,
                         UnitCost = line.UnitCost,
-                        CreatedBy = targetHeader.AuthorizedBy,
+                        CreatedBy = authorizedUser.Username,
                         CreatedAt = now,
                         Remarks = TrimToMax(
                             $"Mode: {targetHeader.AdjustmentMode} | Reason: {line.ReasonCode} | Stock Row: {BuildBatchDisplayName(batch)} | Ref: {targetHeader.Reference}",
@@ -315,7 +483,7 @@ namespace POS.Core.Repositories
 
                 await context.SaveChangesAsync();
 
-                var affectedVariantIds = savedLines
+                List<int> affectedVariantIds = savedLines
                     .Select(l => l.ItemVariantId)
                     .Distinct()
                     .ToList();
@@ -332,6 +500,138 @@ namespace POS.Core.Repositories
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        public async Task<StockAdjustmentHeader> ReverseAdjustmentAsync(
+            int adjustmentId,
+            string reason,
+            StockAdjustmentActorContext actor)
+        {
+            string reversalReason = NormalizeText(reason);
+
+            if (adjustmentId <= 0)
+                throw new InvalidOperationException("A posted stock adjustment must be selected.");
+
+            if (string.IsNullOrWhiteSpace(reversalReason))
+                throw new InvalidOperationException("A reversal reason is required.");
+
+            if (reversalReason.Length > 250)
+                throw new InvalidOperationException("Reversal reason cannot be longer than 250 characters.");
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            try
+            {
+                User authorizedUser = await ValidateActorAsync(context, actor);
+                DateTime now = DateTime.Now;
+
+                StockAdjustmentHeader? header = await context.StockAdjustmentHeaders
+                    .Include(h => h.AdjustmentLines)
+                        .ThenInclude(l => l.ItemBatch)
+                            .ThenInclude(b => b.ItemVariant)
+                                .ThenInclude(v => v.ItemParent)
+                    .SingleOrDefaultAsync(h => h.Id == adjustmentId);
+
+                if (header == null)
+                    throw new InvalidOperationException("The selected stock adjustment no longer exists.");
+
+                if (header.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+                {
+                    await transaction.CommitAsync();
+                    return header;
+                }
+
+                if (!header.Status.Equals("Posted", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Only a posted stock adjustment can be reversed.");
+
+                foreach (StockAdjustmentLine line in header.AdjustmentLines)
+                {
+                    ItemBatch batch = line.ItemBatch;
+                    decimal reverseQuantity = -line.VarianceQty;
+                    decimal resultingQuantity = batch.CurrentStock + reverseQuantity;
+
+                    if (resultingQuantity < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Reversal would make stock row '{BuildBatchDisplayName(batch)}' negative. " +
+                            "Stock issued after the original adjustment must be corrected first.");
+                    }
+
+                    ApplyReversalStockChange(batch, line, reverseQuantity, now);
+
+                    line.LineStatus = "Reversed";
+                    line.UpdatedAt = now;
+
+                    await context.InventoryTransactions.AddAsync(new InventoryTransaction
+                    {
+                        ItemVariantId = batch.ItemVariantId,
+                        ItemBatchId = batch.Id,
+                        TransactionDate = now,
+                        TransactionType = "ADJUSTMENT_REVERSAL",
+                        ReferenceDocument = header.AdjustmentNo,
+                        ReferenceLineId = line.Id,
+                        Quantity = reverseQuantity,
+                        UnitCost = line.UnitCost,
+                        CreatedBy = authorizedUser.Username,
+                        CreatedAt = now,
+                        Remarks = TrimToMax(
+                            $"Reversal of {header.AdjustmentNo} | Reason: {reversalReason} | Stock Row: {BuildBatchDisplayName(batch)}",
+                            250)
+                    });
+                }
+
+                header.Status = "Cancelled";
+                header.CancelledBy = authorizedUser.Username;
+                header.CancellationReason = reversalReason;
+                header.CancelledAt = now;
+                header.UpdatedAt = now;
+
+                List<int> affectedVariantIds = header.AdjustmentLines
+                    .Select(l => l.ItemVariantId)
+                    .Distinct()
+                    .ToList();
+
+                await context.SaveChangesAsync();
+                await RecalculateVariantAverageCostsAsync(context, affectedVariantIds, now);
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return header;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        private static async Task<User> ValidateActorAsync(
+            AppDbContext context,
+            StockAdjustmentActorContext actor)
+        {
+            if (actor == null || actor.UserId <= 0 || string.IsNullOrWhiteSpace(actor.Username))
+                throw new InvalidOperationException("An authenticated Manager or Administrator is required.");
+
+            string username = NormalizeText(actor.Username);
+
+            User? user = await context.Users
+                .AsNoTracking()
+                .SingleOrDefaultAsync(u => u.Id == actor.UserId && u.Username == username);
+
+            if (user == null)
+                throw new InvalidOperationException("The authenticated user could not be verified.");
+
+            if (!user.IsActive)
+                throw new InvalidOperationException("The authenticated user account is suspended.");
+
+            if (user.Role != UserRole.Manager && user.Role != UserRole.Admin)
+                throw new InvalidOperationException("Manager or Administrator privileges are required for stock adjustments.");
+
+            if (actor.Role != user.Role)
+                throw new InvalidOperationException("The authenticated user role changed. Sign in again before posting.");
+
+            return user;
         }
 
         private static void ValidateHeader(StockAdjustmentHeader header)
@@ -369,11 +669,11 @@ namespace POS.Core.Repositories
             List<StockAdjustmentLine> lines,
             Dictionary<int, ItemBatch> batchMap)
         {
-            foreach (var line in lines)
+            foreach (StockAdjustmentLine line in lines)
             {
                 NormalizeLine(line);
 
-                if (!batchMap.TryGetValue(line.ItemBatchId, out var batch))
+                if (!batchMap.TryGetValue(line.ItemBatchId, out ItemBatch? batch))
                     throw new InvalidOperationException("One or more stock rows were not found.");
 
                 if (batch.IsDeactivated)
@@ -404,21 +704,7 @@ namespace POS.Core.Repositories
                     throw new InvalidOperationException("Average-cost items must be adjusted through the GENERAL stock bucket.");
 
                 line.ItemVariantId = batch.ItemVariantId;
-
-                if (line.UnitCost <= 0)
-                {
-                    line.UnitCost = batch.CostPrice > 0
-                        ? batch.CostPrice
-                        : batch.ItemVariant.AverageCost > 0
-                            ? batch.ItemVariant.AverageCost
-                            : batch.ItemVariant.CostPrice;
-                }
-
-                if (line.UnitCost < 0)
-                    throw new InvalidOperationException($"Unit cost cannot be negative for stock row '{BuildBatchDisplayName(batch)}'.");
-
                 line.VarianceQty = line.ActualQty - line.SystemQty;
-                line.CostImpact = Math.Round(line.VarianceQty * line.UnitCost, 2);
 
                 if (line.VarianceQty == 0)
                     throw new InvalidOperationException($"Stock row '{BuildBatchDisplayName(batch)}' has no variance.");
@@ -440,6 +726,9 @@ namespace POS.Core.Repositories
                 if (header.AdjustmentMode == "Stock Decrease" && line.VarianceQty >= 0)
                     throw new InvalidOperationException("Stock Decrease mode can only contain negative variance lines.");
 
+                PrepareLineUnitCost(line, batch);
+                line.CostImpact = Math.Round(line.VarianceQty * line.UnitCost, 2);
+
                 if (string.IsNullOrWhiteSpace(line.ReasonCode))
                     throw new InvalidOperationException($"Reason code is required for stock row '{BuildBatchDisplayName(batch)}'.");
 
@@ -454,9 +743,115 @@ namespace POS.Core.Repositories
             }
         }
 
+        private static void PrepareLineUnitCost(StockAdjustmentLine line, ItemBatch batch)
+        {
+            decimal existingCost = ResolveExistingCost(batch);
+            bool isBatchTracked = batch.ItemVariant.ItemParent.HasBatchTracking;
+
+            if (line.VarianceQty > 0)
+            {
+                if (isBatchTracked && batch.CurrentStock > 0 && existingCost > 0)
+                {
+                    line.UnitCost = existingCost;
+                }
+                else if (line.UnitCost <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"A positive unit cost is required for stock increase on '{BuildBatchDisplayName(batch)}'.");
+                }
+            }
+            else
+            {
+                if (existingCost > 0)
+                    line.UnitCost = existingCost;
+                else if (line.UnitCost <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"The existing stock row '{BuildBatchDisplayName(batch)}' has no valid cost. Enter a positive unit cost before posting.");
+                }
+            }
+
+            if (line.UnitCost <= 0)
+                throw new InvalidOperationException($"Unit cost must be greater than zero for stock row '{BuildBatchDisplayName(batch)}'.");
+        }
+
+        private static void ApplyPostedStockChange(ItemBatch batch, StockAdjustmentLine line, DateTime now)
+        {
+            decimal oldQuantity = batch.CurrentStock;
+            decimal newQuantity = oldQuantity + line.VarianceQty;
+
+            if (newQuantity < 0)
+                throw new InvalidOperationException($"Posting this adjustment would make stock row '{BuildBatchDisplayName(batch)}' negative.");
+
+            bool isGeneral = IsGeneralBatch(batch.BatchNo);
+            decimal existingCost = ResolveExistingCost(batch);
+
+            if (isGeneral)
+            {
+                if (existingCost <= 0)
+                {
+                    batch.CostPrice = line.UnitCost;
+                }
+                else if (line.VarianceQty > 0 && newQuantity > 0)
+                {
+                    decimal oldValue = oldQuantity * existingCost;
+                    decimal addedValue = line.VarianceQty * line.UnitCost;
+                    batch.CostPrice = Math.Round((oldValue + addedValue) / newQuantity, 2);
+                }
+            }
+            else if (line.VarianceQty > 0 && (oldQuantity <= 0 || batch.CostPrice <= 0))
+            {
+                batch.CostPrice = line.UnitCost;
+            }
+
+            batch.CurrentStock = newQuantity;
+            batch.UpdatedAt = now;
+        }
+
+        private static void ApplyReversalStockChange(
+            ItemBatch batch,
+            StockAdjustmentLine originalLine,
+            decimal reverseQuantity,
+            DateTime now)
+        {
+            decimal oldQuantity = batch.CurrentStock;
+            decimal newQuantity = oldQuantity + reverseQuantity;
+
+            if (newQuantity < 0)
+                throw new InvalidOperationException($"Reversal would make stock row '{BuildBatchDisplayName(batch)}' negative.");
+
+            bool isGeneral = IsGeneralBatch(batch.BatchNo);
+            decimal existingCost = ResolveExistingCost(batch);
+
+            if (isGeneral)
+            {
+                if (newQuantity > 0)
+                {
+                    decimal oldValue = oldQuantity * (existingCost > 0 ? existingCost : originalLine.UnitCost);
+                    decimal newValue = oldValue + (reverseQuantity * originalLine.UnitCost);
+
+                    if (newValue < -0.01m)
+                    {
+                        throw new InvalidOperationException(
+                            $"Inventory value for '{BuildBatchDisplayName(batch)}' no longer supports automatic reversal. " +
+                            "Review later stock activity first.");
+                    }
+
+                    batch.CostPrice = Math.Round(Math.Max(0m, newValue) / newQuantity, 2);
+                }
+            }
+            else if (reverseQuantity > 0 && (oldQuantity <= 0 || batch.CostPrice <= 0))
+            {
+                batch.CostPrice = originalLine.UnitCost;
+            }
+
+            batch.CurrentStock = newQuantity;
+            batch.UpdatedAt = now;
+        }
+
         private static void ValidateSubmittedLineDuplicates(List<StockAdjustmentLine> lines)
         {
-            var duplicate = lines
+            IGrouping<int, StockAdjustmentLine>? duplicate = lines
                 .GroupBy(l => l.ItemBatchId)
                 .FirstOrDefault(g => g.Count() > 1);
 
@@ -466,41 +861,11 @@ namespace POS.Core.Repositories
 
         private static void RecalculateTotals(
             StockAdjustmentHeader header,
-            List<StockAdjustmentLine> lines,
-            Dictionary<int, ItemBatch> batchMap)
+            List<StockAdjustmentLine> lines)
         {
-            decimal totalImpact = 0m;
-            decimal totalIncreaseQty = 0m;
-            decimal totalDecreaseQty = 0m;
-
-            foreach (var line in lines)
-            {
-                var batch = batchMap[line.ItemBatchId];
-
-                if (line.UnitCost <= 0)
-                {
-                    line.UnitCost = batch.CostPrice > 0
-                        ? batch.CostPrice
-                        : batch.ItemVariant.AverageCost > 0
-                            ? batch.ItemVariant.AverageCost
-                            : batch.ItemVariant.CostPrice;
-                }
-
-                line.VarianceQty = line.ActualQty - line.SystemQty;
-                line.CostImpact = Math.Round(line.VarianceQty * line.UnitCost, 2);
-
-                totalImpact += line.CostImpact;
-
-                if (line.VarianceQty > 0)
-                    totalIncreaseQty += line.VarianceQty;
-
-                if (line.VarianceQty < 0)
-                    totalDecreaseQty += Math.Abs(line.VarianceQty);
-            }
-
-            header.TotalImpact = Math.Round(totalImpact, 2);
-            header.TotalIncreaseQty = totalIncreaseQty;
-            header.TotalDecreaseQty = totalDecreaseQty;
+            header.TotalImpact = Math.Round(lines.Sum(l => l.CostImpact), 2);
+            header.TotalIncreaseQty = lines.Where(l => l.VarianceQty > 0).Sum(l => l.VarianceQty);
+            header.TotalDecreaseQty = lines.Where(l => l.VarianceQty < 0).Sum(l => Math.Abs(l.VarianceQty));
         }
 
         private static async Task RecalculateVariantAverageCostsAsync(
@@ -513,13 +878,13 @@ namespace POS.Core.Repositories
 
             foreach (int variantId in variantIds.Distinct())
             {
-                var variant = await context.ItemVariants
+                ItemVariant? variant = await context.ItemVariants
                     .FirstOrDefaultAsync(v => v.Id == variantId);
 
                 if (variant == null)
                     continue;
 
-                var activeBatches = await context.ItemBatches
+                List<ItemBatch> activeBatches = await context.ItemBatches
                     .Where(b =>
                         b.ItemVariantId == variantId &&
                         !b.IsDeactivated &&
@@ -532,6 +897,9 @@ namespace POS.Core.Repositories
                 {
                     decimal totalValue = activeBatches.Sum(b => b.CurrentStock * b.CostPrice);
                     variant.AverageCost = Math.Round(totalValue / totalQty, 2);
+
+                    if (variant.CostPrice <= 0 && variant.AverageCost > 0)
+                        variant.CostPrice = variant.AverageCost;
                 }
 
                 variant.UpdatedAt = now;
@@ -540,7 +908,7 @@ namespace POS.Core.Repositories
 
         private static async Task<string> GenerateDocumentNumberAsync(AppDbContext context, string documentType)
         {
-            var sequence = await context.DocumentSequences
+            DocumentSequence? sequence = await context.DocumentSequences
                 .FirstOrDefaultAsync(s => s.DocumentType == documentType);
 
             if (sequence == null)
@@ -568,6 +936,13 @@ namespace POS.Core.Repositories
             return number;
         }
 
+        private static void ApplyAuthorizedUser(StockAdjustmentHeader header, string username)
+        {
+            header.AuthorizedBy = username;
+            header.CreatedBy = username;
+            header.PostedBy = username;
+        }
+
         private static void NormalizeHeader(StockAdjustmentHeader header)
         {
             header.AdjustmentMode = NormalizeText(header.AdjustmentMode);
@@ -576,17 +951,11 @@ namespace POS.Core.Repositories
             header.Remarks = NormalizeText(header.Remarks);
             header.CreatedBy = NormalizeText(header.CreatedBy);
             header.PostedBy = NormalizeText(header.PostedBy);
-
-            if (string.IsNullOrWhiteSpace(header.CreatedBy))
-                header.CreatedBy = header.AuthorizedBy;
-
-            if (string.IsNullOrWhiteSpace(header.PostedBy))
-                header.PostedBy = header.AuthorizedBy;
         }
 
         private static void NormalizeLines(List<StockAdjustmentLine> lines)
         {
-            foreach (var line in lines)
+            foreach (StockAdjustmentLine line in lines)
                 NormalizeLine(line);
         }
 
@@ -594,6 +963,17 @@ namespace POS.Core.Repositories
         {
             line.ReasonCode = NormalizeText(line.ReasonCode);
             line.LineRemarks = NormalizeText(line.LineRemarks);
+        }
+
+        private static decimal ResolveExistingCost(ItemBatch batch)
+        {
+            if (batch.CostPrice > 0)
+                return batch.CostPrice;
+
+            if (batch.ItemVariant.AverageCost > 0)
+                return batch.ItemVariant.AverageCost;
+
+            return batch.ItemVariant.CostPrice;
         }
 
         private static string NormalizeText(string? value)
