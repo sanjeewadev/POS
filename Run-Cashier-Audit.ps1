@@ -42,7 +42,14 @@ $allowedChangedFiles = @(
     "POS.Cashier.UI/POS.Cashier.UI.csproj",
     "POS.Cashier.UI/Resources/PaymentLogos/mastercard.png",
     "POS.Cashier.UI/Resources/PaymentLogos/visa.png",
-    "POS.Cashier.UI/Resources/PaymentLogos/amex.png"
+    "POS.Cashier.UI/Resources/PaymentLogos/amex.png",
+    "POS.Cashier.AuditTests/LockRecoverySourcePolicyAuditTests.cs",
+    "POS.Core/Services/AuthService.cs",
+    "POS.Cashier.UI/Dialogs/LockScreenView.xaml",
+    "POS.Cashier.UI/Dialogs/LockScreenView.xaml.cs",
+    "POS.Cashier.UI/Dialogs/LockRecoveryActionDialog.xaml",
+    "POS.Cashier.UI/Dialogs/LockRecoveryActionDialog.xaml.cs",
+    "POS.Cashier.UI/Services/CashierLockService.cs"
 )
 
 $commandResults = [ordered]@{}

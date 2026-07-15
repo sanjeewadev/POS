@@ -253,6 +253,21 @@ namespace POS.Core.Services
             };
         }
 
+        public Task RecordSecurityAuditAsync(
+            int? userId,
+            string username,
+            string eventType,
+            string applicationName,
+            string message)
+        {
+            return _userRepository.RecordLoginAuditAsync(
+                userId,
+                username,
+                eventType,
+                applicationName,
+                message);
+        }
+
         public void Logout()
         {
             CurrentUser = null;

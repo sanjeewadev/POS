@@ -37,6 +37,7 @@ internal static class AuditTestCatalog
         new("Cashier startup enforces licences before login", AuditGroups.SourcePolicy, SourcePolicyAuditTests.StartupEnforcesLicencesBeforeLoginAsync),
         new("Shift restoration preserves original cashier ownership", AuditGroups.SourcePolicy, SourcePolicyAuditTests.ShiftRestorationPreservesCashierOwnershipAsync),
         new("Sale commits before receipt printer and drawer actions", AuditGroups.SourcePolicy, SourcePolicyAuditTests.SaleCommitsBeforeHardwareActionsAsync),
+        new("Cashier lock screen has audited Manager recovery and safe exit", AuditGroups.SourcePolicy, LockRecoverySourcePolicyAuditTests.ManagerRecoveryAndSafeExitAreControlledAsync),
         new("Live POS database path is never an audit database", AuditGroups.SourcePolicy, SourcePolicyAuditTests.LiveDatabasePathIsExcludedAsync)
     };
 }

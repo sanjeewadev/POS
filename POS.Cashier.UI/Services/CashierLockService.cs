@@ -1,8 +1,10 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using POS.Cashier.UI.Dialogs;
+using POS.Cashier.UI.ViewModels;
 using POS.Core.Services;
 
 namespace POS.Cashier.UI.Services
@@ -110,8 +112,19 @@ namespace POS.Cashier.UI.Services
             if (string.IsNullOrWhiteSpace(username))
                 return false;
 
+            string terminalNo = "Unknown";
+            int shiftId = 0;
+
+            if (_ownerWindow.DataContext is
+                SalesViewModel salesViewModel)
+            {
+                terminalNo = salesViewModel.TerminalNo;
+                shiftId = salesViewModel.CurrentShiftId;
+            }
+
             _timer.Stop();
             _isLocked = true;
+            bool safeExitRequested = false;
 
             try
             {
@@ -119,7 +132,10 @@ namespace POS.Cashier.UI.Services
                     new LockScreenView(
                         _authService,
                         username,
-                        reason)
+                        terminalNo,
+                        shiftId,
+                        reason,
+                        PrepareSafeExitAsync)
                     {
                         Owner = _ownerWindow
                     };
@@ -127,14 +143,40 @@ namespace POS.Cashier.UI.Services
                 bool? result =
                     lockWindow.ShowDialog();
 
+                safeExitRequested =
+                    lockWindow.SafeExitRequested;
+
+                if (safeExitRequested)
+                {
+                    Stop();
+
+                    Application.Current.Shutdown();
+                    return false;
+                }
+
                 return result == true &&
                        lockWindow.IsUnlocked;
             }
             finally
             {
-                _isLocked = false;
-                RestartTimer();
+                if (!safeExitRequested)
+                {
+                    _isLocked = false;
+                    RestartTimer();
+                }
             }
+        }
+
+        private async Task<bool> PrepareSafeExitAsync()
+        {
+            if (_ownerWindow?.DataContext is
+                SalesViewModel salesViewModel)
+            {
+                return await salesViewModel
+                    .FlushCartBeforeLogoffAsync();
+            }
+
+            return true;
         }
 
         private void RestartTimer()
