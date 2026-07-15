@@ -136,6 +136,52 @@
             </Setter>
         </Style>
 
+        <Style x:Key="PrintFeatureIconButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="2,1"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="{TemplateBinding Tag}"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="24"
+                                           FontWeight="Black"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,3"/>
+
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.92"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.50"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="CompactTextButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource {x:Type Button}}">
@@ -194,6 +240,144 @@
                                         VerticalAlignment="Center">
                                 <Border Width="82"
                                         Height="32"
+                                        Background="{TemplateBinding Background}"
+                                        RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.50"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MasterCardLogoButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="#F8FAFC"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel Margin="8,5,8,4"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Border Width="94"
+                                        Height="37"
+                                        Background="{TemplateBinding Background}"
+                                        RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.50"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="VisaLogoButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="#F8FAFC"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel Margin="8,5,8,4"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Border Width="75"
+                                        Height="29"
+                                        Background="{TemplateBinding Background}"
+                                        RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.82"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.50"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AmexLogoButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="#F8FAFC"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <StackPanel Margin="8,5,8,4"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Border Width="103"
+                                        Height="40"
                                         Background="{TemplateBinding Background}"
                                         RenderOptions.BitmapScalingMode="HighQuality"/>
 
@@ -1195,7 +1379,7 @@
 
                     <Button Background="#2563EB"
                             Foreground="White"
-                            Style="{StaticResource FeatureIconButtonStyle}"
+                            Style="{StaticResource PrintFeatureIconButtonStyle}"
                             Tag="&#xE749;"
                             Content="Print"
                             Click="PrintBtn_Click"/>
@@ -1295,7 +1479,7 @@
                     </Grid.ColumnDefinitions>
 
                     <UniformGrid Grid.Column="0" Columns="3" Rows="2" Margin="0,0,1,0">
-                        <Button Style="{StaticResource CardLogoButtonStyle}"
+                        <Button Style="{StaticResource MasterCardLogoButtonStyle}"
                                 Content="MasterCard"
                                 ToolTip="MasterCard"
                                 Click="PayBtn_Click">
@@ -1305,7 +1489,7 @@
                             </Button.Background>
                         </Button>
 
-                        <Button Style="{StaticResource CardLogoButtonStyle}"
+                        <Button Style="{StaticResource VisaLogoButtonStyle}"
                                 Content="VISA"
                                 ToolTip="VISA"
                                 Click="PayBtn_Click">
@@ -1315,7 +1499,7 @@
                             </Button.Background>
                         </Button>
 
-                        <Button Style="{StaticResource CardLogoButtonStyle}"
+                        <Button Style="{StaticResource AmexLogoButtonStyle}"
                                 Content="AMEX"
                                 ToolTip="American Express"
                                 Click="PayBtn_Click">

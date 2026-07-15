@@ -139,12 +139,24 @@ internal static class SourcePolicyAuditTests
             "Cancel selected icon action");
         AuditAssert.Contains(view, "Content=\"Enter\"",
             "Enter selected icon action");
-        AuditAssert.Contains(bottom, "Style=\"{StaticResource CardLogoButtonStyle}\"",
-            "real card-logo button style");
+        AuditAssert.Contains(bottom, "Style=\"{StaticResource MasterCardLogoButtonStyle}\"",
+            "MasterCard logo button style");
+        AuditAssert.Contains(bottom, "Style=\"{StaticResource VisaLogoButtonStyle}\"",
+            "VISA logo button style");
+        AuditAssert.Contains(bottom, "Style=\"{StaticResource AmexLogoButtonStyle}\"",
+            "American Express logo button style");
         AuditAssert.Contains(view, "<Border Width=\"82\"",
             "card-logo display width");
         AuditAssert.Contains(view, "Height=\"32\"",
             "card-logo display height");
+        AuditAssert.Contains(view, "x:Key=\"PrintFeatureIconButtonStyle\"",
+            "slightly smaller Print icon style");
+        AuditAssert.Contains(view, "<Border Width=\"94\"",
+            "boosted MasterCard logo width");
+        AuditAssert.Contains(view, "<Border Width=\"75\"",
+            "reduced VISA logo width");
+        AuditAssert.Contains(view, "<Border Width=\"103\"",
+            "boosted AMEX logo width");
         AuditAssert.Contains(bottom, "<ImageBrush ImageSource=\"/POS.Cashier.UI;component/Resources/PaymentLogos/mastercard.png\"",
             "MasterCard logo brush");
         AuditAssert.Contains(bottom, "<ImageBrush ImageSource=\"/POS.Cashier.UI;component/Resources/PaymentLogos/visa.png\"",
