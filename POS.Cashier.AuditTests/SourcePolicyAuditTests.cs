@@ -189,6 +189,36 @@ internal static class SourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task CashPaymentDialogAndSharedNumpadArePolishedAsync()
+    {
+        string dialog = Read("POS.Cashier.UI", "Dialogs", "CashTenderDialog.xaml");
+        AuditAssert.Contains(dialog, "Width=\"900\"", "balanced Cash Payment dialog width");
+        AuditAssert.Contains(dialog, "Height=\"620\"", "balanced Cash Payment dialog height");
+        AuditAssert.Contains(dialog, "x:Key=\"CashPaymentFieldIcon\"", "Cash Payment field-icon style");
+        AuditAssert.Contains(dialog, "Text=\"Rs\"", "Cash Payment cash identity icon");
+        AuditAssert.Contains(dialog, "Text=\"✓\"", "Cash Payment status and apply icons");
+        AuditAssert.Contains(dialog, "Text=\"⇄\"", "Cash Payment change/balance icon");
+        AuditAssert.Contains(dialog, "CornerRadius=\"3\"", "Cash Payment compact rounded panels");
+        AuditAssert.Contains(dialog, "IsDefault=\"True\"", "Cash Payment keyboard confirm action");
+        AuditAssert.Contains(dialog, "IsCancel=\"True\"", "Cash Payment keyboard cancel action");
+
+        string numpad = Read("POS.Cashier.UI", "Components", "TenderNumpadControl.xaml");
+        AuditAssert.Contains(numpad, "MinWidth=\"270\"", "shared tender numpad width");
+        AuditAssert.Contains(numpad, "MinHeight=\"400\"", "shared tender numpad height");
+        AuditAssert.Contains(numpad, "Background=\"#F6F8FB\"", "shared tender numpad panel background");
+        AuditAssert.Contains(numpad, "Background=\"#C62D32\"", "shared tender numpad backspace action");
+        AuditAssert.Contains(numpad, "Background=\"#C67A00\"", "shared tender numpad clear action");
+        AuditAssert.Contains(numpad, "Background=\"#16875C\"", "shared tender numpad enter action");
+
+        string controls = Read("POS.Cashier.UI", "Resources", "CashierControls.xaml");
+        AuditAssert.Contains(controls, "x:Key=\"CashierNumpadButton\"", "shared tender numpad button style");
+        AuditAssert.Contains(controls, "CornerRadius=\"4\"", "shared tender numpad key corners");
+        AuditAssert.Contains(controls, "<Setter Property=\"Margin\" Value=\"3\"/>",
+            "shared tender numpad key spacing");
+
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");

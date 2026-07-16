@@ -49,7 +49,10 @@ $allowedChangedFiles = @(
     "POS.Cashier.UI/Dialogs/LockScreenView.xaml.cs",
     "POS.Cashier.UI/Dialogs/LockRecoveryActionDialog.xaml",
     "POS.Cashier.UI/Dialogs/LockRecoveryActionDialog.xaml.cs",
-    "POS.Cashier.UI/Services/CashierLockService.cs"
+    "POS.Cashier.UI/Services/CashierLockService.cs",
+    "POS.Cashier.UI/Components/TenderNumpadControl.xaml",
+    "POS.Cashier.UI/Dialogs/CashTenderDialog.xaml",
+    "POS.Cashier.UI/Resources/CashierControls.xaml"
 )
 
 $commandResults = [ordered]@{}

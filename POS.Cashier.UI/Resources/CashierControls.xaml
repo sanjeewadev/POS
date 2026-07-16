@@ -236,19 +236,52 @@
 
     <Style x:Key="CashierNumpadButton" TargetType="Button" BasedOn="{StaticResource CashierButton}">
         <Setter Property="MinWidth" Value="0"/>
-        <Setter Property="MinHeight" Value="54"/>
-        <Setter Property="Margin" Value="2"/>
+        <Setter Property="MinHeight" Value="56"/>
+        <Setter Property="Margin" Value="3"/>
         <Setter Property="Padding" Value="2"/>
-        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontSize" Value="23"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Focusable" Value="False"/>
-        <Setter Property="Background" Value="{StaticResource CashierKeyBrush}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderDarkBrush}"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
+        <Setter Property="Foreground" Value="#102846"/>
+        <Setter Property="BorderBrush" Value="#B7C1CD"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="ButtonBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.91"/>
+                            <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#6F8196"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource CashierDisabledBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource CashierDisabledTextBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="CashierNumpadActionButton" TargetType="Button" BasedOn="{StaticResource CashierNumpadButton}">
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
     </Style>
 
 </ResourceDictionary>

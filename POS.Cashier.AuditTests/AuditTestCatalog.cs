@@ -31,6 +31,7 @@ internal static class AuditTestCatalog
         new("Hidden Credit Note payment placeholder is removed", AuditGroups.SourcePolicy, SourcePolicyAuditTests.HiddenCreditNotePlaceholderIsRemovedAsync),
         new("Cashier Discount Rule entry point is removed while historical snapshots remain", AuditGroups.SourcePolicy, SourcePolicyAuditTests.DiscountRuleEntryPointIsRemovedAsync),
         new("Cashier bottom actions are compact and organized", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CashierBottomPanelIsCompactAndOrganizedAsync),
+        new("Cash Payment dialog and shared tender numpad are polished", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CashPaymentDialogAndSharedNumpadArePolishedAsync),
         new("Paid In and Paid Out UI do not require manager password", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PaidInAndPaidOutDoNotRequireManagerPasswordAsync),
         new("Below-minimum New Price captures manager identity", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PriceOverrideUiCapturesManagerIdentityAsync),
         new("Checkout failure path writes a technical log", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CheckoutFailurePathWritesTechnicalLogAsync),
