@@ -5,6 +5,7 @@ using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using POS.Cashier.UI.Views;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
@@ -30,21 +31,36 @@ namespace POS.Cashier.UI
         private StoreSettings? _storeSettings;
         private TillRepository? _tillRepository;
         private bool _fatalErrorShown;
+        private Exception? _serviceConfigurationError;
 
         public App()
         {
             RegisterGlobalExceptionHandlers();
-            Services = ConfigureServices();
+
+            try
+            {
+                Services = ConfigureServices();
+            }
+            catch (Exception ex)
+            {
+                _serviceConfigurationError = ex;
+            }
         }
 
         private static IServiceProvider ConfigureServices()
         {
             var services = new ServiceCollection();
 
-            services.AddDbContextFactory<AppDbContext>(
-                options =>
-                    options.UseSqlite(
-                        DatabasePathProvider.ConnectionString));
+            var databaseSettings =
+                new DatabaseConnectionSettingsStore()
+                    .LoadOrDefault();
+
+            services.AddSingleton(databaseSettings);
+            services.AddDbContextFactory<AppDbContext>(options =>
+                PosDatabaseOptionsConfigurator.Configure(
+                    options,
+                    databaseSettings));
+            services.AddSingleton<DatabaseInitializationService>();
 
             // Core repositories.
             services.AddTransient<UserRepository>();
@@ -114,6 +130,29 @@ namespace POS.Cashier.UI
         {
             base.OnStartup(e);
 
+            if (_serviceConfigurationError != null)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Service configuration",
+                    _serviceConfigurationError);
+
+                string message =
+                    _serviceConfigurationError is DatabaseConfigurationException
+                        ? _serviceConfigurationError.Message
+                        : "Cashier services could not be configured.";
+
+                MessageBox.Show(
+                    message +
+                    "\n\nTechnical details were saved in the local POS Logs folder.",
+                    "Cashier Startup Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                Shutdown();
+                return;
+            }
+
             if (Services == null)
             {
                 Shutdown();
@@ -138,10 +177,12 @@ namespace POS.Cashier.UI
                     ex);
 
                 string userMessage =
-                    ex is InvalidOperationException &&
-                    !string.IsNullOrWhiteSpace(ex.Message)
+                    ex is DatabaseConfigurationException
                         ? ex.Message
-                        : "Cashier could not start.";
+                        : ex is InvalidOperationException &&
+                          !string.IsNullOrWhiteSpace(ex.Message)
+                            ? ex.Message
+                            : "Cashier could not start.";
 
                 MessageBox.Show(
                     userMessage +
@@ -184,16 +225,18 @@ namespace POS.Cashier.UI
                 throw new InvalidOperationException(
                     "Cashier services are not available.");
 
-            var dbFactory =
+            var databaseInitialization =
                 Services.GetRequiredService<
-                    IDbContextFactory<AppDbContext>>();
+                    DatabaseInitializationService>();
 
             try
             {
-                await using var context =
-                    await dbFactory.CreateDbContextAsync();
-
-                await context.Database.MigrateAsync();
+                await databaseInitialization
+                    .InitializeCashierAsync();
+            }
+            catch (DatabaseConfigurationException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

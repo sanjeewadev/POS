@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 
 namespace POS.Core.Repositories
@@ -165,9 +166,11 @@ namespace POS.Core.Repositories
                 return false;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.Suppliers.AnyAsync(s =>
-                EF.Functions.Collate(s.SupplierCode, "NOCASE") == normalizedCode &&
+                EF.Functions.Collate(s.SupplierCode, caseInsensitiveCollation) == normalizedCode &&
                 s.Id != currentSupplierId);
         }
 
@@ -192,9 +195,11 @@ namespace POS.Core.Repositories
             ValidateSupplierForSave(supplier);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             bool codeExists = await context.Suppliers.AnyAsync(s =>
-                EF.Functions.Collate(s.SupplierCode, "NOCASE") == supplier.SupplierCode);
+                EF.Functions.Collate(s.SupplierCode, caseInsensitiveCollation) == supplier.SupplierCode);
 
             if (codeExists)
                 throw new InvalidOperationException($"Supplier code '{supplier.SupplierCode}' already exists.");

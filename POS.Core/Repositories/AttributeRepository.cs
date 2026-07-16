@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 
 namespace POS.Core.Repositories
@@ -99,9 +100,11 @@ namespace POS.Core.Repositories
                 return false;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.AttributeGroups.AnyAsync(g =>
-                EF.Functions.Collate(g.GroupName, "NOCASE") == normalizedName &&
+                EF.Functions.Collate(g.GroupName, caseInsensitiveCollation) == normalizedName &&
                 g.Id != currentGroupId);
         }
 
@@ -115,9 +118,11 @@ namespace POS.Core.Repositories
             ValidateDisplayOrder(group.DisplayOrder, "Group display order");
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             bool nameExists = await context.AttributeGroups.AnyAsync(g =>
-                EF.Functions.Collate(g.GroupName, "NOCASE") == normalizedName);
+                EF.Functions.Collate(g.GroupName, caseInsensitiveCollation) == normalizedName);
 
             if (nameExists)
                 throw new InvalidOperationException($"Attribute group '{normalizedName}' already exists.");
@@ -160,8 +165,10 @@ namespace POS.Core.Repositories
             if (existing == null)
                 throw new InvalidOperationException("Attribute group was not found.");
 
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
             bool nameExists = await context.AttributeGroups.AnyAsync(g =>
-                EF.Functions.Collate(g.GroupName, "NOCASE") == normalizedName &&
+                EF.Functions.Collate(g.GroupName, caseInsensitiveCollation) == normalizedName &&
                 g.Id != group.Id);
 
             if (nameExists)
@@ -345,10 +352,12 @@ namespace POS.Core.Repositories
                 return false;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.AttributeValues.AnyAsync(v =>
                 v.AttributeGroupId == groupId &&
-                EF.Functions.Collate(v.ValueName, "NOCASE") == normalizedName &&
+                EF.Functions.Collate(v.ValueName, caseInsensitiveCollation) == normalizedName &&
                 v.Id != currentValueId);
         }
 
@@ -370,9 +379,11 @@ namespace POS.Core.Repositories
             if (!groupExists)
                 throw new InvalidOperationException("Selected attribute group was not found.");
 
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
             bool nameExists = await context.AttributeValues.AnyAsync(v =>
                 v.AttributeGroupId == value.AttributeGroupId &&
-                EF.Functions.Collate(v.ValueName, "NOCASE") == normalizedName);
+                EF.Functions.Collate(v.ValueName, caseInsensitiveCollation) == normalizedName);
 
             if (nameExists)
                 throw new InvalidOperationException($"Value '{normalizedName}' already exists in this group.");
@@ -416,9 +427,11 @@ namespace POS.Core.Repositories
             if (existing == null)
                 throw new InvalidOperationException("Attribute value was not found.");
 
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
             bool nameExists = await context.AttributeValues.AnyAsync(v =>
                 v.AttributeGroupId == existing.AttributeGroupId &&
-                EF.Functions.Collate(v.ValueName, "NOCASE") == normalizedName &&
+                EF.Functions.Collate(v.ValueName, caseInsensitiveCollation) == normalizedName &&
                 v.Id != value.Id);
 
             if (nameExists)

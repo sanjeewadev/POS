@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 
 namespace POS.Core.Repositories
@@ -114,9 +115,11 @@ namespace POS.Core.Repositories
                 return false;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.UnitsOfMeasure.AnyAsync(u =>
-                EF.Functions.Collate(u.UomCode, "NOCASE") == normalizedCode &&
+                EF.Functions.Collate(u.UomCode, caseInsensitiveCollation) == normalizedCode &&
                 u.Id != currentUomId);
         }
 
@@ -128,9 +131,11 @@ namespace POS.Core.Repositories
                 return false;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.UnitsOfMeasure.AnyAsync(u =>
-                EF.Functions.Collate(u.UomDescription, "NOCASE") == normalizedDescription &&
+                EF.Functions.Collate(u.UomDescription, caseInsensitiveCollation) == normalizedDescription &&
                 u.Id != currentUomId);
         }
 
@@ -161,15 +166,17 @@ namespace POS.Core.Repositories
             ValidateDisplayOrder(displayOrder);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             bool codeExists = await context.UnitsOfMeasure.AnyAsync(u =>
-                EF.Functions.Collate(u.UomCode, "NOCASE") == normalizedCode);
+                EF.Functions.Collate(u.UomCode, caseInsensitiveCollation) == normalizedCode);
 
             if (codeExists)
                 throw new InvalidOperationException($"UOM code '{normalizedCode}' already exists.");
 
             bool descriptionExists = await context.UnitsOfMeasure.AnyAsync(u =>
-                EF.Functions.Collate(u.UomDescription, "NOCASE") == normalizedDescription);
+                EF.Functions.Collate(u.UomDescription, caseInsensitiveCollation) == normalizedDescription);
 
             if (descriptionExists)
                 throw new InvalidOperationException($"UOM description '{normalizedDescription}' already exists.");
@@ -209,8 +216,10 @@ namespace POS.Core.Repositories
             if (existing == null)
                 throw new InvalidOperationException("UOM record was not found.");
 
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
             bool descriptionExists = await context.UnitsOfMeasure.AnyAsync(u =>
-                EF.Functions.Collate(u.UomDescription, "NOCASE") == normalizedDescription &&
+                EF.Functions.Collate(u.UomDescription, caseInsensitiveCollation) == normalizedDescription &&
                 u.Id != existing.Id);
 
             if (descriptionExists)

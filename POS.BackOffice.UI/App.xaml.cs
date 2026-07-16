@@ -7,6 +7,7 @@ using POS.BackOffice.UI.Views.Layout;
 using POS.BackOffice.UI.Views.Pages.Admin;
 using POS.BackOffice.UI.Views.Pages.File;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Interfaces;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
@@ -30,11 +31,20 @@ namespace POS.BackOffice.UI
 
         private bool _exitApproved;
         private bool _fatalErrorShown;
+        private Exception? _serviceConfigurationError;
 
         public App()
         {
             RegisterGlobalExceptionHandlers();
-            Services = ConfigureServices();
+
+            try
+            {
+                Services = ConfigureServices();
+            }
+            catch (Exception ex)
+            {
+                _serviceConfigurationError = ex;
+            }
         }
 
         private static IServiceProvider ConfigureServices()
@@ -43,9 +53,19 @@ namespace POS.BackOffice.UI
 
             // ==========================================
             // DATABASE CONFIGURATION
+            // Default remains standalone SQLite until a locally encrypted
+            // central SQL Server profile is created by the approved setup flow.
             // ==========================================
+            var databaseSettings =
+                new DatabaseConnectionSettingsStore()
+                    .LoadOrDefault();
+
+            services.AddSingleton(databaseSettings);
             services.AddDbContextFactory<AppDbContext>(options =>
-                options.UseSqlite(DatabasePathProvider.ConnectionString));
+                PosDatabaseOptionsConfigurator.Configure(
+                    options,
+                    databaseSettings));
+            services.AddSingleton<DatabaseInitializationService>();
 
             // ==========================================
             // UI SERVICES
@@ -233,6 +253,29 @@ namespace POS.BackOffice.UI
             object sender,
             StartupEventArgs e)
         {
+            if (_serviceConfigurationError != null)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Service configuration",
+                    _serviceConfigurationError);
+
+                string message =
+                    _serviceConfigurationError is DatabaseConfigurationException
+                        ? _serviceConfigurationError.Message
+                        : "BackOffice services could not be configured.";
+
+                MessageBox.Show(
+                    message +
+                    "\n\nTechnical details were saved in the local POS Logs folder.",
+                    "BackOffice Startup Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                Shutdown();
+                return;
+            }
+
             if (Services == null)
             {
                 LocalLogService.WriteInformation(
@@ -246,16 +289,14 @@ namespace POS.BackOffice.UI
 
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            var dbFactory =
-                Services.GetRequiredService<
-                    IDbContextFactory<AppDbContext>>();
-
             try
             {
-                await using var context =
-                    await dbFactory.CreateDbContextAsync();
+                var databaseInitialization =
+                    Services.GetRequiredService<
+                        DatabaseInitializationService>();
 
-                await context.Database.MigrateAsync();
+                await databaseInitialization
+                    .InitializeBackOfficeAsync();
             }
             catch (Exception ex)
             {
@@ -264,10 +305,14 @@ namespace POS.BackOffice.UI
                     "Database startup",
                     ex);
 
+                string message =
+                    ex is DatabaseConfigurationException
+                        ? ex.Message
+                        : "The POS database could not be initialized. Close BackOffice and try again.";
+
                 MessageBox.Show(
-                    "The POS database could not be initialized.\n\n" +
-                    "Close BackOffice and try again. Technical details " +
-                    "were saved in the local POS Logs folder.",
+                    message +
+                    "\n\nTechnical details were saved in the local POS Logs folder.",
                     "Database Startup Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);

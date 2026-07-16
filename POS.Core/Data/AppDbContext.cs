@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Models.Terminals;
@@ -116,9 +117,17 @@ namespace POS.Core.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlite(DatabasePathProvider.ConnectionString);
+                PosDatabaseOptionsConfigurator.Configure(
+                    optionsBuilder,
+                    DatabaseConnectionSettings.CreateStandaloneSqlite());
             }
         }
+
+        private string CaseInsensitiveCollation =>
+            DatabaseProviderModelConventions.GetCaseInsensitive(Database);
+
+        private string LargeTextColumnType =>
+            DatabaseProviderModelConventions.GetLargeTextColumnType(Database);
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -149,17 +158,17 @@ namespace POS.Core.Data
                 entity.Property(e => e.UsernameAttempted)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(e => e.EventType)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(e => e.ApplicationName)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(e => e.MachineName)
                     .IsRequired()
@@ -194,12 +203,12 @@ namespace POS.Core.Data
                 entity.Property(c => c.CategoryCode)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CategoryName)
                     .IsRequired()
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.Description)
                     .HasMaxLength(250)
@@ -257,12 +266,12 @@ namespace POS.Core.Data
                 entity.Property(s => s.SubCategoryCode)
                     .IsRequired()
                     .HasMaxLength(40)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.SubCategoryName)
                     .IsRequired()
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.DisplayOrder)
                     .HasDefaultValue(0);
@@ -318,12 +327,12 @@ namespace POS.Core.Data
                 entity.Property(u => u.UomCode)
                     .IsRequired()
                     .HasMaxLength(10)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(u => u.UomDescription)
                     .IsRequired()
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasIndex(u => u.UomCode)
                     .IsUnique();
@@ -356,7 +365,7 @@ namespace POS.Core.Data
                 entity.Property(a => a.GroupName)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasIndex(a => a.GroupName)
                     .IsUnique();
@@ -374,7 +383,7 @@ namespace POS.Core.Data
                 entity.Property(a => a.ValueName)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(a => a.AttributeGroup)
                     .WithMany(g => g.AttributeValues)
@@ -417,12 +426,12 @@ namespace POS.Core.Data
                 entity.Property(i => i.ItemCode)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(i => i.ItemName)
                     .IsRequired()
                     .HasMaxLength(150)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(i => i.PrintName)
                     .HasMaxLength(50);
@@ -583,15 +592,15 @@ namespace POS.Core.Data
                 entity.Property(v => v.SkuCode)
                     .IsRequired()
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.VariantDescription)
                     .HasMaxLength(250)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.AverageCost)
                     .HasColumnType("decimal(18,2)");
@@ -641,14 +650,14 @@ namespace POS.Core.Data
                 entity.Property(b => b.BatchNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 // Internal GRN/batch barcode used by the cashier for exact-batch sales.
                 // Average-cost GENERAL buckets should keep this blank.
                 entity.Property(b => b.InternalBatchBarcode)
                     .HasMaxLength(100)
                     .HasDefaultValue(string.Empty)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(b => b.BarcodePrintedCount)
                     .HasDefaultValue(0);
@@ -711,39 +720,39 @@ namespace POS.Core.Data
                 entity.Property(p => p.PriceChangeNo)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.PriceLevel)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.ChangeSource)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.SourceDocumentType)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.SourceDocumentNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.ItemCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.SkuCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.ItemDescription)
                     .HasMaxLength(200);
@@ -753,7 +762,7 @@ namespace POS.Core.Data
 
                 entity.Property(p => p.BatchNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.EffectiveCost)
                     .HasColumnType("decimal(18,2)");
@@ -788,7 +797,7 @@ namespace POS.Core.Data
 
                 entity.Property(p => p.ReasonCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.ChangeReason)
                     .IsRequired()
@@ -868,12 +877,12 @@ namespace POS.Core.Data
                 entity.Property(t => t.TransactionType)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.ReferenceDocument)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.Quantity)
                     .HasColumnType("decimal(18,3)");
@@ -923,12 +932,12 @@ namespace POS.Core.Data
                 entity.Property(g => g.GrnNumber)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(g => g.SupplierInvoiceNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(g => g.Remarks)
                     .HasMaxLength(500);
@@ -936,7 +945,7 @@ namespace POS.Core.Data
                 entity.Property(g => g.Status)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE")
+                    .UseCollation(CaseInsensitiveCollation)
                     .HasDefaultValue("Posted");
 
                 entity.Property(g => g.CreatedBy)
@@ -997,13 +1006,13 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(g => g.TaxSnapshotStatus)
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(g => g.Supplier)
                     .WithMany()
@@ -1048,7 +1057,7 @@ namespace POS.Core.Data
             {
                 entity.Property(l => l.BatchNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.Uom)
                     .HasMaxLength(20);
@@ -1066,7 +1075,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(20)
                     .HasDefaultValue("Amount")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.LineDiscountValue)
                     .HasColumnType("decimal(18,2)");
@@ -1114,7 +1123,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.UpdateSellingPrices)
                     .HasDefaultValue(false);
@@ -1153,7 +1162,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("Posted")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(l => l.GrnHeader)
                     .WithMany(h => h.GrnLines)
@@ -1221,12 +1230,12 @@ namespace POS.Core.Data
                 entity.Property(l => l.TransactionType)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ReferenceDocument)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ChargeAmount)
                     .HasColumnType("decimal(18,2)");
@@ -1287,11 +1296,11 @@ namespace POS.Core.Data
                 entity.Property(r => r.ReturnNumber)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.OriginalInvoiceNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.AuthorizedBy)
                     .IsRequired()
@@ -1331,12 +1340,12 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.Status)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.CreatedBy)
                     .HasMaxLength(50);
@@ -1386,7 +1395,7 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.BatchNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ReturnQty)
                     .HasColumnType("decimal(18,3)");
@@ -1399,11 +1408,11 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.TaxCategoryCodeSnapshot)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxCodeSnapshot)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxNameSnapshot)
                     .HasMaxLength(100);
@@ -1433,12 +1442,12 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ReasonCode)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.LineRemarks)
                     .HasMaxLength(250);
@@ -1446,7 +1455,7 @@ namespace POS.Core.Data
                 entity.Property(l => l.LineStatus)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(l => l.ReturnHeader)
                     .WithMany(h => h.ReturnLines)
@@ -1515,16 +1524,16 @@ namespace POS.Core.Data
                 entity.Property(r => r.ReturnNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.OriginalInvoiceNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.TerminalNo)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.CashierName)
                     .IsRequired()
@@ -1548,22 +1557,22 @@ namespace POS.Core.Data
 
                 entity.Property(r => r.ReplacementGiftVoucherNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.RefundMethod)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.DocumentType)
                     .IsRequired()
                     .HasMaxLength(20)
                     .HasDefaultValue("Return")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.CreditNoteNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.TaxableAmountTotal)
                     .HasColumnType("decimal(18,2)");
@@ -1587,7 +1596,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(r => r.OriginalSalesHeader)
                     .WithMany()
@@ -1642,19 +1651,19 @@ namespace POS.Core.Data
                 entity.Property(l => l.InventoryAction)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ItemTypeSnapshot)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxCategoryCodeSnapshot)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxCodeSnapshot)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxNameSnapshot)
                     .HasMaxLength(100);
@@ -1684,7 +1693,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(l => l.CustomerReturnHeader)
                     .WithMany(h => h.Lines)
@@ -1734,7 +1743,7 @@ namespace POS.Core.Data
                 entity.Property(d => d.DocumentType)
                     .IsRequired()
                     .HasMaxLength(10)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(d => d.Prefix)
                     .IsRequired()
@@ -1879,8 +1888,8 @@ namespace POS.Core.Data
             {
                 entity.ToTable("ShiftCloseSnapshots");
                 entity.HasKey(s => s.Id);
-                entity.Property(s => s.ZReportNo).IsRequired().HasMaxLength(50).UseCollation("NOCASE");
-                entity.Property(s => s.TerminalNo).IsRequired().HasMaxLength(20).UseCollation("NOCASE");
+                entity.Property(s => s.ZReportNo).IsRequired().HasMaxLength(50).UseCollation(CaseInsensitiveCollation);
+                entity.Property(s => s.TerminalNo).IsRequired().HasMaxLength(20).UseCollation(CaseInsensitiveCollation);
                 entity.Property(s => s.CashierName).IsRequired().HasMaxLength(100);
                 entity.Property(s => s.ClosedBy).IsRequired().HasMaxLength(100);
                 entity.Property(s => s.AuthorizedBy).HasMaxLength(100);
@@ -1927,9 +1936,9 @@ namespace POS.Core.Data
             {
                 entity.ToTable("CashDrawerEvents");
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.TerminalNo).IsRequired().HasMaxLength(20).UseCollation("NOCASE");
+                entity.Property(e => e.TerminalNo).IsRequired().HasMaxLength(20).UseCollation(CaseInsensitiveCollation);
                 entity.Property(e => e.CashierName).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.EventType).IsRequired().HasMaxLength(30).UseCollation("NOCASE");
+                entity.Property(e => e.EventType).IsRequired().HasMaxLength(30).UseCollation(CaseInsensitiveCollation);
                 entity.Property(e => e.Reason).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Note).HasMaxLength(500);
                 entity.Property(e => e.AuthorizedBy).HasMaxLength(100);
@@ -1963,44 +1972,44 @@ namespace POS.Core.Data
                 entity.Property(c => c.CustomerCode)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.FullName)
                     .IsRequired()
                     .HasMaxLength(150)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.Phone)
                     .HasMaxLength(30);
 
                 entity.Property(c => c.Email)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.Address)
                     .HasMaxLength(300);
 
                 entity.Property(c => c.NicNumber)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CompanyName)
                     .HasMaxLength(150)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.BusinessRegistrationNumber)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.VatRegistrationNumber)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CustomerType)
                     .IsRequired()
                     .HasMaxLength(20)
                     .HasDefaultValue("Retail")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.IsDiscountEligible)
                     .HasDefaultValue(false);
@@ -2012,7 +2021,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("None")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CreditLimit)
                     .HasColumnType("decimal(18,2)");
@@ -2039,7 +2048,7 @@ namespace POS.Core.Data
                 // Keep until old loyalty/profile pages are replaced.
                 entity.Property(c => c.LoyaltyCardNumber)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.LoyaltyPointsBalance)
                     .HasColumnType("decimal(18,2)");
@@ -2085,12 +2094,12 @@ namespace POS.Core.Data
                 entity.Property(l => l.DocumentRef)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TransactionType)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.DebitAmount)
                     .HasColumnType("decimal(18,2)");
@@ -2111,7 +2120,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("Open")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ProcessedBy)
                     .HasMaxLength(100);
@@ -2149,17 +2158,17 @@ namespace POS.Core.Data
                 entity.Property(row => row.ReceiptNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
                 entity.Property(row => row.PaymentMethod)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
                 entity.Property(row => row.Amount).HasColumnType("decimal(18,2)");
-                entity.Property(row => row.ReferenceNo).HasMaxLength(100).UseCollation("NOCASE");
-                entity.Property(row => row.BankOrCardType).HasMaxLength(100).UseCollation("NOCASE");
+                entity.Property(row => row.ReferenceNo).HasMaxLength(100).UseCollation(CaseInsensitiveCollation);
+                entity.Property(row => row.BankOrCardType).HasMaxLength(100).UseCollation(CaseInsensitiveCollation);
                 entity.Property(row => row.DestinationAccount).HasMaxLength(100);
                 entity.Property(row => row.ProcessedBy).HasMaxLength(100);
-                entity.Property(row => row.TerminalNo).HasMaxLength(20).UseCollation("NOCASE");
+                entity.Property(row => row.TerminalNo).HasMaxLength(20).UseCollation(CaseInsensitiveCollation);
                 entity.Property(row => row.Remarks).HasMaxLength(255);
 
                 entity.HasOne(row => row.CustomerMaster)
@@ -2218,20 +2227,20 @@ namespace POS.Core.Data
                 entity.Property(s => s.SupplierCode)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.SupplierName)
                     .IsRequired()
                     .HasMaxLength(150)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CompanyName)
                     .HasMaxLength(150)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.ContactPerson)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.Phone1)
                     .IsRequired()
@@ -2242,14 +2251,14 @@ namespace POS.Core.Data
 
                 entity.Property(s => s.Email)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.Address)
                     .HasMaxLength(250);
 
                 entity.Property(s => s.VatNumber)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.DefaultCreditDays)
                     .HasDefaultValue(30);
@@ -2280,7 +2289,7 @@ namespace POS.Core.Data
             {
                 entity.Property(i => i.SupplierItemCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(i => i.LastCostPrice)
                     .HasColumnType("decimal(18,2)");
@@ -2322,7 +2331,7 @@ namespace POS.Core.Data
                 entity.Property(p => p.PoNumber)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.Terms)
                     .HasMaxLength(50);
@@ -2333,7 +2342,7 @@ namespace POS.Core.Data
                 entity.Property(p => p.Status)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.CreatedBy)
                     .HasMaxLength(50);
@@ -2381,7 +2390,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(p => p.Supplier)
                     .WithMany()
@@ -2412,7 +2421,7 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.SupplierItemCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.OrderQty)
                     .HasColumnType("decimal(18,3)");
@@ -2427,7 +2436,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(20)
                     .HasDefaultValue("Amount")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.LineDiscountValue)
                     .HasColumnType("decimal(18,2)");
@@ -2475,12 +2484,12 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.LineStatus)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(l => l.PoHeader)
                     .WithMany(h => h.PoLines)
@@ -2530,12 +2539,12 @@ namespace POS.Core.Data
                 entity.Property(a => a.AdjustmentNo)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.AdjustmentMode)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.AuthorizedBy)
                     .IsRequired()
@@ -2550,7 +2559,7 @@ namespace POS.Core.Data
                 entity.Property(a => a.Status)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.CreatedBy)
                     .HasMaxLength(50);
@@ -2602,7 +2611,7 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.ReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.LineRemarks)
                     .HasMaxLength(250);
@@ -2616,7 +2625,7 @@ namespace POS.Core.Data
                 entity.Property(l => l.LineStatus)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(l => l.StockAdjustmentHeader)
                     .WithMany(h => h.AdjustmentLines)
@@ -2660,12 +2669,12 @@ namespace POS.Core.Data
                 entity.Property(r => r.ReasonCode)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.ReasonName)
                     .IsRequired()
                     .HasMaxLength(150)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.Description)
                     .HasMaxLength(300);
@@ -2717,20 +2726,20 @@ namespace POS.Core.Data
                 entity.Property(r => r.RuleName)
                     .IsRequired()
                     .HasMaxLength(150)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.DiscountType)
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("Percent")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.DiscountValue)
                     .HasColumnType("decimal(18,2)");
 
                 entity.Property(r => r.ReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.ReasonName)
                     .HasMaxLength(150);
@@ -2739,7 +2748,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("All")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.CategoryName)
                     .HasMaxLength(100);
@@ -2752,16 +2761,16 @@ namespace POS.Core.Data
 
                 entity.Property(r => r.SkuCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.CustomerType)
                     .HasMaxLength(30)
                     .HasDefaultValue("All")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.IsActive)
                     .HasDefaultValue(true);
@@ -2855,14 +2864,14 @@ namespace POS.Core.Data
 
                 entity.Property(a => a.InvoiceNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.CashierName)
                     .HasMaxLength(100);
 
                 entity.Property(a => a.TerminalNo)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 // =====================================================
                 // DISCOUNT SNAPSHOT
@@ -2873,14 +2882,14 @@ namespace POS.Core.Data
 
                 entity.Property(a => a.ReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.ReasonName)
                     .HasMaxLength(150);
 
                 entity.Property(a => a.DiscountType)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.DiscountValue)
                     .HasColumnType("decimal(18,2)");
@@ -2916,18 +2925,18 @@ namespace POS.Core.Data
 
                 entity.Property(a => a.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.SkuCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.ItemDescription)
                     .HasMaxLength(200);
 
                 entity.Property(a => a.BatchNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.Uom)
                     .HasMaxLength(20);
@@ -3024,12 +3033,12 @@ namespace POS.Core.Data
                 entity.Property(s => s.InvoiceNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.TerminalNo)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CashierName)
                     .IsRequired()
@@ -3041,7 +3050,7 @@ namespace POS.Core.Data
 
                 entity.Property(s => s.CustomerCode)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CustomerName)
                     .HasMaxLength(150);
@@ -3054,15 +3063,15 @@ namespace POS.Core.Data
 
                 entity.Property(s => s.CustomerType)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CustomerNicOrBrNumber)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CustomerCreditStatus)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CustomerIsDiscountEligible)
                     .HasDefaultValue(false);
@@ -3086,11 +3095,11 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(20)
                     .HasDefaultValue("Receipt")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.TaxInvoiceNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CheckoutToken);
 
@@ -3101,25 +3110,25 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.SupplierVatNoSnapshot)
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CustomerTinSnapshot)
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CustomerVatNoSnapshot)
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(s => s.CustomerAddressSnapshot)
                     .IsRequired()
@@ -3148,7 +3157,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 // =====================================================
                 // TOTALS / PAYMENT SUMMARY
@@ -3178,7 +3187,7 @@ namespace POS.Core.Data
                 entity.Property(s => s.Status)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne<ShiftSession>()
                     .WithMany()
@@ -3254,28 +3263,28 @@ namespace POS.Core.Data
                 entity.Property(c => c.ReferenceNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.TerminalNo)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CashierName)
                     .IsRequired()
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CustomerCodeSnapshot)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CustomerNameSnapshot)
                     .HasMaxLength(150);
 
                 entity.Property(c => c.CustomerTypeSnapshot)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CustomerSnapshotJson)
                     .IsRequired()
@@ -3296,7 +3305,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(20)
                     .HasDefaultValue(CashierCartStatusCodes.Active)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CreatedBy).HasMaxLength(100);
                 entity.Property(c => c.UpdatedBy).HasMaxLength(100);
@@ -3305,7 +3314,7 @@ namespace POS.Core.Data
                 entity.Property(c => c.CancelledBy).HasMaxLength(100);
                 entity.Property(c => c.CancellationReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
                 entity.Property(c => c.CancellationReasonText)
                     .HasMaxLength(250);
 
@@ -3351,7 +3360,7 @@ namespace POS.Core.Data
                 entity.Property(l => l.LineType)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
                 entity.Property(l => l.Description)
                     .IsRequired()
                     .HasMaxLength(250);
@@ -3379,17 +3388,17 @@ namespace POS.Core.Data
                 entity.Property(a => a.DocumentType)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.DocumentNumber)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.EventType)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.PerformedBy)
                     .IsRequired()
@@ -3398,7 +3407,7 @@ namespace POS.Core.Data
                 entity.Property(a => a.TerminalNo)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(a => a.PrinterName)
                     .IsRequired()
@@ -3428,11 +3437,11 @@ namespace POS.Core.Data
             {
                 entity.Property(l => l.SkuCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ItemDescription)
                     .IsRequired()
@@ -3441,22 +3450,22 @@ namespace POS.Core.Data
                 entity.Property(l => l.BatchNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.Uom)
                     .HasMaxLength(20);
 
                 entity.Property(l => l.ItemTypeSnapshot)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxCategoryCodeSnapshot)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxCodeSnapshot)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.TaxNameSnapshot)
                     .HasMaxLength(100);
@@ -3477,7 +3486,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.Quantity)
                     .HasColumnType("decimal(18,3)");
@@ -3507,7 +3516,7 @@ namespace POS.Core.Data
                 entity.Property(l => l.DiscountMode)
                     .HasMaxLength(30)
                     .HasDefaultValue("None")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.IsManualDiscount)
                     .HasDefaultValue(false);
@@ -3584,11 +3593,11 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.GiftVoucherNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.GiftVoucherBarcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasIndex(l => l.IsGiftVoucherSale);
 
@@ -3610,11 +3619,11 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.FreeIssueType)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.FreeReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.FreeReasonText)
                     .HasMaxLength(150);
@@ -3627,7 +3636,7 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.FreeApprovedRole)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.FreeIssueRuleSnapshotJson)
                     .HasDefaultValue(string.Empty);
@@ -3636,7 +3645,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("LegacyUnknown")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.OriginalUnitPrice)
                     .HasColumnType("decimal(18,2)");
@@ -3655,15 +3664,15 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.SupplierPromotionReference)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.SupplierClaimStatus)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.SupplierClaimReferenceNo)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.SupplierClaimValue)
                     .HasColumnType("decimal(18,2)");
@@ -3692,7 +3701,7 @@ namespace POS.Core.Data
 
                 entity.Property(l => l.DiscountReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.DiscountReasonName)
                     .HasMaxLength(150);
@@ -3740,7 +3749,7 @@ namespace POS.Core.Data
                 entity.Property(p => p.PaymentType)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.Amount)
                     .HasColumnType("decimal(18,2)");
@@ -3753,22 +3762,22 @@ namespace POS.Core.Data
 
                 entity.Property(p => p.CardLastDigits)
                     .HasMaxLength(6)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.ReferenceNo)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.BankOrCardType)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.EnteredBy)
                     .HasMaxLength(100);
 
                 entity.Property(p => p.TerminalNo)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.HasOne(p => p.SalesHeader)
                     .WithMany(h => h.SalesPayments)
@@ -3788,11 +3797,11 @@ namespace POS.Core.Data
                 // Gift voucher payment fields.
                 entity.Property(p => p.GiftVoucherNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.GiftVoucherBarcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(p => p.GiftVoucherAmount)
                     .HasColumnType("decimal(18,2)");
@@ -3818,12 +3827,12 @@ namespace POS.Core.Data
                 entity.Property(v => v.VoucherNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.Barcode)
                     .IsRequired()
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.VoucherAmount)
                     .HasColumnType("decimal(18,2)");
@@ -3832,11 +3841,11 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("Created")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.BatchNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.Description)
                     .HasMaxLength(100);
@@ -3855,29 +3864,29 @@ namespace POS.Core.Data
 
                 entity.Property(v => v.StatusBeforeBlock)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.SoldInvoiceNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.SoldCashierName)
                     .HasMaxLength(100);
 
                 entity.Property(v => v.SoldTerminalNo)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.RedeemedInvoiceNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.RedeemedCashierName)
                     .HasMaxLength(100);
 
                 entity.Property(v => v.RedeemedTerminalNo)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(v => v.RedeemedAmount)
                     .HasColumnType("decimal(18,2)");
@@ -3952,15 +3961,15 @@ namespace POS.Core.Data
                 entity.Property(t => t.TransactionType)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.VoucherNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.VoucherAmount)
                     .HasColumnType("decimal(18,2)");
@@ -3976,26 +3985,26 @@ namespace POS.Core.Data
 
                 entity.Property(t => t.StatusAfter)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.ReferenceInvoiceNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.ReferenceReturnNo)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.ReferenceKey)
                     .HasMaxLength(120)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.CashierName)
                     .HasMaxLength(100);
 
                 entity.Property(t => t.TerminalNo)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.CreatedBy)
                     .HasMaxLength(100);
@@ -4063,11 +4072,11 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("ShopCost")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.ReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.ReasonName)
                     .HasMaxLength(150);
@@ -4077,12 +4086,12 @@ namespace POS.Core.Data
 
                 entity.Property(r => r.SupplierPromotionReference)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.ClaimValueMode)
                     .HasMaxLength(30)
                     .HasDefaultValue("Cost")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.FixedClaimValue)
                     .HasColumnType("decimal(18,2)");
@@ -4091,7 +4100,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("ItemVariant")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.CategoryName)
                     .HasMaxLength(100);
@@ -4104,11 +4113,11 @@ namespace POS.Core.Data
 
                 entity.Property(r => r.SkuCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.MaxQtyPerInvoice)
                     .HasColumnType("decimal(18,3)");
@@ -4173,7 +4182,7 @@ namespace POS.Core.Data
                 entity.Property(r => r.ReasonCode)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.ReasonName)
                     .IsRequired()
@@ -4183,7 +4192,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("ShopCost")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(r => r.Description)
                     .HasMaxLength(500);
@@ -4221,21 +4230,21 @@ namespace POS.Core.Data
                 entity.Property(c => c.InvoiceNo)
                     .IsRequired()
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CashierName)
                     .HasMaxLength(100);
 
                 entity.Property(c => c.TerminalNo)
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.FreeIssueRuleName)
                     .HasMaxLength(150);
 
                 entity.Property(c => c.FreeReasonCode)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.FreeReasonText)
                     .HasMaxLength(150);
@@ -4244,22 +4253,22 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("SupplierClaim")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.SupplierName)
                     .HasMaxLength(150);
 
                 entity.Property(c => c.SupplierPromotionReference)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.Barcode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.SkuCode)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.ItemDescription)
                     .IsRequired()
@@ -4267,12 +4276,12 @@ namespace POS.Core.Data
 
                 entity.Property(c => c.BatchNo)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.Uom)
                     .HasMaxLength(30)
                     .HasDefaultValue("PCS")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.Quantity)
                     .HasColumnType("decimal(18,3)");
@@ -4296,11 +4305,11 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("Pending")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.ClaimReferenceNo)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.SubmittedBy)
                     .HasMaxLength(100);
@@ -4310,11 +4319,11 @@ namespace POS.Core.Data
 
                 entity.Property(c => c.SettlementType)
                     .HasMaxLength(50)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.SettlementReferenceNo)
                     .HasMaxLength(100)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.RejectedBy)
                     .HasMaxLength(100);
@@ -4339,7 +4348,7 @@ namespace POS.Core.Data
 
                 entity.Property(c => c.FreeApprovedRole)
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.FreeIssueAppliedBy)
                     .HasMaxLength(100);
@@ -4351,7 +4360,7 @@ namespace POS.Core.Data
                     .IsRequired()
                     .HasMaxLength(30)
                     .HasDefaultValue("LegacyUnknown")
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(c => c.CreatedBy)
                     .HasMaxLength(100);
@@ -4742,11 +4751,11 @@ namespace POS.Core.Data
                 entity.Property(e => e.LastVerifiedAt);
 
                 entity.Property(e => e.RawLicenseJson)
-                    .HasColumnType("TEXT")
+                    .HasColumnType(LargeTextColumnType)
                     .HasDefaultValue(string.Empty);
 
                 entity.Property(e => e.Signature)
-                    .HasColumnType("TEXT")
+                    .HasColumnType(LargeTextColumnType)
                     .HasDefaultValue(string.Empty);
 
                 entity.Property(e => e.IsActive)
@@ -4904,7 +4913,7 @@ namespace POS.Core.Data
                 entity.Property(t => t.CategoryCode)
                     .IsRequired()
                     .HasMaxLength(30)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.CategoryName)
                     .IsRequired()
@@ -4948,7 +4957,7 @@ namespace POS.Core.Data
                 entity.Property(t => t.TaxCode)
                     .IsRequired()
                     .HasMaxLength(20)
-                    .UseCollation("NOCASE");
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(t => t.TaxName)
                     .IsRequired()

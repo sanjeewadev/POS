@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 
 namespace POS.Core.Repositories
@@ -149,9 +150,11 @@ namespace POS.Core.Repositories
                 .Select(c => c.Id)
                 .SingleAsync();
 
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
             var standardByCode = await context.TaxRates
                 .FirstOrDefaultAsync(t =>
-                    EF.Functions.Collate(t.TaxCode, "NOCASE") == "VAT-STD");
+                    EF.Functions.Collate(t.TaxCode, caseInsensitiveCollation) == "VAT-STD");
 
             bool anyStandardRate = await context.TaxRates
                 .AnyAsync(t => t.TaxCategoryId == standardCategoryId);
@@ -309,12 +312,14 @@ namespace POS.Core.Repositories
                 return null;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return await context.TaxRates
                 .AsNoTracking()
                 .Include(t => t.TaxCategory)
                 .FirstOrDefaultAsync(t =>
-                    EF.Functions.Collate(t.TaxCode, "NOCASE") == code);
+                    EF.Functions.Collate(t.TaxCode, caseInsensitiveCollation) == code);
         }
 
         public async Task<TaxRate?> GetEffectiveRateAsync(
@@ -328,11 +333,13 @@ namespace POS.Core.Repositories
                 return null;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             var category = await context.TaxCategories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c =>
-                    EF.Functions.Collate(c.CategoryCode, "NOCASE") == code &&
+                    EF.Functions.Collate(c.CategoryCode, caseInsensitiveCollation) == code &&
                     c.IsActive);
 
             if (category == null || !category.IsRateBased)
@@ -375,8 +382,10 @@ namespace POS.Core.Repositories
                 taxRate,
                 currentId: 0);
 
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
             bool codeExists = await context.TaxRates.AnyAsync(t =>
-                EF.Functions.Collate(t.TaxCode, "NOCASE") == taxRate.TaxCode);
+                EF.Functions.Collate(t.TaxCode, caseInsensitiveCollation) == taxRate.TaxCode);
 
             if (codeExists)
                 throw new InvalidOperationException($"Tax code '{taxRate.TaxCode}' already exists.");
@@ -600,9 +609,11 @@ namespace POS.Core.Repositories
             TaxCategorySeed seed,
             DateTime now)
         {
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
             var existing = await context.TaxCategories
                 .FirstOrDefaultAsync(c =>
-                    EF.Functions.Collate(c.CategoryCode, "NOCASE") == seed.Code);
+                    EF.Functions.Collate(c.CategoryCode, caseInsensitiveCollation) == seed.Code);
 
             if (existing == null)
             {
@@ -719,44 +730,46 @@ namespace POS.Core.Repositories
             TaxRate taxRate)
         {
             string code = NormalizeCode(taxRate.TaxCode);
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             var result = new TaxRateLinkedDataSummary
             {
                 LegacyItemCount = await context.ItemParents
                     .AsNoTracking()
                     .CountAsync(i =>
-                        EF.Functions.Collate(i.TaxCode ?? string.Empty, "NOCASE") == code),
+                        EF.Functions.Collate(i.TaxCode ?? string.Empty, caseInsensitiveCollation) == code),
 
                 PurchaseOrderLineCount = await context.PoLines
                     .AsNoTracking()
                     .CountAsync(l =>
                         l.TaxRateId == taxRate.Id ||
-                        EF.Functions.Collate(l.TaxCode ?? string.Empty, "NOCASE") == code ||
-                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, "NOCASE") == code),
+                        EF.Functions.Collate(l.TaxCode ?? string.Empty, caseInsensitiveCollation) == code ||
+                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, caseInsensitiveCollation) == code),
 
                 GrnLineCount = await context.GrnLines
                     .AsNoTracking()
                     .CountAsync(l =>
                         l.TaxRateId == taxRate.Id ||
-                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, "NOCASE") == code),
+                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, caseInsensitiveCollation) == code),
 
                 SalesLineCount = await context.SalesLines
                     .AsNoTracking()
                     .CountAsync(l =>
                         l.TaxRateId == taxRate.Id ||
-                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, "NOCASE") == code),
+                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, caseInsensitiveCollation) == code),
 
                 CustomerReturnLineCount = await context.CustomerReturnLines
                     .AsNoTracking()
                     .CountAsync(l =>
                         l.TaxRateId == taxRate.Id ||
-                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, "NOCASE") == code),
+                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, caseInsensitiveCollation) == code),
 
                 SupplierReturnLineCount = await context.SupplierReturnLines
                     .AsNoTracking()
                     .CountAsync(l =>
                         l.TaxRateId == taxRate.Id ||
-                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, "NOCASE") == code)
+                        EF.Functions.Collate(l.TaxCodeSnapshot ?? string.Empty, caseInsensitiveCollation) == code)
             };
 
             return result;

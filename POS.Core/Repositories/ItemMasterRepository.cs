@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Services.Tax;
@@ -436,9 +437,11 @@ namespace POS.Core.Repositories
                 return false;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.ItemParents.AnyAsync(p =>
-                EF.Functions.Collate(p.ItemCode, "NOCASE") == normalizedCode &&
+                EF.Functions.Collate(p.ItemCode, caseInsensitiveCollation) == normalizedCode &&
                 p.Id != currentParentId);
         }
 
@@ -450,9 +453,11 @@ namespace POS.Core.Repositories
                 return false;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.ItemVariants.AnyAsync(v =>
-                EF.Functions.Collate(v.SkuCode, "NOCASE") == normalizedSku &&
+                EF.Functions.Collate(v.SkuCode, caseInsensitiveCollation) == normalizedSku &&
                 v.Id != currentVariantId);
         }
 
@@ -464,9 +469,11 @@ namespace POS.Core.Repositories
                 return true;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             return !await context.ItemVariants.AnyAsync(v =>
-                EF.Functions.Collate(v.Barcode ?? string.Empty, "NOCASE") == normalizedBarcode &&
+                EF.Functions.Collate(v.Barcode ?? string.Empty, caseInsensitiveCollation) == normalizedBarcode &&
                 v.Id != currentVariantId);
         }
 
@@ -481,16 +488,18 @@ namespace POS.Core.Repositories
                 return true;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             bool itemBarcodeExists = await context.ItemVariants.AnyAsync(v =>
-                EF.Functions.Collate(v.Barcode ?? string.Empty, "NOCASE") == normalizedBarcode &&
+                EF.Functions.Collate(v.Barcode ?? string.Empty, caseInsensitiveCollation) == normalizedBarcode &&
                 v.Id != currentVariantId);
 
             if (itemBarcodeExists)
                 return false;
 
             bool batchBarcodeExists = await context.ItemBatches.AnyAsync(b =>
-                EF.Functions.Collate(b.InternalBatchBarcode ?? string.Empty, "NOCASE") == normalizedBarcode &&
+                EF.Functions.Collate(b.InternalBatchBarcode ?? string.Empty, caseInsensitiveCollation) == normalizedBarcode &&
                 b.Id != currentBatchId);
 
             return !batchBarcodeExists;
@@ -1122,9 +1131,11 @@ namespace POS.Core.Repositories
             int currentVariantId)
         {
             string sku = NormalizeCode(variant.SkuCode);
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             bool skuExists = await context.ItemVariants.AnyAsync(v =>
-                EF.Functions.Collate(v.SkuCode, "NOCASE") == sku &&
+                EF.Functions.Collate(v.SkuCode, caseInsensitiveCollation) == sku &&
                 v.Id != currentVariantId);
 
             if (skuExists)
@@ -1138,7 +1149,7 @@ namespace POS.Core.Repositories
             if (!string.IsNullOrWhiteSpace(barcode))
             {
                 bool barcodeExistsOnItem = await context.ItemVariants.AnyAsync(v =>
-                    EF.Functions.Collate(v.Barcode ?? string.Empty, "NOCASE") == barcode &&
+                    EF.Functions.Collate(v.Barcode ?? string.Empty, caseInsensitiveCollation) == barcode &&
                     v.Id != currentVariantId);
 
                 if (barcodeExistsOnItem)
@@ -1148,7 +1159,7 @@ namespace POS.Core.Repositories
                 }
 
                 bool barcodeExistsOnBatch = await context.ItemBatches.AnyAsync(b =>
-                    EF.Functions.Collate(b.InternalBatchBarcode ?? string.Empty, "NOCASE") == barcode);
+                    EF.Functions.Collate(b.InternalBatchBarcode ?? string.Empty, caseInsensitiveCollation) == barcode);
 
                 if (barcodeExistsOnBatch)
                 {

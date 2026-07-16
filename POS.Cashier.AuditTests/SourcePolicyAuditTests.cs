@@ -256,13 +256,47 @@ internal static class SourcePolicyAuditTests
     public static Task StartupEnforcesLicencesBeforeLoginAsync()
     {
         string source = Read("POS.Cashier.UI", "App.xaml.cs");
-        int initialize = source.IndexOf("InitializeTerminalAndLicenseAsync", StringComparison.Ordinal);
-        int login = source.IndexOf("ShowLoginWindowAsync", StringComparison.Ordinal);
-        AuditAssert.True(initialize >= 0 && login >= 0 && initialize < login,
-            "Cashier startup does not clearly initialize terminal/licence enforcement before login.");
+        int database = source.IndexOf(
+            "await InitializeDatabaseAsync()",
+            StringComparison.Ordinal);
+        int initialize = source.IndexOf(
+            "await InitializeTerminalAndLicenseAsync()",
+            StringComparison.Ordinal);
+        int login = source.IndexOf(
+            "await ShowLoginWindowAsync()",
+            StringComparison.Ordinal);
+
+        AuditAssert.True(
+            database >= 0 &&
+            initialize >= 0 &&
+            login >= 0 &&
+            database < initialize &&
+            initialize < login,
+            "Cashier startup must initialize the database, enforce the terminal licence, and only then show login.");
         AuditAssert.Contains(source, "CanRunCashier", "Cashier run licence gate");
         AuditAssert.Contains(source, "ExpiringSoon", "licence expiry warning path");
-        AuditAssert.Contains(source, "Database.MigrateAsync", "startup migration path");
+        AuditAssert.Contains(
+            source,
+            "InitializeCashierAsync",
+            "delegated Cashier database initialization");
+
+        string databaseInitialization = Read(
+            "POS.Core",
+            "Data",
+            "Configuration",
+            "DatabaseInitializationService.cs");
+        AuditAssert.Contains(
+            databaseInitialization,
+            "_settings.IsStandaloneSqlite",
+            "standalone database initialization branch");
+        AuditAssert.Contains(
+            databaseInitialization,
+            "Database.MigrateAsync",
+            "standalone startup migration path");
+        AuditAssert.Contains(
+            databaseInitialization,
+            "Database.CanConnectAsync",
+            "central database connectivity validation");
         return Task.CompletedTask;
     }
 

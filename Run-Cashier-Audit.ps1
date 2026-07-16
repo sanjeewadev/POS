@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$RepositoryPath = (Get-Location).Path,
     [string]$ExpectedBranch = "sanjeewadev",
@@ -27,7 +27,7 @@ $allowedChangedFiles = @(
     "POS.Cashier.UI/Views/SalesView.xaml.cs",
     "POS.Core/Repositories/SalesRepository.cs",
     "POS.Core/Repositories/TillRepository.cs",
-    "POS.Core.CalculationTests/Program.cs"
+    "POS.Core.CalculationTests/Program.cs",
     "POS.Cashier.UI/App.xaml.cs",
     "POS.Cashier.UI/Dialogs/StockInquiryDialog.xaml",
     "POS.Cashier.UI/Dialogs/StockInquiryDialog.xaml.cs",
@@ -44,6 +44,26 @@ $allowedChangedFiles = @(
     "POS.Cashier.UI/Resources/PaymentLogos/visa.png",
     "POS.Cashier.UI/Resources/PaymentLogos/amex.png",
     "POS.Cashier.AuditTests/LockRecoverySourcePolicyAuditTests.cs",
+    "POS.Cashier.AuditTests/DatabaseFoundationSourcePolicyAuditTests.cs",
+    "POS.Core/POS.Core.csproj",
+    "POS.Core/Data/AppDbContext.cs",
+    "POS.Core/Data/Configuration/DatabaseProviderKind.cs",
+    "POS.Core/Data/Configuration/DatabaseConfigurationException.cs",
+    "POS.Core/Data/Configuration/DatabaseProviderModelConventions.cs",
+    "POS.Core/Data/Configuration/DatabaseConnectionSettings.cs",
+    "POS.Core/Data/Configuration/DatabaseConnectionSettingsStore.cs",
+    "POS.Core/Data/Configuration/PosDatabaseOptionsConfigurator.cs",
+    "POS.Core/Data/Configuration/DatabaseInitializationService.cs",
+    "POS.BackOffice.UI/App.xaml.cs",
+    "POS.Core.CalculationTests/DatabaseProviderFoundationTests.cs",
+    "POS.Core/Repositories/AttributeRepository.cs",
+    "POS.Core/Repositories/CustomerReturnRepository.cs",
+    "POS.Core/Repositories/ItemMasterRepository.cs",
+    "POS.Core/Repositories/SupplierRepository.cs",
+    "POS.Core/Repositories/TaxRateRepository.cs",
+    "POS.Core/Repositories/UnitOfMeasureRepository.cs",
+    "POS.Core/Services/Backup/BackupService.cs",
+    "docs/Phase11A_Dual_Database_Provider_Foundation.md",
     "POS.Core/Services/AuthService.cs",
     "POS.Cashier.UI/Dialogs/LockScreenView.xaml",
     "POS.Cashier.UI/Dialogs/LockScreenView.xaml.cs",
@@ -98,8 +118,19 @@ function Invoke-LoggedCommand {
     Write-Host "`n=== $Name ===" -ForegroundColor Cyan
     Write-Host "`$ $commandLine"
 
-    $output = & $FilePath @Arguments 2>&1
-    $exitCode = $LASTEXITCODE
+    # Windows PowerShell converts native stderr records into PowerShell errors.
+    # Keep capturing stderr, but temporarily prevent a failed native command from
+    # terminating this wrapper before its real output and exit code are logged.
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $output = & $FilePath @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
     foreach ($line in @($output)) {
         Write-Host $line
         Add-Content -LiteralPath $LogPath -Value "$line" -Encoding UTF8
@@ -292,7 +323,7 @@ Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz')
 - Approved baseline ancestor: $ExpectedBaseline
 - Live database protected path: $liveDbPath
 - Temporary database root: $tempAuditRoot
-- Live database opened by audit tests: **No â€” tests receive explicit temporary SQLite paths**
+- Live database opened by audit tests: **No - tests receive explicit temporary SQLite paths**
 
 ## Command results
 
@@ -302,7 +333,7 @@ $($resultRows -join "`r`n")
 
 ## Test counts
 
-- Existing regression PASS lines: **$regressionPass** (expected registration count: 230)
+- Existing regression PASS lines: **$regressionPass**
 - Cashier audit PASS: **$auditPass**
 - Cashier audit FAIL: **$auditFail**
 - Cashier audit SKIP: **$auditSkip**

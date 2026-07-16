@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models.Backup;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
@@ -42,6 +43,9 @@ namespace POS.Core.Services.Backup
         private readonly IDbContextFactory<AppDbContext>
             _contextFactory;
 
+        private readonly DatabaseConnectionSettings
+            _databaseSettings;
+
         private readonly StoreSettingsRepository
             _storeSettingsRepository;
 
@@ -62,9 +66,12 @@ namespace POS.Core.Services.Backup
             IDbContextFactory<AppDbContext> contextFactory,
             StoreSettingsRepository storeSettingsRepository,
             TerminalSettingsRepository terminalSettingsRepository,
-            MachineFingerprintService machineFingerprintService)
+            MachineFingerprintService machineFingerprintService,
+            DatabaseConnectionSettings databaseSettings)
         {
             _contextFactory = contextFactory;
+            _databaseSettings = databaseSettings ??
+                throw new ArgumentNullException(nameof(databaseSettings));
             _storeSettingsRepository =
                 storeSettingsRepository;
             _terminalSettingsRepository =
@@ -76,6 +83,8 @@ namespace POS.Core.Services.Backup
         public async Task<BackupMetadata>
             GetCurrentDatabaseInfoAsync()
         {
+            EnsureStandaloneSqliteBackupMode();
+
             string databasePath =
                 DatabasePathProvider.DatabaseFilePath;
 
@@ -141,6 +150,8 @@ namespace POS.Core.Services.Backup
             string destinationFilePath,
             string createdBy)
         {
+            EnsureStandaloneSqliteBackupMode();
+
             string tempFolder = CreateTempFolder();
             string temporaryPackagePath = string.Empty;
 
@@ -308,6 +319,8 @@ namespace POS.Core.Services.Backup
         public async Task<BackupResult> VerifyBackupAsync(
             string backupFilePath)
         {
+            EnsureStandaloneSqliteBackupMode();
+
             string tempFolder = string.Empty;
 
             try
@@ -368,6 +381,8 @@ namespace POS.Core.Services.Backup
             string backupFilePath,
             string restoredBy)
         {
+            EnsureStandaloneSqliteBackupMode();
+
             string packageTempFolder = string.Empty;
             string stagedDatabasePath = string.Empty;
             string safetyCopyPath = string.Empty;
@@ -558,6 +573,16 @@ namespace POS.Core.Services.Backup
                     TryDeleteDirectory(
                         packageTempFolder);
                 }
+            }
+        }
+
+        private void EnsureStandaloneSqliteBackupMode()
+        {
+            if (_databaseSettings.IsCentralSqlServer)
+            {
+                throw new InvalidOperationException(
+                    "Local SQLite backup and restore are unavailable while this installation uses the central SQL Server database. " +
+                    "Use the approved server backup utility on the BackOffice server PC.");
             }
         }
 

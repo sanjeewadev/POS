@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Services.Returns;
@@ -38,13 +39,15 @@ namespace POS.Core.Repositories
 
             await using AppDbContext context =
                 await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
             SalesHeader? sale = await context.SalesHeaders
                 .Include(header => header.SalesLines)
                 .Include(header => header.SalesPayments)
                 .AsNoTracking()
                 .Where(header =>
-                    EF.Functions.Collate(header.InvoiceNo, "NOCASE") == safeInvoiceNo &&
+                    EF.Functions.Collate(header.InvoiceNo, caseInsensitiveCollation) == safeInvoiceNo &&
                     header.Status == "Completed" &&
                     !header.IsVoided)
                 .OrderByDescending(header => header.Id)
