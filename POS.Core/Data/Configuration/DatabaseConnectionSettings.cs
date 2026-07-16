@@ -7,8 +7,8 @@ public sealed class DatabaseConnectionSettings
 {
     public const int CurrentFormatVersion = 1;
     public const int DefaultSqlServerPort = 1433;
-    public const string DefaultDatabaseName = "EasyRobinPOS";
-    public const string DefaultApplicationLogin = "EasyRobinPOS_App";
+    public const string DefaultDatabaseName = "POSNetwork";
+    public const string DefaultApplicationLogin = "POS_App";
 
     public int FormatVersion { get; init; } = CurrentFormatVersion;
     public DatabaseProviderKind Provider { get; init; } = DatabaseProviderKind.Sqlite;
@@ -123,7 +123,7 @@ public sealed class DatabaseConnectionSettings
             ConnectRetryInterval = 1,
             MultipleActiveResultSets = true,
             Pooling = true,
-            ApplicationName = "EasyRobin POS",
+            ApplicationName = "Advanced POS",
             WorkstationID = Environment.MachineName
         };
 

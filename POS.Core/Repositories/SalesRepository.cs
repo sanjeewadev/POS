@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
@@ -49,10 +50,17 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Gift voucher cannot be used to buy another gift voucher.");
 
             await using var context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {
+                if (header.CheckoutToken.HasValue && header.CheckoutToken.Value != Guid.Empty)
+                {
+                    await SqlServerTransactionLock.AcquireAsync(
+                        context,
+                        $"POS:Checkout:{header.CheckoutToken.Value:N}");
+                }
+
                 DateTime now = DateTime.Now;
                 CashierCartSession? cartSession = null;
 
@@ -373,24 +381,75 @@ namespace POS.Core.Repositories
                     context,
                     header.Id);
             }
-            catch (DbUpdateException) when (header.CheckoutToken.HasValue && header.CheckoutToken.Value != Guid.Empty)
+            catch (Exception exception)
+                when (header.CheckoutToken.HasValue && header.CheckoutToken.Value != Guid.Empty)
             {
-                await transaction.RollbackAsync();
+                await RollbackQuietlyAsync(transaction);
 
-                await using AppDbContext retryContext = await _contextFactory.CreateDbContextAsync();
-                SalesHeader? existingSale = await retryContext.SalesHeaders
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.CheckoutToken == header.CheckoutToken.Value);
+                SalesHeader? recoveredSale =
+                    await TryLoadSavedReceiptByCheckoutTokenAsync(
+                        header.CheckoutToken.Value);
 
-                if (existingSale != null)
-                    return await LoadSavedReceiptAsync(retryContext, existingSale.Id);
+                if (recoveredSale != null)
+                    return recoveredSale;
 
+                ExceptionDispatchInfo.Capture(exception).Throw();
                 throw;
             }
             catch
             {
-                await transaction.RollbackAsync();
+                await RollbackQuietlyAsync(transaction);
                 throw;
+            }
+        }
+
+        private async Task<SalesHeader?> TryLoadSavedReceiptByCheckoutTokenAsync(
+            Guid checkoutToken)
+        {
+            const int MaxAttempts = 8;
+
+            for (int attempt = 1; attempt <= MaxAttempts; attempt++)
+            {
+                try
+                {
+                    await using AppDbContext retryContext =
+                        await _contextFactory.CreateDbContextAsync();
+
+                    SalesHeader? existingSale = await retryContext.SalesHeaders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(
+                            sale => sale.CheckoutToken == checkoutToken);
+
+                    if (existingSale != null)
+                    {
+                        return await LoadSavedReceiptAsync(
+                            retryContext,
+                            existingSale.Id);
+                    }
+                }
+                catch
+                {
+                    // Preserve the original checkout exception. A later attempt may
+                    // succeed after the winning transaction finishes committing.
+                }
+
+                if (attempt < MaxAttempts)
+                    await Task.Delay(attempt * 100);
+            }
+
+            return null;
+        }
+
+        private static async Task RollbackQuietlyAsync(
+            Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction)
+        {
+            try
+            {
+                await transaction.RollbackAsync();
+            }
+            catch
+            {
+                // Preserve the operation's original exception.
             }
         }
 

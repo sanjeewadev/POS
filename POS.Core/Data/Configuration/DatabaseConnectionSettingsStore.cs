@@ -15,10 +15,11 @@ public sealed class DatabaseConnectionSettingsStore
 
     private readonly string _settingsPath;
 
+    public const string SettingsPathEnvironmentVariable =
+        "POS_DATABASE_SETTINGS_PATH";
+
     public DatabaseConnectionSettingsStore()
-        : this(Path.Combine(
-            DatabasePathProvider.DatabaseFolderPath,
-            SettingsFileName))
+        : this(ResolveDefaultSettingsPath())
     {
     }
 
@@ -151,4 +152,17 @@ public sealed class DatabaseConnectionSettingsStore
 
     public void ResetToStandaloneSqlite() =>
         Save(DatabaseConnectionSettings.CreateStandaloneSqlite());
+
+    private static string ResolveDefaultSettingsPath()
+    {
+        string? overridePath = Environment.GetEnvironmentVariable(
+            SettingsPathEnvironmentVariable);
+
+        if (!string.IsNullOrWhiteSpace(overridePath))
+            return Path.GetFullPath(overridePath.Trim());
+
+        return Path.Combine(
+            DatabasePathProvider.DatabaseFolderPath,
+            SettingsFileName);
+    }
 }

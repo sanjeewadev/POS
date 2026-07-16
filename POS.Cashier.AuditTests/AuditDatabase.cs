@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
@@ -15,9 +16,65 @@ internal sealed class AuditDbContextFactory : IDbContextFactory<AppDbContext>, I
 {
     private readonly DbContextOptions<AppDbContext> _options;
     private readonly string _databasePath;
+    private readonly string? _sqlServerAdminConnectionString;
+    private readonly string? _sqlServerDatabaseConnectionString;
+    private readonly string? _sqlServerDatabaseName;
 
     public AuditDbContextFactory(bool migrate = false, string? existingDatabasePath = null)
     {
+        string? sqlServerInstance = Environment.GetEnvironmentVariable("POS_AUDIT_SQLSERVER_INSTANCE");
+        bool useSqlServer = !migrate &&
+            existingDatabasePath is null &&
+            !string.IsNullOrWhiteSpace(sqlServerInstance);
+
+        if (useSqlServer)
+        {
+            string instance = sqlServerInstance!.Trim();
+            _sqlServerDatabaseName = $"POSAudit_Rehearsal_{Guid.NewGuid():N}";
+            _databasePath = $"sqlserver://{instance}/{_sqlServerDatabaseName}";
+
+            var adminBuilder = new SqlConnectionStringBuilder
+            {
+                DataSource = instance,
+                InitialCatalog = "master",
+                IntegratedSecurity = true,
+                Encrypt = SqlConnectionEncryptOption.Mandatory,
+                TrustServerCertificate = true,
+                ConnectTimeout = 15,
+                ApplicationName = "Advanced POS SQL Server Audit",
+                Pooling = true
+            };
+
+            var databaseBuilder = new SqlConnectionStringBuilder(adminBuilder.ConnectionString)
+            {
+                InitialCatalog = _sqlServerDatabaseName,
+                MultipleActiveResultSets = true
+            };
+
+            _sqlServerAdminConnectionString = adminBuilder.ConnectionString;
+            _sqlServerDatabaseConnectionString = databaseBuilder.ConnectionString;
+
+            CreateSqlServerDatabase();
+
+            _options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlServer(_sqlServerDatabaseConnectionString)
+                .EnableDetailedErrors()
+                .Options;
+
+            try
+            {
+                using AppDbContext context = CreateDbContext();
+                context.Database.EnsureCreated();
+            }
+            catch
+            {
+                DropSqlServerDatabase();
+                throw;
+            }
+
+            return;
+        }
+
         string root = AuditPaths.GetAuditTempRoot();
         Directory.CreateDirectory(root);
 
@@ -38,15 +95,15 @@ internal sealed class AuditDbContextFactory : IDbContextFactory<AppDbContext>, I
             .EnableDetailedErrors()
             .Options;
 
-        using AppDbContext context = CreateDbContext();
+        using AppDbContext sqliteContext = CreateDbContext();
         if (migrate)
-            context.Database.Migrate();
+            sqliteContext.Database.Migrate();
         else
-            context.Database.EnsureCreated();
+            sqliteContext.Database.EnsureCreated();
 
-        context.Database.ExecuteSqlRaw("PRAGMA busy_timeout=5000;");
-        context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
-        context.Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
+        sqliteContext.Database.ExecuteSqlRaw("PRAGMA busy_timeout=5000;");
+        sqliteContext.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+        sqliteContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys=ON;");
     }
 
     public string DatabasePath => _databasePath;
@@ -58,10 +115,57 @@ internal sealed class AuditDbContextFactory : IDbContextFactory<AppDbContext>, I
 
     public void Dispose()
     {
+        if (_sqlServerDatabaseName is not null)
+        {
+            DropSqlServerDatabase();
+            return;
+        }
+
         SqliteConnection.ClearAllPools();
         DeleteIfPresent(_databasePath);
         DeleteIfPresent(_databasePath + "-shm");
         DeleteIfPresent(_databasePath + "-wal");
+    }
+
+    private void CreateSqlServerDatabase()
+    {
+        if (_sqlServerAdminConnectionString is null || _sqlServerDatabaseName is null)
+            throw new InvalidOperationException("SQL Server audit database configuration is incomplete.");
+
+        using var connection = new SqlConnection(_sqlServerAdminConnectionString);
+        connection.Open();
+
+        using SqlCommand command = connection.CreateCommand();
+        command.CommandText = $"CREATE DATABASE [{_sqlServerDatabaseName}];";
+        command.ExecuteNonQuery();
+    }
+
+    private void DropSqlServerDatabase()
+    {
+        if (_sqlServerAdminConnectionString is null || _sqlServerDatabaseName is null)
+            return;
+
+        SqlConnection.ClearAllPools();
+
+        try
+        {
+            using var connection = new SqlConnection(_sqlServerAdminConnectionString);
+            connection.Open();
+
+            using SqlCommand command = connection.CreateCommand();
+            command.CommandText = $@"
+IF DB_ID(@DatabaseName) IS NOT NULL
+BEGIN
+    ALTER DATABASE [{_sqlServerDatabaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE [{_sqlServerDatabaseName}];
+END;";
+            command.Parameters.AddWithValue("@DatabaseName", _sqlServerDatabaseName);
+            command.ExecuteNonQuery();
+        }
+        finally
+        {
+            SqlConnection.ClearAllPools();
+        }
     }
 
     private static void DeleteIfPresent(string path)

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
@@ -92,7 +92,7 @@ namespace POS.Core.Repositories
             string safeCreatedBy = RequiredText(createdBy, "Created user is required.");
 
             await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {
@@ -334,7 +334,7 @@ namespace POS.Core.Repositories
             string remarks = "")
         {
             await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
                 await MarkVoucherSoldAsync(context, giftVoucherId, salesHeader, cashierName, terminalNo, remarks);
@@ -434,7 +434,7 @@ namespace POS.Core.Repositories
             string remarks = "")
         {
             await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
                 await MarkVoucherRedeemedAsync(

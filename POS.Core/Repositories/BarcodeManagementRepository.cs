@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -125,7 +125,7 @@ namespace POS.Core.Repositories
             ValidateManualBarcode(normalizedBarcode, allowEmpty: true);
 
             using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {
@@ -180,7 +180,7 @@ namespace POS.Core.Repositories
                 .ToList();
 
             using var context = await _contextFactory.CreateDbContextAsync();
-            using var transaction = await context.Database.BeginTransactionAsync();
+            using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {

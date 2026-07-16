@@ -61,7 +61,7 @@ public sealed class DatabaseInitializationService
         catch (Exception ex)
         {
             throw new DatabaseConfigurationException(
-                "The store server was reached, but the EasyRobin POS database schema is missing or incompatible. " +
+                "The store server was reached, but the POS network database schema is missing or incompatible. " +
                 "Run the approved server database setup/update utility on the BackOffice server PC.",
                 ex);
         }

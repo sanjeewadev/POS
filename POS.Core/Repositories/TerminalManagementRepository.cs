@@ -186,7 +186,7 @@ namespace POS.Core.Repositories
 
             await using var transaction =
                 await context.Database
-                    .BeginTransactionAsync();
+                    .BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {
@@ -370,7 +370,7 @@ namespace POS.Core.Repositories
 
             await using var transaction =
                 await context.Database
-                    .BeginTransactionAsync();
+                    .BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {
@@ -439,7 +439,7 @@ namespace POS.Core.Repositories
 
             await using var transaction =
                 await context.Database
-                    .BeginTransactionAsync();
+                    .BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {

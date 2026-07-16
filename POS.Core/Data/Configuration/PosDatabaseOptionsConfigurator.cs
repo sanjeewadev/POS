@@ -4,9 +4,12 @@ namespace POS.Core.Data.Configuration;
 
 public static class PosDatabaseOptionsConfigurator
 {
+    public const string SqlServerMigrationsAssembly = "POS.Database.Setup";
+
     public static void Configure(
         DbContextOptionsBuilder optionsBuilder,
-        DatabaseConnectionSettings settings)
+        DatabaseConnectionSettings settings,
+        string? sqlServerMigrationsAssembly = null)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);
         ArgumentNullException.ThrowIfNull(settings);
@@ -24,11 +27,18 @@ public static class PosDatabaseOptionsConfigurator
             settings.BuildConnectionString(),
             sqlServerOptions =>
             {
+                if (!string.IsNullOrWhiteSpace(sqlServerMigrationsAssembly))
+                {
+                    sqlServerOptions.MigrationsAssembly(
+                        sqlServerMigrationsAssembly.Trim());
+                }
+
+                // Explicit repository transactions are used throughout the POS.
+                // Do not enable EF Core's retrying execution strategy here, because
+                // it rejects user-initiated transactions unless every transaction is
+                // wrapped by the execution strategy. Connection-open retries remain
+                // configured in the SQL Server connection string.
                 sqlServerOptions.CommandTimeout(30);
-                sqlServerOptions.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(2),
-                    errorNumbersToAdd: null);
             });
     }
 }

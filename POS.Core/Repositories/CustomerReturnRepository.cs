@@ -123,10 +123,20 @@ namespace POS.Core.Repositories
 
             try
             {
-                // SQLite transactions are deferred by default. This harmless update
-                // acquires the write lock before return quantities are rechecked.
-                await context.Database.ExecuteSqlInterpolatedAsync(
-                    $"UPDATE SalesHeaders SET Id = Id WHERE Id = {request.SalesHeaderId}");
+                if (context.Database.IsSqlServer())
+                {
+                    await SqlServerTransactionLock.AcquireAsync(
+                        context,
+                        $"POS:CustomerReturn:Sale:{request.SalesHeaderId}");
+                }
+                else if (context.Database.IsSqlite())
+                {
+                    // SQLite transactions are deferred by default. Updating a
+                    // non-identity column to itself acquires the write lock before
+                    // return quantities are rechecked.
+                    await context.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE SalesHeaders SET Status = Status WHERE Id = {request.SalesHeaderId}");
+                }
 
                 SalesHeader sale = await context.SalesHeaders
                     .Include(header => header.SalesLines)

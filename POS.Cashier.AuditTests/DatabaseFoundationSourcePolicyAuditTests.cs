@@ -58,8 +58,11 @@ internal static class DatabaseFoundationSourcePolicyAuditTests
             "SQLite provider configuration");
         AuditAssert.Contains(configurator, "UseSqlServer",
             "SQL Server provider configuration");
-        AuditAssert.Contains(configurator, "EnableRetryOnFailure",
-            "SQL Server transient retry policy");
+        AuditAssert.False(
+            configurator.Contains("EnableRetryOnFailure", StringComparison.Ordinal),
+            "retrying execution strategy must remain disabled for explicit repository transactions");
+        AuditAssert.Contains(settings, "ConnectRetryCount",
+            "SQL Server connection-open retry policy");
 
         string collations = Read(
             "POS.Core",

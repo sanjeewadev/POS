@@ -31,7 +31,7 @@ namespace POS.Core.Repositories
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             await using var transaction =
-                await context.Database.BeginTransactionAsync();
+                await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             if (await context.Users.AnyAsync())
             {
@@ -122,7 +122,7 @@ namespace POS.Core.Repositories
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             await using var transaction =
-                await context.Database.BeginTransactionAsync();
+                await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             var existingUser = await context.Users
                 .FirstOrDefaultAsync(existing => existing.Id == user.Id);
@@ -186,7 +186,7 @@ namespace POS.Core.Repositories
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             await using var transaction =
-                await context.Database.BeginTransactionAsync();
+                await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             var user = await context.Users
                 .FirstOrDefaultAsync(candidate => candidate.Id == userId);
@@ -250,7 +250,7 @@ namespace POS.Core.Repositories
         {
             using var context = await _contextFactory.CreateDbContextAsync();
             await using var transaction =
-                await context.Database.BeginTransactionAsync();
+                await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             var user = await context.Users
                 .FirstOrDefaultAsync(candidate => candidate.Id == userId);

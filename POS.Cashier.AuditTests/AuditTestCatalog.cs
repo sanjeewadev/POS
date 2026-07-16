@@ -40,6 +40,7 @@ internal static class AuditTestCatalog
         new("Sale commits before receipt printer and drawer actions", AuditGroups.SourcePolicy, SourcePolicyAuditTests.SaleCommitsBeforeHardwareActionsAsync),
         new("Cashier lock screen has audited Manager recovery and safe exit", AuditGroups.SourcePolicy, LockRecoverySourcePolicyAuditTests.ManagerRecoveryAndSafeExitAreControlledAsync),
         new("Phase 11A dual database-provider foundation is controlled", AuditGroups.SourcePolicy, DatabaseFoundationSourcePolicyAuditTests.DualProviderFoundationIsControlledAsync),
+        new("POS Network SQL Server setup and migration path is controlled", AuditGroups.SourcePolicy, SqlServerMigrationSourcePolicyAuditTests.DedicatedSqlServerBaselineIsControlledAsync),
         new("Live POS database path is never an audit database", AuditGroups.SourcePolicy, SourcePolicyAuditTests.LiveDatabasePathIsExcludedAsync)
     };
 }

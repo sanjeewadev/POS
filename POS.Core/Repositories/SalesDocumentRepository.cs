@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -114,7 +114,7 @@ namespace POS.Core.Repositories
             await using AppDbContext context =
                 await _contextFactory.CreateDbContextAsync();
             await using var transaction =
-                await context.Database.BeginTransactionAsync();
+                await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {
@@ -262,7 +262,7 @@ namespace POS.Core.Repositories
             await using AppDbContext context =
                 await _contextFactory.CreateDbContextAsync();
             await using var transaction =
-                await context.Database.BeginTransactionAsync();
+                await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {

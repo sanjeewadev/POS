@@ -269,7 +269,7 @@ namespace POS.Core.Repositories
                 return;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {

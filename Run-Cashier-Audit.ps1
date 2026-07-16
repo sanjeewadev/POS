@@ -45,6 +45,9 @@ $allowedChangedFiles = @(
     "POS.Cashier.UI/Resources/PaymentLogos/amex.png",
     "POS.Cashier.AuditTests/LockRecoverySourcePolicyAuditTests.cs",
     "POS.Cashier.AuditTests/DatabaseFoundationSourcePolicyAuditTests.cs",
+    "POS.Cashier.AuditTests/AuditDatabase.cs",
+    "POS.Cashier.AuditTests/POS.Cashier.AuditTests.csproj",
+    "POS.Cashier.AuditTests/Program.cs",
     "POS.Core/POS.Core.csproj",
     "POS.Core/Data/AppDbContext.cs",
     "POS.Core/Data/Configuration/DatabaseProviderKind.cs",
@@ -57,11 +60,28 @@ $allowedChangedFiles = @(
     "POS.BackOffice.UI/App.xaml.cs",
     "POS.Core.CalculationTests/DatabaseProviderFoundationTests.cs",
     "POS.Core/Repositories/AttributeRepository.cs",
+    "POS.Core/Repositories/BarcodeManagementRepository.cs",
+    "POS.Core/Repositories/BarcodePrinterRepository.cs",
+    "POS.Core/Repositories/CashierCartRepository.cs",
     "POS.Core/Repositories/CustomerReturnRepository.cs",
+    "POS.Core/Repositories/ExpressItemRepository.cs",
+    "POS.Core/Repositories/GiftVoucherRepository.cs",
+    "POS.Core/Repositories/GrnRepository.cs",
     "POS.Core/Repositories/ItemMasterRepository.cs",
+    "POS.Core/Repositories/LicenseRepository.cs",
+    "POS.Core/Repositories/PoRepository.cs",
+    "POS.Core/Repositories/PriceManagementRepository.cs",
+    "POS.Core/Repositories/SalesDocumentRepository.cs",
+    "POS.Core/Repositories/SalesRepository.cs",
+    "POS.Core/Repositories/StoreSettingsRepository.cs",
+    "POS.Core/Repositories/SupplierLedgerRepository.cs",
     "POS.Core/Repositories/SupplierRepository.cs",
+    "POS.Core/Repositories/SupplierReturnRepository.cs",
     "POS.Core/Repositories/TaxRateRepository.cs",
+    "POS.Core/Repositories/TerminalManagementRepository.cs",
+    "POS.Core/Repositories/TerminalSettingsRepository.cs",
     "POS.Core/Repositories/UnitOfMeasureRepository.cs",
+    "POS.Core/Repositories/UserRepository.cs",
     "POS.Core/Services/Backup/BackupService.cs",
     "docs/Phase11A_Dual_Database_Provider_Foundation.md",
     "POS.Core/Services/AuthService.cs",
@@ -72,7 +92,33 @@ $allowedChangedFiles = @(
     "POS.Cashier.UI/Services/CashierLockService.cs",
     "POS.Cashier.UI/Components/TenderNumpadControl.xaml",
     "POS.Cashier.UI/Dialogs/CashTenderDialog.xaml",
-    "POS.Cashier.UI/Resources/CashierControls.xaml"
+    "POS.Cashier.UI/Resources/CashierControls.xaml",
+    "POS.Cashier.AuditTests/SqlServerMigrationSourcePolicyAuditTests.cs",
+    "POS.Core/Data/DatabasePathProvider.cs",
+    "POS.Database.Setup/CommandLineArguments.cs",
+    "POS.Database.Setup/POS.Database.Setup.csproj",
+    "POS.Database.Setup/ProfileCommandService.cs",
+    "POS.Database.Setup/Program.cs",
+    "POS.Database.Setup/ServerProvisioningService.cs",
+    "POS.Database.Setup/SetupReportWriter.cs",
+    "POS.Database.Setup/SqlName.cs",
+    "POS.Database.Setup/SqlServerBackupService.cs",
+    "POS.Database.Setup/SqlServerConnectionFactory.cs",
+    "POS.Database.Setup/SqlServerDesignTimeDbContextFactory.cs",
+    "POS.Database.Setup/SqliteToSqlServerTransferService.cs",
+    "docs/POS_Network_Edition_Deployment.md",
+    "docs/POS_Network_Edition_Runtime_Checklist.md",
+    "tools/network/Backup-POS-SqlServer.ps1",
+    "tools/network/Configure-POS-SqlServer-Network.ps1",
+    "tools/network/Configure-POS-Terminal.ps1",
+    "tools/network/Generate-POS-SqlServer-Baseline.ps1",
+    "tools/network/Install-POS-Server.ps1",
+    "tools/network/Restore-POS-SqlServer-Backup.ps1",
+    "tools/network/Restore-POS-SqlServer-Network.ps1"
+)
+
+$allowedChangedPrefixes = @(
+    "POS.Database.Setup/Migrations/"
 )
 
 $commandResults = [ordered]@{}
@@ -202,7 +248,15 @@ try {
     }
 
     $changedFiles = @(Get-ChangedFiles)
-    $unexpectedFiles = @($changedFiles | Where-Object { $allowedChangedFiles -notcontains $_ })
+    $unexpectedFiles = @(
+        $changedFiles | Where-Object {
+            $path = $_
+            $exact = $allowedChangedFiles -contains $path
+            $prefixed = @($allowedChangedPrefixes | Where-Object {
+                $path.StartsWith($_, [StringComparison]::Ordinal)
+            }).Count -gt 0
+            -not ($exact -or $prefixed)
+        })
     if ($unexpectedFiles.Count -gt 0) {
         throw "Unapproved repository changes were found:`r`n - $($unexpectedFiles -join "`r`n - ")"
     }

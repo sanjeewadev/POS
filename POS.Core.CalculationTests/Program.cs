@@ -240,6 +240,7 @@ namespace POS.Core.CalculationTests
                 ("Phase 11A SQL Server profile is encrypted and round-trips", DatabaseProviderFoundationTests.SqlServerProfileIsEncryptedAndRoundTrips),
                 ("Phase 11A provider options and collations are portable", DatabaseProviderFoundationTests.ProviderOptionsAndCollationsArePortable),
                 ("Phase 11A invalid database profiles fail closed", DatabaseProviderFoundationTests.InvalidOrCorruptProfilesFailClosed),
+                ("Phase 11B1 SQL Server uses a dedicated migration assembly", DatabaseProviderFoundationTests.SqlServerUsesDedicatedMigrationAssembly),
                 ("Phase 9A customer return history filters and loads details", Phase9AOperationalPageTests.CustomerReturnHistoryFiltersAndLoadsDetails),
                 ("Phase 9A cart history shows statuses and lines", Phase9AOperationalPageTests.BackOfficeCartHistoryShowsStatusesAndLines),
                 ("Phase 9A item analytics supports Stock Items and Services", Phase9AOperationalPageTests.ItemAnalyticsSupportsStockAndService),
@@ -279,7 +280,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, POS Network SQL Server migration and setup foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
                 return 0;
             }
             catch (Exception ex)

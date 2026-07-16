@@ -387,7 +387,7 @@ namespace POS.Core.Repositories
             ValidateSubmittedLineDuplicates(lines);
 
             using AppDbContext context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {

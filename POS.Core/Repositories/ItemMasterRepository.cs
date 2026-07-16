@@ -542,7 +542,7 @@ namespace POS.Core.Repositories
 
             await ValidateParentReferencesAsync(context, parent);
 
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {
@@ -1291,7 +1291,7 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException("Item cannot be deleted:\n\n" + deleteCheck.Message);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await context.Database.BeginTransactionAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
             try
             {

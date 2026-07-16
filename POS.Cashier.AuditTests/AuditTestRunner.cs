@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 
 namespace POS.Cashier.AuditTests;
@@ -68,7 +69,7 @@ internal sealed class AuditTestRunner
                 failed++;
                 Exception actual = Unwrap(ex);
                 await _writer.WriteLineAsync($"FAIL: [{test.Group}] {test.Name} ({timer.ElapsedMilliseconds} ms)");
-                await _writer.WriteLineAsync($"  {actual.GetType().Name}: {actual.Message}");
+                await WriteExceptionChainAsync(actual);
                 if (!string.IsNullOrWhiteSpace(actual.StackTrace))
                     await _writer.WriteLineAsync(actual.StackTrace);
             }
@@ -79,6 +80,35 @@ internal sealed class AuditTestRunner
             $"AUDIT SUMMARY: Total={tests.Count}; Passed={passed}; Failed={failed}; Skipped={skipped}; DurationMs={totalTimer.ElapsedMilliseconds}");
 
         return new AuditRunSummary(tests.Count, passed, failed, skipped, totalTimer.Elapsed);
+    }
+
+    private async Task WriteExceptionChainAsync(Exception exception)
+    {
+        int depth = 0;
+        Exception? current = exception;
+
+        while (current != null)
+        {
+            string prefix = depth == 0
+                ? "  "
+                : $"  Inner[{depth}]: ";
+
+            if (current is SqlException sqlException)
+            {
+                await _writer.WriteLineAsync(
+                    $"{prefix}{current.GetType().Name}: {current.Message} " +
+                    $"(Number={sqlException.Number}, Class={sqlException.Class}, State={sqlException.State}, " +
+                    $"Procedure={sqlException.Procedure ?? "<none>"}, Line={sqlException.LineNumber})");
+            }
+            else
+            {
+                await _writer.WriteLineAsync(
+                    $"{prefix}{current.GetType().Name}: {current.Message}");
+            }
+
+            current = current.InnerException;
+            depth++;
+        }
     }
 
     private static Exception Unwrap(Exception exception)

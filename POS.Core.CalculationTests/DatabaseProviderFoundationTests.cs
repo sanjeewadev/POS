@@ -7,6 +7,7 @@ using POS.Core.Data.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using System.Text;
+using System.Reflection;
 
 namespace POS.Core.CalculationTests;
 
@@ -44,8 +45,8 @@ internal static class DatabaseProviderFoundationTests
                 DatabaseConnectionSettings.CreateSqlServer(
                     "STORE-SERVER",
                     14333,
-                    "EasyRobinPOS",
-                    "EasyRobinPOS_App",
+                    "POSNetwork",
+                    "POS_App",
                     "Test-Only-Secret-987!");
 
             store.Save(expected);
@@ -100,8 +101,8 @@ internal static class DatabaseProviderFoundationTests
             DatabaseConnectionSettings.CreateSqlServer(
                 "127.0.0.1",
                 1433,
-                "EasyRobinPOS",
-                "EasyRobinPOS_App",
+                "POSNetwork",
+                "POS_App",
                 "Test-Only-Secret-987!");
 
         var sqlServerBuilder = new DbContextOptionsBuilder<AppDbContext>();
@@ -133,14 +134,56 @@ internal static class DatabaseProviderFoundationTests
             "SQL Server connection string may persist credentials");
     }
 
+    public static void SqlServerUsesDedicatedMigrationAssembly()
+    {
+        DatabaseConnectionSettings settings =
+            DatabaseConnectionSettings.CreateSqlServer(
+                "127.0.0.1",
+                1433,
+                "POSNetwork",
+                "POS_App",
+                "Test-Only-Secret-987!");
+
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        PosDatabaseOptionsConfigurator.Configure(
+            optionsBuilder,
+            settings,
+            PosDatabaseOptionsConfigurator.SqlServerMigrationsAssembly);
+
+        object sqlServerExtension = optionsBuilder.Options.Extensions
+            .Single(extension =>
+                string.Equals(
+                    extension.GetType().Name,
+                    "SqlServerOptionsExtension",
+                    StringComparison.Ordinal));
+
+        PropertyInfo? property = FindProperty(
+            sqlServerExtension.GetType(),
+            "MigrationsAssembly");
+
+        if (property == null)
+        {
+            throw new InvalidOperationException(
+                "SQL Server options did not expose the configured migrations assembly");
+        }
+
+        string? actual = property.GetValue(sqlServerExtension) as string;
+        Require(
+            string.Equals(
+                actual,
+                PosDatabaseOptionsConfigurator.SqlServerMigrationsAssembly,
+                StringComparison.Ordinal),
+            "SQL Server options did not use the dedicated setup migrations assembly");
+    }
+
     public static void InvalidOrCorruptProfilesFailClosed()
     {
         DatabaseConnectionSettings invalid =
             DatabaseConnectionSettings.CreateSqlServer(
                 "STORE-SERVER;Injected=True",
                 1433,
-                "EasyRobinPOS",
-                "EasyRobinPOS_App",
+                "POSNetwork",
+                "POS_App",
                 "secret");
 
         RequireThrows<DatabaseConfigurationException>(
@@ -151,8 +194,8 @@ internal static class DatabaseProviderFoundationTests
             DatabaseConnectionSettings.CreateSqlServer(
                 "STORE-SERVER\\SQLEXPRESS",
                 1433,
-                "EasyRobinPOS",
-                "EasyRobinPOS_App",
+                "POSNetwork",
+                "POS_App",
                 "secret");
 
         RequireThrows<DatabaseConfigurationException>(
@@ -164,8 +207,8 @@ internal static class DatabaseProviderFoundationTests
             Provider = DatabaseProviderKind.SqlServer,
             ServerHost = "STORE-SERVER",
             ServerPort = 1433,
-            DatabaseName = "EasyRobinPOS",
-            UserName = "EasyRobinPOS_App",
+            DatabaseName = "POSNetwork",
+            UserName = "POS_App",
             Password = "secret",
             Encrypt = false
         };
@@ -204,6 +247,29 @@ internal static class DatabaseProviderFoundationTests
 
     private static IModel GetDesignTimeModel(AppDbContext context) =>
         context.GetService<IDesignTimeModel>().Model;
+
+    private static PropertyInfo? FindProperty(
+        Type type,
+        string propertyName)
+    {
+        Type? current = type;
+        while (current != null)
+        {
+            PropertyInfo? property = current.GetProperty(
+                propertyName,
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.NonPublic |
+                BindingFlags.DeclaredOnly);
+
+            if (property != null)
+                return property;
+
+            current = current.BaseType;
+        }
+
+        return null;
+    }
 
     private static string CreateTemporaryDirectory()
     {
