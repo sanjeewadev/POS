@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 
 namespace POS.Cashier.UI.Dialogs
@@ -10,6 +10,11 @@ namespace POS.Cashier.UI.Dialogs
         public PrintOptionsDialog()
         {
             InitializeComponent();
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            LastReceiptButton.Focus();
         }
 
         private void PrintLastBill_Click(object sender, RoutedEventArgs e)

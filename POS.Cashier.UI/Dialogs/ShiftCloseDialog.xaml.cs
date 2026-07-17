@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace POS.Cashier.UI.Dialogs
 {
@@ -14,6 +15,21 @@ namespace POS.Cashier.UI.Dialogs
         {
             InitializeComponent();
             UpdateTotals();
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            Qty5000.Focus();
+            Qty5000.SelectAll();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape)
+                return;
+
+            DialogResult = false;
+            e.Handled = true;
         }
 
         private void Count_TextChanged(object sender, TextChangedEventArgs e) => UpdateTotals();
@@ -115,6 +131,9 @@ namespace POS.Cashier.UI.Dialogs
             DialogResult = true;
         }
 
-        private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+        private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+        }
     }
 }

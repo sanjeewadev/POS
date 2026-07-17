@@ -10,6 +10,7 @@ namespace POS.Cashier.UI.Dialogs
         {
             InitializeComponent();
             PreviewKeyDown += OpenShiftView_PreviewKeyDown;
+            Loaded += (_, _) => StartShiftButton.Focus();
         }
 
         private async void OpenShift_Click(

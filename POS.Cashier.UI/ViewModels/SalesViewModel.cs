@@ -1478,9 +1478,13 @@ namespace POS.Cashier.UI.ViewModels
             }
 
             string authorizedBy = CashierName;
+            Window? owner = Application.Current?.MainWindow;
 
             var authVM = App.Services!.GetRequiredService<ManagerAuthViewModel>();
-            var authDialog = new POS.Cashier.UI.Dialogs.ManagerAuthDialogView(authVM);
+            var authDialog = new POS.Cashier.UI.Dialogs.ManagerAuthDialogView(authVM)
+            {
+                Owner = owner
+            };
 
             if (authDialog.ShowDialog() != true)
                 return;
@@ -1490,7 +1494,10 @@ namespace POS.Cashier.UI.ViewModels
             var floatVM = App.Services!.GetRequiredService<FloatCashViewModel>();
             floatVM.Initialize(_currentShiftId, authorizedBy);
 
-            var floatDialog = new POS.Cashier.UI.Dialogs.FloatCashDialog(floatVM);
+            var floatDialog = new POS.Cashier.UI.Dialogs.FloatCashDialog(floatVM)
+            {
+                Owner = owner
+            };
             floatDialog.ShowDialog();
 
             await Task.CompletedTask;

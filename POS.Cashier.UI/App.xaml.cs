@@ -35,6 +35,7 @@ namespace POS.Cashier.UI
 
         public App()
         {
+            CashierWindowPlacementService.Register();
             RegisterGlobalExceptionHandlers();
 
             try

@@ -1,4 +1,5 @@
-﻿using System.Windows;
+using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace POS.Cashier.UI.Dialogs
@@ -15,19 +16,28 @@ namespace POS.Cashier.UI.Dialogs
             decimal variance = actualCash - expectedCash;
             VarianceText.Text = $"Rs. {variance:N2}";
 
-            // Visual feedback for shortages vs overages
-            if (variance < 0)
+            string brushKey = variance switch
             {
-                VarianceText.Foreground = new SolidColorBrush(Colors.DarkRed); // Shortage
-            }
-            else if (variance > 0)
-            {
-                VarianceText.Foreground = new SolidColorBrush(Colors.DarkOrange); // Overage
-            }
-            else
-            {
-                VarianceText.Foreground = new SolidColorBrush(Colors.DarkGreen); // Perfect match
-            }
+                < 0m => "CashierDangerBrush",
+                > 0m => "CashierWarningDarkBrush",
+                _ => "CashierSuccessDarkBrush"
+            };
+
+            VarianceText.Foreground = (Brush)FindResource(brushKey);
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            ConfirmButton.Focus();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape)
+                return;
+
+            DialogResult = false;
+            e.Handled = true;
         }
 
         private void Confirm_Click(object sender, RoutedEventArgs e)

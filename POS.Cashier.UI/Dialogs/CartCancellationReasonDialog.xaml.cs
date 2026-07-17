@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using POS.Core.Configuration;
 
 namespace POS.Cashier.UI.Dialogs
@@ -15,6 +16,20 @@ namespace POS.Cashier.UI.Dialogs
             ReasonComboBox.SelectedIndex = 0;
         }
 
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            ReasonComboBox.Focus();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape)
+                return;
+
+            DialogResult = false;
+            e.Handled = true;
+        }
+
         private void ReasonComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ValidationText != null)
@@ -24,7 +39,6 @@ namespace POS.Cashier.UI.Dialogs
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
-            Close();
         }
 
         private void ConfirmButton_Click(object sender, RoutedEventArgs e)
@@ -32,6 +46,7 @@ namespace POS.Cashier.UI.Dialogs
             if (ReasonComboBox.SelectedItem is not ComboBoxItem selected)
             {
                 ValidationText.Text = "Select a cancellation reason.";
+                ReasonComboBox.Focus();
                 return;
             }
 
@@ -49,7 +64,6 @@ namespace POS.Cashier.UI.Dialogs
             ReasonCode = code;
             ReasonText = string.IsNullOrWhiteSpace(note) ? selectedText : note;
             DialogResult = true;
-            Close();
         }
     }
 }

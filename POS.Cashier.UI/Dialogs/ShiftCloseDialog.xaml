@@ -2,80 +2,157 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Close Shift - Blind Cash Count"
-        Height="620" Width="520"
+        Style="{StaticResource CashierDialogWindow}"
+        Width="560"
+        Height="640"
+        MinWidth="500"
+        MinHeight="500"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
-        Background="#F3F4F6"
-        ShowInTaskbar="False">
-    <Grid Margin="18">
+        ResizeMode="CanResizeWithGrip"
+        ShowInTaskbar="False"
+        Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="12"/>
+            <RowDefinition Height="64"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="12"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="64"/>
         </Grid.RowDefinitions>
 
-        <Border Background="#7F1D1D" Padding="15">
-            <StackPanel>
-                <TextBlock Text="CLOSE SHIFT — BLIND CASH COUNT" Foreground="White" FontSize="20" FontWeight="Bold"/>
-                <TextBlock Text="Count the physical drawer before the system reveals expected cash." Foreground="#FECACA" Margin="0,5,0,0" TextWrapping="Wrap"/>
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="2" Background="White" BorderBrush="#D1D5DB" BorderThickness="1" Padding="16">
+        <Border Grid.Row="0"
+                Background="{StaticResource CashierDangerDarkBrush}"
+                BorderBrush="{StaticResource CashierDangerBrush}"
+                BorderThickness="1"
+                Padding="14,6">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="115"/>
-                    <ColumnDefinition Width="140"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="38"/>
-                    <RowDefinition Height="70"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Text="Denomination" FontWeight="Bold" Foreground="#374151"/>
-                <TextBlock Grid.Column="1" Text="Quantity" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Center"/>
-                <TextBlock Grid.Column="2" Text="Line total" FontWeight="Bold" Foreground="#374151" HorizontalAlignment="Right"/>
-
-                <TextBlock Grid.Row="1" Text="Rs. 5,000" VerticalAlignment="Center"/><TextBox x:Name="Qty5000" Grid.Row="1" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total5000" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="2" Text="Rs. 1,000" VerticalAlignment="Center"/><TextBox x:Name="Qty1000" Grid.Row="2" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total1000" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="3" Text="Rs. 500" VerticalAlignment="Center"/><TextBox x:Name="Qty500" Grid.Row="3" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total500" Grid.Row="3" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="4" Text="Rs. 100" VerticalAlignment="Center"/><TextBox x:Name="Qty100" Grid.Row="4" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total100" Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="5" Text="Rs. 50" VerticalAlignment="Center"/><TextBox x:Name="Qty50" Grid.Row="5" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total50" Grid.Row="5" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="6" Text="Rs. 20" VerticalAlignment="Center"/><TextBox x:Name="Qty20" Grid.Row="6" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total20" Grid.Row="6" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="7" Text="Rs. 10" VerticalAlignment="Center"/><TextBox x:Name="Qty10" Grid.Row="7" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total10" Grid.Row="7" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Row="8" Text="Rs. 5" VerticalAlignment="Center"/><TextBox x:Name="Qty5" Grid.Row="8" Grid.Column="1" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right"/><TextBlock x:Name="Total5" Grid.Row="8" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-
-                <StackPanel Grid.Row="9" Grid.ColumnSpan="2">
-                    <TextBlock Text="Coins / other amount" FontWeight="SemiBold"/>
-                    <TextBox x:Name="OtherAmount" TextChanged="Count_TextChanged" HorizontalContentAlignment="Right" Margin="0,5,10,0"/>
-                    <TextBlock Text="Optional variance note" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                    <TextBox x:Name="VarianceNoteBox" MaxLength="500" Margin="0,5,10,0"/>
+                <StackPanel>
+                    <TextBlock Text="CLOSE SHIFT — BLIND CASH COUNT"
+                               Foreground="White"
+                               FontSize="19"
+                               FontWeight="Bold"/>
+                    <TextBlock Text="Count the physical drawer before the system reveals expected cash."
+                               Foreground="White"
+                               FontSize="12"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
-
-                <Border Grid.Row="9" Grid.Column="2" Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" Padding="10">
-                    <StackPanel>
-                        <TextBlock Text="COUNTED CASH" FontWeight="Bold" Foreground="#7F1D1D"/>
-                        <TextBlock x:Name="GrandTotalText" Text="Rs. 0.00" FontSize="22" FontWeight="Bold" Foreground="#991B1B" HorizontalAlignment="Right" Margin="0,8,0,0"/>
-                    </StackPanel>
-                </Border>
+                <TextBlock Text="ENTER submits · ESC cancels"
+                           Style="{StaticResource CashierShortcutHint}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="4">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <Button Content="CANCEL" Click="Cancel_Click" Height="42" Background="#E5E7EB" FontWeight="Bold"/>
-            <Button Grid.Column="2" Content="SUBMIT COUNT" Click="Submit_Click" Height="42" Background="#991B1B" Foreground="White" FontWeight="Bold"/>
-        </Grid>
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="16">
+            <Border Style="{StaticResource CashierPanel}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="150"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="38"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Denomination" Style="{StaticResource CashierFieldLabel}"/>
+                    <TextBlock Grid.Column="1" Text="Quantity" Style="{StaticResource CashierFieldLabel}" HorizontalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="Line total" Style="{StaticResource CashierFieldLabel}" HorizontalAlignment="Right"/>
+
+                    <TextBlock Grid.Row="1" Text="Rs. 5,000" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty5000" Grid.Row="1" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="0" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total5000" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="2" Text="Rs. 1,000" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty1000" Grid.Row="2" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="1" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total1000" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="3" Text="Rs. 500" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty500" Grid.Row="3" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="2" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total500" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="4" Text="Rs. 100" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty100" Grid.Row="4" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="3" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total100" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="5" Text="Rs. 50" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty50" Grid.Row="5" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="4" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total50" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="6" Text="Rs. 20" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty20" Grid.Row="6" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="5" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total20" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="7" Text="Rs. 10" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty10" Grid.Row="7" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="6" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total10" Grid.Row="7" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="8" Text="Rs. 5" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Qty5" Grid.Row="8" Grid.Column="1" Style="{StaticResource CashierTextBox}" TextAlignment="Right" TabIndex="7" TextChanged="Count_TextChanged"/>
+                    <TextBlock x:Name="Total5" Grid.Row="8" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Row="9" Grid.ColumnSpan="2" Margin="0,12,12,0">
+                        <TextBlock Text="Coins / other amount" Style="{StaticResource CashierFieldLabel}"/>
+                        <TextBox x:Name="OtherAmount"
+                                 Style="{StaticResource CashierTextBox}"
+                                 TextAlignment="Right"
+                                 TabIndex="8"
+                                 Margin="0,6,0,12"
+                                 TextChanged="Count_TextChanged"/>
+                        <TextBlock Text="Optional variance note" Style="{StaticResource CashierFieldLabel}"/>
+                        <TextBox x:Name="VarianceNoteBox"
+                                 Style="{StaticResource CashierTextBox}"
+                                 TabIndex="9"
+                                 Margin="0,6,0,0"
+                                 MaxLength="500"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="9"
+                            Grid.Column="2"
+                            Style="{StaticResource CashierStatusPanel}"
+                            Margin="0,12,0,0"
+                            VerticalAlignment="Top">
+                        <StackPanel>
+                            <TextBlock Text="COUNTED CASH"
+                                       Foreground="{StaticResource CashierDangerDarkBrush}"
+                                       FontWeight="Bold"/>
+                            <TextBlock x:Name="GrandTotalText"
+                                       Text="Rs. 0.00"
+                                       Foreground="{StaticResource CashierDangerBrush}"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Right"
+                                       Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="CANCEL"
+                        Style="{StaticResource CashierButton}"
+                        IsCancel="True"
+                        Margin="0,0,10,0"
+                        Click="Cancel_Click"/>
+                <Button Content="SUBMIT COUNT"
+                        Style="{StaticResource CashierDangerButton}"
+                        MinWidth="145"
+                        IsDefault="True"
+                        Click="Submit_Click"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

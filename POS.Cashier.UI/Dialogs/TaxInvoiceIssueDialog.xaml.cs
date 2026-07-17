@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using POS.Core.Models;
 
@@ -30,6 +30,12 @@ namespace POS.Cashier.UI.Dialogs
                 sale?.CustomerVatNoSnapshot ?? string.Empty;
             CustomerAddressTextBox.Text =
                 sale?.CustomerAddressSnapshot ?? string.Empty;
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            CustomerNameTextBox.Focus();
+            CustomerNameTextBox.SelectAll();
         }
 
         private void Continue_Click(

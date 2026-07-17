@@ -1,7 +1,10 @@
-﻿using System;
+using System;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
 using POS.Cashier.UI.Services;
 using POS.Core.Models.DTOs;
+using POS.Core.Services;
 using POS.Core.Services.Documents;
 
 namespace POS.Cashier.UI.Dialogs
@@ -13,6 +16,7 @@ namespace POS.Cashier.UI.Dialogs
         private readonly ShiftReportTextFormatter _formatter;
         private readonly string _printerName;
         private readonly int _paperWidth;
+        private bool _isPrinting;
 
         public ShiftSummaryDialog(
             ShiftCashSummaryDto summary,
@@ -31,10 +35,33 @@ namespace POS.Cashier.UI.Dialogs
             DataContext = summary;
         }
 
-        private void CancelBtn_Click(object sender, RoutedEventArgs e) => Close();
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            PrintButton.Focus();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape || _isPrinting)
+                return;
+
+            Close();
+            e.Handled = true;
+        }
+
+        private void CancelBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isPrinting)
+                Close();
+        }
 
         private async void PrintBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isPrinting)
+                return;
+
+            SetPrintingState(true);
+
             try
             {
                 if (string.IsNullOrWhiteSpace(_printerName))
@@ -42,12 +69,41 @@ namespace POS.Cashier.UI.Dialogs
 
                 string text = _formatter.FormatXReport(_summary, _paperWidth);
                 await _printService.PrintTextAsync(text, _printerName, "POS X Report");
-                MessageBox.Show("X Report printed. The shift remains open.", "X Report", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    "X Report printed. The shift remains open.",
+                    "X Report",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"X Report could not be printed: {ex.Message}", "Print Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LocalLogService.WriteException("Cashier", "Print X Report", ex);
+                MessageBox.Show(
+                    $"X Report could not be printed.\n\n{ex.Message}",
+                    "Print Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
+            finally
+            {
+                SetPrintingState(false);
+            }
+        }
+
+        private void SetPrintingState(bool isPrinting)
+        {
+            _isPrinting = isPrinting;
+            PrintButton.IsEnabled = !isPrinting;
+            CloseButton.IsEnabled = !isPrinting;
+            PrintStatusText.Visibility = isPrinting ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (_isPrinting)
+                e.Cancel = true;
+
+            base.OnClosing(e);
         }
     }
 }

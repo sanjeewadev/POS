@@ -1,11 +1,15 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.Services;
 using POS.Cashier.UI.ViewModels;
 using POS.Cashier.UI.Views;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services;
 using POS.Core.Services.Documents;
 
 namespace POS.Cashier.UI.Dialogs
@@ -13,12 +17,28 @@ namespace POS.Cashier.UI.Dialogs
     public partial class ShiftMenuView : Window
     {
         private readonly SalesViewModel _viewModel;
+        private bool _isOperationInProgress;
+        private bool _allowClose;
 
         public ShiftMenuView(SalesViewModel viewModel)
         {
             InitializeComponent();
             _viewModel = viewModel;
             RefreshStatusUI();
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            XReportBtn.Focus();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape || _isOperationInProgress)
+                return;
+
+            Close();
+            e.Handled = true;
         }
 
         private void RefreshStatusUI()
@@ -29,20 +49,45 @@ namespace POS.Cashier.UI.Dialogs
 
             if (_viewModel.IsManagerModeActive)
             {
-                SecurityStatusTxt.Foreground = Brush("#DC3545");
-                ToggleManagerBtn.Background = Brush("#28A745");
+                SecurityStatusTxt.Foreground = ResourceBrush("CashierDangerBrush");
+                ToggleManagerBtn.Background = ResourceBrush("CashierSuccessBrush");
+                ToggleManagerBtn.BorderBrush = ResourceBrush("CashierSuccessDarkBrush");
                 ToggleManagerTxt.Text = "DROP TO CASHIER MODE";
             }
             else
             {
-                SecurityStatusTxt.Foreground = Brush("#28A745");
-                ToggleManagerBtn.Background = Brush("#DC3545");
+                SecurityStatusTxt.Foreground = ResourceBrush("CashierSuccessBrush");
+                ToggleManagerBtn.Background = ResourceBrush("CashierDangerBrush");
+                ToggleManagerBtn.BorderBrush = ResourceBrush("CashierDangerDarkBrush");
                 ToggleManagerTxt.Text = "ELEVATE TO MANAGER";
             }
         }
 
-        private static System.Windows.Media.SolidColorBrush Brush(string value) =>
-            new((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(value));
+        private Brush ResourceBrush(string key)
+        {
+            return (Brush)FindResource(key);
+        }
+
+        private bool TryBeginOperation(string statusText)
+        {
+            if (_isOperationInProgress)
+                return false;
+
+            _isOperationInProgress = true;
+            MenuActionsPanel.IsEnabled = false;
+            CloseMenuButton.IsEnabled = false;
+            OperationText.Text = statusText;
+            OperationText.Visibility = Visibility.Visible;
+            return true;
+        }
+
+        private void EndOperation()
+        {
+            _isOperationInProgress = false;
+            MenuActionsPanel.IsEnabled = true;
+            CloseMenuButton.IsEnabled = true;
+            OperationText.Visibility = Visibility.Collapsed;
+        }
 
         private static IServiceProvider GetServices()
         {
@@ -52,6 +97,9 @@ namespace POS.Cashier.UI.Dialogs
 
         private async void XReportBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (!TryBeginOperation("Loading shift summary..."))
+                return;
+
             try
             {
                 IServiceProvider services = GetServices();
@@ -74,6 +122,10 @@ namespace POS.Cashier.UI.Dialogs
             {
                 MessageBox.Show(ex.Message, "X Report", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            finally
+            {
+                EndOperation();
+            }
         }
 
         private async void CloseShiftBtn_Click(object sender, RoutedEventArgs e)
@@ -83,6 +135,9 @@ namespace POS.Cashier.UI.Dialogs
                 MessageBox.Show("Wait for checkout to finish before closing the shift.", "Close Shift", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            if (!TryBeginOperation("Preparing shift close..."))
+                return;
 
             try
             {
@@ -163,6 +218,7 @@ namespace POS.Cashier.UI.Dialogs
 
                 if (Application.Current is App app && Owner is SalesView salesWindow)
                 {
+                    _allowClose = true;
                     Close();
                     await app.ReturnToLoginAsync(salesWindow);
                 }
@@ -171,10 +227,18 @@ namespace POS.Cashier.UI.Dialogs
             {
                 MessageBox.Show(ex.Message, "Close Shift Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            finally
+            {
+                if (IsVisible)
+                    EndOperation();
+            }
         }
 
         private void CustomerPaymentBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (!TryBeginOperation("Opening customer payment..."))
+                return;
+
             try
             {
                 IServiceProvider services = GetServices();
@@ -192,6 +256,10 @@ namespace POS.Cashier.UI.Dialogs
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Customer Payment", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                EndOperation();
             }
         }
 
@@ -219,30 +287,73 @@ namespace POS.Cashier.UI.Dialogs
             MessageBox.Show("Manager elevation is not enabled as a persistent session mode.", "Manager Mode", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
+        private void CloseBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isOperationInProgress)
+                Close();
+        }
 
         private async void LogOffBtn_Click(object sender, RoutedEventArgs e)
         {
-            MessageBoxResult result = MessageBox.Show(
-                "Log off this user?\n\nThe current shift will remain open.",
-                "Log Off",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result != MessageBoxResult.Yes)
+            if (!TryBeginOperation("Preparing log off..."))
                 return;
 
-            _viewModel.SetManagerMode(false);
-
-            if (Application.Current is not App app || Owner is not SalesView salesWindow)
+            try
             {
-                MessageBox.Show("The Cashier login route is unavailable.", "Log Off Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
+                MessageBoxResult result = MessageBox.Show(
+                    "Log off this user?\n\nThe current shift will remain open.",
+                    "Log Off",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
 
-            bool returned = await app.ReturnToLoginAsync(salesWindow);
-            if (returned)
-                Close();
+                if (result != MessageBoxResult.Yes)
+                    return;
+
+                _viewModel.SetManagerMode(false);
+
+                if (Application.Current is not App app || Owner is not SalesView salesWindow)
+                {
+                    MessageBox.Show(
+                        "The Cashier login route is unavailable.",
+                        "Log Off Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                bool returned = await app.ReturnToLoginAsync(salesWindow);
+                if (returned)
+                {
+                    _allowClose = true;
+                    Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Shift menu log off",
+                    ex);
+
+                MessageBox.Show(
+                    $"The Cashier could not return to login.\n\n{ex.Message}",
+                    "Log Off Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                if (IsVisible)
+                    EndOperation();
+            }
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (_isOperationInProgress && !_allowClose)
+                e.Cancel = true;
+
+            base.OnClosing(e);
         }
     }
 }

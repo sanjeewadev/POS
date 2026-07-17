@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Windows;
+using System.Windows.Input;
 using POS.Cashier.UI.ViewModels;
 
 namespace POS.Cashier.UI.Dialogs
@@ -9,37 +10,41 @@ namespace POS.Cashier.UI.Dialogs
         public ManagerAuthDialogView(ManagerAuthViewModel viewModel)
         {
             InitializeComponent();
-            this.DataContext = viewModel;
-
-            // Wire up the event so the ViewModel can tell the Window when to close itself
+            DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             viewModel.AuthenticationCompleted += OnAuthenticationCompleted;
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            UsernameBox.Focus();
+            UsernameBox.SelectAll();
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape)
+                return;
+
+            DialogResult = false;
+            e.Handled = true;
         }
 
         private void OnAuthenticationCompleted(bool success)
         {
             if (success)
-            {
-                // Returns 'true' to whatever button opened this dialog
-                this.DialogResult = true;
-                this.Close();
-            }
+                DialogResult = true;
         }
 
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
         {
-            // Returns 'false', so the system knows the override was aborted
-            this.DialogResult = false;
-            this.Close();
+            DialogResult = false;
         }
 
-        // CRITICAL: We must un-subscribe from the event when the window closes 
-        // to prevent the dreaded WPF Memory Leak!
         protected override void OnClosed(EventArgs e)
         {
-            if (this.DataContext is ManagerAuthViewModel viewModel)
-            {
+            if (DataContext is ManagerAuthViewModel viewModel)
                 viewModel.AuthenticationCompleted -= OnAuthenticationCompleted;
-            }
+
             base.OnClosed(e);
         }
     }

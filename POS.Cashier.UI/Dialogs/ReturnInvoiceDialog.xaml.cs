@@ -176,5 +176,14 @@ namespace POS.Cashier.UI.Dialogs
                 _isWorking = false;
             }
         }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape || _isWorking)
+                return;
+
+            DialogResult = false;
+            e.Handled = true;
+        }
     }
 }

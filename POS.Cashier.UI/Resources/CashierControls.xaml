@@ -76,6 +76,58 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="CashierComboBox" TargetType="ComboBox">
+        <Setter Property="Background" Value="{StaticResource CashierInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="7,4"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style.Triggers>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierInputFocusBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource CashierPrimaryBrush}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource CashierDisabledBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource CashierMutedTextBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierDatePicker" TargetType="DatePicker">
+        <Setter Property="Background" Value="{StaticResource CashierInputBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierCheckBox" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="MinHeight" Value="28"/>
+    </Style>
+
+    <Style x:Key="CashierValidationText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierDangerBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="CashierReadOnlyValue" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
     <Style x:Key="CashierButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource CashierNeutralButtonBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>

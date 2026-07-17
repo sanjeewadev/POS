@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
 using POS.Cashier.UI.ViewModels;
@@ -15,6 +15,11 @@ namespace POS.Cashier.UI.Dialogs
             {
                 DataContext = App.Services.GetRequiredService<ExpressMenuViewModel>();
             }
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            RefreshButton.Focus();
         }
 
         private void CloseBtn_Click(object sender, RoutedEventArgs e)

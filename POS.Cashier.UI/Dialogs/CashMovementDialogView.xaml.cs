@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Input;
 using POS.Cashier.UI.ViewModels;
@@ -13,6 +13,11 @@ namespace POS.Cashier.UI.Dialogs
 
             DataContext = viewModel;
             viewModel.ActionCompleted += OnActionCompleted;
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            ReasonListBox.Focus();
         }
 
         private void OnActionCompleted(bool success)
@@ -36,21 +41,6 @@ namespace POS.Cashier.UI.Dialogs
                 DialogResult = false;
                 Close();
                 e.Handled = true;
-            }
-        }
-
-        private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ButtonState != MouseButtonState.Pressed)
-                return;
-
-            try
-            {
-                DragMove();
-            }
-            catch
-            {
-                // Ignore drag errors when mouse capture is lost.
             }
         }
 
