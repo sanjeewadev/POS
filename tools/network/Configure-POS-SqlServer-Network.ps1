@@ -82,15 +82,33 @@ Assert-Administrator
 
 $instanceId = Get-SqlInstanceId -Name $InstanceName
 $serviceName = "MSSQL`$$InstanceName"
-$serverRoot = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instanceId\MSSQLServer"
+$instanceRoot = "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instanceId"
+$serverRoot = "$instanceRoot\MSSQLServer"
+$setupRoot = "$instanceRoot\Setup"
 $tcpRoot = "$serverRoot\SuperSocketNetLib\Tcp"
 $ipAllRoot = "$tcpRoot\IPAll"
 $firewallRuleName = "POS SQL Server TCP $Port"
 
-foreach ($requiredPath in @($serverRoot, $tcpRoot, $ipAllRoot)) {
+foreach ($requiredPath in @($serverRoot, $setupRoot, $tcpRoot, $ipAllRoot)) {
     if (-not (Test-Path -LiteralPath $requiredPath)) {
         throw "Required SQL Server registry path was not found: $requiredPath"
     }
+}
+
+$setupProperties = Get-ItemProperty -LiteralPath $setupRoot
+$sqlVersion = [string]$setupProperties.Version
+if ([string]::IsNullOrWhiteSpace($sqlVersion)) {
+    $sqlVersion = [string]$setupProperties.PatchLevel
+}
+
+$majorVersion = 0
+if ([string]::IsNullOrWhiteSpace($sqlVersion) -or
+    -not [int]::TryParse(
+        ($sqlVersion -split '\.' | Select-Object -First 1),
+        [ref]$majorVersion) -or
+    $majorVersion -ne 16) {
+    throw `
+        "Advanced POS 1.0 requires the tested SQL Server 2022 Express major version 16 instance. Detected version: $sqlVersion"
 }
 
 if ([string]::IsNullOrWhiteSpace($BackupPath)) {

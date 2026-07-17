@@ -423,7 +423,7 @@
                                FontWeight="SemiBold"
                                TextWrapping="Wrap"/>
 
-                    <TextBlock Text="Terminal printer, drawer, and auto-lock options are configured on that computer through Terminal Settings. This page does not remotely control another PC."
+                    <TextBlock Text="Use RELEASE MACHINE before replacing a Cashier computer. Historical transactions remain unchanged; open shifts and active or held carts block release. Printer, drawer, and auto-lock options remain local to each Cashier computer."
                                Style="{StaticResource HelpText}"
                                Margin="0,5,0,0"/>
                 </StackPanel>
@@ -441,6 +441,12 @@
                             Command="{Binding ActivateTerminalCommand}"
                             IsEnabled="{Binding CanManageSelected}"
                             Style="{StaticResource ClassicButton}"
+                            Margin="0,0,8,0"/>
+
+                    <Button Content="RELEASE MACHINE"
+                            Command="{Binding ReleaseMachineAssignmentCommand}"
+                            IsEnabled="{Binding CanReleaseSelected}"
+                            Style="{StaticResource WarningButton}"
                             Margin="0,0,8,0"/>
 
                     <Button Content="DISABLE"

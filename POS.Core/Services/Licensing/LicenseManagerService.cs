@@ -471,16 +471,18 @@ namespace POS.Core.Services.Licensing
         {
             try
             {
+                string machineName =
+                    _machineFingerprintService
+                        .GetMachineName();
+
                 var settings =
                     await _terminalSettingsRepository
-                        .GetOrCreateForCurrentMachineAsync();
+                        .GetByMachineNameAsync(
+                            machineName);
 
-                if (!string.IsNullOrWhiteSpace(
-                        settings.TerminalNo))
-                {
-                    return settings.TerminalNo
-                        .Trim();
-                }
+                return settings?.TerminalNo
+                    ?.Trim() ??
+                    string.Empty;
             }
             catch (Exception ex)
             {
@@ -493,9 +495,6 @@ namespace POS.Core.Services.Licensing
                     "The current terminal identity could not be resolved.",
                     ex);
             }
-
-            throw new InvalidOperationException(
-                "The current terminal number is missing.");
         }
 
         private static void

@@ -26,6 +26,7 @@ internal static class AuditTestCatalog
         new("Zero-opening shift and one-open-shift rule are enforced", AuditGroups.Control, CashierControlAuditTests.ZeroOpeningShiftAndSingleOpenShiftAsync),
         new("Stock inquiry returns Stock Item quantities only", AuditGroups.Control, CashierControlAuditTests.StockInquiryReturnsStockItemsOnlyAsync),
         new("Walk-in Wholesale mode persists and validates Wholesale price", AuditGroups.Control, CashierControlAuditTests.WalkInWholesaleModePersistsAsync),
+        new("Terminal machine release blocks active work and preserves identity", AuditGroups.Control, CashierControlAuditTests.TerminalReleaseBlocksActiveWorkAndPreservesIdentityAsync),
 
         new("Cashier utility buttons are wired", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CashierUtilityButtonsAreWiredAsync),
         new("Hidden Credit Note payment placeholder is removed", AuditGroups.SourcePolicy, SourcePolicyAuditTests.HiddenCreditNotePlaceholderIsRemovedAsync),

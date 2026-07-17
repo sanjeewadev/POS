@@ -1,4 +1,5 @@
 using System.Data;
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
@@ -58,6 +59,9 @@ internal sealed class TerminalProvisioningService
         string machineName = machineFingerprint.GetMachineName().Trim();
         string machineCode = machineFingerprint.GetMachineCode().Trim();
 
+        bool wasAlreadyConfigured = false;
+        RegisteredTerminal registered = null!;
+
         await using AppDbContext context =
             await factory.CreateDbContextAsync(cancellationToken);
 
@@ -84,10 +88,11 @@ internal sealed class TerminalProvisioningService
                 byNumber != null &&
                 byMachine.Id != byNumber.Id)
             {
-                throw new InvalidOperationException(
+                throw new SetupUserException(
+                    "TERMINAL_DATABASE_CONFLICT",
                     "The terminal database contains conflicting machine and " +
-                    "terminal-number assignments. Resolve them in Terminal " +
-                    "Management before continuing.");
+                    "terminal-number assignments. Resolve them in BackOffice " +
+                    "Terminal Management before continuing.");
             }
 
             if (byMachine != null &&
@@ -96,10 +101,12 @@ internal sealed class TerminalProvisioningService
                     safeTerminalNo,
                     StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
+                throw new SetupUserException(
+                    "MACHINE_ASSIGNED_TO_DIFFERENT_TERMINAL",
                     $"This computer is already assigned to terminal " +
-                    $"'{byMachine.TerminalNo}'. Use Terminal Management " +
-                    "to release it before assigning a different number.");
+                    $"'{byMachine.TerminalNo}'. Release that machine assignment " +
+                    "in BackOffice Terminal Management before assigning a " +
+                    "different terminal number.");
             }
 
             if (byNumber != null &&
@@ -109,9 +116,12 @@ internal sealed class TerminalProvisioningService
                     machineName,
                     StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
+                throw new SetupUserException(
+                    "TERMINAL_ASSIGNED_TO_OTHER_COMPUTER",
                     $"Terminal '{safeTerminalNo}' is already assigned to " +
-                    $"computer '{byNumber.MachineName}'.");
+                    $"computer '{byNumber.MachineName}'. Choose another terminal, " +
+                    "or release the existing machine assignment in BackOffice " +
+                    "Terminal Management.");
             }
 
             RegisteredTerminal? registeredByMachine =
@@ -127,50 +137,112 @@ internal sealed class TerminalProvisioningService
                         cancellationToken);
 
             if (registeredByMachine != null &&
+                registeredByNumber != null &&
+                registeredByMachine.Id != registeredByNumber.Id)
+            {
+                throw new SetupUserException(
+                    "REGISTERED_TERMINAL_CONFLICT",
+                    "The registered-terminal database contains conflicting " +
+                    "machine and terminal-number assignments. Resolve them in " +
+                    "BackOffice Terminal Management before continuing.");
+            }
+
+            if (registeredByMachine != null &&
                 !string.Equals(
                     registeredByMachine.TerminalNo,
                     safeTerminalNo,
                     StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
-                    $"This machine code is already registered as terminal " +
-                    $"'{registeredByMachine.TerminalNo}'.");
+                throw new SetupUserException(
+                    "MACHINE_CODE_ASSIGNED_TO_DIFFERENT_TERMINAL",
+                    $"This computer is already registered as terminal " +
+                    $"'{registeredByMachine.TerminalNo}'. Release that machine " +
+                    "assignment in BackOffice Terminal Management before " +
+                    "assigning a different terminal number.");
             }
 
             if (registeredByNumber != null &&
+                !string.IsNullOrWhiteSpace(registeredByNumber.MachineCode) &&
                 !string.Equals(
                     registeredByNumber.MachineCode,
                     machineCode,
                     StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
+                throw new SetupUserException(
+                    "TERMINAL_REGISTERED_TO_OTHER_MACHINE",
                     $"Terminal '{safeTerminalNo}' is registered to another " +
-                    "machine code.");
+                    "computer. Release the existing machine assignment in " +
+                    "BackOffice Terminal Management before continuing.");
             }
 
-            TerminalSettings entity =
+            wasAlreadyConfigured =
+                byMachine != null &&
+                byNumber != null &&
+                byMachine.Id == byNumber.Id &&
+                registeredByMachine != null &&
+                registeredByNumber != null &&
+                registeredByMachine.Id == registeredByNumber.Id &&
+                string.Equals(
+                    registeredByMachine.MachineName,
+                    machineName,
+                    StringComparison.OrdinalIgnoreCase);
+
+            TerminalSettings terminalSettings =
                 byMachine ??
                 byNumber ??
                 TerminalSettingsRepository.CreateDefaultSettings(
                     safeTerminalNo,
                     machineName);
 
-            bool isNew = entity.Id == 0;
+            bool isNewSettings = terminalSettings.Id == 0;
             DateTime now = DateTime.Now;
 
-            entity.TerminalNo = safeTerminalNo;
-            entity.TerminalName = safeTerminalName;
-            entity.MachineName = machineName;
-            entity.Location = safeLocation;
-            entity.IsActive = true;
-            entity.UpdatedAt = now;
-            entity.UpdatedBy = safeUpdatedBy;
+            terminalSettings.TerminalNo = safeTerminalNo;
+            terminalSettings.TerminalName = safeTerminalName;
+            terminalSettings.MachineName = machineName;
+            terminalSettings.Location = safeLocation;
+            terminalSettings.IsActive = true;
+            terminalSettings.UpdatedAt = now;
+            terminalSettings.UpdatedBy = safeUpdatedBy;
 
-            if (isNew)
+            if (isNewSettings)
             {
-                entity.CreatedAt = now;
+                terminalSettings.CreatedAt = now;
                 await context.TerminalSettings.AddAsync(
-                    entity,
+                    terminalSettings,
+                    cancellationToken);
+            }
+
+            registered =
+                registeredByMachine ??
+                registeredByNumber ??
+                new RegisteredTerminal
+                {
+                    CreatedAt = now
+                };
+
+            bool isNewRegistration = registered.Id == 0;
+
+            registered.TerminalNo = safeTerminalNo;
+            registered.TerminalName = safeTerminalName;
+            registered.MachineName = machineName;
+            registered.MachineCode = machineCode;
+            registered.Location = safeLocation;
+            registered.IsCashierTerminal = true;
+            registered.IsBackOfficeAllowed = true;
+            registered.IsActive = true;
+            registered.UpdatedAt = now;
+            registered.UpdatedBy = safeUpdatedBy;
+            registered.Remarks = AppendRemark(
+                registered.Remarks,
+                wasAlreadyConfigured
+                    ? "Production terminal configuration verified again."
+                    : "Production terminal machine assignment configured.");
+
+            if (isNewRegistration)
+            {
+                await context.RegisteredTerminals.AddAsync(
+                    registered,
                     cancellationToken);
             }
 
@@ -182,19 +254,6 @@ internal sealed class TerminalProvisioningService
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
-
-        var terminalSettingsRepository =
-            new TerminalSettingsRepository(factory);
-
-        var terminalManagementRepository =
-            new TerminalManagementRepository(
-                factory,
-                machineFingerprint,
-                terminalSettingsRepository);
-
-        RegisteredTerminal registered =
-            await terminalManagementRepository
-                .RegisterOrUpdateCurrentMachineAsync(safeUpdatedBy);
 
         new ProfileCommandService().WriteSqlServerProfile(
             profilePath,
@@ -219,7 +278,29 @@ internal sealed class TerminalProvisioningService
             registered.MachineName,
             registered.MachineCode,
             registered.Location,
-            Path.GetFullPath(profilePath));
+            Path.GetFullPath(profilePath),
+            wasAlreadyConfigured);
+    }
+
+    private static string AppendRemark(
+        string existing,
+        string message)
+    {
+        string safeExisting = (existing ?? string.Empty).Trim();
+        string safeMessage = (message ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(safeExisting))
+            return safeMessage;
+
+        if (string.IsNullOrWhiteSpace(safeMessage))
+            return safeExisting;
+
+        string combined =
+            $"{safeExisting} | {DateTime.Now:yyyy-MM-dd HH:mm}: {safeMessage}";
+
+        return combined.Length <= 500
+            ? combined
+            : combined[^500..];
     }
 
     private static string NormalizeRequired(
@@ -261,4 +342,5 @@ internal sealed record TerminalProvisioningResult(
     string MachineName,
     string MachineCode,
     string Location,
-    string ProfilePath);
+    string ProfilePath,
+    bool WasAlreadyConfigured);

@@ -6,6 +6,7 @@ param(
     [string]$OutputDirectory = "",
     [string]$InnoCompilerPath = "",
     [string]$SqlServerExpressInstallerPath = "",
+    [switch]$AllowServerInstallerWithoutSqlExpress,
     [switch]$SkipSqlServerAudit
 )
 
@@ -17,7 +18,7 @@ $repository = [IO.Path]::GetFullPath(
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path `
-        ([Environment]::GetFolderPath("Desktop")) `
+        ([Environment]::GetFolderPath([Environment+SpecialFolder]::Desktop)) `
         "Advanced_POS_$Version"
 }
 else {
@@ -94,6 +95,79 @@ function Resolve-InnoCompiler {
     }
 
     throw "Inno Setup 6 compiler (ISCC.exe) is required to build the two production setup files."
+}
+
+function Resolve-SqlServerExpressInstaller {
+    $candidate = $null
+
+    if (-not [string]::IsNullOrWhiteSpace($SqlServerExpressInstallerPath)) {
+        $candidate = [IO.Path]::GetFullPath($SqlServerExpressInstallerPath)
+    }
+    else {
+        $searchFolders = @(
+            [Environment]::GetFolderPath([Environment+SpecialFolder]::Desktop),
+            (Join-Path $HOME "Downloads")
+        ) | Where-Object {
+            -not [string]::IsNullOrWhiteSpace($_) -and
+            (Test-Path -LiteralPath $_ -PathType Container)
+        }
+
+        $candidate = $searchFolders | ForEach-Object {
+            Get-ChildItem `
+                -LiteralPath $_ `
+                -File `
+                -Filter "SQLEXPR_x64_ENU.exe" `
+                -ErrorAction SilentlyContinue
+        } | Sort-Object LastWriteTime -Descending |
+            Select-Object -ExpandProperty FullName -First 1
+    }
+
+    if ([string]::IsNullOrWhiteSpace($candidate)) {
+        if ($AllowServerInstallerWithoutSqlExpress) {
+            Write-Warning `
+                "Building a diagnostic Server installer without the SQL Server Express prerequisite."
+            return ""
+        }
+
+        throw ((@(
+            "A full production Server installer must include SQL Server 2022 Express.",
+            "Download the offline Express Core package named SQLEXPR_x64_ENU.exe",
+            "and place it on the Desktop or in Downloads, or pass",
+            "-SqlServerExpressInstallerPath with its full path.",
+            "Use -AllowServerInstallerWithoutSqlExpress only for a non-customer diagnostic build."
+        )) -join " ")
+    }
+
+    $candidate = [IO.Path]::GetFullPath($candidate)
+
+    if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+        throw "SQL Server Express installer was not found: $candidate"
+    }
+
+    if ([IO.Path]::GetFileName($candidate) -ne "SQLEXPR_x64_ENU.exe") {
+        throw `
+            "The offline SQL prerequisite must be the Express Core package named SQLEXPR_x64_ENU.exe. Selected: $candidate"
+    }
+
+    $signature = Get-AuthenticodeSignature -LiteralPath $candidate
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
+        $null -eq $signature.SignerCertificate -or
+        $signature.SignerCertificate.Subject -notmatch "Microsoft") {
+        throw `
+            "The SQL Server Express prerequisite does not have a valid Microsoft Authenticode signature: $candidate"
+    }
+
+    $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($candidate)
+    if ($versionInfo.FileMajorPart -ne 16) {
+        throw `
+            "Advanced POS 1.0 requires the tested SQL Server 2022 Express major version 16 package. Detected version: $($versionInfo.FileVersion)"
+    }
+
+    Write-Host `
+        "SQL Server Express prerequisite: $candidate" `
+        -ForegroundColor Green
+
+    return $candidate
 }
 
 function Test-PowerShellSources {
@@ -192,12 +266,7 @@ try {
     $dotnet = Get-Command dotnet -ErrorAction Stop
     $inno = Resolve-InnoCompiler
 
-    if (-not [string]::IsNullOrWhiteSpace($SqlServerExpressInstallerPath)) {
-        $SqlServerExpressInstallerPath = [IO.Path]::GetFullPath($SqlServerExpressInstallerPath)
-        if (-not (Test-Path -LiteralPath $SqlServerExpressInstallerPath -PathType Leaf)) {
-            throw "SQL Server Express installer was not found: $SqlServerExpressInstallerPath"
-        }
-    }
+    $SqlServerExpressInstallerPath = Resolve-SqlServerExpressInstaller
 
     Test-PowerShellSources
     Test-XamlSources
@@ -343,7 +412,8 @@ try {
         "docs\POS_Production_Customer_Acceptance_Checklist.md",
         "docs\POS_Production_Terminal_Replacement.md",
         "docs\POS_Production_Upgrade_Guide.md",
-        "docs\Phase11D_Production_Deployment_and_Recovery.md"
+        "docs\Phase11D_Production_Deployment_and_Recovery.md",
+        "docs\Phase11D1_Production_Installer_Hotfix.md"
     )
 
     foreach ($relative in $documents) {
@@ -410,11 +480,16 @@ try {
         SelfContainedRuntime = "win-x64"
         SqlServerExpressBundled = -not [string]::IsNullOrWhiteSpace($SqlServerExpressInstallerPath)
         SqlServerAuditSkipped = [bool]$SkipSqlServerAudit
+        CustomerReadyServerInstaller = `
+            -not [string]::IsNullOrWhiteSpace($SqlServerExpressInstallerPath)
     }
 
     if (-not [string]::IsNullOrWhiteSpace($SqlServerExpressInstallerPath)) {
         $manifest["SqlServerExpressInstallerSha256"] = (
             Get-FileHash -LiteralPath $SqlServerExpressInstallerPath -Algorithm SHA256).Hash
+        $manifest["SqlServerExpressInstallerVersion"] = (
+            [Diagnostics.FileVersionInfo]::GetVersionInfo(
+                $SqlServerExpressInstallerPath)).FileVersion
     }
 
     $manifest | ConvertTo-Json -Depth 5 |

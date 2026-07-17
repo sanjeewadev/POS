@@ -60,3 +60,9 @@ After licensing:
 ## Existing standalone data
 
 The Cashier installer does not delete an existing `%LOCALAPPDATA%\POS\pos_local.db`. The encrypted network profile causes the installed production Cashier shortcut to use SQL Server. Keep the old standalone database only as a controlled migration backup, not as a second live production database.
+
+## Re-running configuration
+
+The **Configure Advanced POS Cashier** Start-menu entry can be run again after an interrupted or failed configuration. Repeating the same terminal assignment on the same computer is safe and verifies the existing configuration.
+
+When the selected terminal belongs to another computer, do not choose a different number merely to bypass the message. Release the old machine through BackOffice **Terminal Management → RELEASE MACHINE**, then retry configuration. The Cashier installer never installs SQL Server.

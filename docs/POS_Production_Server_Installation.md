@@ -61,3 +61,11 @@ The POS Server must be running whenever a Cashier or BackOffice computer needs t
 ## Uninstall safety
 
 Uninstalling the application files does not delete the production SQL database, SQL backups, encrypted profile, licences, or deployment reports. Customer data removal requires a separate deliberate administrative operation.
+
+## Phase 11D.1 role and prerequisite controls
+
+Choose **Server and BackOffice** when the server computer will not process sales. That role does not reserve Terminal 01 or any other Cashier terminal.
+
+Choose **Server, BackOffice, and Cashier** only when the same physical computer will also operate as a checkout. The installer then binds the selected terminal to that computer.
+
+The customer-ready Server setup includes the approved Microsoft-signed SQL Server 2022 Express Core prerequisite. Existing `SQLEXPRESS` installations are detected and retained. A Server setup built without the prerequisite is diagnostic only and must not be given to a customer whose computer may not already contain SQL Server.

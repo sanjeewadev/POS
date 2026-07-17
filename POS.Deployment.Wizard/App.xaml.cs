@@ -11,6 +11,7 @@ public partial class App : Application
 
         DeploymentRole role = DeploymentRole.Server;
         string installRoot = string.Empty;
+        bool serverCashierSelected = false;
 
         for (int index = 0; index < e.Args.Length; index++)
         {
@@ -29,6 +30,15 @@ public partial class App : Application
             {
                 installRoot = e.Args[++index];
             }
+            else if (string.Equals(token, "--server-cashier", StringComparison.OrdinalIgnoreCase) &&
+                     index + 1 < e.Args.Length)
+            {
+                string value = e.Args[++index];
+                serverCashierSelected =
+                    string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(value, "1", StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         if (string.IsNullOrWhiteSpace(installRoot))
@@ -37,7 +47,10 @@ public partial class App : Application
                 ?? AppContext.BaseDirectory;
         }
 
-        var window = new MainWindow(role, Path.GetFullPath(installRoot));
+        var window = new MainWindow(
+            role,
+            Path.GetFullPath(installRoot),
+            serverCashierSelected);
         MainWindow = window;
         window.Show();
     }

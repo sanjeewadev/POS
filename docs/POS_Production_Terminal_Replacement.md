@@ -21,3 +21,7 @@ Do not overwrite an existing terminal assignment. Release the old assignment in 
 ## Server address change
 
 Rerun the Cashier configuration wizard on every terminal using the new server IP. The wizard rewrites the encrypted profile for the current Windows account and verifies the connection.
+
+## Release before replacement
+
+In BackOffice, open Terminal Management, select the terminal, and choose **RELEASE MACHINE**. The operation preserves historical sales but is blocked by an Open/Closing shift or an Active/Held cart. Configure the replacement computer only after release and issue a new machine-bound terminal licence.

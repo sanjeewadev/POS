@@ -190,9 +190,30 @@ namespace POS.BackOffice.UI.ViewModels
                     "Loading current terminal settings...",
                     "#003366");
 
-                TerminalSettings settings =
+                string machineName =
+                    _machineFingerprintService
+                        .GetMachineName();
+
+                TerminalSettings? settings =
                     await _terminalSettingsRepository
-                        .GetOrCreateForCurrentMachineAsync();
+                        .GetByMachineNameAsync(
+                            machineName);
+
+                if (settings == null)
+                {
+                    _loadedSettings = null;
+                    ApplyUnassignedState(
+                        machineName);
+                    RefreshPrinterListCore();
+
+                    SetStatus(
+                        "This computer is not assigned as a Cashier terminal. " +
+                        "Use the Cashier installer or BackOffice Terminal " +
+                        "Management before configuring terminal hardware.",
+                        "#B45309");
+
+                    return;
+                }
 
                 LicenseSummary licenseSummary =
                     await _licenseManagerService
@@ -441,6 +462,29 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (!value)
                 OpenDrawerAfterCashSale = false;
+        }
+
+        private void ApplyUnassignedState(
+            string machineName)
+        {
+            TerminalNo = "-";
+            TerminalName = string.Empty;
+            MachineName = DisplayOrDash(
+                machineName);
+            MachineCode = DisplayOrDash(
+                _machineFingerprintService
+                    .GetMachineCode());
+            TerminalStatusText = "Not assigned";
+            TerminalStatusColor = "#B45309";
+            TerminalLicenseStatusText = "Not applicable";
+            TerminalLicenseExpiryText = "-";
+            ReceiptPrinterName = string.Empty;
+            ReceiptPaperWidth = 80;
+            AutoPrintReceipt = false;
+            ReceiptCopies = 1;
+            EnableCashDrawer = false;
+            OpenDrawerAfterCashSale = false;
+            AutoLockTimeoutMinutes = 10;
         }
 
         private void ApplySettings(

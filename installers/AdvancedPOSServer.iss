@@ -56,7 +56,7 @@ Source: "{#SourceRoot}\Server\DeploymentWizard\*"; DestDir: "{app}\DeploymentWiz
 Source: "{#SourceRoot}\Server\Tools\*"; DestDir: "{app}\Tools"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\Server\Docs\*"; DestDir: "{app}\Docs"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs
 #ifdef SqlExpressInstaller
-Source: "{#SqlExpressInstaller}"; DestDir: "{tmp}"; DestName: "SQLEXPR_x64_ENU.exe"; Flags: deleteafterinstall
+Source: "{#SqlExpressInstaller}"; DestDir: "{tmp}"; DestName: "SQLEXPR_x64_ENU.exe"; Flags: deleteafterinstall; AfterInstall: InstallSqlExpressIfNeeded
 #endif
 
 [Icons]
@@ -64,22 +64,27 @@ Name: "{group}\Advanced POS BackOffice"; Filename: "{app}\BackOffice\POS.BackOff
 Name: "{autodesktop}\Advanced POS BackOffice"; Filename: "{app}\BackOffice\POS.BackOffice.UI.exe"; WorkingDir: "{app}\BackOffice"; Tasks: desktopbackoffice
 Name: "{group}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier
 Name: "{autodesktop}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier; Tasks: desktopcashier
-Name: "{group}\Configure Advanced POS Server"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"""; WorkingDir: "{app}"
+Name: "{group}\Configure Advanced POS Server"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"
 Name: "{group}\Backup POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Backup-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\Restore POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Restore-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\Check POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Check-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\POS Server Status"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Show-POS-Server-Status.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 
 [Run]
-#ifdef SqlExpressInstaller
-Filename: "{tmp}\SQLEXPR_x64_ENU.exe"; Parameters: "/Q /ACTION=Install /FEATURES=SQLEngine /INSTANCENAME=SQLEXPRESS /INSTANCEID=SQLEXPRESS /SQLSVCSTARTUPTYPE=Automatic /SQLSYSADMINACCOUNTS=""BUILTIN\ADMINISTRATORS"" /TCPENABLED=0 /NPENABLED=0 /IACCEPTSQLSERVERLICENSETERMS /UPDATEENABLED=False"; StatusMsg: "Installing SQL Server Express..."; Flags: waituntilterminated runhidden; Check: ShouldInstallSqlExpress
-#endif
-Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"""; WorkingDir: "{app}"; Description: "Configure the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated
+Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"; Description: "Configure the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\Cashier"; Check: IsServerOnlyInstall
+Type: files; Name: "{autodesktop}\Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
+Type: files; Name: "{group}\Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Temp"
 
 [Code]
+var
+  SqlExpressRestartRequired: Boolean;
+
 function SqlExpressServiceExists(): Boolean;
 begin
   Result :=
@@ -92,6 +97,79 @@ begin
   Result := not SqlExpressServiceExists();
 end;
 
+function IsServerCashierInstall(): Boolean;
+begin
+  Result := WizardIsComponentSelected('cashier');
+end;
+
+function IsServerOnlyInstall(): Boolean;
+begin
+  Result := not IsServerCashierInstall();
+end;
+
+function GetServerCashierArgument(Param: String): String;
+begin
+  if IsServerCashierInstall() then
+    Result := 'true'
+  else
+    Result := 'false';
+end;
+
+#ifdef SqlExpressInstaller
+procedure InstallSqlExpressIfNeeded();
+var
+  ResultCode: Integer;
+  Parameters: String;
+begin
+  if not ShouldInstallSqlExpress() then
+  begin
+    Log('Existing SQLEXPRESS service detected; bundled SQL Server Express installation skipped.');
+    exit;
+  end;
+
+  Parameters :=
+    '/Q /ACTION=Install /FEATURES=SQLEngine ' +
+    '/INSTANCENAME=SQLEXPRESS /INSTANCEID=SQLEXPRESS ' +
+    '/SQLSVCSTARTUPTYPE=Automatic ' +
+    '/SQLSYSADMINACCOUNTS="BUILTIN\ADMINISTRATORS" ' +
+    '/TCPENABLED=0 /NPENABLED=0 ' +
+    '/IACCEPTSQLSERVERLICENSETERMS /UPDATEENABLED=False';
+
+  if not Exec(
+      ExpandConstant('{tmp}\SQLEXPR_x64_ENU.exe'),
+      Parameters,
+      '',
+      SW_HIDE,
+      ewWaitUntilTerminated,
+      ResultCode) then
+  begin
+    RaiseException(
+      'SQL Server Express could not be started. Setup cannot continue.');
+  end;
+
+  if (ResultCode <> 0) and (ResultCode <> 3010) then
+  begin
+    RaiseException(
+      Format(
+        'SQL Server Express installation failed with exit code %d. ' +
+        'Review the Advanced POS installer log before retrying.', [ResultCode]));
+  end;
+
+  if ResultCode = 3010 then
+  begin
+    SqlExpressRestartRequired := True;
+    Log('SQL Server Express requested a Windows restart (exit code 3010).');
+  end;
+
+  if not SqlExpressServiceExists() then
+  begin
+    RaiseException(
+      'SQL Server Express installation finished but the SQLEXPRESS service ' +
+      'was not created. Setup cannot continue.');
+  end;
+end;
+#endif
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
@@ -99,9 +177,13 @@ begin
   if not SqlExpressServiceExists() then
   begin
     Result :=
-      'SQL Server Express instance SQLEXPRESS is not installed. ' +
-      'Install the approved SQL Server Express prerequisite first, or rebuild ' +
-      'this server installer with -SqlServerExpressInstallerPath.';
+      'This Server installer does not contain SQL Server Express and the ' +
+      'SQLEXPRESS instance is not installed. Use the full production Server ' +
+      'installer that includes the approved SQL Server Express prerequisite.';
   end;
 #endif
+end;
+function NeedRestart(): Boolean;
+begin
+  Result := SqlExpressRestartRequired;
 end;

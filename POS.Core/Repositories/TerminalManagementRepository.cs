@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
@@ -428,6 +429,117 @@ namespace POS.Core.Repositories
             }
         }
 
+        public async Task ReleaseMachineAssignmentAsync(
+            int terminalId,
+            string updatedBy)
+        {
+            await using AppDbContext context =
+                await _contextFactory
+                    .CreateDbContextAsync();
+
+            await using var transaction =
+                await context.Database
+                    .BeginTransactionAsync(
+                        System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                RegisteredTerminal? terminal =
+                    await context.RegisteredTerminals
+                        .FirstOrDefaultAsync(
+                            item =>
+                                item.Id ==
+                                    terminalId);
+
+                if (terminal == null)
+                {
+                    throw new InvalidOperationException(
+                        "The selected terminal no longer exists.");
+                }
+
+                string terminalNo =
+                    NormalizeText(terminal.TerminalNo);
+
+                bool hasOpenShift =
+                    await context.ShiftSessions
+                        .AnyAsync(
+                            shift =>
+                                shift.TerminalNo == terminalNo &&
+                                (shift.Status == "Open" ||
+                                 shift.Status == "Closing"));
+
+                if (hasOpenShift)
+                {
+                    throw new InvalidOperationException(
+                        $"Terminal '{terminalNo}' has an open or closing shift. " +
+                        "Close the shift before releasing the machine assignment.");
+                }
+
+                bool hasActiveCart =
+                    await context.CashierCartSessions
+                        .AnyAsync(
+                            cart =>
+                                cart.TerminalNo == terminalNo &&
+                                (cart.Status == CashierCartStatusCodes.Active ||
+                                 cart.Status == CashierCartStatusCodes.Held));
+
+                if (hasActiveCart)
+                {
+                    throw new InvalidOperationException(
+                        $"Terminal '{terminalNo}' has an active or held cart. " +
+                        "Complete, cancel, or recall the cart before releasing " +
+                        "the machine assignment.");
+                }
+
+                if (string.IsNullOrWhiteSpace(terminal.MachineName) &&
+                    string.IsNullOrWhiteSpace(terminal.MachineCode))
+                {
+                    return;
+                }
+
+                string previousMachine =
+                    string.IsNullOrWhiteSpace(terminal.MachineName)
+                        ? "unknown computer"
+                        : terminal.MachineName;
+
+                DateTime now = DateTime.Now;
+                string safeUpdatedBy = NormalizeText(updatedBy);
+
+                terminal.MachineName = string.Empty;
+                terminal.MachineCode = string.Empty;
+                terminal.LicenseId = string.Empty;
+                terminal.LicenseExpiryDate = null;
+                terminal.LicenseLastCheckedAt = null;
+                terminal.UpdatedAt = now;
+                terminal.UpdatedBy = safeUpdatedBy;
+                terminal.Remarks = AppendRemark(
+                    terminal.Remarks,
+                    $"Machine assignment released from {previousMachine}.");
+
+                List<TerminalSettings> linkedSettings =
+                    await context.TerminalSettings
+                        .Where(
+                            settings =>
+                                settings.TerminalNo == terminalNo)
+                        .ToListAsync();
+
+                foreach (TerminalSettings settings in linkedSettings)
+                {
+                    settings.MachineName = string.Empty;
+                    settings.UpdatedAt = now;
+                    settings.UpdatedBy = safeUpdatedBy;
+                }
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task SetActiveStatusAsync(
             int terminalId,
             bool isActive,
@@ -588,7 +700,8 @@ namespace POS.Core.Repositories
         {
             InstalledLicense? license = null;
 
-            if (terminal.IsCashierTerminal)
+            if (terminal.IsCashierTerminal &&
+                !string.IsNullOrWhiteSpace(terminal.MachineCode))
             {
                 license =
                     licenses

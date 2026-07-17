@@ -101,6 +101,10 @@ namespace POS.BackOffice.UI.ViewModels
             CanManage &&
             HasSelectedTerminal;
 
+        public bool CanReleaseSelected =>
+            CanManageSelected &&
+            SelectedTerminal?.HasMachineAssignment == true;
+
         partial void OnSelectedTerminalChanged(
             RegisteredTerminalSummary? value)
         {
@@ -111,6 +115,9 @@ namespace POS.BackOffice.UI.ViewModels
 
             OnPropertyChanged(
                 nameof(CanManageSelected));
+
+            OnPropertyChanged(
+                nameof(CanReleaseSelected));
         }
 
         partial void OnIsAdministratorChanged(
@@ -121,6 +128,9 @@ namespace POS.BackOffice.UI.ViewModels
 
             OnPropertyChanged(
                 nameof(CanManageSelected));
+
+            OnPropertyChanged(
+                nameof(CanReleaseSelected));
         }
 
         partial void OnIsBusyChanged(
@@ -131,6 +141,9 @@ namespace POS.BackOffice.UI.ViewModels
 
             OnPropertyChanged(
                 nameof(CanManageSelected));
+
+            OnPropertyChanged(
+                nameof(CanReleaseSelected));
         }
 
         [RelayCommand]
@@ -374,6 +387,77 @@ namespace POS.BackOffice.UI.ViewModels
 
             await ChangeActiveStatusAsync(
                 false);
+        }
+
+        [RelayCommand]
+        private async Task ReleaseMachineAssignmentAsync()
+        {
+            if (!EnsureSelectedTerminal() ||
+                !EnsureAdministrator() ||
+                IsBusy)
+            {
+                return;
+            }
+
+            if (SelectedTerminal!.HasMachineAssignment == false)
+            {
+                SetStatus(
+                    "The selected terminal has no machine assignment.",
+                    "#C05A00");
+                return;
+            }
+
+            string warning =
+                $"Release the machine assignment for Terminal {SelectedTerminal.TerminalNo}?\n\n" +
+                $"Assigned computer: {SelectedTerminal.MachineNameDisplay}\n\n" +
+                "Historical sales will be preserved. The terminal cannot be " +
+                "released while it has an open shift or an active/held cart. " +
+                "The replacement computer will require a new machine-bound licence.";
+
+            MessageBoxResult confirmation =
+                MessageBox.Show(
+                    warning,
+                    "Release Terminal Machine",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                IsBusy = true;
+                int terminalId = SelectedTerminal.Id;
+
+                SetStatus(
+                    "Releasing the selected terminal machine assignment...",
+                    "#2B5B84");
+
+                await _repository.ReleaseMachineAssignmentAsync(
+                    terminalId,
+                    GetCurrentUserName());
+
+                await ReloadAndSelectAsync(terminalId);
+
+                SetStatus(
+                    "Machine assignment released. The terminal is ready for a replacement computer.",
+                    "#008000");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Release terminal machine assignment",
+                    ex);
+
+                SetStatus(
+                    $"Machine assignment could not be released: {ex.Message}",
+                    "#B91C1C");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand]

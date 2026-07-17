@@ -39,6 +39,19 @@ internal static class ProductionDeploymentSourcePolicyAuditTests
             setupProgram,
             "confirm-destructive-restore",
             "explicit destructive restore confirmation");
+        AuditAssert.Contains(
+            setupProgram,
+            "USER_MESSAGE:",
+            "customer-safe database setup error channel");
+        AuditAssert.Contains(
+            setupProgram,
+            "SetupFailureLog.Write",
+            "technical setup failure logging");
+        AuditAssert.False(
+            setupProgram.Contains(
+                "Console.Error.WriteLine(ex);",
+                StringComparison.Ordinal),
+            "raw setup stack trace is exposed to the customer dialog");
 
         string terminalService = Read(
             "POS.Database.Setup",
@@ -49,8 +62,16 @@ internal static class ProductionDeploymentSourcePolicyAuditTests
             "serial terminal assignment");
         AuditAssert.Contains(
             terminalService,
-            "RegisterOrUpdateCurrentMachineAsync",
-            "machine registration during terminal installation");
+            "context.RegisteredTerminals.AddAsync",
+            "atomic machine registration during terminal installation");
+        AuditAssert.Contains(
+            terminalService,
+            "WasAlreadyConfigured",
+            "idempotent same-machine terminal configuration");
+        AuditAssert.Contains(
+            terminalService,
+            "TERMINAL_ASSIGNED_TO_OTHER_COMPUTER",
+            "controlled cross-computer terminal conflict");
         AuditAssert.Contains(
             terminalService,
             "WriteSqlServerProfile",
@@ -106,6 +127,23 @@ internal static class ProductionDeploymentSourcePolicyAuditTests
             wizard,
             "import-license",
             "installer licence import workflow");
+        AuditAssert.Contains(
+            wizard,
+            "_serverCashierSelected",
+            "installer-selected server Cashier role is authoritative");
+        AuditAssert.False(
+            wizard.Contains(
+                "bool cashierInstalled = File.Exists",
+                StringComparison.Ordinal),
+            "stale Cashier files control the server terminal role");
+        AuditAssert.Contains(
+            wizard,
+            "CASHIER TERMINAL CONFIGURATION ALREADY COMPLETE",
+            "safe repeated Cashier configuration result");
+        AuditAssert.Contains(
+            wizard,
+            "WriteWizardFailureLog",
+            "deployment wizard technical logging");
 
         string serverInstaller = Read(
             "installers",
@@ -122,6 +160,22 @@ internal static class ProductionDeploymentSourcePolicyAuditTests
             serverInstaller,
             "POS.Deployment.Wizard.exe",
             "guided server deployment wizard");
+        AuditAssert.Contains(
+            serverInstaller,
+            "--server-cashier {code:GetServerCashierArgument}",
+            "explicit server role handoff to the deployment wizard");
+        AuditAssert.Contains(
+            serverInstaller,
+            "AfterInstall: InstallSqlExpressIfNeeded",
+            "checked SQL Server Express bootstrap");
+        AuditAssert.Contains(
+            serverInstaller,
+            "ResultCode = 3010",
+            "SQL Server prerequisite restart handling");
+        AuditAssert.Contains(
+            serverInstaller,
+            "IsServerOnlyInstall",
+            "stale server Cashier component cleanup");
         AuditAssert.False(
             serverInstaller.Contains(
                 "delete production database",
@@ -139,6 +193,11 @@ internal static class ProductionDeploymentSourcePolicyAuditTests
             cashierInstaller,
             "POS.Deployment.Wizard.exe",
             "guided Cashier deployment wizard");
+        AuditAssert.False(
+            cashierInstaller.Contains(
+                "SQLEXPR",
+                StringComparison.OrdinalIgnoreCase),
+            "Cashier installer contains a SQL Server prerequisite");
 
         string networkScript = Read(
             "tools",
@@ -152,6 +211,10 @@ internal static class ProductionDeploymentSourcePolicyAuditTests
             networkScript,
             "-Profile Private",
             "Private-profile SQL firewall restriction");
+        AuditAssert.Contains(
+            networkScript,
+            "$majorVersion -ne 16",
+            "tested SQL Server 2022 major-version gate");
 
         string builder = Read(
             "tools",
@@ -173,6 +236,77 @@ internal static class ProductionDeploymentSourcePolicyAuditTests
             builder,
             "SHA256SUMS.txt",
             "installer hash manifest");
+        AuditAssert.Contains(
+            builder,
+            "Resolve-SqlServerExpressInstaller",
+            "mandatory SQL Server Express prerequisite resolution");
+        AuditAssert.Contains(
+            builder,
+            "Get-AuthenticodeSignature",
+            "Microsoft prerequisite signature validation");
+        AuditAssert.Contains(
+            builder,
+            "CustomerReadyServerInstaller",
+            "release manifest customer-readiness flag");
+
+        string licenseManager = Read(
+            "POS.Core",
+            "Services",
+            "Licensing",
+            "LicenseManagerService.cs");
+        AuditAssert.Contains(
+            licenseManager,
+            "GetByMachineNameAsync",
+            "non-creating terminal lookup during BackOffice licence checks");
+        AuditAssert.False(
+            licenseManager.Contains(
+                "GetOrCreateForCurrentMachineAsync",
+                StringComparison.Ordinal),
+            "BackOffice licence check silently reserves Terminal 01");
+
+        string terminalSettingsViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "TerminalSettingsViewModel.cs");
+        AuditAssert.Contains(
+            terminalSettingsViewModel,
+            "GetByMachineNameAsync",
+            "non-creating BackOffice Terminal Settings lookup");
+        AuditAssert.Contains(
+            terminalSettingsViewModel,
+            "This computer is not assigned as a Cashier terminal",
+            "server-only Terminal Settings guidance");
+        AuditAssert.False(
+            terminalSettingsViewModel.Contains(
+                "GetOrCreateForCurrentMachineAsync",
+                StringComparison.Ordinal),
+            "BackOffice Terminal Settings silently reserves Terminal 01");
+
+        string terminalRepository = Read(
+            "POS.Core",
+            "Repositories",
+            "TerminalManagementRepository.cs");
+        AuditAssert.Contains(
+            terminalRepository,
+            "ReleaseMachineAssignmentAsync",
+            "controlled terminal machine release");
+        AuditAssert.Contains(
+            terminalRepository,
+            "shift.Status == \"Open\"",
+            "open-shift release block");
+        AuditAssert.Contains(
+            terminalRepository,
+            "CashierCartStatusCodes.Held",
+            "held-cart release block");
+
+        string terminalViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "TerminalManagementViewModel.cs");
+        AuditAssert.Contains(
+            terminalViewModel,
+            "ReleaseMachineAssignmentAsync",
+            "Administrator terminal-release command");
 
         foreach (string tool in new[]
         {

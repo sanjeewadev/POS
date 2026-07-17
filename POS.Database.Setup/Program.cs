@@ -95,8 +95,19 @@ internal static class Program
         }
         catch (Exception ex)
         {
+            string technicalLog = SetupFailureLog.Write(ex);
+            string errorCode = ex is SetupUserException userError
+                ? userError.Code
+                : "UNEXPECTED_SETUP_FAILURE";
+
+            string userMessage = ex is SetupUserException
+                ? ex.Message
+                : "Advanced POS setup could not be completed. No password was written to the setup log. Review the technical log or contact support.";
+
             Console.Error.WriteLine("SETUP FAILED:");
-            Console.Error.WriteLine(ex);
+            Console.Error.WriteLine($"ERROR_CODE: {errorCode}");
+            Console.Error.WriteLine($"USER_MESSAGE: {userMessage}");
+            Console.Error.WriteLine($"TECHNICAL_LOG: {technicalLog}");
             return 1;
         }
     }
@@ -546,11 +557,16 @@ internal static class Program
                     result.MachineName,
                     result.MachineCode,
                     result.Location,
-                    result.ProfilePath
+                    result.ProfilePath,
+                    result.WasAlreadyConfigured
                 });
         }
 
-        Console.WriteLine("POS NETWORK TERMINAL CONFIGURATION PASSED.");
+        Console.WriteLine(
+            result.WasAlreadyConfigured
+                ? "POS NETWORK TERMINAL CONFIGURATION ALREADY COMPLETE."
+                : "POS NETWORK TERMINAL CONFIGURATION PASSED.");
+        Console.WriteLine($"Already configured: {result.WasAlreadyConfigured}");
         Console.WriteLine($"Terminal:     {result.TerminalNo}");
         Console.WriteLine($"Machine:      {result.MachineName}");
         Console.WriteLine($"Machine code: {result.MachineCode}");

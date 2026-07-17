@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
 {
     private readonly DeploymentRole _role;
     private readonly string _installRoot;
+    private readonly bool _serverCashierSelected;
     private readonly SetupProcessRunner _runner = new();
     private bool _running;
 
@@ -39,12 +41,14 @@ public partial class MainWindow : Window
 
     public MainWindow(
         DeploymentRole role,
-        string installRoot)
+        string installRoot,
+        bool serverCashierSelected)
     {
         InitializeComponent();
 
         _role = role;
         _installRoot = installRoot;
+        _serverCashierSelected = serverCashierSelected;
 
         Loaded += OnLoaded;
     }
@@ -60,29 +64,26 @@ public partial class MainWindow : Window
 
         if (_role == DeploymentRole.Server)
         {
-            RoleTextBlock.Text =
-                "Server and BackOffice production installation";
-
-            bool cashierInstalled = File.Exists(
-                Path.Combine(
-                    _installRoot,
-                    "Cashier",
-                    "POS.Cashier.UI.exe"));
+            RoleTextBlock.Text = _serverCashierSelected
+                ? "Server, BackOffice, and Cashier production installation"
+                : "Server and BackOffice production installation";
 
             InstallCashierOnServerCheckBox.Visibility =
-                cashierInstalled
+                _serverCashierSelected
                     ? Visibility.Visible
                     : Visibility.Collapsed;
 
-            InstallCashierOnServerCheckBox.IsChecked = cashierInstalled;
+            InstallCashierOnServerCheckBox.IsChecked = _serverCashierSelected;
+            InstallCashierOnServerCheckBox.IsEnabled = false;
+
             TerminalPanel.Visibility =
-                cashierInstalled
+                _serverCashierSelected
                     ? Visibility.Visible
                     : Visibility.Collapsed;
 
-            StatusTextBlock.Text = cashierInstalled
+            StatusTextBlock.Text = _serverCashierSelected
                 ? "Choose the production database mode and confirm the server Cashier identity."
-                : "Choose the production database mode, then start setup.";
+                : "This is a Server and BackOffice-only installation. No Cashier terminal will be reserved or assigned.";
         }
         else
         {
@@ -135,7 +136,7 @@ public partial class MainWindow : Window
         RoutedEventArgs e)
     {
         TerminalPanel.Visibility =
-            InstallCashierOnServerCheckBox.IsChecked == true
+            _serverCashierSelected
                 ? Visibility.Visible
                 : Visibility.Collapsed;
     }
@@ -195,18 +196,29 @@ public partial class MainWindow : Window
             else
                 await RunCashierSetupAsync();
         }
-        catch (Exception ex)
+        catch (OperationCanceledException ex)
         {
             AppendOutput(string.Empty);
-            AppendOutput("SETUP FAILED:");
+            AppendOutput("SETUP CANCELLED:");
             AppendOutput(ex.Message);
+            StatusTextBlock.Text = "Setup was cancelled. No further setup steps were run.";
+        }
+        catch (Exception ex)
+        {
+            string technicalLog = WriteWizardFailureLog(ex);
+            string message = BuildFriendlyFailureMessage(ex, technicalLog);
 
-            StatusTextBlock.Text = "Setup failed. Review the progress details.";
+            AppendOutput(string.Empty);
+            AppendOutput("SETUP FAILED:");
+            AppendOutput(message);
+
+            StatusTextBlock.Text =
+                "Setup could not be completed. Correct the reported issue and run configuration again.";
 
             MessageBox.Show(
                 this,
-                ex.Message,
-                "Advanced POS Setup Failed",
+                message,
+                "Advanced POS Setup Could Not Complete",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
@@ -360,7 +372,7 @@ public partial class MainWindow : Window
 
         string? machineCode = null;
 
-        if (InstallCashierOnServerCheckBox.IsChecked == true)
+        if (_serverCashierSelected)
         {
             string terminalReport = Path.Combine(
                 reportsFolder,
@@ -370,7 +382,9 @@ public partial class MainWindow : Window
                 BuildTerminalArguments(terminalReport));
 
             terminalResult.ThrowIfFailed("Server Cashier terminal configuration");
-            machineCode = await ReadMachineCodeAsync(terminalReport);
+            TerminalSetupReport terminalSetup =
+                await ReadTerminalSetupReportAsync(terminalReport);
+            machineCode = terminalSetup.MachineCode;
         }
 
         await ImportOptionalLicenseAsync(
@@ -397,8 +411,8 @@ public partial class MainWindow : Window
                 NetworkSettingsBackup = networkBackup,
                 PreviousProfileBackup = previousProfileBackup,
                 ServerReport = reportPath,
-                CashierConfigured = InstallCashierOnServerCheckBox.IsChecked == true,
-                TerminalNo = InstallCashierOnServerCheckBox.IsChecked == true
+                CashierConfigured = _serverCashierSelected,
+                TerminalNo = _serverCashierSelected
                     ? TerminalNoTextBox.Text.Trim()
                     : string.Empty,
                 MachineCode = machineCode ?? string.Empty
@@ -445,9 +459,13 @@ public partial class MainWindow : Window
 
         terminalResult.ThrowIfFailed("Cashier terminal configuration");
 
+        TerminalSetupReport terminalSetup =
+            await ReadTerminalSetupReportAsync(terminalReport);
+
         string machineCode =
-            await ReadMachineCodeAsync(terminalReport)
-            ?? "Unavailable";
+            string.IsNullOrWhiteSpace(terminalSetup.MachineCode)
+                ? "Unavailable"
+                : terminalSetup.MachineCode;
 
         await ImportOptionalLicenseAsync(
             Path.Combine(reportsFolder, $"Terminal_Licence_{timestamp}.json"));
@@ -476,16 +494,23 @@ public partial class MainWindow : Window
                 TerminalReport = terminalReport
             });
 
-        StatusTextBlock.Text = "Cashier terminal setup completed successfully.";
+        StatusTextBlock.Text = terminalSetup.WasAlreadyConfigured
+            ? "Cashier terminal configuration was already complete and has been verified."
+            : "Cashier terminal setup completed successfully.";
         AppendOutput(string.Empty);
-        AppendOutput("CASHIER TERMINAL SETUP PASSED.");
+        AppendOutput(
+            terminalSetup.WasAlreadyConfigured
+                ? "CASHIER TERMINAL CONFIGURATION ALREADY COMPLETE."
+                : "CASHIER TERMINAL SETUP PASSED.");
         AppendOutput($"Terminal: {TerminalNoTextBox.Text.Trim()}");
         AppendOutput($"Machine code: {machineCode}");
         AppendOutput($"Profile: {ProfilePath}");
 
         MessageBox.Show(
             this,
-            "Cashier setup completed.\n\n" +
+            (terminalSetup.WasAlreadyConfigured
+                ? "This computer was already configured for the selected terminal. The connection and machine assignment were verified again.\n\n"
+                : "Cashier setup completed.\n\n") +
             $"Terminal: {TerminalNoTextBox.Text.Trim()}\n" +
             $"Machine code: {machineCode}\n\n" +
             "When no terminal licence was selected, create one for this exact terminal number and machine code before opening Cashier.",
@@ -574,19 +599,30 @@ public partial class MainWindow : Window
         result.ThrowIfFailed("POS licence import");
     }
 
-    private async Task<string?> ReadMachineCodeAsync(string reportPath)
+    private async Task<TerminalSetupReport> ReadTerminalSetupReportAsync(
+        string reportPath)
     {
         if (!File.Exists(reportPath))
-            return null;
+            return new TerminalSetupReport(string.Empty, false);
 
         await using FileStream stream = File.OpenRead(reportPath);
         using JsonDocument document = await JsonDocument.ParseAsync(stream);
 
-        return document.RootElement.TryGetProperty(
+        string machineCode = document.RootElement.TryGetProperty(
             "MachineCode",
-            out JsonElement value)
-            ? value.GetString()
-            : null;
+            out JsonElement machineCodeValue)
+            ? machineCodeValue.GetString() ?? string.Empty
+            : string.Empty;
+
+        bool wasAlreadyConfigured =
+            document.RootElement.TryGetProperty(
+                "WasAlreadyConfigured",
+                out JsonElement configuredValue) &&
+            configuredValue.ValueKind == JsonValueKind.True;
+
+        return new TerminalSetupReport(
+            machineCode,
+            wasAlreadyConfigured);
     }
 
     private async Task VerifyTcpEndpointAsync(string host, int port)
@@ -627,6 +663,58 @@ public partial class MainWindow : Window
         return backupPath;
     }
 
+    private string WriteWizardFailureLog(Exception exception)
+    {
+        try
+        {
+            string folder = Path.Combine(
+                ProgramDataRoot,
+                "Logs",
+                "Setup");
+
+            Directory.CreateDirectory(folder);
+
+            string path = Path.Combine(
+                folder,
+                $"DeploymentWizard_{Environment.MachineName}_{DateTime.Now:yyyyMMdd_HHmmss_fff}.log");
+
+            var content = new StringBuilder();
+            content.AppendLine("Advanced POS deployment wizard failure");
+            content.AppendLine($"Generated: {DateTimeOffset.Now:O}");
+            content.AppendLine($"Computer:  {Environment.MachineName}");
+            content.AppendLine($"Role:      {_role}");
+            content.AppendLine($"Version:   {ProductReleaseInfo.ProductVersion}");
+            content.AppendLine();
+            content.AppendLine(exception.ToString());
+
+            File.WriteAllText(path, content.ToString(), Encoding.UTF8);
+            return path;
+        }
+        catch
+        {
+            return "Technical setup log could not be written.";
+        }
+    }
+
+    private static string BuildFriendlyFailureMessage(
+        Exception exception,
+        string technicalLog)
+    {
+        string message = string.IsNullOrWhiteSpace(exception.Message)
+            ? "Advanced POS setup could not be completed."
+            : exception.Message.Trim();
+
+        if (!message.Contains(
+                "Technical log:",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            message += Environment.NewLine + Environment.NewLine +
+                       $"Technical log: {technicalLog}";
+        }
+
+        return message;
+    }
+
     private void ValidateCommonInputs()
     {
         if (string.IsNullOrWhiteSpace(ServerHostTextBox.Text))
@@ -664,7 +752,7 @@ public partial class MainWindow : Window
         }
 
         if (_role == DeploymentRole.Cashier ||
-            InstallCashierOnServerCheckBox.IsChecked == true)
+            _serverCashierSelected)
         {
             if (string.IsNullOrWhiteSpace(TerminalNoTextBox.Text))
                 throw new InvalidOperationException("A unique terminal number is required.");
@@ -728,7 +816,7 @@ public partial class MainWindow : Window
         ConfirmPasswordBox.IsEnabled = enabled;
         SourceFileTextBox.IsEnabled = enabled;
         TrustedNetworkCheckBox.IsEnabled = enabled;
-        InstallCashierOnServerCheckBox.IsEnabled = enabled;
+        InstallCashierOnServerCheckBox.IsEnabled = false;
         TerminalNoTextBox.IsEnabled = enabled;
         TerminalNameTextBox.IsEnabled = enabled;
         LocationTextBox.IsEnabled = enabled;
@@ -753,3 +841,7 @@ public partial class MainWindow : Window
         Close();
     }
 }
+
+internal sealed record TerminalSetupReport(
+    string MachineCode,
+    bool WasAlreadyConfigured);

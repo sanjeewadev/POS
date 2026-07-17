@@ -5,6 +5,7 @@ using POS.Core.Enums;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Services.Licensing;
 
 namespace POS.Cashier.AuditTests;
 
@@ -267,4 +268,125 @@ internal static class CashierControlAuditTests
         AuditAssert.Equal(1, context.ShiftSessions.Count(row => row.TerminalNo == "T02" && row.Status == ShiftStatusCodes.Open),
             "open shift count for terminal");
     }
+
+    public static async Task TerminalReleaseBlocksActiveWorkAndPreservesIdentityAsync()
+    {
+        using var factory = new AuditDbContextFactory();
+
+        int terminalId;
+        int shiftId;
+        int cartId;
+
+        using (AppDbContext context = factory.CreateDbContext())
+        {
+            var settings = new TerminalSettings
+            {
+                TerminalNo = "01",
+                TerminalName = "Main Cashier",
+                MachineName = "OLD-CASHIER-PC",
+                Location = "Main Store",
+                IsActive = true,
+                CreatedAt = DateTime.Now
+            };
+
+            var terminal = new POS.Core.Models.Terminals.RegisteredTerminal
+            {
+                TerminalNo = "01",
+                TerminalName = "Main Cashier",
+                MachineName = "OLD-CASHIER-PC",
+                MachineCode = "OLD-MACHINE-CODE",
+                Location = "Main Store",
+                IsCashierTerminal = true,
+                IsBackOfficeAllowed = true,
+                IsActive = true,
+                LicenseId = "LIC-OLD-01",
+                LicenseExpiryDate = DateTime.Today.AddYears(1),
+                CreatedAt = DateTime.Now
+            };
+
+            var shift = new ShiftSession
+            {
+                TerminalNo = "01",
+                CashierName = "auditcashier",
+                StartTime = DateTime.Now,
+                Status = "Open"
+            };
+
+            context.TerminalSettings.Add(settings);
+            context.RegisteredTerminals.Add(terminal);
+            context.ShiftSessions.Add(shift);
+            context.SaveChanges();
+
+            terminalId = terminal.Id;
+            shiftId = shift.Id;
+        }
+
+        var repository = new TerminalManagementRepository(
+            factory,
+            new MachineFingerprintService(),
+            new TerminalSettingsRepository(factory));
+
+        await AuditAssert.ThrowsAsync(
+            () => repository.ReleaseMachineAssignmentAsync(
+                terminalId,
+                "auditadmin"),
+            "shift");
+
+        using (AppDbContext context = factory.CreateDbContext())
+        {
+            ShiftSession shift = context.ShiftSessions.Single(row => row.Id == shiftId);
+            shift.Status = "Closed";
+            shift.EndTime = DateTime.Now;
+
+            var cart = new CashierCartSession
+            {
+                CartToken = Guid.NewGuid(),
+                ReferenceNo = "AUDIT-RELEASE-01",
+                ShiftSessionId = shiftId,
+                TerminalNo = "01",
+                CashierName = "auditcashier",
+                Status = CashierCartStatusCodes.Held,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            context.CashierCartSessions.Add(cart);
+            context.SaveChanges();
+            cartId = cart.Id;
+        }
+
+        await AuditAssert.ThrowsAsync(
+            () => repository.ReleaseMachineAssignmentAsync(
+                terminalId,
+                "auditadmin"),
+            "cart");
+
+        using (AppDbContext context = factory.CreateDbContext())
+        {
+            CashierCartSession cart = context.CashierCartSessions.Single(row => row.Id == cartId);
+            cart.Status = CashierCartStatusCodes.Cancelled;
+            cart.CancelledAtUtc = DateTime.UtcNow;
+            cart.CancelledBy = "auditadmin";
+            context.SaveChanges();
+        }
+
+        await repository.ReleaseMachineAssignmentAsync(
+            terminalId,
+            "auditadmin");
+
+        using AppDbContext verify = factory.CreateDbContext();
+
+        var released = verify.RegisteredTerminals.Single(row => row.Id == terminalId);
+        TerminalSettings persistedSettings = verify.TerminalSettings.Single(row => row.TerminalNo == "01");
+
+        AuditAssert.Equal("01", released.TerminalNo, "released terminal number");
+        AuditAssert.Equal("Main Cashier", released.TerminalName, "released terminal name");
+        AuditAssert.Equal(string.Empty, released.MachineName, "released machine name");
+        AuditAssert.Equal(string.Empty, released.MachineCode, "released machine code");
+        AuditAssert.Equal(string.Empty, released.LicenseId, "released licence snapshot");
+        AuditAssert.Equal(string.Empty, persistedSettings.MachineName, "released settings machine name");
+        AuditAssert.Equal(1, verify.ShiftSessions.Count(), "historical shift count");
+        AuditAssert.Equal(1, verify.CashierCartSessions.Count(), "historical cart count");
+    }
+
 }

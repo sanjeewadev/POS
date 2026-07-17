@@ -99,6 +99,10 @@ namespace POS.Core.Models.Terminals
                     "yyyy-MM-dd HH:mm")
                 : "-";
 
+        public bool HasMachineAssignment =>
+            !string.IsNullOrWhiteSpace(MachineName) ||
+            !string.IsNullOrWhiteSpace(MachineCode);
+
         public string MachineCodeDisplay =>
             string.IsNullOrWhiteSpace(
                 MachineCode)
