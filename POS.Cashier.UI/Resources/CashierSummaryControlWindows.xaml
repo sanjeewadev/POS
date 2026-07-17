@@ -1,0 +1,282 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Category 3: shift summaries, control actions, and document previews. -->
+
+    <Style x:Key="CashierSummaryControlWindow"
+           TargetType="Window"
+           BasedOn="{StaticResource CashierDialogWindow}">
+        <Setter Property="Background" Value="{StaticResource CashierWindowBgBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
+        <Setter Property="KeyboardNavigation.ControlTabNavigation" Value="Cycle"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryHeader"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierDialogHeader}">
+        <Setter Property="MinHeight" Value="62"/>
+        <Setter Property="Padding" Value="16,8"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryDangerHeader"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierSummaryHeader}">
+        <Setter Property="Background" Value="{StaticResource CashierDangerDarkBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierDangerBrush}"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryHeaderTitle"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierDialogTitle}">
+        <Setter Property="FontSize" Value="19"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryHeaderSubtitle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierHeaderHintBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryContentPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierPanel}">
+        <Setter Property="Padding" Value="14"/>
+    </Style>
+
+    <Style x:Key="CashierSummarySectionPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierPanel}">
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Background" Value="{StaticResource CashierPanelBrush}"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryFooter"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierDialogFooter}">
+        <Setter Property="MinHeight" Value="62"/>
+        <Setter Property="Padding" Value="12,9"/>
+    </Style>
+
+    <Style x:Key="CashierSummarySectionTitle"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierSectionTitle}">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Margin" Value="0,0,0,9"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryRowLabel"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierMutedText}">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Margin" Value="0,4"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryRowValue"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierReadOnlyValue}">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="12,4,0,4"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryTotalLabel" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryTotalValue"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierSummaryRowValue}">
+        <Setter Property="Foreground" Value="{StaticResource CashierPrimaryDarkBrush}"/>
+        <Setter Property="FontSize" Value="19"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryMetricPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierStatusPanel}">
+        <Setter Property="Background" Value="{StaticResource CashierInputBrush}"/>
+        <Setter Property="Padding" Value="11"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryMetricLabel" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierMutedTextBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryMetricValue" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierHeaderBrush}"/>
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Margin" Value="0,6,0,0"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryInformationPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierStatusPanel}">
+        <Setter Property="Background" Value="{StaticResource CashierSelectionBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierPrimaryBrush}"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryWarningPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierStatusPanel}">
+        <Setter Property="Background" Value="{StaticResource CashierTransactionBalanceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierWarningBrush}"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryDangerPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierStatusPanel}">
+        <Setter Property="Background" Value="{StaticResource CashierPanelBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierDangerBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Padding" Value="11"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryReadOnlyTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierTextBox}">
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="Background" Value="{StaticResource CashierPanelAltBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryQuantityTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierTextBox}">
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="7,3"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryMoneyTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierMoneyInputTextBox}">
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryNoteTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierTextBox}">
+        <Setter Property="AcceptsReturn" Value="True"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="VerticalContentAlignment" Value="Top"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+    </Style>
+
+    <Style x:Key="CashierSummarySecondaryButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierButton}">
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="FontSize" Value="14"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryPrimaryButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierPrimaryButton}">
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="Padding" Value="16,6"/>
+        <Setter Property="FontSize" Value="14"/>
+    </Style>
+
+    <Style x:Key="CashierSummarySuccessButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierSuccessButton}">
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="Padding" Value="16,6"/>
+        <Setter Property="FontSize" Value="14"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryDangerButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierDangerButton}">
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="Padding" Value="16,6"/>
+        <Setter Property="FontSize" Value="14"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryProtectedButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierProtectedButton}">
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="Padding" Value="16,6"/>
+        <Setter Property="FontSize" Value="14"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryMenuButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierButton}">
+        <Setter Property="MinHeight" Value="68"/>
+        <Setter Property="Padding" Value="14,10"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryOptionButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierButton}">
+        <Setter Property="MinHeight" Value="150"/>
+        <Setter Property="Padding" Value="14"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryActionTitle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierHeaderBrush}"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryActionSubtitle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierMutedTextBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,7,0,0"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryPreviewTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierTextBox}">
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="AcceptsReturn" Value="True"/>
+        <Setter Property="AcceptsTab" Value="False"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Background" Value="{StaticResource CashierInputBrush}"/>
+    </Style>
+
+    <Style x:Key="CashierSummaryStatusText"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierMutedText}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+</ResourceDictionary>

@@ -2,125 +2,173 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Shift and Security"
-        Style="{StaticResource CashierDialogWindow}"
-        Width="460"
-        Height="680"
-        MinWidth="420"
+        Style="{StaticResource CashierSummaryControlWindow}"
+        Width="720"
+        Height="650"
+        MinWidth="600"
         MinHeight="520"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
+        KeyboardNavigation.TabNavigation="Cycle"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
+
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="52"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="64"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource CashierDialogHeader}">
-            <Grid>
-                <TextBlock Text="SHIFT AND SECURITY"
-                           Style="{StaticResource CashierDialogTitle}"/>
+        <Border Grid.Row="0"
+                Style="{StaticResource CashierSummaryHeader}">
+            <DockPanel LastChildFill="True">
                 <TextBlock Text="ESC closes"
                            Style="{StaticResource CashierShortcutHint}"
-                           HorizontalAlignment="Right"/>
-            </Grid>
+                           DockPanel.Dock="Right"
+                           Margin="16,0,0,0"/>
+                <StackPanel>
+                    <TextBlock Text="SHIFT AND SECURITY"
+                               Style="{StaticResource CashierSummaryHeaderTitle}"/>
+                    <TextBlock Text="Review the active terminal, print reports, or perform controlled session actions."
+                               Style="{StaticResource CashierSummaryHeaderSubtitle}"/>
+                </StackPanel>
+            </DockPanel>
         </Border>
 
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Padding="16">
-            <StackPanel x:Name="MenuActionsPanel">
-                <Border Style="{StaticResource CashierPanel}" Margin="0,0,0,14">
+            <Grid x:Name="MenuActionsPanel">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Style="{StaticResource CashierSummarySectionPanel}">
                     <StackPanel>
                         <TextBlock Text="TERMINAL STATUS"
-                                   Style="{StaticResource CashierSectionTitle}"
-                                   Margin="0,0,0,10"/>
-
-                        <Grid Margin="0,0,0,7">
-                            <TextBlock Text="Cashier" Style="{StaticResource CashierFieldLabel}"/>
-                            <TextBlock x:Name="CashierNameTxt"
-                                       Text="Pending..."
-                                       Style="{StaticResource CashierReadOnlyValue}"
-                                       Foreground="{StaticResource CashierPrimaryBrush}"
-                                       HorizontalAlignment="Right"/>
-                        </Grid>
-                        <Grid Margin="0,0,0,7">
-                            <TextBlock Text="Shift ID" Style="{StaticResource CashierFieldLabel}"/>
-                            <TextBlock x:Name="ShiftIdTxt"
-                                       Text="#0000"
-                                       Style="{StaticResource CashierReadOnlyValue}"
-                                       HorizontalAlignment="Right"/>
-                        </Grid>
-                        <Grid>
-                            <TextBlock Text="Security level" Style="{StaticResource CashierFieldLabel}"/>
-                            <TextBlock x:Name="SecurityStatusTxt"
-                                       Text="CASHIER MODE"
-                                       Style="{StaticResource CashierReadOnlyValue}"
-                                       Foreground="{StaticResource CashierSuccessBrush}"
-                                       HorizontalAlignment="Right"/>
-                        </Grid>
+                                   Style="{StaticResource CashierSummarySectionTitle}"/>
+                        <UniformGrid Columns="3">
+                            <Border Style="{StaticResource CashierSummaryMetricPanel}"
+                                    Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="CASHIER"
+                                               Style="{StaticResource CashierSummaryMetricLabel}"/>
+                                    <TextBlock x:Name="CashierNameTxt"
+                                               Text="Pending..."
+                                               Style="{StaticResource CashierSummaryMetricValue}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CashierSummaryMetricPanel}"
+                                    Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="SHIFT ID"
+                                               Style="{StaticResource CashierSummaryMetricLabel}"/>
+                                    <TextBlock x:Name="ShiftIdTxt"
+                                               Text="#0000"
+                                               Style="{StaticResource CashierSummaryMetricValue}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CashierSummaryMetricPanel}">
+                                <StackPanel>
+                                    <TextBlock Text="SECURITY LEVEL"
+                                               Style="{StaticResource CashierSummaryMetricLabel}"/>
+                                    <TextBlock x:Name="SecurityStatusTxt"
+                                               Text="CASHIER MODE"
+                                               Style="{StaticResource CashierSummaryMetricValue}"
+                                               Foreground="{StaticResource CashierSuccessBrush}"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
                     </StackPanel>
                 </Border>
 
-                <Button x:Name="XReportBtn"
-                        Content="X REPORT — LIVE SUMMARY"
-                        Style="{StaticResource CashierSuccessButton}"
-                        Height="48"
-                        Margin="0,0,0,10"
-                        Click="XReportBtn_Click"/>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="10"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="10"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <Button x:Name="CloseShiftBtn"
-                        Content="CLOSE SHIFT / Z REPORT"
-                        Style="{StaticResource CashierDangerButton}"
-                        Height="48"
-                        Margin="0,0,0,10"
-                        Click="CloseShiftBtn_Click"/>
+                    <Button x:Name="XReportBtn"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Content="X REPORT — LIVE SUMMARY"
+                            Style="{StaticResource CashierSummarySuccessButton}"
+                            Height="68"
+                            Click="XReportBtn_Click"/>
 
-                <Button x:Name="CustomerPaymentBtn"
-                        Content="CUSTOMER ACCOUNT PAYMENT"
-                        Style="{StaticResource CashierPrimaryButton}"
-                        Height="48"
-                        Margin="0,0,0,10"
-                        Click="CustomerPaymentBtn_Click"/>
+                    <Button x:Name="CloseShiftBtn"
+                            Grid.Row="0"
+                            Grid.Column="2"
+                            Content="CLOSE SHIFT / Z REPORT"
+                            Style="{StaticResource CashierSummaryDangerButton}"
+                            Height="68"
+                            Click="CloseShiftBtn_Click"/>
 
-                <Button x:Name="LockTerminalBtn"
-                        Content="LOCK TERMINAL  (F12)"
-                        Style="{StaticResource CashierButton}"
-                        Height="48"
-                        Margin="0,0,0,10"
-                        Click="LockTerminalBtn_Click"/>
+                    <Button x:Name="CustomerPaymentBtn"
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            Content="CUSTOMER ACCOUNT PAYMENT"
+                            Style="{StaticResource CashierSummaryPrimaryButton}"
+                            Height="68"
+                            Click="CustomerPaymentBtn_Click"/>
 
-                <Button x:Name="ToggleManagerBtn"
-                        Style="{StaticResource CashierDangerButton}"
-                        Height="48"
-                        Margin="0,0,0,10"
-                        Click="ToggleManagerBtn_Click">
-                    <TextBlock x:Name="ToggleManagerTxt" Text="ELEVATE TO MANAGER"/>
-                </Button>
+                    <Button x:Name="LockTerminalBtn"
+                            Grid.Row="2"
+                            Grid.Column="2"
+                            Content="LOCK TERMINAL  (F12)"
+                            Style="{StaticResource CashierSummarySecondaryButton}"
+                            Height="68"
+                            Click="LockTerminalBtn_Click"/>
 
-                <Button x:Name="LogOffBtn"
-                        Content="LOG OFF USER"
-                        Style="{StaticResource CashierProtectedButton}"
-                        Height="48"
-                        Click="LogOffBtn_Click"/>
-            </StackPanel>
+                    <Button x:Name="ToggleManagerBtn"
+                            Grid.Row="4"
+                            Grid.Column="0"
+                            Style="{StaticResource CashierSummaryDangerButton}"
+                            Height="68"
+                            Click="ToggleManagerBtn_Click">
+                        <TextBlock x:Name="ToggleManagerTxt"
+                                   Text="ELEVATE TO MANAGER"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                    </Button>
+
+                    <Button x:Name="LogOffBtn"
+                            Grid.Row="4"
+                            Grid.Column="2"
+                            Content="LOG OFF USER"
+                            Style="{StaticResource CashierSummaryProtectedButton}"
+                            Height="68"
+                            Click="LogOffBtn_Click"/>
+                </Grid>
+            </Grid>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}">
+        <Border Grid.Row="2"
+                Style="{StaticResource CashierSummaryFooter}">
             <Grid>
                 <TextBlock x:Name="OperationText"
                            Text="Processing..."
-                           Style="{StaticResource CashierMutedText}"
+                           Style="{StaticResource CashierSummaryStatusText}"
                            Visibility="Collapsed"
                            VerticalAlignment="Center"/>
                 <Button x:Name="CloseMenuButton"
                         Content="CLOSE MENU"
-                        Style="{StaticResource CashierButton}"
-                        Width="130"
+                        Style="{StaticResource CashierSummarySecondaryButton}"
+                        MinWidth="130"
                         HorizontalAlignment="Right"
                         IsCancel="True"
                         Click="CloseBtn_Click"/>

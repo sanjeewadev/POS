@@ -696,6 +696,144 @@ internal static class SourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task SummaryAndControlWindowsUseCategoryThreeFamilyAsync()
+    {
+        string app = Read("POS.Cashier.UI", "App.xaml");
+        AuditAssert.Contains(
+            app,
+            "Resources/CashierSummaryControlWindows.xaml",
+            "Category 3 resource dictionary registration");
+
+        string styles = Read(
+            "POS.Cashier.UI",
+            "Resources",
+            "CashierSummaryControlWindows.xaml");
+
+        string[] requiredStyles =
+        {
+            "x:Key=\"CashierSummaryControlWindow\"",
+            "x:Key=\"CashierSummaryHeader\"",
+            "x:Key=\"CashierSummaryDangerHeader\"",
+            "x:Key=\"CashierSummarySectionPanel\"",
+            "x:Key=\"CashierSummaryFooter\"",
+            "x:Key=\"CashierSummaryRowLabel\"",
+            "x:Key=\"CashierSummaryRowValue\"",
+            "x:Key=\"CashierSummaryMetricPanel\"",
+            "x:Key=\"CashierSummaryWarningPanel\"",
+            "x:Key=\"CashierSummaryQuantityTextBox\"",
+            "x:Key=\"CashierSummaryPreviewTextBox\"",
+            "x:Key=\"CashierSummaryOptionButton\""
+        };
+
+        foreach (string styleKey in requiredStyles)
+            AuditAssert.Contains(styles, styleKey, $"shared Category 3 style {styleKey}");
+
+        AuditAssert.Contains(
+            styles,
+            "BasedOn=\"{StaticResource CashierDialogWindow}\"",
+            "Category 3 window style derives from the shared Cashier dialog style");
+
+        string[] dialogs =
+        {
+            "OpenShiftView.xaml",
+            "ShiftMenuView.xaml",
+            "ShiftCloseDialog.xaml",
+            "ShiftSummaryDialog.xaml",
+            "ZReportSummaryDialog.xaml",
+            "PrintOptionsDialog.xaml",
+            "SalesDocumentPreviewDialog.xaml"
+        };
+
+        foreach (string fileName in dialogs)
+        {
+            string dialog = Read("POS.Cashier.UI", "Dialogs", fileName);
+            AuditAssert.Contains(
+                dialog,
+                "Style=\"{StaticResource CashierSummaryControlWindow}\"",
+                $"{fileName} shared summary/control window style");
+            AuditAssert.Contains(
+                dialog,
+                "WindowStartupLocation=\"CenterOwner\"",
+                $"{fileName} owner centering");
+            AuditAssert.Contains(
+                dialog,
+                "KeyboardNavigation.TabNavigation=\"Cycle\"",
+                $"{fileName} controlled Tab navigation");
+            AuditAssert.Contains(dialog, "MinWidth=\"", $"{fileName} minimum width");
+            AuditAssert.Contains(dialog, "MinHeight=\"", $"{fileName} minimum height");
+            AuditAssert.True(
+                dialog.Contains("ResizeMode=\"CanResize", StringComparison.Ordinal),
+                $"{fileName} must remain resizable and scaling-safe.");
+            AuditAssert.False(
+                dialog.Contains("<Window.Resources>", StringComparison.Ordinal),
+                $"{fileName} must not retain duplicated local summary/control styles.");
+            AuditAssert.False(
+                System.Text.RegularExpressions.Regex.IsMatch(dialog, "#[0-9A-Fa-f]{6}"),
+                $"{fileName} must use shared palette resources instead of hard-coded hexadecimal colours.");
+        }
+
+        string openShift = Read("POS.Cashier.UI", "Dialogs", "OpenShiftView.xaml");
+        AuditAssert.Contains(openShift, "x:Name=\"StartShiftButton\"", "Start Shift default action");
+        AuditAssert.Contains(openShift, "Text=\"{Binding TerminalNo}\"", "Start Shift terminal binding");
+        AuditAssert.Contains(openShift, "Text=\"{Binding CashierName}\"", "Start Shift operator binding");
+        AuditAssert.Contains(
+            openShift,
+            "The shift starts with Rs. 0.00 opening cash",
+            "Start Shift zero-opening-cash instruction");
+
+        string menu = Read("POS.Cashier.UI", "Dialogs", "ShiftMenuView.xaml");
+        AuditAssert.Contains(menu, "x:Name=\"MenuActionsPanel\"", "Shift Menu guarded action panel");
+        AuditAssert.Contains(menu, "Click=\"XReportBtn_Click\"", "Shift Menu X Report route");
+        AuditAssert.Contains(menu, "Click=\"CloseShiftBtn_Click\"", "Shift Menu close-shift route");
+        AuditAssert.Contains(menu, "Click=\"LockTerminalBtn_Click\"", "Shift Menu lock route");
+        AuditAssert.Contains(menu, "Click=\"LogOffBtn_Click\"", "Shift Menu log-off route");
+
+        string close = Read("POS.Cashier.UI", "Dialogs", "ShiftCloseDialog.xaml");
+        AuditAssert.Contains(close, "CLOSE SHIFT — BLIND CASH COUNT", "blind cash count heading");
+        AuditAssert.Contains(close, "x:Name=\"Qty5000\"", "blind count first denomination");
+        AuditAssert.Contains(close, "x:Name=\"OtherAmount\"", "blind count other amount");
+        AuditAssert.Contains(close, "x:Name=\"VarianceNoteBox\"", "blind count variance note");
+        AuditAssert.Contains(
+            close,
+            "Style=\"{StaticResource CashierSummaryQuantityTextBox}\"",
+            "blind count shared quantity style");
+        AuditAssert.Contains(close, "Click=\"Submit_Click\"", "blind count submit route");
+
+        string summary = Read("POS.Cashier.UI", "Dialogs", "ShiftSummaryDialog.xaml");
+        AuditAssert.Contains(summary, "Text=\"{Binding NetSales", "X Report net-sales binding");
+        AuditAssert.Contains(summary, "Text=\"{Binding ExpectedCash", "X Report expected-cash binding");
+        AuditAssert.Contains(summary, "x:Name=\"PrintButton\"", "X Report print control");
+        AuditAssert.Contains(summary, "Click=\"PrintBtn_Click\"", "X Report print route");
+
+        string zReport = Read("POS.Cashier.UI", "Dialogs", "ZReportSummaryDialog.xaml");
+        AuditAssert.Contains(zReport, "x:Name=\"ExpectedText\"", "Z Report expected cash");
+        AuditAssert.Contains(zReport, "x:Name=\"CountedText\"", "Z Report counted cash");
+        AuditAssert.Contains(zReport, "x:Name=\"VarianceText\"", "Z Report variance");
+        AuditAssert.Contains(zReport, "Click=\"Confirm_Click\"", "Z Report confirmation route");
+
+        string printOptions = Read("POS.Cashier.UI", "Dialogs", "PrintOptionsDialog.xaml");
+        AuditAssert.Contains(printOptions, "x:Name=\"LastReceiptButton\"", "Print Options initial action");
+        AuditAssert.Contains(printOptions, "Click=\"PrintLastBill_Click\"", "last receipt route");
+        AuditAssert.Contains(printOptions, "Click=\"TaxInvoice_Click\"", "Tax Invoice route");
+        AuditAssert.Contains(printOptions, "Click=\"PrintQuotation_Click\"", "quotation route");
+        AuditAssert.Contains(
+            printOptions,
+            "Style=\"{StaticResource CashierSummaryOptionButton}\"",
+            "Print Options shared action-card style");
+
+        string preview = Read("POS.Cashier.UI", "Dialogs", "SalesDocumentPreviewDialog.xaml");
+        AuditAssert.Contains(preview, "x:Name=\"HeadingText\"", "document preview heading");
+        AuditAssert.Contains(preview, "x:Name=\"PreviewTextBox\"", "document preview text");
+        AuditAssert.Contains(
+            preview,
+            "Style=\"{StaticResource CashierSummaryPreviewTextBox}\"",
+            "document preview shared text style");
+        AuditAssert.Contains(preview, "Click=\"SavePdf_Click\"", "document preview PDF route");
+        AuditAssert.Contains(preview, "Click=\"Print_Click\"", "document preview print route");
+
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");

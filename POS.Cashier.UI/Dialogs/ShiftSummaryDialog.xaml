@@ -2,108 +2,150 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Shift Summary"
-        Style="{StaticResource CashierDialogWindow}"
-        Width="600"
-        Height="680"
-        MinWidth="500"
-        MinHeight="480"
+        Style="{StaticResource CashierSummaryControlWindow}"
+        Width="800"
+        Height="720"
+        MinWidth="640"
+        MinHeight="540"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
+        KeyboardNavigation.TabNavigation="Cycle"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
-    <Window.Resources>
-        <Style x:Key="SummaryLabel" TargetType="TextBlock" BasedOn="{StaticResource CashierMutedText}">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Margin" Value="0,4"/>
-        </Style>
-        <Style x:Key="SummaryValue" TargetType="TextBlock" BasedOn="{StaticResource CashierReadOnlyValue}">
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-            <Setter Property="Margin" Value="0,4"/>
-        </Style>
-    </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="52"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="64"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource CashierDialogHeader}">
-            <Grid>
-                <TextBlock Text="X-READING / SHIFT SUMMARY"
-                           Style="{StaticResource CashierDialogTitle}"/>
+        <Border Grid.Row="0"
+                Style="{StaticResource CashierSummaryHeader}">
+            <DockPanel LastChildFill="True">
                 <TextBlock Text="ENTER prints · ESC closes"
                            Style="{StaticResource CashierShortcutHint}"
-                           HorizontalAlignment="Right"/>
-            </Grid>
+                           DockPanel.Dock="Right"
+                           Margin="16,0,0,0"/>
+                <StackPanel>
+                    <TextBlock Text="X-READING / SHIFT SUMMARY"
+                               Style="{StaticResource CashierSummaryHeaderTitle}"/>
+                    <TextBlock Text="Live totals for the active shift. Printing does not close the shift."
+                               Style="{StaticResource CashierSummaryHeaderSubtitle}"/>
+                </StackPanel>
+            </DockPanel>
         </Border>
 
         <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Padding="16">
-            <StackPanel>
-                <Border Style="{StaticResource CashierPanel}" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Grid.Column="0"
+                        Style="{StaticResource CashierSummarySectionPanel}">
                     <StackPanel>
-                        <TextBlock Text="SALES SUMMARY" Style="{StaticResource CashierSectionTitle}" Margin="0,0,0,8"/>
-                        <Grid><TextBlock Text="Completed sales" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding CompletedSaleCount}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Customer returns" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding CustomerReturnCount}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Gross sales" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding GrossSales, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Discounts" Style="{StaticResource SummaryLabel}" Foreground="{StaticResource CashierDangerBrush}"/><TextBlock Text="{Binding TotalDiscount, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}" Foreground="{StaticResource CashierDangerBrush}"/></Grid>
-                        <Grid><TextBlock Text="VAT" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding VatTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Rectangle Height="1" Fill="{StaticResource CashierBorderBrush}" Margin="0,7"/>
-                        <Grid><TextBlock Text="NET SALES" FontSize="18" FontWeight="Bold"/><TextBlock Text="{Binding NetSales, StringFormat=Rs. \{0:N2\}}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource CashierPrimaryDarkBrush}" HorizontalAlignment="Right"/></Grid>
+                        <TextBlock Text="SALES SUMMARY"
+                                   Style="{StaticResource CashierSummarySectionTitle}"/>
+                        <Grid><TextBlock Text="Completed sales" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding CompletedSaleCount}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Customer returns" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding CustomerReturnCount}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Gross sales" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding GrossSales, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Discounts" Style="{StaticResource CashierSummaryRowLabel}" Foreground="{StaticResource CashierDangerBrush}"/><TextBlock Text="{Binding TotalDiscount, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}" Foreground="{StaticResource CashierDangerBrush}"/></Grid>
+                        <Grid><TextBlock Text="VAT" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding VatTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Rectangle Height="1" Fill="{StaticResource CashierBorderBrush}" Margin="0,8"/>
+                        <Grid><TextBlock Text="NET SALES" Style="{StaticResource CashierSummaryTotalLabel}"/><TextBlock Text="{Binding NetSales, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryTotalValue}"/></Grid>
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource CashierPanel}" Margin="0,0,0,12">
+                <Border Grid.Row="0"
+                        Grid.Column="2"
+                        Style="{StaticResource CashierSummarySectionPanel}">
                     <StackPanel>
-                        <TextBlock Text="TENDER BREAKDOWN" Style="{StaticResource CashierSectionTitle}" Margin="0,0,0,8"/>
-                        <Grid><TextBlock Text="Cash" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding CashTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Card" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding CardTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Cheque" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding ChequeTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Gift voucher" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding GiftVoucherTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Customer credit" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding CustomerCreditTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Other tenders" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding OtherTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
+                        <TextBlock Text="TENDER BREAKDOWN"
+                                   Style="{StaticResource CashierSummarySectionTitle}"/>
+                        <Grid><TextBlock Text="Cash" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding CashTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Card" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding CardTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Cheque" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding ChequeTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Gift voucher" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding GiftVoucherTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Customer credit" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding CustomerCreditTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                        <Grid><TextBlock Text="Other tenders" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding OtherTenderTotal, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource CashierPanel}">
+                <Border Grid.Row="2"
+                        Grid.ColumnSpan="3"
+                        Style="{StaticResource CashierSummarySectionPanel}">
                     <StackPanel>
-                        <TextBlock Text="DRAWER RECONCILIATION" Style="{StaticResource CashierSectionTitle}" Margin="0,0,0,8"/>
-                        <Grid><TextBlock Text="Opening cash" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding OpeningCash, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Paid In" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding PaidInTotal, StringFormat=+ Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Float In" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding FloatInTotal, StringFormat=+ Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Paid Out" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding PaidOutTotal, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Float Out" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding FloatOutTotal, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Grid><TextBlock Text="Cash refunds" Style="{StaticResource SummaryLabel}"/><TextBlock Text="{Binding CashRefundTotal, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource SummaryValue}"/></Grid>
-                        <Rectangle Height="1" Fill="{StaticResource CashierBorderBrush}" Margin="0,7"/>
-                        <Grid><TextBlock Text="EXPECTED CASH IN DRAWER" FontSize="17" FontWeight="Bold"/><TextBlock Text="{Binding ExpectedCash, StringFormat=Rs. \{0:N2\}}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource CashierWarningDarkBrush}" HorizontalAlignment="Right"/></Grid>
+                        <TextBlock Text="DRAWER RECONCILIATION"
+                                   Style="{StaticResource CashierSummarySectionTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <Grid><TextBlock Text="Opening cash" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding OpeningCash, StringFormat=Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}"/></Grid>
+                                <Grid><TextBlock Text="Paid In" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding PaidInTotal, StringFormat=+ Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}" Foreground="{StaticResource CashierSuccessDarkBrush}"/></Grid>
+                                <Grid><TextBlock Text="Float In" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding FloatInTotal, StringFormat=+ Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}" Foreground="{StaticResource CashierSuccessDarkBrush}"/></Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <Grid><TextBlock Text="Paid Out" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding PaidOutTotal, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}" Foreground="{StaticResource CashierDangerBrush}"/></Grid>
+                                <Grid><TextBlock Text="Float Out" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding FloatOutTotal, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}" Foreground="{StaticResource CashierDangerBrush}"/></Grid>
+                                <Grid><TextBlock Text="Cash refunds" Style="{StaticResource CashierSummaryRowLabel}"/><TextBlock Text="{Binding CashRefundTotal, StringFormat=- Rs. \{0:N2\}}" Style="{StaticResource CashierSummaryRowValue}" Foreground="{StaticResource CashierDangerBrush}"/></Grid>
+                            </StackPanel>
+                        </Grid>
+
+                        <Rectangle Height="1" Fill="{StaticResource CashierBorderBrush}" Margin="0,9"/>
+                        <Border Style="{StaticResource CashierSummaryWarningPanel}">
+                            <Grid>
+                                <TextBlock Text="EXPECTED CASH IN DRAWER"
+                                           Style="{StaticResource CashierSummaryTotalLabel}"/>
+                                <TextBlock Text="{Binding ExpectedCash, StringFormat=Rs. \{0:N2\}}"
+                                           Style="{StaticResource CashierSummaryTotalValue}"
+                                           Foreground="{StaticResource CashierWarningDarkBrush}"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
-            </StackPanel>
+            </Grid>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}">
+        <Border Grid.Row="2"
+                Style="{StaticResource CashierSummaryFooter}">
             <Grid>
                 <TextBlock x:Name="PrintStatusText"
                            Text="Printing X Report..."
-                           Style="{StaticResource CashierMutedText}"
+                           Style="{StaticResource CashierSummaryStatusText}"
                            Visibility="Collapsed"
                            VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right">
                     <Button x:Name="CloseButton"
                             Content="CLOSE"
-                            Style="{StaticResource CashierButton}"
+                            Style="{StaticResource CashierSummarySecondaryButton}"
                             IsCancel="True"
+                            MinWidth="110"
                             Margin="0,0,10,0"
                             Click="CancelBtn_Click"/>
                     <Button x:Name="PrintButton"
                             Content="PRINT X-READING"
-                            Style="{StaticResource CashierPrimaryButton}"
-                            MinWidth="160"
+                            Style="{StaticResource CashierSummaryPrimaryButton}"
+                            MinWidth="170"
                             IsDefault="True"
                             Click="PrintBtn_Click"/>
                 </StackPanel>

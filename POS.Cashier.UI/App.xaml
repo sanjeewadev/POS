@@ -11,6 +11,7 @@
                 <ResourceDictionary Source="Resources/CashierDialogs.xaml" />
                 <ResourceDictionary Source="Resources/CashierTransactionDialogs.xaml" />
                 <ResourceDictionary Source="Resources/CashierOperationalWindows.xaml" />
+                <ResourceDictionary Source="Resources/CashierSummaryControlWindows.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -15,6 +15,17 @@ internal static class CashierWindowStabilizationSourcePolicyAuditTests
         "TaxInvoiceIssueDialog.xaml"
     };
 
+    private static readonly HashSet<string> SummaryControlDialogFiles = new(StringComparer.Ordinal)
+    {
+        "OpenShiftView.xaml",
+        "PrintOptionsDialog.xaml",
+        "SalesDocumentPreviewDialog.xaml",
+        "ShiftCloseDialog.xaml",
+        "ShiftMenuView.xaml",
+        "ShiftSummaryDialog.xaml",
+        "ZReportSummaryDialog.xaml"
+    };
+
     private static readonly string[] RoutineDialogFiles =
     {
         "B2BCustomerDialogView.xaml",
@@ -98,12 +109,27 @@ internal static class CashierWindowStabilizationSourcePolicyAuditTests
             "BasedOn=\"{StaticResource CashierDialogWindow}\"",
             "Category 2 style derives from the shared Cashier dialog style");
 
+        string summaryControlStyles = Read(
+            "POS.Cashier.UI",
+            "Resources",
+            "CashierSummaryControlWindows.xaml");
+        AuditAssert.Contains(
+            summaryControlStyles,
+            "x:Key=\"CashierSummaryControlWindow\"",
+            "Category 3 summary/control window style");
+        AuditAssert.Contains(
+            summaryControlStyles,
+            "BasedOn=\"{StaticResource CashierDialogWindow}\"",
+            "Category 3 style derives from the shared Cashier dialog style");
+
         foreach (string fileName in RoutineDialogFiles)
         {
             string xaml = Read("POS.Cashier.UI", "Dialogs", fileName);
             string expectedStyle = OperationalDialogFiles.Contains(fileName)
                 ? "Style=\"{StaticResource CashierOperationalWindow}\""
-                : "Style=\"{StaticResource CashierDialogWindow}\"";
+                : SummaryControlDialogFiles.Contains(fileName)
+                    ? "Style=\"{StaticResource CashierSummaryControlWindow}\""
+                    : "Style=\"{StaticResource CashierDialogWindow}\"";
             AuditAssert.Contains(
                 xaml,
                 expectedStyle,
