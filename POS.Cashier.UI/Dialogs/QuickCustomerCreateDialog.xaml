@@ -2,78 +2,21 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Quick Customer Registration"
-        Style="{StaticResource CashierDialogWindow}"
-        Width="820"
-        Height="610"
+        Style="{StaticResource CashierOperationalWindow}"
+        Width="860"
+        Height="640"
+        MinWidth="760"
+        MinHeight="560"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
+        ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        KeyboardNavigation.TabNavigation="Cycle">
 
     <Window.InputBindings>
         <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
     </Window.InputBindings>
-
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
-        <Style TargetType="TextBlock" x:Key="LabelText" BasedOn="{StaticResource CashierFieldLabel}">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-        </Style>
-
-        <Style TargetType="TextBox" x:Key="ClassicInput" BasedOn="{StaticResource CashierTextBox}">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="6,0"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
-        </Style>
-
-        <Style TargetType="ComboBox" x:Key="ClassicCombo">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
-        </Style>
-
-        <Style TargetType="DatePicker" x:Key="ClassicDate">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
-        </Style>
-
-        <Style TargetType="Button" x:Key="ClassicBtn" BasedOn="{StaticResource CashierButton}">
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Padding" Value="18,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style TargetType="Button" x:Key="SaveBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005500"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003300"/>
-            <Setter Property="Height" Value="42"/>
-            <Setter Property="FontSize" Value="16"/>
-        </Style>
-    </Window.Resources>
 
     <Grid Margin="6">
         <Grid.RowDefinitions>
@@ -84,10 +27,7 @@
 
         <!-- HEADER -->
         <Border Grid.Row="0"
-                Background="#003366"
-                BorderBrush="#002244"
-                BorderThickness="1"
-                Padding="10"
+                Style="{StaticResource CashierOperationalHeader}"
                 Margin="0,0,0,6">
 
             <Grid>
@@ -98,7 +38,7 @@
                            HorizontalAlignment="Center"/>
 
                 <TextBlock Text="Esc = Close"
-                           Foreground="#BFD7EF"
+                           Foreground="{StaticResource CashierHeaderHintBrush}"
                            FontSize="12"
                            FontWeight="Bold"
                            HorizontalAlignment="Right"
@@ -108,8 +48,8 @@
 
         <!-- BODY -->
         <Border Grid.Row="1"
-                Background="#F0F0F0"
-                BorderBrush="#808080"
+                Background="{StaticResource CashierPanelAltBrush}"
+                BorderBrush="{StaticResource CashierBorderBrush}"
                 BorderThickness="1"
                 Padding="14">
 
@@ -124,7 +64,7 @@
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="1. BASIC DETAILS"
                                FontWeight="Heavy"
-                               Foreground="#003366"
+                               Foreground="{StaticResource CashierHeaderBrush}"
                                FontSize="15"
                                Margin="0,0,0,14"/>
 
@@ -134,13 +74,13 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="Customer Type *" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="Customer Type *" Style="{StaticResource CashierOperationalInlineLabel}"/>
                         <ComboBox Grid.Column="1"
                                   ItemsSource="{Binding CustomerTypes}"
                                   SelectedItem="{Binding InputCustomerType}"
-                                  Style="{StaticResource ClassicCombo}"
+                                  Style="{StaticResource CashierOperationalComboBox}"
                                   FontWeight="Bold"
-                                  Background="#FFFFE0"/>
+                                  Background="{StaticResource CashierInputFocusBrush}"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,10">
@@ -149,12 +89,12 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="Full Name *" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="Full Name *" Style="{StaticResource CashierOperationalInlineLabel}"/>
                         <TextBox x:Name="FullNameTextBox"
                                  Grid.Column="1"
                                  Text="{Binding InputFullName, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 Background="#FFFFE0"
+                                 Style="{StaticResource CashierOperationalTextBox}"
+                                 Background="{StaticResource CashierInputFocusBrush}"
                                  FontWeight="Bold"/>
                     </Grid>
 
@@ -164,12 +104,12 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="Phone *" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="Phone *" Style="{StaticResource CashierOperationalInlineLabel}"/>
                         <TextBox x:Name="PhoneTextBox"
                                  Grid.Column="1"
                                  Text="{Binding InputPhone, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 Background="#FFFFE0"/>
+                                 Style="{StaticResource CashierOperationalTextBox}"
+                                 Background="{StaticResource CashierInputFocusBrush}"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,10">
@@ -178,11 +118,11 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="Email:" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="Email:" Style="{StaticResource CashierOperationalInlineLabel}"/>
                         <TextBox x:Name="EmailTextBox"
                                  Grid.Column="1"
                                  Text="{Binding InputEmail, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"/>
+                                 Style="{StaticResource CashierOperationalTextBox}"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,10">
@@ -191,10 +131,10 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="Birthday:" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="Birthday:" Style="{StaticResource CashierOperationalInlineLabel}"/>
                         <DatePicker Grid.Column="1"
                                     SelectedDate="{Binding InputBirthday, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    Style="{StaticResource ClassicDate}"/>
+                                    Style="{StaticResource CashierOperationalDatePicker}"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,10">
@@ -203,11 +143,11 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="Address:" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="Address:" Style="{StaticResource CashierOperationalInlineLabel}"/>
                         <TextBox x:Name="AddressTextBox"
                                  Grid.Column="1"
                                  Text="{Binding InputAddress, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"/>
+                                 Style="{StaticResource CashierOperationalTextBox}"/>
                     </Grid>
 
                     <!-- RETAIL NIC -->
@@ -228,35 +168,35 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="NIC No:" Style="{StaticResource LabelText}"/>
+                        <TextBlock Text="NIC No:" Style="{StaticResource CashierOperationalInlineLabel}"/>
                         <TextBox x:Name="NicTextBox"
                                  Grid.Column="1"
                                  Text="{Binding InputNicNumber, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"/>
+                                 Style="{StaticResource CashierOperationalTextBox}"/>
                     </Grid>
                 </StackPanel>
 
                 <Rectangle Grid.Column="1"
                            Width="1"
-                           Fill="#A0A0A0"
+                           Fill="{StaticResource CashierBorderBrush}"
                            Margin="8,0"/>
 
                 <!-- RIGHT: WHOLESALE / SECURITY RULES -->
                 <StackPanel Grid.Column="2">
                     <TextBlock Text="2. BUSINESS DETAILS"
                                FontWeight="Heavy"
-                               Foreground="#005500"
+                               Foreground="{StaticResource CashierSuccessBrush}"
                                FontSize="15"
                                Margin="0,0,0,14"/>
 
-                    <Border Background="#FFFFFF"
-                            BorderBrush="#C0C0C0"
+                    <Border Background="{StaticResource CashierInputBrush}"
+                            BorderBrush="{StaticResource CashierGridLineBrush}"
                             BorderThickness="1"
                             Padding="10"
                             Margin="0,0,0,12">
 
                         <TextBlock Text="{Binding CustomerTypeHelpText}"
-                                   Foreground="#333333"
+                                   Foreground="{StaticResource CashierTextBrush}"
                                    FontWeight="SemiBold"
                                    TextWrapping="Wrap"/>
                     </Border>
@@ -279,12 +219,12 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="Company *" Style="{StaticResource LabelText}"/>
+                            <TextBlock Text="Company *" Style="{StaticResource CashierOperationalInlineLabel}"/>
                             <TextBox x:Name="CompanyTextBox"
                                      Grid.Column="1"
                                      Text="{Binding InputCompanyName, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ClassicInput}"
-                                     Background="#FFFFE0"
+                                     Style="{StaticResource CashierOperationalTextBox}"
+                                     Background="{StaticResource CashierInputFocusBrush}"
                                      FontWeight="Bold"/>
                         </Grid>
 
@@ -294,11 +234,11 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="BR No:" Style="{StaticResource LabelText}"/>
+                            <TextBlock Text="BR No:" Style="{StaticResource CashierOperationalInlineLabel}"/>
                             <TextBox x:Name="BrTextBox"
                                      Grid.Column="1"
                                      Text="{Binding InputBusinessRegistrationNumber, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ClassicInput}"/>
+                                     Style="{StaticResource CashierOperationalTextBox}"/>
                         </Grid>
 
                         <Grid Margin="0,0,0,10">
@@ -307,16 +247,16 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="VAT No:" Style="{StaticResource LabelText}"/>
+                            <TextBlock Text="VAT No:" Style="{StaticResource CashierOperationalInlineLabel}"/>
                             <TextBox x:Name="VatTextBox"
                                      Grid.Column="1"
                                      Text="{Binding InputVatRegistrationNumber, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource ClassicInput}"/>
+                                     Style="{StaticResource CashierOperationalTextBox}"/>
                         </Grid>
                     </StackPanel>
 
-                    <Border Background="#FFF7ED"
-                            BorderBrush="#D97706"
+                    <Border Background="{StaticResource CashierTransactionBalanceBrush}"
+                            BorderBrush="{StaticResource CashierWarningBrush}"
                             BorderThickness="1"
                             Padding="10"
                             Margin="0,8,0,0">
@@ -324,18 +264,18 @@
                         <StackPanel>
                             <TextBlock Text="Cashier permission rule"
                                        FontWeight="Heavy"
-                                       Foreground="#9A3412"
+                                       Foreground="{StaticResource CashierWarningBrush}"
                                        Margin="0,0,0,6"/>
 
                             <TextBlock Text="This screen creates only a basic customer. Loyalty, discount eligibility, credit limit, credit days and credit approval must be changed from BackOffice/Admin."
                                        TextWrapping="Wrap"
-                                       Foreground="#7C2D12"
+                                       Foreground="{StaticResource CashierWarningDarkBrush}"
                                        FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
 
                     <Border Background="{Binding StatusColorHex}"
-                            BorderBrush="#808080"
+                            BorderBrush="{StaticResource CashierBorderBrush}"
                             BorderThickness="1"
                             Padding="10"
                             Margin="0,18,0,0">
@@ -353,8 +293,8 @@
 
         <!-- FOOTER -->
         <Border Grid.Row="2"
-                Background="#E0E0E0"
-                BorderBrush="#A0A0A0"
+                Background="{StaticResource CashierNeutralButtonBrush}"
+                BorderBrush="{StaticResource CashierBorderBrush}"
                 BorderThickness="1"
                 Padding="10"
                 Margin="0,6,0,0">
@@ -370,21 +310,21 @@
 
                 <TextBlock Grid.Column="0"
                            Text="Required: Full Name, Phone, Customer Type"
-                           Foreground="#333333"
+                           Foreground="{StaticResource CashierTextBrush}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
 
                 <Button Grid.Column="2"
                         Content="CLEAR"
                         Command="{Binding ClearCommand}"
-                        Style="{StaticResource ClassicBtn}"
+                        Style="{StaticResource CashierOperationalSecondaryButton}"
                         Margin="0,0,8,0"/>
 
                 <Button Grid.Column="3"
                         Content="CANCEL"
                         Command="{Binding CancelCommand}"
                         IsCancel="True"
-                        Style="{StaticResource ClassicBtn}"
+                        Style="{StaticResource CashierOperationalSecondaryButton}"
                         Margin="0,0,8,0"/>
 
                 <Button Grid.Column="4"
@@ -392,7 +332,7 @@
         Command="{Binding SaveCommand}"
         IsDefault="True">
                     <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource SaveBtn}">
+                        <Style TargetType="Button" BasedOn="{StaticResource CashierOperationalSuccessButton}">
                             <Setter Property="IsEnabled" Value="True"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsBusy}" Value="True">

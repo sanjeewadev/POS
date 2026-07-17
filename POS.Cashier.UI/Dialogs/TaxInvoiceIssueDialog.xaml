@@ -2,16 +2,17 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Tax Invoice Details"
-        Style="{StaticResource CashierDialogWindow}"
-        Width="580"
-        Height="500"
-        MinWidth="540"
-        MinHeight="460"
+        Style="{StaticResource CashierOperationalWindow}"
+        Width="620"
+        Height="520"
+        MinWidth="560"
+        MinHeight="480"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
+        ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        KeyboardNavigation.TabNavigation="Cycle">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="52"/>
@@ -19,17 +20,17 @@
             <RowDefinition Height="64"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource CashierDialogHeader}">
+        <Border Grid.Row="0" Style="{StaticResource CashierOperationalHeader}">
             <Grid>
                 <TextBlock Text="TAX INVOICE CUSTOMER DETAILS"
-                           Style="{StaticResource CashierDialogTitle}"/>
+                           Style="{StaticResource CashierOperationalHeaderTitle}"/>
                 <TextBlock Text="ENTER continues · ESC cancels"
                            Style="{StaticResource CashierShortcutHint}"
                            HorizontalAlignment="Right"/>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Style="{StaticResource CashierPanel}" Margin="16">
+        <Border Grid.Row="1" Style="{StaticResource CashierOperationalContentPanel}" Margin="16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -52,19 +53,19 @@
                            Margin="0,0,0,16"/>
 
                 <TextBlock Grid.Row="1" Text="Customer name *" Style="{StaticResource CashierFieldLabel}" Margin="0,0,10,10"/>
-                <TextBox x:Name="CustomerNameTextBox" Grid.Row="1" Grid.Column="1" Style="{StaticResource CashierTextBox}" Margin="0,0,0,10" MaxLength="150"/>
+                <TextBox x:Name="CustomerNameTextBox" Grid.Row="1" Grid.Column="1" Style="{StaticResource CashierOperationalTextBox}" Margin="0,0,0,10" MaxLength="150"/>
 
                 <TextBlock Grid.Row="2" Text="Customer TIN" Style="{StaticResource CashierFieldLabel}" Margin="0,0,10,10"/>
-                <TextBox x:Name="CustomerTinTextBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource CashierTextBox}" Margin="0,0,0,10" MaxLength="30"/>
+                <TextBox x:Name="CustomerTinTextBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource CashierOperationalTextBox}" Margin="0,0,0,10" MaxLength="30"/>
 
                 <TextBlock Grid.Row="3" Text="Customer VAT No" Style="{StaticResource CashierFieldLabel}" Margin="0,0,10,10"/>
-                <TextBox x:Name="CustomerVatTextBox" Grid.Row="3" Grid.Column="1" Style="{StaticResource CashierTextBox}" Margin="0,0,0,10" MaxLength="30"/>
+                <TextBox x:Name="CustomerVatTextBox" Grid.Row="3" Grid.Column="1" Style="{StaticResource CashierOperationalTextBox}" Margin="0,0,0,10" MaxLength="30"/>
 
                 <TextBlock Grid.Row="4" Text="Address *" Style="{StaticResource CashierFieldLabel}" VerticalAlignment="Top" Margin="0,6,10,0"/>
                 <TextBox x:Name="CustomerAddressTextBox"
                          Grid.Row="4"
                          Grid.Column="1"
-                         Style="{StaticResource CashierTextBox}"
+                         Style="{StaticResource CashierOperationalTextBox}"
                          Height="100"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
@@ -80,15 +81,15 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}">
+        <Border Grid.Row="2" Style="{StaticResource CashierOperationalFooter}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="CANCEL"
-                        Style="{StaticResource CashierButton}"
+                        Style="{StaticResource CashierOperationalSecondaryButton}"
                         IsCancel="True"
                         Margin="0,0,10,0"
                         Click="Cancel_Click"/>
                 <Button Content="CONTINUE"
-                        Style="{StaticResource CashierPrimaryButton}"
+                        Style="{StaticResource CashierOperationalPrimaryButton}"
                         MinWidth="120"
                         IsDefault="True"
                         Click="Continue_Click"/>

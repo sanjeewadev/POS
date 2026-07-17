@@ -2,6 +2,19 @@ namespace POS.Cashier.AuditTests;
 
 internal static class CashierWindowStabilizationSourcePolicyAuditTests
 {
+    private static readonly HashSet<string> OperationalDialogFiles = new(StringComparer.Ordinal)
+    {
+        "B2BCustomerDialogView.xaml",
+        "ExpressItemDialogView.xaml",
+        "HoldRecallDialog.xaml",
+        "LoyaltyCustomerDialogView.xaml",
+        "ProductSeekDialog.xaml",
+        "QuickCustomerCreateDialog.xaml",
+        "ReturnInvoiceDialog.xaml",
+        "StockInquiryDialog.xaml",
+        "TaxInvoiceIssueDialog.xaml"
+    };
+
     private static readonly string[] RoutineDialogFiles =
     {
         "B2BCustomerDialogView.xaml",
@@ -72,13 +85,29 @@ internal static class CashierWindowStabilizationSourcePolicyAuditTests
             "window.MaxWidth",
             "work-area width protection");
 
+        string operationalStyles = Read(
+            "POS.Cashier.UI",
+            "Resources",
+            "CashierOperationalWindows.xaml");
+        AuditAssert.Contains(
+            operationalStyles,
+            "x:Key=\"CashierOperationalWindow\"",
+            "Category 2 operational window style");
+        AuditAssert.Contains(
+            operationalStyles,
+            "BasedOn=\"{StaticResource CashierDialogWindow}\"",
+            "Category 2 style derives from the shared Cashier dialog style");
+
         foreach (string fileName in RoutineDialogFiles)
         {
             string xaml = Read("POS.Cashier.UI", "Dialogs", fileName);
+            string expectedStyle = OperationalDialogFiles.Contains(fileName)
+                ? "Style=\"{StaticResource CashierOperationalWindow}\""
+                : "Style=\"{StaticResource CashierDialogWindow}\"";
             AuditAssert.Contains(
                 xaml,
-                "Style=\"{StaticResource CashierDialogWindow}\"",
-                $"shared Cashier dialog style for {fileName}");
+                expectedStyle,
+                $"approved Cashier window style for {fileName}");
             AuditAssert.Contains(
                 xaml,
                 "WindowStartupLocation=\"CenterOwner\"",

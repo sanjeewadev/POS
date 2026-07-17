@@ -557,6 +557,145 @@ internal static class SourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task OperationalWindowsUseCategoryTwoFamilyAsync()
+    {
+        string app = Read("POS.Cashier.UI", "App.xaml");
+        AuditAssert.Contains(
+            app,
+            "Resources/CashierOperationalWindows.xaml",
+            "Category 2 resource dictionary registration");
+
+        string styles = Read(
+            "POS.Cashier.UI",
+            "Resources",
+            "CashierOperationalWindows.xaml");
+
+        string[] requiredStyles =
+        {
+            "x:Key=\"CashierOperationalWindow\"",
+            "x:Key=\"CashierOperationalHeader\"",
+            "x:Key=\"CashierOperationalSearchPanel\"",
+            "x:Key=\"CashierOperationalContentPanel\"",
+            "x:Key=\"CashierOperationalFooter\"",
+            "x:Key=\"CashierOperationalSearchTextBox\"",
+            "x:Key=\"CashierOperationalDataGrid\"",
+            "x:Key=\"CashierOperationalEditableDataGrid\"",
+            "x:Key=\"CashierOperationalGroupBox\"",
+            "x:Key=\"CashierOperationalExpressItemButton\"",
+            "x:Key=\"CashierOperationalGridQuantityTextBox\""
+        };
+
+        foreach (string styleKey in requiredStyles)
+            AuditAssert.Contains(styles, styleKey, $"shared Category 2 style {styleKey}");
+
+        string[] dialogs =
+        {
+            "ProductSeekDialog.xaml",
+            "B2BCustomerDialogView.xaml",
+            "LoyaltyCustomerDialogView.xaml",
+            "QuickCustomerCreateDialog.xaml",
+            "ExpressItemDialogView.xaml",
+            "HoldRecallDialog.xaml",
+            "StockInquiryDialog.xaml",
+            "ReturnInvoiceDialog.xaml",
+            "TaxInvoiceIssueDialog.xaml"
+        };
+
+        foreach (string fileName in dialogs)
+        {
+            string dialog = Read("POS.Cashier.UI", "Dialogs", fileName);
+            AuditAssert.Contains(
+                dialog,
+                "Style=\"{StaticResource CashierOperationalWindow}\"",
+                $"{fileName} shared operational window style");
+            AuditAssert.Contains(
+                dialog,
+                "WindowStartupLocation=\"CenterOwner\"",
+                $"{fileName} owner centering");
+            AuditAssert.Contains(
+                dialog,
+                "KeyboardNavigation.TabNavigation=\"Cycle\"",
+                $"{fileName} controlled Tab navigation");
+            AuditAssert.True(
+                dialog.Contains("ResizeMode=\"CanResize\"", StringComparison.Ordinal) ||
+                dialog.Contains("ResizeMode=\"CanResizeWithGrip\"", StringComparison.Ordinal),
+                $"{fileName} must remain resizable for operational use.");
+            AuditAssert.Contains(dialog, "MinWidth=\"", $"{fileName} minimum width");
+            AuditAssert.Contains(dialog, "MinHeight=\"", $"{fileName} minimum height");
+            AuditAssert.False(
+                dialog.Contains("<Window.Resources>", StringComparison.Ordinal),
+                $"{fileName} must not retain duplicated local operational styles.");
+            AuditAssert.False(
+                System.Text.RegularExpressions.Regex.IsMatch(dialog, "#[0-9A-Fa-f]{6}"),
+                $"{fileName} must use shared palette resources instead of hard-coded hexadecimal colours.");
+        }
+
+        string productSeek = Read("POS.Cashier.UI", "Dialogs", "ProductSeekDialog.xaml");
+        AuditAssert.Contains(productSeek, "x:Name=\"ParentDataGrid\"", "Product Seek master grid");
+        AuditAssert.Contains(productSeek, "x:Name=\"VariantDataGrid\"", "Product Seek variant grid");
+        AuditAssert.Contains(productSeek, "x:Name=\"BatchDataGrid\"", "Product Seek batch grid");
+        AuditAssert.Contains(
+            productSeek,
+            "Style=\"{StaticResource CashierOperationalDataGrid}\"",
+            "Product Seek shared data-grid style");
+
+        string b2b = Read("POS.Cashier.UI", "Dialogs", "B2BCustomerDialogView.xaml");
+        AuditAssert.Contains(b2b, "Command=\"{Binding AttachCommand}\"", "B2B attach command");
+        AuditAssert.Contains(
+            b2b,
+            "Style=\"{StaticResource CashierOperationalGroupBox}\"",
+            "B2B shared directory panel");
+
+        string loyalty = Read("POS.Cashier.UI", "Dialogs", "LoyaltyCustomerDialogView.xaml");
+        AuditAssert.Contains(loyalty, "Command=\"{Binding AttachCommand}\"", "Loyalty attach command");
+        AuditAssert.Contains(
+            loyalty,
+            "Style=\"{StaticResource CashierOperationalSearchTextBox}\"",
+            "Loyalty shared search field");
+
+        string quickCustomer = Read("POS.Cashier.UI", "Dialogs", "QuickCustomerCreateDialog.xaml");
+        AuditAssert.Contains(quickCustomer, "Command=\"{Binding SaveCommand}\"", "Quick Customer save command");
+        AuditAssert.Contains(
+            quickCustomer,
+            "BasedOn=\"{StaticResource CashierOperationalSuccessButton}\"",
+            "Quick Customer guarded save button");
+
+        string express = Read("POS.Cashier.UI", "Dialogs", "ExpressItemDialogView.xaml");
+        AuditAssert.Contains(
+            express,
+            "Style=\"{StaticResource CashierOperationalExpressItemButton}\"",
+            "Express Item shared button style");
+        AuditAssert.Contains(express, "Command=\"{Binding LoadButtonsCommand}\"", "Express Item refresh command");
+
+        string holdRecall = Read("POS.Cashier.UI", "Dialogs", "HoldRecallDialog.xaml");
+        AuditAssert.Contains(holdRecall, "x:Name=\"dgSuspended\"", "Hold Recall suspended-cart grid");
+        AuditAssert.Contains(holdRecall, "Click=\"ConfirmBtn_Click\"", "Hold Recall confirmation route");
+
+        string stock = Read("POS.Cashier.UI", "Dialogs", "StockInquiryDialog.xaml");
+        AuditAssert.Contains(stock, "Command=\"{Binding CheckStockCommand}\"", "Stock Inquiry command");
+        AuditAssert.Contains(stock, "x:Name=\"dgStock\"", "Stock Inquiry result grid");
+
+        string customerReturn = Read("POS.Cashier.UI", "Dialogs", "ReturnInvoiceDialog.xaml");
+        AuditAssert.Contains(
+            customerReturn,
+            "Style=\"{StaticResource CashierOperationalEditableDataGrid}\"",
+            "Customer Return editable grid");
+        AuditAssert.Contains(
+            customerReturn,
+            "Style=\"{StaticResource CashierOperationalGridQuantityTextBox}\"",
+            "Customer Return quantity input");
+        AuditAssert.Contains(
+            customerReturn,
+            "Click=\"CompleteReturnButton_Click\"",
+            "Customer Return completion route");
+
+        string taxInvoice = Read("POS.Cashier.UI", "Dialogs", "TaxInvoiceIssueDialog.xaml");
+        AuditAssert.Contains(taxInvoice, "x:Name=\"CustomerNameTextBox\"", "Tax Invoice customer name");
+        AuditAssert.Contains(taxInvoice, "Click=\"Continue_Click\"", "Tax Invoice continue route");
+
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");
