@@ -210,7 +210,6 @@ namespace POS.BackOffice.UI.ViewModels
             if (_isInitialized)
                 return;
 
-            _isInitialized = true;
             IsBusy = true;
             StatusMessage = "Loading GRN page...";
 
@@ -229,10 +228,12 @@ namespace POS.BackOffice.UI.ViewModels
 
                 BulkDiscountMode = DiscountModes.FirstOrDefault() ?? "Amount";
 
+                _isInitialized = true;
                 StatusMessage = "GRN page loaded. Select supplier, enter invoice number, then confirm header.";
             }
             catch (Exception ex)
             {
+                _isInitialized = false;
                 StatusMessage = "Failed to initialize GRN page.";
 
                 _messageBoxService.ShowError(

@@ -125,13 +125,13 @@ namespace POS.BackOffice.UI.ViewModels
             if (IsInitialized)
                 return;
 
-            IsInitialized = true;
+            bool filtersLoaded = await LoadLookupFiltersAsync();
+            bool historyLoaded = await LoadHistoryAsync();
 
-            await LoadLookupFiltersAsync();
-            await LoadHistoryAsync();
+            IsInitialized = filtersLoaded && historyLoaded;
         }
 
-        private async Task LoadLookupFiltersAsync()
+        private async Task<bool> LoadLookupFiltersAsync()
         {
             try
             {
@@ -155,6 +155,8 @@ namespace POS.BackOffice.UI.ViewModels
 
                 if (!ChangedByFilters.Contains(SelectedChangedByFilter))
                     SelectedChangedByFilter = "All";
+
+                return true;
             }
             catch (Exception ex)
             {
@@ -165,6 +167,8 @@ namespace POS.BackOffice.UI.ViewModels
                     "Price History Filter Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
+
+                return false;
             }
         }
 
@@ -185,13 +189,13 @@ namespace POS.BackOffice.UI.ViewModels
             await LoadHistoryAsync();
         }
 
-        private async Task LoadHistoryAsync()
+        private async Task<bool> LoadHistoryAsync()
         {
             if (IsBusy)
-                return;
+                return false;
 
             if (!ValidateFilters())
-                return;
+                return false;
 
             IsBusy = true;
             StatusMessage = "Loading price change history...";
@@ -217,6 +221,7 @@ namespace POS.BackOffice.UI.ViewModels
                 RefreshSummaryCounters();
 
                 StatusMessage = $"Loaded {TotalRows} price change record(s).";
+                return true;
             }
             catch (Exception ex)
             {
@@ -227,6 +232,8 @@ namespace POS.BackOffice.UI.ViewModels
                     "Price History Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+
+                return false;
             }
             finally
             {

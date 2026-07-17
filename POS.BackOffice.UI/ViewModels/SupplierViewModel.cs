@@ -135,18 +135,24 @@ namespace POS.BackOffice.UI.ViewModels
             if (_isInitialized)
                 return;
 
-            _isInitialized = true;
-            await LoadDataAsync();
+            _isInitialized = await TryLoadDataAsync();
+            InitializeCommand.NotifyCanExecuteChanged();
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task LoadDataAsync()
+        {
+            await TryLoadDataAsync();
+        }
+
+        private async Task<bool> TryLoadDataAsync()
         {
             IsBusy = true;
 
             try
             {
                 await LoadDataInternalAsync();
+                return true;
             }
             catch (Exception ex)
             {
@@ -155,6 +161,7 @@ namespace POS.BackOffice.UI.ViewModels
                 _messageBoxService.ShowError(
                     $"Failed to load suppliers:\n\n{ex.Message}",
                     "Database Error");
+                return false;
             }
             finally
             {

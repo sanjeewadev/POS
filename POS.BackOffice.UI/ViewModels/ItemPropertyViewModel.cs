@@ -101,16 +101,17 @@ namespace POS.BackOffice.UI.ViewModels
             if (_isInitialized)
                 return;
 
-            _isInitialized = true;
             IsBusy = true;
 
             try
             {
                 await LoadGroupsInternalAsync();
+                _isInitialized = true;
                 StatusMessage = "Global item property page loaded.";
             }
             catch (Exception ex)
             {
+                _isInitialized = false;
                 StatusMessage = "Failed to initialize item property page.";
 
                 _messageBoxService.ShowError(

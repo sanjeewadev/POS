@@ -389,17 +389,18 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task InitializeAsync()
         {
             if (_isInitialized) return;
-            _isInitialized = true;
             IsBusy = true;
 
             try
             {
                 await LoadLookupsAsync();
                 await LoadMasterGridInternalAsync();
+                _isInitialized = true;
                 StatusMessage = "Item Master page loaded.";
             }
             catch (Exception ex)
             {
+                _isInitialized = false;
                 StatusMessage = "Failed to initialize Item Master.";
                 _messageBoxService.ShowError($"Failed to initialize:\n\n{ex.Message}", "Database Error");
             }

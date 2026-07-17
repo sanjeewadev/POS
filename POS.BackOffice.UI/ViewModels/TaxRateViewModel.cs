@@ -222,7 +222,6 @@ namespace POS.BackOffice.UI.ViewModels
             if (_isInitialized)
                 return;
 
-            _isInitialized = true;
             IsBusy = true;
 
             try
@@ -231,10 +230,12 @@ namespace POS.BackOffice.UI.ViewModels
                 await LoadCategoriesInternalAsync();
                 await LoadRatesInternalAsync(selectCurrentRate: true);
 
+                _isInitialized = true;
                 StatusMessage = "Tax Category and Rate Management loaded.";
             }
             catch (Exception ex)
             {
+                _isInitialized = false;
                 StatusMessage = "Failed to initialize Tax Master.";
 
                 _messageBoxService.ShowError(

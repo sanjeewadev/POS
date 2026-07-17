@@ -100,7 +100,6 @@ namespace POS.BackOffice.UI.ViewModels
             if (_isInitialized)
                 return;
 
-            _isInitialized = true;
             IsBusy = true;
 
             try
@@ -108,10 +107,12 @@ namespace POS.BackOffice.UI.ViewModels
                 await LoadCategoriesAsync();
                 await LoadSubCategoriesInternalAsync();
 
+                _isInitialized = true;
                 StatusMessage = "Sub-category page loaded.";
             }
             catch (Exception ex)
             {
+                _isInitialized = false;
                 StatusMessage = "Failed to initialize sub-category page.";
 
                 _messageBoxService.ShowError(

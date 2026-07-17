@@ -74,17 +74,23 @@ namespace POS.BackOffice.UI.ViewModels
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         }
 
+        private void NavigateTo<TPage>()
+            where TPage : class
+        {
+            if (CurrentPage is TPage)
+                return;
+
+            CurrentPage =
+                _serviceProvider.GetRequiredService<TPage>();
+        }
+
         // ==========================================
         // 0. APPLICATION / DASHBOARD
         // ==========================================
 
         [RelayCommand]
-        private void NavigateToDashboard()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<DashboardViewModel>();
-        }
+        private void NavigateToDashboard() =>
+            NavigateTo<DashboardViewModel>();
 
         [RelayCommand]
         private void ExitApplication()
@@ -103,61 +109,32 @@ namespace POS.BackOffice.UI.ViewModels
         // ==========================================
 
         [RelayCommand]
-        private void NavigateToStoreSettings()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<StoreSettingsView>();
-        }
+        private void NavigateToStoreSettings() =>
+            NavigateTo<StoreSettingsView>();
 
         [RelayCommand]
-        private void NavigateToTerminalSettings()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<TerminalSettingsView>();
-        }
+        private void NavigateToTerminalSettings() =>
+            NavigateTo<TerminalSettingsView>();
 
         [RelayCommand]
-        private void NavigateToBackupRestore()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<BackupRestoreView>();
-        }
+        private void NavigateToBackupRestore() =>
+            NavigateTo<BackupRestoreView>();
 
         [RelayCommand]
-        private void NavigateToLicenseManagement()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<LicenseManagementView>();
-        }
+        private void NavigateToLicenseManagement() =>
+            NavigateTo<LicenseManagementView>();
 
         [RelayCommand]
-        private void NavigateToTerminalManagement()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<TerminalManagementView>();
-        }
+        private void NavigateToTerminalManagement() =>
+            NavigateTo<TerminalManagementView>();
 
         [RelayCommand]
-        private void NavigateToUserManagement()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<UserManagementViewModel>();
-        }
+        private void NavigateToUserManagement() =>
+            NavigateTo<UserManagementViewModel>();
 
         [RelayCommand]
-        private void NavigateToSuspendedTransactionsMonitor()
-        {
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        SuspendedTransactionsMonitorViewModel>();
-        }
+        private void NavigateToSuspendedTransactionsMonitor() =>
+            NavigateTo<SuspendedTransactionsMonitorViewModel>();
 
         // ==========================================
         // 2. INVENTORY SETUP
@@ -165,45 +142,31 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToCategory() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<CategoryViewModel>();
+            NavigateTo<CategoryViewModel>();
 
         [RelayCommand]
         private void NavigateToSubCategory() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SubCategoryViewModel>();
+            NavigateTo<SubCategoryViewModel>();
 
         [RelayCommand]
         private void NavigateToItemProperty() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<ItemPropertyViewModel>();
+            NavigateTo<ItemPropertyViewModel>();
 
         [RelayCommand]
         private void NavigateToUnitOfMeasure() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<UnitOfMeasureViewModel>();
+            NavigateTo<UnitOfMeasureViewModel>();
 
         [RelayCommand]
         private void NavigateToTaxRate() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<TaxRateViewModel>();
+            NavigateTo<TaxRateViewModel>();
 
         [RelayCommand]
         private void NavigateToSupplier() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SupplierViewModel>();
+            NavigateTo<SupplierViewModel>();
 
         [RelayCommand]
         private void NavigateToItemMaster() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<ItemMasterViewModel>();
+            NavigateTo<ItemMasterViewModel>();
 
         // ==========================================
         // 3. INVENTORY OPERATIONS
@@ -211,68 +174,43 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToStockAdjustment() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        StockAdjustmentViewModel>();
+            NavigateTo<StockAdjustmentViewModel>();
 
         [RelayCommand]
         private void NavigateToStockBalance() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<StockBalanceViewModel>();
+            NavigateTo<StockBalanceViewModel>();
 
         [RelayCommand]
         private void NavigateToGoodsReceivedNote() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<GrnViewModel>();
+            NavigateTo<GrnViewModel>();
 
         [RelayCommand]
         private void NavigateToGrnDashboard() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<GrnDashboardViewModel>();
+            NavigateTo<GrnDashboardViewModel>();
 
         [RelayCommand]
         private void NavigateToBarcodeManagement() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        BarcodeManagementViewModel>();
+            NavigateTo<BarcodeManagementViewModel>();
 
         [RelayCommand]
         private void NavigateToBarcodePrinter() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        BarcodePrinterViewModel>();
+            NavigateTo<BarcodePrinterViewModel>();
 
         [RelayCommand]
         private void NavigateToExpressItemAdmin() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        ExpressItemAdminViewModel>();
+            NavigateTo<ExpressItemAdminViewModel>();
 
         [RelayCommand]
         private void NavigateToSupplierReturn() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SupplierReturnViewModel>();
+            NavigateTo<SupplierReturnViewModel>();
 
         [RelayCommand]
         private void NavigateToPriceManagement() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<PriceManagementViewModel>();
+            NavigateTo<PriceManagementViewModel>();
 
         [RelayCommand]
         private void NavigateToPriceChangeHistory() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        PriceChangeHistoryViewModel>();
+            NavigateTo<PriceChangeHistoryViewModel>();
 
         // ==========================================
         // 4. PURCHASING
@@ -280,16 +218,11 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToPurchaseOrder() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<PurchaseOrderViewModel>();
+            NavigateTo<PurchaseOrderViewModel>();
 
         [RelayCommand]
         private void NavigateToPurchaseOrderDashboard() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        PurchaseOrderDashboardViewModel>();
+            NavigateTo<PurchaseOrderDashboardViewModel>();
 
         // ==========================================
         // 5. CRM / WHOLESALE
@@ -297,28 +230,19 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToCustomerMaster() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<CustomerMasterViewModel>();
+            NavigateTo<CustomerMasterViewModel>();
 
         [RelayCommand]
         private void NavigateToCustomerLedger() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<CustomerLedgerViewModel>();
+            NavigateTo<CustomerLedgerViewModel>();
 
         [RelayCommand]
         private void NavigateToGiftVoucher() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<GiftVoucherAdminViewModel>();
+            NavigateTo<GiftVoucherAdminViewModel>();
 
         [RelayCommand]
         private void NavigateToFreeIssueRuleSetup() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        FreeIssueRuleSetupViewModel>();
+            NavigateTo<FreeIssueRuleSetupViewModel>();
 
         // ==========================================
         // 6. SALES
@@ -326,29 +250,19 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToSalesExplorer() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SalesExplorerViewModel>();
+            NavigateTo<SalesExplorerViewModel>();
 
         [RelayCommand]
         private void NavigateToSecurityAudit() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SecurityAuditViewModel>();
+            NavigateTo<SecurityAuditViewModel>();
 
         [RelayCommand]
         private void NavigateToCustomerReturnsAudit() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        CustomerReturnsAuditViewModel>();
+            NavigateTo<CustomerReturnsAuditViewModel>();
 
         [RelayCommand]
         private void NavigateToItemSalesAnalytics() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        ItemSalesAnalyticsViewModel>();
+            NavigateTo<ItemSalesAnalyticsViewModel>();
 
         // ==========================================
         // 7. FINANCE
@@ -356,15 +270,11 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToSupplierLedger() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SupplierLedgerViewModel>();
+            NavigateTo<SupplierLedgerViewModel>();
 
         [RelayCommand]
         private void NavigateToSupplierClaims() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SupplierClaimsViewModel>();
+            NavigateTo<SupplierClaimsViewModel>();
 
         // ==========================================
         // 8. REPORTS / ANALYTICS
@@ -372,33 +282,22 @@ namespace POS.BackOffice.UI.ViewModels
 
         [RelayCommand]
         private void NavigateToFinancialSummary() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<FinancialSummaryViewModel>();
+            NavigateTo<FinancialSummaryViewModel>();
 
         [RelayCommand]
         private void NavigateToSupplierReport() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<SupplierReportViewModel>();
+            NavigateTo<SupplierReportViewModel>();
 
         [RelayCommand]
         private void NavigateToFloatCashLog() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<FloatCashLogViewModel>();
+            NavigateTo<FloatCashLogViewModel>();
 
         [RelayCommand]
         private void NavigateToCashMovementDashboard() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<
-                        CashMovementDashboardViewModel>();
+            NavigateTo<CashMovementDashboardViewModel>();
 
         [RelayCommand]
         private void NavigateToVatReport() =>
-            CurrentPage =
-                _serviceProvider
-                    .GetRequiredService<VatReportViewModel>();
+            NavigateTo<VatReportViewModel>();
     }
 }

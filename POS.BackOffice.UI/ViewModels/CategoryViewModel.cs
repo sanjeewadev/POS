@@ -73,12 +73,16 @@ namespace POS.BackOffice.UI.ViewModels
             if (_isInitialized)
                 return;
 
-            _isInitialized = true;
-            await LoadDataAsync();
+            _isInitialized = await TryLoadDataAsync();
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task LoadDataAsync()
+        {
+            await TryLoadDataAsync();
+        }
+
+        private async Task<bool> TryLoadDataAsync()
         {
             IsBusy = true;
 
@@ -96,6 +100,7 @@ namespace POS.BackOffice.UI.ViewModels
                 }
 
                 StatusMessage = $"{Categories.Count} category record(s) loaded.";
+                return true;
             }
             catch (Exception ex)
             {
@@ -104,6 +109,7 @@ namespace POS.BackOffice.UI.ViewModels
                 _messageBoxService.ShowError(
                     $"Failed to load categories:\n\n{ex.Message}",
                     "Database Error");
+                return false;
             }
             finally
             {
