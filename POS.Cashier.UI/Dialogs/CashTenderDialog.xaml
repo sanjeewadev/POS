@@ -6,52 +6,25 @@
         Style="{StaticResource CashierDialogWindow}"
         Width="900"
         Height="620"
+        MinWidth="820"
+        MinHeight="540"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         ResizeMode="NoResize"
+        KeyboardNavigation.TabNavigation="Cycle"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
 
-    <Window.Resources>
-        <Style x:Key="CashPaymentFieldLabel"
-               TargetType="TextBlock"
-               BasedOn="{StaticResource CashierFieldLabel}">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#23344D"/>
-        </Style>
-
-        <Style x:Key="CashPaymentFieldIcon" TargetType="Border">
-            <Setter Property="Width" Value="34"/>
-            <Setter Property="Height" Value="34"/>
-            <Setter Property="CornerRadius" Value="3"/>
-            <Setter Property="Background" Value="#F1F5F9"/>
-            <Setter Property="BorderBrush" Value="#B9C5D3"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="HorizontalAlignment" Value="Left"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <Style x:Key="CashPaymentAmountBorder" TargetType="Border">
-            <Setter Property="Height" Value="52"/>
-            <Setter Property="CornerRadius" Value="3"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,0"/>
-        </Style>
-    </Window.Resources>
-
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="74"/>
+            <RowDefinition Height="70"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="58"/>
+            <RowDefinition Height="56"/>
         </Grid.RowDefinitions>
 
-        <!-- HEADER -->
+        <!-- CATEGORY 1 TRANSACTION HEADER -->
         <Border Grid.Row="0"
-                Style="{StaticResource CashierDialogHeader}"
-                CornerRadius="3"
-                Padding="16,0">
+                Style="{StaticResource CashierTransactionDialogHeader}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="58"/>
@@ -60,17 +33,10 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0"
-                        Width="46"
-                        Height="46"
-                        CornerRadius="23"
-                        BorderBrush="#D6E4F2"
-                        BorderThickness="1"
-                        Background="#123C69"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center">
-                    <TextBlock Text="Rs"
+                        Style="{StaticResource CashierTransactionHeaderIcon}">
+                    <TextBlock Text="Rs."
                                Foreground="White"
-                               FontSize="15"
+                               FontSize="14"
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
@@ -82,10 +48,7 @@
                                Style="{StaticResource CashierDialogTitle}"
                                FontSize="22"/>
                     <TextBlock Text="Apply cash to the current sale"
-                               Foreground="#D6E4F2"
-                               FontSize="11.5"
-                               FontWeight="SemiBold"
-                               Margin="0,2,0,0"/>
+                               Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
                 </StackPanel>
 
                 <TextBlock Grid.Column="2"
@@ -96,242 +59,244 @@
             </Grid>
         </Border>
 
-        <!-- BODY -->
-        <Grid Grid.Row="1" Margin="0,10,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="320"/>
-            </Grid.ColumnDefinitions>
+        <!-- TRANSACTION BODY. The scrollbar is a high-scaling safety fallback. -->
+        <ScrollViewer Grid.Row="1"
+                      Margin="0,10,0,10"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      CanContentScroll="False"
+                      Focusable="False">
+            <Grid MinHeight="390">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="320"/>
+                </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0"
-                    Style="{StaticResource CashierPanel}"
-                    CornerRadius="3"
-                    Padding="14"
-                    Margin="0,0,10,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="50"/>
-                        <RowDefinition Height="58"/>
-                        <RowDefinition Height="58"/>
-                        <RowDefinition Height="58"/>
-                        <RowDefinition Height="58"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <Border Grid.Column="0"
+                        Style="{StaticResource CashierPanel}"
+                        CornerRadius="3"
+                        Padding="14"
+                        Margin="0,0,10,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="48"/>
+                            <RowDefinition Height="56"/>
+                            <RowDefinition Height="56"/>
+                            <RowDefinition Height="56"/>
+                            <RowDefinition Height="56"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0"
-                            Background="{Binding StatusColorHex}"
-                            BorderBrush="{StaticResource CashierBorderDarkBrush}"
-                            BorderThickness="1"
-                            CornerRadius="3"
-                            Padding="10,0">
-                        <StackPanel Orientation="Horizontal"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center">
-                            <Border Width="26"
-                                    Height="26"
-                                    CornerRadius="13"
-                                    BorderBrush="White"
-                                    BorderThickness="1"
-                                    Margin="0,0,10,0">
-                                <TextBlock Text="✓"
+                        <Border Grid.Row="0"
+                                Style="{StaticResource CashierTransactionStatusBanner}"
+                                Background="{Binding StatusColorHex}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0"
+                                        Width="26"
+                                        Height="26"
+                                        CornerRadius="13"
+                                        BorderBrush="White"
+                                        BorderThickness="1"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource CashierTransactionStatusSymbol}"/>
+                                </Border>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding StatusText}"
                                            Foreground="White"
-                                           FontSize="15"
+                                           FontSize="13"
                                            FontWeight="Bold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock Text="{Binding StatusText}"
-                                       Foreground="White"
-                                       FontSize="13"
-                                       FontWeight="Bold"
-                                       TextAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Grid Grid.Row="1" Margin="0,6,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="44"/>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Grid.Column="0" Style="{StaticResource CashPaymentFieldIcon}">
-                            <TextBlock Text="≡"
-                                       Foreground="#183B63"
-                                       FontSize="21"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Grid>
                         </Border>
 
-                        <TextBlock Grid.Column="1"
-                                   Text="BALANCE DUE"
-                                   Style="{StaticResource CashPaymentFieldLabel}"/>
-
-                        <Border Grid.Column="2"
-                                Style="{StaticResource CashPaymentAmountBorder}"
-                                Background="#092E57"
-                                BorderBrush="#062341">
-                            <TextBlock Text="{Binding BalanceDue, StringFormat={}{0:N2}}"
-                                       Foreground="White"
-                                       FontSize="27"
-                                       FontWeight="Bold"
-                                       TextAlignment="Right"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
-
-                    <Grid Grid.Row="2" Margin="0,6,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="44"/>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Grid.Column="0" Style="{StaticResource CashPaymentFieldIcon}">
-                            <TextBlock Text="Rs"
-                                       Foreground="#183B63"
-                                       FontSize="13"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-
-                        <TextBlock Grid.Column="1"
-                                   Text="CASH TENDERED"
-                                   Style="{StaticResource CashPaymentFieldLabel}"/>
-
-                        <TextBox x:Name="TenderedAmountTextBox"
-                                 Grid.Column="2"
-                                 Height="52"
-                                 Text="{Binding TenderedAmountText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource CashierMoneyInputTextBox}"
-                                 BorderThickness="1"
-                                 GotKeyboardFocus="TenderedAmountTextBox_GotKeyboardFocus"
-                                 PreviewMouseLeftButtonDown="TenderedAmountTextBox_PreviewMouseLeftButtonDown"/>
-                    </Grid>
-
-                    <Grid Grid.Row="3" Margin="0,6,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="44"/>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Grid.Column="0" Style="{StaticResource CashPaymentFieldIcon}">
-                            <TextBlock Text="✓"
-                                       Foreground="#18704A"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-
-                        <TextBlock Grid.Column="1"
-                                   Text="APPLY TO BILL"
-                                   Style="{StaticResource CashPaymentFieldLabel}"/>
-
-                        <Border Grid.Column="2"
-                                Style="{StaticResource CashPaymentAmountBorder}"
-                                Background="#EDF8F2"
-                                BorderBrush="#73B99A">
-                            <TextBlock Text="{Binding AppliedAmount, StringFormat={}{0:N2}}"
-                                       Foreground="#13734B"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       TextAlignment="Right"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
-
-                    <Grid Grid.Row="4" Margin="0,6,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="44"/>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Grid.Column="0" Style="{StaticResource CashPaymentFieldIcon}">
-                            <TextBlock Text="⇄"
-                                       Foreground="#8A5A00"
-                                       FontSize="19"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-
-                        <TextBlock Grid.Column="1"
-                                   Text="CHANGE / BALANCE"
-                                   Style="{StaticResource CashPaymentFieldLabel}"/>
-
-                        <Border Grid.Column="2"
-                                Style="{StaticResource CashPaymentAmountBorder}"
-                                Background="#FFF7E8"
-                                BorderBrush="#D9A44E">
-                            <TextBlock Text="{Binding ChangeOrRemainingText}"
-                                       Foreground="#9A5B00"
-                                       FontSize="23"
-                                       FontWeight="Bold"
-                                       TextAlignment="Right"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                    </Grid>
-
-                    <Border Grid.Row="5"
-                            Style="{StaticResource CashierStatusPanel}"
-                            CornerRadius="3"
-                            Margin="0,10,0,0"
-                            Padding="10,7">
-                        <Grid>
+                        <Grid Grid.Row="1" Margin="0,5,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="44"/>
+                                <ColumnDefinition Width="150"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0"
-                                    Width="24"
-                                    Height="24"
-                                    CornerRadius="12"
-                                    BorderBrush="#5D718A"
-                                    BorderThickness="1"
-                                    HorizontalAlignment="Left"
-                                    VerticalAlignment="Top">
-                                <TextBlock Text="i"
-                                           Foreground="#314C6D"
-                                           FontSize="13"
+                                    Style="{StaticResource CashierTransactionFieldIcon}">
+                                <TextBlock Text="≡"
+                                           Foreground="{StaticResource CashierTransactionIconBrush}"
+                                           FontSize="21"
                                            FontWeight="Bold"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                             </Border>
 
                             <TextBlock Grid.Column="1"
-                                       Text="Exact cash completes the cash portion.&#x0a;Higher cash calculates change. Lower cash records a partial cash payment."
-                                       Style="{StaticResource CashierMutedText}"
-                                       FontWeight="SemiBold"
-                                       LineHeight="17"
-                                       TextWrapping="Wrap"/>
+                                       Text="BALANCE DUE"
+                                       Style="{StaticResource CashierTransactionFieldLabel}"/>
+
+                            <Border Grid.Column="2"
+                                    Style="{StaticResource CashierTransactionAmountPanel}"
+                                    Background="{StaticResource CashierTransactionDueBrush}"
+                                    BorderBrush="{StaticResource CashierTransactionDueBorderBrush}">
+                                <TextBlock Text="{Binding BalanceDue, StringFormat={}{0:N2}}"
+                                           Style="{StaticResource CashierTransactionAmountText}"
+                                           Foreground="White"
+                                           FontSize="27"/>
+                            </Border>
                         </Grid>
-                    </Border>
-                </Grid>
-            </Border>
 
-            <components:TenderNumpadControl x:Name="TenderNumpad"
-                                            Grid.Column="1"
-                                            TargetText="{Binding TenderedAmountText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                            HeaderText="CASH ENTRY"
-                                            TargetLabel="CASH TENDERED"
-                                            ModeText="AMOUNT"
-                                            ShowDecimal="True"
-                                            ShowDoubleZero="True"
-                                            MaxLength="12"
-                                            ClearText=""
-                                            SelectAllOnFirstKey="True"
-                                            EnterPressed="TenderNumpad_EnterPressed"/>
-        </Grid>
+                        <Grid Grid.Row="2" Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="44"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-        <!-- FOOTER -->
+                            <Border Grid.Column="0"
+                                    Style="{StaticResource CashierTransactionFieldIcon}">
+                                <TextBlock Text="Rs."
+                                           Foreground="{StaticResource CashierTransactionIconBrush}"
+                                           FontSize="12"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="CASH TENDERED"
+                                       Style="{StaticResource CashierTransactionFieldLabel}"/>
+
+                            <TextBox x:Name="TenderedAmountTextBox"
+                                     Grid.Column="2"
+                                     Height="52"
+                                     MaxLength="12"
+                                     TabIndex="0"
+                                     AutomationProperties.Name="Cash tendered amount"
+                                     Text="{Binding TenderedAmountText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource CashierMoneyInputTextBox}"
+                                     GotKeyboardFocus="TenderedAmountTextBox_GotKeyboardFocus"
+                                     PreviewMouseLeftButtonDown="TenderedAmountTextBox_PreviewMouseLeftButtonDown"
+                                     PreviewTextInput="TenderedAmountTextBox_PreviewTextInput"
+                                     DataObject.Pasting="TenderedAmountTextBox_Pasting"/>
+                        </Grid>
+
+                        <Grid Grid.Row="3" Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="44"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0"
+                                    Style="{StaticResource CashierTransactionFieldIcon}">
+                                <TextBlock Text="✓"
+                                           Foreground="{StaticResource CashierTransactionAppliedTextBrush}"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="APPLY TO BILL"
+                                       Style="{StaticResource CashierTransactionFieldLabel}"/>
+
+                            <Border Grid.Column="2"
+                                    Style="{StaticResource CashierTransactionAmountPanel}"
+                                    Background="{StaticResource CashierTransactionAppliedBrush}"
+                                    BorderBrush="{StaticResource CashierTransactionAppliedBorderBrush}">
+                                <TextBlock Text="{Binding AppliedAmount, StringFormat={}{0:N2}}"
+                                           Style="{StaticResource CashierTransactionAmountText}"
+                                           Foreground="{StaticResource CashierTransactionAppliedTextBrush}"/>
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="4" Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="44"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0"
+                                    Style="{StaticResource CashierTransactionFieldIcon}">
+                                <TextBlock Text="⇄"
+                                           Foreground="{StaticResource CashierTransactionBalanceTextBrush}"
+                                           FontSize="19"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="CHANGE / BALANCE"
+                                       Style="{StaticResource CashierTransactionFieldLabel}"/>
+
+                            <Border Grid.Column="2"
+                                    Style="{StaticResource CashierTransactionAmountPanel}"
+                                    Background="{StaticResource CashierTransactionBalanceBrush}"
+                                    BorderBrush="{StaticResource CashierTransactionBalanceBorderBrush}">
+                                <TextBlock Text="{Binding ChangeOrRemainingText}"
+                                           Style="{StaticResource CashierTransactionAmountText}"
+                                           Foreground="{StaticResource CashierTransactionBalanceTextBrush}"
+                                           FontSize="23"/>
+                            </Border>
+                        </Grid>
+
+                        <Border Grid.Row="5"
+                                Style="{StaticResource CashierStatusPanel}"
+                                CornerRadius="3"
+                                Margin="0,9,0,0"
+                                Padding="10,7">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="32"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0"
+                                        Style="{StaticResource CashierTransactionHelpIcon}">
+                                    <TextBlock Text="i"
+                                               Foreground="{StaticResource CashierTransactionHelpTextBrush}"
+                                               FontSize="13"
+                                               FontWeight="Bold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="Enter the cash received. The applied amount and change are calculated automatically. A lower amount adds a partial cash payment."
+                                           Style="{StaticResource CashierMutedText}"
+                                           FontWeight="SemiBold"
+                                           LineHeight="17"
+                                           TextWrapping="Wrap"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <components:TenderNumpadControl x:Name="TenderNumpad"
+                                                Grid.Column="1"
+                                                TargetText="{Binding TenderedAmountText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                HeaderText="CASH ENTRY"
+                                                TargetLabel="CASH TENDERED"
+                                                ModeText="AMOUNT"
+                                                ShowDecimal="True"
+                                                ShowDoubleZero="True"
+                                                MaxLength="12"
+                                                ClearText="0"
+                                                SelectAllOnFirstKey="True"
+                                                IsEnterEnabled="{Binding CanConfirm}"
+                                                EnterPressed="TenderNumpad_EnterPressed"/>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- STANDARD TRANSACTION FOOTER -->
         <Border Grid.Row="2"
                 Style="{StaticResource CashierDialogFooter}"
                 Padding="10,8">
@@ -339,33 +304,39 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="140"/>
-                    <ColumnDefinition Width="176"/>
+                    <ColumnDefinition Width="178"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
-                    <TextBlock Text="⌨"
-                               Foreground="#5D718A"
-                               FontSize="18"
-                               Margin="0,0,8,0"
+                    <TextBlock Text="KEYBOARD / TOUCH"
+                               Foreground="{StaticResource CashierTransactionHelpBrush}"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               Margin="0,0,10,0"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="Use the keyboard or touch numpad."
+                    <TextBlock Text="Type an amount or use the numpad."
                                Style="{StaticResource CashierMutedText}"
                                FontWeight="SemiBold"/>
                 </StackPanel>
 
                 <Button Grid.Column="1"
                         Content="CANCEL"
-                        Style="{StaticResource CashierButton}"
+                        Style="{StaticResource CashierTransactionCancelButton}"
                         Margin="0,0,8,0"
+                        TabIndex="1"
                         IsCancel="True"
+                        AutomationProperties.Name="Cancel cash payment"
                         Click="CancelBtn_Click"/>
 
                 <Button Grid.Column="2"
                         Content="CONFIRM CASH"
-                        Style="{StaticResource CashierSuccessButton}"
+                        Style="{StaticResource CashierTransactionConfirmButton}"
+                        TabIndex="2"
                         IsDefault="True"
+                        IsEnabled="{Binding CanConfirm}"
+                        AutomationProperties.Name="Confirm cash payment"
                         Click="ConfirmBtn_Click"/>
             </Grid>
         </Border>

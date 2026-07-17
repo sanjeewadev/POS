@@ -1,4 +1,4 @@
-namespace POS.Cashier.AuditTests;
+﻿namespace POS.Cashier.AuditTests;
 
 internal static class SourcePolicyAuditTests
 {
@@ -191,30 +191,126 @@ internal static class SourcePolicyAuditTests
 
     public static Task CashPaymentDialogAndSharedNumpadArePolishedAsync()
     {
+        string app = Read("POS.Cashier.UI", "App.xaml");
+        AuditAssert.Contains(
+            app,
+            "Resources/CashierTransactionDialogs.xaml",
+            "Category 1 transaction-dialog resource dictionary");
+
+        string transactionStyles = Read(
+            "POS.Cashier.UI",
+            "Resources",
+            "CashierTransactionDialogs.xaml");
+        AuditAssert.Contains(
+            transactionStyles,
+            "x:Key=\"CashierTransactionDialogHeader\"",
+            "shared transaction-dialog header");
+        AuditAssert.Contains(
+            transactionStyles,
+            "x:Key=\"CashierTransactionFieldIcon\"",
+            "shared transaction field icon");
+        AuditAssert.Contains(
+            transactionStyles,
+            "x:Key=\"CashierTransactionAmountPanel\"",
+            "shared transaction amount panel");
+        AuditAssert.Contains(
+            transactionStyles,
+            "x:Key=\"CashierTransactionConfirmButton\"",
+            "shared transaction confirmation button");
+        AuditAssert.Contains(
+            transactionStyles,
+            "x:Key=\"CashierTransactionNumpadPanel\"",
+            "shared transaction numpad panel");
+
         string dialog = Read("POS.Cashier.UI", "Dialogs", "CashTenderDialog.xaml");
-        AuditAssert.Contains(dialog, "Width=\"900\"", "balanced Cash Payment dialog width");
-        AuditAssert.Contains(dialog, "Height=\"620\"", "balanced Cash Payment dialog height");
-        AuditAssert.Contains(dialog, "x:Key=\"CashPaymentFieldIcon\"", "Cash Payment field-icon style");
-        AuditAssert.Contains(dialog, "Text=\"Rs\"", "Cash Payment cash identity icon");
-        AuditAssert.Contains(dialog, "Text=\"✓\"", "Cash Payment status and apply icons");
-        AuditAssert.Contains(dialog, "Text=\"⇄\"", "Cash Payment change/balance icon");
-        AuditAssert.Contains(dialog, "CornerRadius=\"3\"", "Cash Payment compact rounded panels");
+        AuditAssert.Contains(dialog, "Width=\"900\"", "Cash Payment reference width");
+        AuditAssert.Contains(dialog, "Height=\"620\"", "Cash Payment reference height");
+        AuditAssert.Contains(dialog, "MinWidth=\"820\"", "Cash Payment minimum width");
+        AuditAssert.Contains(dialog, "MinHeight=\"540\"", "Cash Payment minimum height");
+        AuditAssert.Contains(
+            dialog,
+            "Style=\"{StaticResource CashierTransactionDialogHeader}\"",
+            "Cash Payment transaction header");
+        AuditAssert.Contains(
+            dialog,
+            "VerticalScrollBarVisibility=\"Auto\"",
+            "Cash Payment high-scaling overflow protection");
+        AuditAssert.Contains(
+            dialog,
+            "KeyboardNavigation.TabNavigation=\"Cycle\"",
+            "Cash Payment controlled keyboard navigation");
+        AuditAssert.Contains(
+            dialog,
+            "PreviewTextInput=\"TenderedAmountTextBox_PreviewTextInput\"",
+            "Cash Payment typed-input validation");
+        AuditAssert.Contains(
+            dialog,
+            "DataObject.Pasting=\"TenderedAmountTextBox_Pasting\"",
+            "Cash Payment pasted-input validation");
+        AuditAssert.Contains(
+            dialog,
+            "IsEnterEnabled=\"{Binding CanConfirm}\"",
+            "Cash Payment numpad confirmation availability");
+        AuditAssert.Contains(
+            dialog,
+            "IsEnabled=\"{Binding CanConfirm}\"",
+            "Cash Payment footer confirmation availability");
         AuditAssert.Contains(dialog, "IsDefault=\"True\"", "Cash Payment keyboard confirm action");
         AuditAssert.Contains(dialog, "IsCancel=\"True\"", "Cash Payment keyboard cancel action");
+        AuditAssert.False(
+            dialog.Contains("<Window.Resources>", StringComparison.Ordinal),
+            "Cash Payment must not reintroduce local transaction styles.");
+
+        string codeBehind = Read(
+            "POS.Cashier.UI",
+            "Dialogs",
+            "CashTenderDialog.xaml.cs");
+        AuditAssert.Contains(
+            codeBehind,
+            "private bool _completionInProgress",
+            "Cash Payment repeated-completion guard");
+        AuditAssert.Contains(
+            codeBehind,
+            "private void ExecuteConfirm()",
+            "Cash Payment single confirm route");
+        AuditAssert.Contains(
+            codeBehind,
+            "private static bool IsValidMoneyCandidate",
+            "Cash Payment numeric-entry policy");
+        AuditAssert.Contains(
+            codeBehind,
+            "DialogResult = accepted",
+            "Cash Payment single modal completion");
 
         string numpad = Read("POS.Cashier.UI", "Components", "TenderNumpadControl.xaml");
-        AuditAssert.Contains(numpad, "MinWidth=\"270\"", "shared tender numpad width");
-        AuditAssert.Contains(numpad, "MinHeight=\"400\"", "shared tender numpad height");
-        AuditAssert.Contains(numpad, "Background=\"#F6F8FB\"", "shared tender numpad panel background");
-        AuditAssert.Contains(numpad, "Background=\"#C62D32\"", "shared tender numpad backspace action");
-        AuditAssert.Contains(numpad, "Background=\"#C67A00\"", "shared tender numpad clear action");
-        AuditAssert.Contains(numpad, "Background=\"#16875C\"", "shared tender numpad enter action");
+        AuditAssert.Contains(numpad, "MinWidth=\"280\"", "shared tender numpad width");
+        AuditAssert.Contains(numpad, "MinHeight=\"360\"", "shared tender numpad height");
+        AuditAssert.Contains(
+            numpad,
+            "Style=\"{StaticResource CashierTransactionNumpadPanel}\"",
+            "shared transaction numpad panel style");
+        AuditAssert.Contains(numpad, "Content=\"BACK\"", "stable textual backspace action");
+        AuditAssert.Contains(
+            numpad,
+            "IsEnabled=\"{Binding IsEnterEnabled",
+            "shared tender numpad disabled-enter behavior");
+
+        string numpadCode = Read(
+            "POS.Cashier.UI",
+            "Components",
+            "TenderNumpadControl.xaml.cs");
+        AuditAssert.Contains(
+            numpadCode,
+            "IsEnterEnabledProperty",
+            "shared tender numpad enter-enabled dependency property");
 
         string controls = Read("POS.Cashier.UI", "Resources", "CashierControls.xaml");
         AuditAssert.Contains(controls, "x:Key=\"CashierNumpadButton\"", "shared tender numpad button style");
         AuditAssert.Contains(controls, "CornerRadius=\"4\"", "shared tender numpad key corners");
-        AuditAssert.Contains(controls, "<Setter Property=\"Margin\" Value=\"3\"/>",
-            "shared tender numpad key spacing");
+        AuditAssert.Contains(
+            controls,
+            "CashierTransactionNumpadKeyBrush",
+            "shared tender numpad resource colours");
 
         return Task.CompletedTask;
     }

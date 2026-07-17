@@ -1,0 +1,158 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Category 1: Cashier Transaction Dialogs.
+        These styles define the final reference shell for focused payment and
+        protected-action dialogs. They deliberately reuse the classic Cashier
+        controls and native WPF window chrome.
+    -->
+
+    <Style x:Key="CashierTransactionDialogHeader"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierDialogHeader}">
+        <Setter Property="MinHeight" Value="68"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionHeaderIcon" TargetType="Border">
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="46"/>
+        <Setter Property="CornerRadius" Value="23"/>
+        <Setter Property="Background" Value="{StaticResource CashierTransactionHeaderIconBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierTransactionHeaderIconBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionHeaderSubtitle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierHeaderHintBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionFieldLabel"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierFieldLabel}">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{StaticResource CashierTransactionLabelBrush}"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionFieldIcon" TargetType="Border">
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Background" Value="{StaticResource CashierTransactionIconBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierTransactionIconBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionAmountPanel" TargetType="Border">
+        <Setter Property="Height" Value="52"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="12,0"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionAmountText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionStatusBanner" TargetType="Border">
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderDarkBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="MinHeight" Value="48"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionStatusSymbol" TargetType="TextBlock">
+        <Setter Property="Text" Value="i"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding StatusColorHex}" Value="#10B981">
+                <Setter Property="Text" Value="✓"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusColorHex}" Value="#18885C">
+                <Setter Property="Text" Value="✓"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusColorHex}" Value="#D97706">
+                <Setter Property="Text" Value="!"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusColorHex}" Value="#F59E0B">
+                <Setter Property="Text" Value="!"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusColorHex}" Value="#EF4444">
+                <Setter Property="Text" Value="×"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding StatusColorHex}" Value="#B72C2C">
+                <Setter Property="Text" Value="×"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierTransactionHelpIcon" TargetType="Border">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierTransactionHelpBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionCancelButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierButton}">
+        <Setter Property="MinWidth" Value="136"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionConfirmButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierSuccessButton}">
+        <Setter Property="MinWidth" Value="174"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionNumpadPanel" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource CashierTransactionNumpadPanelBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierTransactionNumpadBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionNumpadHeader" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource CashierTransactionNumpadHeaderBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierTransactionNumpadHeaderBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="Padding" Value="10,0"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionNumpadDisplay" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource CashierTransactionNumpadDisplayBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierTransactionNumpadDisplayBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="Padding" Value="10,6"/>
+    </Style>
+
+</ResourceDictionary>

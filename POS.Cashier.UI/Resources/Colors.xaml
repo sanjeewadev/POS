@@ -76,4 +76,40 @@
     <SolidColorBrush x:Key="CashierDisabledTextBrush" Color="#777E86" />
     <SolidColorBrush x:Key="CashierMoneyTextBrush" Color="#7A1C1C" />
 
+    <!-- Category 1: Cashier Transaction Dialog palette -->
+    <SolidColorBrush x:Key="CashierTransactionLabelBrush" Color="#23344D" />
+    <SolidColorBrush x:Key="CashierTransactionHeaderIconBrush" Color="#123C69" />
+    <SolidColorBrush x:Key="CashierTransactionHeaderIconBorderBrush" Color="#D6E4F2" />
+    <SolidColorBrush x:Key="CashierTransactionIconBackgroundBrush" Color="#F1F5F9" />
+    <SolidColorBrush x:Key="CashierTransactionIconBorderBrush" Color="#B9C5D3" />
+    <SolidColorBrush x:Key="CashierTransactionIconBrush" Color="#183B63" />
+    <SolidColorBrush x:Key="CashierTransactionDueBrush" Color="#092E57" />
+    <SolidColorBrush x:Key="CashierTransactionDueBorderBrush" Color="#062341" />
+    <SolidColorBrush x:Key="CashierTransactionAppliedBrush" Color="#EDF8F2" />
+    <SolidColorBrush x:Key="CashierTransactionAppliedBorderBrush" Color="#73B99A" />
+    <SolidColorBrush x:Key="CashierTransactionAppliedTextBrush" Color="#13734B" />
+    <SolidColorBrush x:Key="CashierTransactionBalanceBrush" Color="#FFF7E8" />
+    <SolidColorBrush x:Key="CashierTransactionBalanceBorderBrush" Color="#D9A44E" />
+    <SolidColorBrush x:Key="CashierTransactionBalanceTextBrush" Color="#9A5B00" />
+    <SolidColorBrush x:Key="CashierTransactionHelpBrush" Color="#5D718A" />
+    <SolidColorBrush x:Key="CashierTransactionHelpTextBrush" Color="#314C6D" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadPanelBrush" Color="#F6F8FB" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadBorderBrush" Color="#AEBAC8" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadHeaderBrush" Color="#0A335D" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadHeaderBorderBrush" Color="#062341" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadDisplayBrush" Color="#0D2746" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadDisplayBorderBrush" Color="#061A30" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadDisplayLabelBrush" Color="#D4E2F0" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadDisplayValueBrush" Color="#FFD34D" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadKeyBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadKeyTextBrush" Color="#102846" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadKeyBorderBrush" Color="#B7C1CD" />
+    <SolidColorBrush x:Key="CashierTransactionNumpadKeyHoverBorderBrush" Color="#6F8196" />
+    <SolidColorBrush x:Key="CashierTransactionBackBrush" Color="#C62D32" />
+    <SolidColorBrush x:Key="CashierTransactionBackBorderBrush" Color="#9F1F24" />
+    <SolidColorBrush x:Key="CashierTransactionClearBrush" Color="#C67A00" />
+    <SolidColorBrush x:Key="CashierTransactionClearBorderBrush" Color="#9D6100" />
+    <SolidColorBrush x:Key="CashierTransactionEnterBrush" Color="#16875C" />
+    <SolidColorBrush x:Key="CashierTransactionEnterBorderBrush" Color="#0E6846" />
+
 </ResourceDictionary>

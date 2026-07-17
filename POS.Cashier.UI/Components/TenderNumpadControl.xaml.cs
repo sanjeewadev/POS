@@ -86,6 +86,19 @@ namespace POS.Cashier.UI.Components
             set => SetValue(ShowDoubleZeroProperty, value);
         }
 
+        public static readonly DependencyProperty IsEnterEnabledProperty =
+            DependencyProperty.Register(
+                nameof(IsEnterEnabled),
+                typeof(bool),
+                typeof(TenderNumpadControl),
+                new PropertyMetadata(true));
+
+        public bool IsEnterEnabled
+        {
+            get => (bool)GetValue(IsEnterEnabledProperty);
+            set => SetValue(IsEnterEnabledProperty, value);
+        }
+
         public static readonly DependencyProperty MaxLengthProperty =
             DependencyProperty.Register(
                 nameof(MaxLength),
