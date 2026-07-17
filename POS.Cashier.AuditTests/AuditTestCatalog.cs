@@ -38,6 +38,7 @@ internal static class AuditTestCatalog
         new("Float Cash and owned Cashier dialog routes are controlled", AuditGroups.SourcePolicy, CashierWindowStabilizationSourcePolicyAuditTests.FloatCashAndOwnedDialogRoutesAreControlledAsync),
         new("Large Cashier dialogs are responsive and scroll-safe", AuditGroups.SourcePolicy, CashierWindowStabilizationSourcePolicyAuditTests.LargeDialogsAreResponsiveAndScrollableAsync),
         new("Cashier keyboard focus and initial loading are controlled", AuditGroups.SourcePolicy, CashierWindowStabilizationSourcePolicyAuditTests.KeyboardFocusAndSingleInitialLoadAreControlledAsync),
+        new("Transaction and authorization dialogs use the Category 1 family", AuditGroups.SourcePolicy, SourcePolicyAuditTests.TransactionAndAuthorizationDialogsUseCategoryOneFamilyAsync),
         new("Paid In and Paid Out UI do not require manager password", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PaidInAndPaidOutDoNotRequireManagerPasswordAsync),
         new("Below-minimum New Price captures manager identity", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PriceOverrideUiCapturesManagerIdentityAsync),
         new("Checkout failure path writes a technical log", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CheckoutFailurePathWritesTechnicalLogAsync),

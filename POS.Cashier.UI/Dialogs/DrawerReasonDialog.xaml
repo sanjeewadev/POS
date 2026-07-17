@@ -3,66 +3,66 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Cash Drawer Reason"
         Style="{StaticResource CashierDialogWindow}"
-        Width="480"
-        Height="380"
-        MinWidth="440"
-        MinHeight="350"
+        Width="520"
+        Height="430"
+        MinWidth="470"
+        MinHeight="390"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
-    <Grid>
+    <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Grid.RowDefinitions>
-            <RowDefinition Height="52"/>
+            <RowDefinition Height="72"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="64"/>
+            <RowDefinition Height="66"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource CashierDialogHeader}">
+        <Border Grid.Row="0" Style="{StaticResource CashierTransactionDialogHeader}" Margin="10,10,10,0">
             <Grid>
-                <TextBlock x:Name="TitleText" Style="{StaticResource CashierDialogTitle}"/>
-                <TextBlock Text="ENTER continues · ESC cancels"
-                           Style="{StaticResource CashierShortcutHint}"
-                           HorizontalAlignment="Right"/>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="54"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CashierTransactionHeaderIcon}">
+                    <TextBlock Text="D" Foreground="White" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="TitleText" Style="{StaticResource CashierDialogTitle}"/>
+                    <TextBlock Text="Record why the cash drawer is being opened"
+                               Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="ENTER = CONTINUE   |   ESC = CANCEL"
+                           Style="{StaticResource CashierShortcutHint}" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Style="{StaticResource CashierPanel}" Margin="16">
+        <Border Grid.Row="1" Style="{StaticResource CashierTransactionContentPanel}" Margin="10">
             <StackPanel>
-                <TextBlock Text="Reason" Style="{StaticResource CashierFieldLabel}"/>
+                <TextBlock Text="REASON" Style="{StaticResource CashierTransactionFieldLabel}"/>
                 <ComboBox x:Name="ReasonCombo"
-                          Style="{StaticResource CashierComboBox}"
+                          Style="{StaticResource CashierTransactionComboBox}"
                           Margin="0,6,0,14"/>
 
-                <TextBlock Text="Note (required for Other)" Style="{StaticResource CashierFieldLabel}"/>
+                <TextBlock Text="NOTE (REQUIRED FOR OTHER)" Style="{StaticResource CashierTransactionFieldLabel}"/>
                 <TextBox x:Name="NoteBox"
-                         Style="{StaticResource CashierTextBox}"
-                         Height="82"
-                         Margin="0,6,0,0"
-                         TextWrapping="Wrap"
-                         AcceptsReturn="True"
-                         MaxLength="500"
-                         VerticalScrollBarVisibility="Auto"/>
+                         Style="{StaticResource CashierTransactionMultilineTextBox}"
+                         Margin="0,6,0,0" MaxLength="500"/>
                 <TextBlock x:Name="ErrorText"
                            Style="{StaticResource CashierValidationText}"
-                           MinHeight="18"
-                           Margin="0,8,0,0"/>
+                           MinHeight="18" Margin="0,8,0,0"/>
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}">
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="CANCEL"
-                        Style="{StaticResource CashierButton}"
-                        IsCancel="True"
-                        Margin="0,0,10,0"
-                        Click="Cancel_Click"/>
-                <Button Content="CONTINUE"
-                        Style="{StaticResource CashierSuccessButton}"
-                        MinWidth="120"
-                        IsDefault="True"
-                        Click="Continue_Click"/>
+                <Button Content="CANCEL" IsCancel="True" Click="Cancel_Click"
+                        Style="{StaticResource CashierTransactionCancelButton}" Margin="0,0,10,0"/>
+                <Button Content="CONTINUE" IsDefault="True" Click="Continue_Click"
+                        Style="{StaticResource CashierTransactionConfirmButton}"/>
             </StackPanel>
         </Border>
     </Grid>

@@ -3,113 +3,137 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Apply Free Issue"
         Style="{StaticResource CashierDialogWindow}"
-        Width="720"
-        Height="500"
-        MinWidth="680"
-        MinHeight="460"
+        Width="760"
+        Height="570"
+        MinWidth="700"
+        MinHeight="500"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
-    <Grid Margin="12">
+    <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="72"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="66"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#1F2937" Padding="12" CornerRadius="3">
-            <StackPanel>
-                <TextBlock Text="Apply Free Issue" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Text="Choose a valid rule and enter only the quantity that becomes free."
-                           Foreground="#D1D5DB" Margin="0,3,0,0"/>
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="1" Margin="0,10,0,8" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="10">
+        <Border Grid.Row="0" Style="{StaticResource CashierTransactionDialogHeader}" Margin="10,10,10,0">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="54"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="95"/>
-                    <ColumnDefinition Width="130"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <TextBlock Text="Item" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding ItemDescription}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                <TextBlock Grid.Row="1" Text="SKU / Barcode" Margin="0,6,0,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SkuCode}" Margin="0,6,0,0"/>
-                <TextBlock Grid.Row="1" Grid.Column="2" Text="Batch" Margin="0,6,0,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding BatchNo}" Margin="0,6,0,0"/>
-                <TextBlock Grid.Row="2" Text="Available Qty" Margin="0,6,0,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MaximumQuantity, StringFormat=N3}" Margin="0,6,0,0"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Unit Price" Margin="0,6,0,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding OriginalUnitPrice, StringFormat='Rs. {0:N2}'}" Margin="0,6,0,0"/>
+                <Border Grid.Column="0" Style="{StaticResource CashierTransactionHeaderIcon}">
+                    <TextBlock Text="F" Foreground="White" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="APPLY FREE ISSUE" Style="{StaticResource CashierDialogTitle}"/>
+                    <TextBlock Text="Choose an applicable rule and enter the free quantity"
+                               Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="ENTER = APPLY   |   ESC = CANCEL"
+                           Style="{StaticResource CashierShortcutHint}" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Padding="12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="125"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="115"/>
-                    <ColumnDefinition Width="150"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Text="Free Issue Rule" VerticalAlignment="Center"/>
-                <ComboBox Grid.Column="1" Grid.ColumnSpan="3"
-                          ItemsSource="{Binding ApplicableRules}"
-                          SelectedItem="{Binding SelectedRule}"
-                          DisplayMemberPath="RuleName"
-                          MinHeight="28"/>
-
-                <TextBlock Grid.Row="1" Text="Free Quantity" Margin="0,10,0,0" VerticalAlignment="Center"/>
-                <TextBox x:Name="QuantityTextBox"
-                         Grid.Row="1" Grid.Column="1"
-                         Text="{Binding Quantity, UpdateSourceTrigger=PropertyChanged, StringFormat=0.###}"
-                         Margin="0,10,10,0" MinHeight="28" VerticalContentAlignment="Center"/>
-                <TextBlock Grid.Row="1" Grid.Column="2" Text="Claim Value" Margin="0,10,0,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding ClaimValue, StringFormat='Rs. {0:N2}'}"
-                           Margin="0,10,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
-
-                <TextBlock Grid.Row="2" Text="Cost Value" Margin="0,8,0,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FreeIssueCostValue, StringFormat='Rs. {0:N2}'}" Margin="0,8,0,0"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Selling Value" Margin="0,8,0,0" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding FreeIssueSellingValue, StringFormat='Rs. {0:N2}'}" Margin="0,8,0,0"/>
-
-                <Border Grid.Row="3" Grid.ColumnSpan="4" Margin="0,12,0,0" Padding="9"
-                        Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColorHex}" TextWrapping="Wrap"/>
-                        <TextBlock Margin="0,4,0,0" Foreground="#4B5563" TextWrapping="Wrap"
-                                   Text="Manager or Administrator credentials will be requested after confirmation only when the selected rule requires approval."/>
-                    </StackPanel>
+        <ScrollViewer Grid.Row="1" Margin="10" Padding="6"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="38"/>
+                            <RowDefinition Height="34"/>
+                            <RowDefinition Height="34"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="ITEM" Style="{StaticResource CashierTransactionDetailLabel}"/>
+                        <TextBlock Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding ItemDescription}"
+                                   Style="{StaticResource CashierTransactionDetailValue}"/>
+                        <TextBlock Grid.Row="1" Text="SKU / Barcode" Style="{StaticResource CashierTransactionDetailLabel}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SkuCode}" Style="{StaticResource CashierTransactionDetailValue}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Batch" Style="{StaticResource CashierTransactionDetailLabel}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding BatchNo}" Style="{StaticResource CashierTransactionDetailValue}"/>
+                        <TextBlock Grid.Row="2" Text="Available Qty" Style="{StaticResource CashierTransactionDetailLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MaximumQuantity, StringFormat=N3}" Style="{StaticResource CashierTransactionDetailValue}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Unit Price" Style="{StaticResource CashierTransactionDetailLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding OriginalUnitPrice, StringFormat='Rs. {0:N2}'}" Style="{StaticResource CashierTransactionDetailValue}"/>
+                    </Grid>
                 </Border>
 
-                <TextBlock Grid.Row="4" Grid.ColumnSpan="4" Margin="0,10,0,0" Foreground="#4B5563" TextWrapping="Wrap"
-                           Text="The paid quantity remains on the original line. The entered quantity is split into a separate zero-price Free Issue line. Stock is deducted for Stock Items; Services create no inventory movement."/>
-            </Grid>
-        </Border>
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="135"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="48"/>
+                            <RowDefinition Height="56"/>
+                            <RowDefinition Height="42"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="FREE ISSUE RULE" Style="{StaticResource CashierTransactionFieldLabel}" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" Grid.ColumnSpan="3"
+                                  ItemsSource="{Binding ApplicableRules}"
+                                  SelectedItem="{Binding SelectedRule}"
+                                  DisplayMemberPath="RuleName"
+                                  Style="{StaticResource CashierTransactionComboBox}"/>
+                        <TextBlock Grid.Row="1" Text="FREE QUANTITY" Style="{StaticResource CashierTransactionFieldLabel}" VerticalAlignment="Center"/>
+                        <TextBox x:Name="QuantityTextBox" Grid.Row="1" Grid.Column="1"
+                                 Text="{Binding Quantity, UpdateSourceTrigger=PropertyChanged, StringFormat=0.###}"
+                                 Style="{StaticResource CashierTransactionMoneyInputTextBox}" Margin="0,4,10,4"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="CLAIM VALUE" Style="{StaticResource CashierTransactionFieldLabel}" VerticalAlignment="Center"/>
+                        <Border Grid.Row="1" Grid.Column="3" Style="{StaticResource CashierTransactionReadOnlyPanel}" Margin="0,4,0,4">
+                            <TextBlock Text="{Binding ClaimValue, StringFormat='Rs. {0:N2}'}"
+                                       Style="{StaticResource CashierTransactionReadOnlyValue}"
+                                       Foreground="{StaticResource CashierPrimaryDarkBrush}"/>
+                        </Border>
+                        <TextBlock Grid.Row="2" Text="Cost value" Style="{StaticResource CashierTransactionDetailLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FreeIssueCostValue, StringFormat='Rs. {0:N2}'}" Style="{StaticResource CashierTransactionDetailValue}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Selling value" Style="{StaticResource CashierTransactionDetailLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding FreeIssueSellingValue, StringFormat='Rs. {0:N2}'}" Style="{StaticResource CashierTransactionDetailValue}"/>
+                    </Grid>
+                </Border>
 
-        <DockPanel Grid.Row="3" Margin="0,10,0,0" LastChildFill="False">
-            <Button Content="Cancel (Esc)" Command="{Binding CancelCommand}" IsCancel="True" Style="{StaticResource CashierButton}" Width="105" Height="30" Margin="0,0,8,0"/>
-            <Button Content="Refresh Rules" Command="{Binding RefreshRulesCommand}" Style="{StaticResource CashierButton}" Width="110" Height="30" Margin="0,0,8,0"/>
-            <Button Content="Apply Free Issue" Command="{Binding ConfirmCommand}" IsDefault="True" Style="{StaticResource CashierSuccessButton}" IsEnabled="{Binding CanConfirm}"
-                    Width="135" Height="30" FontWeight="SemiBold"/>
-        </DockPanel>
+                <Border Style="{StaticResource CashierTransactionStatusBanner}"
+                        Background="{Binding StatusColorHex}" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource CashierTransactionStatusSymbol}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="White"
+                                   FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource CashierTransactionSectionPanel}">
+                    <TextBlock Text="The paid quantity stays on the original line. The free quantity is split to a zero-price Free Issue line. Approval is requested only when the selected rule requires it."
+                               Style="{StaticResource CashierTransactionFooterHint}"/>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="CANCEL" Command="{Binding CancelCommand}" IsCancel="True"
+                        Style="{StaticResource CashierTransactionCancelButton}" Margin="0,0,10,0"/>
+                <Button Content="REFRESH RULES" Command="{Binding RefreshRulesCommand}"
+                        Style="{StaticResource CashierTransactionSecondaryButton}" Margin="0,0,10,0"/>
+                <Button Content="APPLY FREE ISSUE" Command="{Binding ConfirmCommand}"
+                        IsDefault="True" IsEnabled="{Binding CanConfirm}"
+                        Style="{StaticResource CashierTransactionConfirmButton}"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

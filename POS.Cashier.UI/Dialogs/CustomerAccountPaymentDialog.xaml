@@ -3,147 +3,159 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Customer Account Payment"
         Style="{StaticResource CashierDialogWindow}"
-        Width="600"
-        Height="560"
-        MinWidth="520"
-        MinHeight="500"
+        Width="700"
+        Height="620"
+        MinWidth="620"
+        MinHeight="540"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         PreviewKeyDown="Window_PreviewKeyDown">
-    <Grid>
+    <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Grid.RowDefinitions>
-            <RowDefinition Height="52"/>
+            <RowDefinition Height="72"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="64"/>
+            <RowDefinition Height="66"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource CashierDialogHeader}">
+        <Border Grid.Row="0" Style="{StaticResource CashierTransactionDialogHeader}" Margin="10,10,10,0">
             <Grid>
-                <TextBlock Text="CUSTOMER ACCOUNT PAYMENT"
-                           Style="{StaticResource CashierDialogTitle}"/>
-                <TextBlock Text="Receive an account payment without changing the current sale"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="54"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CashierTransactionHeaderIcon}">
+                    <TextBlock Text="A" Foreground="White" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="CUSTOMER ACCOUNT PAYMENT" Style="{StaticResource CashierDialogTitle}"/>
+                    <TextBlock Text="Receive a payment without changing the active sale"
+                               Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="ENTER = SAVE   |   ESC = CANCEL"
                            Style="{StaticResource CashierShortcutHint}"
-                           HorizontalAlignment="Right"/>
+                           VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1"
+        <ScrollViewer Grid.Row="1" Margin="10" Padding="6"
                       VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      Padding="16">
+                      HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
-                <TextBlock Text="Customer" Style="{StaticResource CashierFieldLabel}"/>
-                <ComboBox x:Name="CustomerBox"
-                          Style="{StaticResource CashierComboBox}"
-                          Margin="0,6,0,14"
-                          DisplayMemberPath="FullName"
-                          SelectionChanged="CustomerBox_SelectionChanged"/>
-
-                <Grid Margin="0,0,0,14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="8"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="8"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" Style="{StaticResource CashierStatusPanel}">
-                        <StackPanel>
-                            <TextBlock Text="Outstanding" Style="{StaticResource CashierMutedText}"/>
-                            <TextBlock x:Name="OutstandingText"
-                                       Text="Rs. 0.00"
-                                       Foreground="{StaticResource CashierDangerBrush}"
-                                       FontSize="18"
-                                       FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Grid.Column="2" Style="{StaticResource CashierStatusPanel}">
-                        <StackPanel>
-                            <TextBlock Text="Overdue" Style="{StaticResource CashierMutedText}"/>
-                            <TextBlock x:Name="OverdueText"
-                                       Text="Rs. 0.00"
-                                       Foreground="{StaticResource CashierWarningDarkBrush}"
-                                       FontSize="18"
-                                       FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Grid.Column="4" Style="{StaticResource CashierStatusPanel}">
-                        <StackPanel>
-                            <TextBlock Text="Open invoices" Style="{StaticResource CashierMutedText}"/>
-                            <TextBlock x:Name="InvoiceCountText"
-                                       Text="0"
-                                       Foreground="{StaticResource CashierPrimaryDarkBrush}"
-                                       FontSize="18"
-                                       FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-
-                <TextBlock Text="Amount" Style="{StaticResource CashierFieldLabel}"/>
-                <TextBox x:Name="AmountBox"
-                         Style="{StaticResource CashierMoneyInputTextBox}"
-                         Margin="0,6,0,14"
-                         IsEnabled="False"/>
-
-                <Grid Margin="0,0,0,14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="Method" Style="{StaticResource CashierFieldLabel}"/>
-                        <ComboBox x:Name="MethodBox"
-                                  Style="{StaticResource CashierComboBox}"
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="CUSTOMER ACCOUNT" Style="{StaticResource CashierTransactionFieldLabel}"/>
+                        <ComboBox x:Name="CustomerBox"
+                                  Style="{StaticResource CashierTransactionComboBox}"
                                   Margin="0,6,0,0"
-                                  SelectedIndex="0">
-                            <ComboBoxItem Content="Cash"/>
-                            <ComboBoxItem Content="Card"/>
-                            <ComboBoxItem Content="Cheque"/>
-                            <ComboBoxItem Content="Bank Transfer"/>
-                        </ComboBox>
+                                  DisplayMemberPath="FullName"
+                                  SelectionChanged="CustomerBox_SelectionChanged"/>
                     </StackPanel>
+                </Border>
 
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="Reference" Style="{StaticResource CashierFieldLabel}"/>
-                        <TextBox x:Name="ReferenceBox"
-                                 Style="{StaticResource CashierTextBox}"
-                                 Margin="0,6,0,0"
-                                 MaxLength="100"/>
-                    </StackPanel>
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Style="{StaticResource CashierTransactionMetricPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Outstanding" Style="{StaticResource CashierTransactionMetricLabel}"/>
+                            <TextBlock x:Name="OutstandingText" Text="Rs. 0.00"
+                                       Style="{StaticResource CashierTransactionMetricValue}"
+                                       Foreground="{StaticResource CashierDangerBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Style="{StaticResource CashierTransactionMetricPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Overdue" Style="{StaticResource CashierTransactionMetricLabel}"/>
+                            <TextBlock x:Name="OverdueText" Text="Rs. 0.00"
+                                       Style="{StaticResource CashierTransactionMetricValue}"
+                                       Foreground="{StaticResource CashierWarningDarkBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="4" Style="{StaticResource CashierTransactionMetricPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Open invoices" Style="{StaticResource CashierTransactionMetricLabel}"/>
+                            <TextBlock x:Name="InvoiceCountText" Text="0"
+                                       Style="{StaticResource CashierTransactionMetricValue}"
+                                       Foreground="{StaticResource CashierPrimaryDarkBrush}"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
 
-                <Border Style="{StaticResource CashierStatusPanel}">
-                    <TextBlock Text="Cash increases the current drawer once. Card, Cheque and Bank Transfer do not affect drawer cash."
-                               Style="{StaticResource CashierMutedText}"
-                               TextWrapping="Wrap"/>
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="PAYMENT AMOUNT" Style="{StaticResource CashierTransactionFieldLabel}"/>
+                        <TextBox x:Name="AmountBox"
+                                 Style="{StaticResource CashierTransactionMoneyInputTextBox}"
+                                 Margin="0,6,0,14"
+                                 IsEnabled="False"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="METHOD" Style="{StaticResource CashierTransactionFieldLabel}"/>
+                                <ComboBox x:Name="MethodBox"
+                                          Style="{StaticResource CashierTransactionComboBox}"
+                                          Margin="0,6,0,0"
+                                          SelectedIndex="0">
+                                    <ComboBoxItem Content="Cash"/>
+                                    <ComboBoxItem Content="Card"/>
+                                    <ComboBoxItem Content="Cheque"/>
+                                    <ComboBoxItem Content="Bank Transfer"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="REFERENCE" Style="{StaticResource CashierTransactionFieldLabel}"/>
+                                <TextBox x:Name="ReferenceBox"
+                                         Style="{StaticResource CashierTransactionInputTextBox}"
+                                         Margin="0,6,0,0"
+                                         MaxLength="100"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CashierTransactionSectionPanel}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource CashierTransactionHelpIcon}">
+                            <TextBlock Text="i" Foreground="{StaticResource CashierTransactionHelpBrush}"
+                                       FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0"
+                                   Text="Cash increases the current drawer once. Card, Cheque and Bank Transfer do not affect drawer cash."
+                                   Style="{StaticResource CashierTransactionFooterHint}"/>
+                    </Grid>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}">
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
             <Grid>
-                <TextBlock x:Name="BusyText"
-                           Text="Saving payment..."
-                           Style="{StaticResource CashierMutedText}"
-                           Visibility="Collapsed"
-                           VerticalAlignment="Center"/>
+                <TextBlock x:Name="BusyText" Text="Saving payment..."
+                           Style="{StaticResource CashierTransactionFooterHint}"
+                           Visibility="Collapsed"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="CancelButton"
-                            Content="CANCEL"
-                            Style="{StaticResource CashierButton}"
-                            IsCancel="True"
-                            Margin="0,0,10,0"
-                            Click="Cancel_Click"/>
-                    <Button x:Name="SaveButton"
-                            Content="SAVE PAYMENT"
-                            Style="{StaticResource CashierSuccessButton}"
-                            MinWidth="150"
-                            IsDefault="True"
-                            Click="Save_Click"/>
+                    <Button x:Name="CancelButton" Content="CANCEL"
+                            Style="{StaticResource CashierTransactionCancelButton}"
+                            IsCancel="True" Margin="0,0,10,0" Click="Cancel_Click"/>
+                    <Button x:Name="SaveButton" Content="SAVE PAYMENT"
+                            Style="{StaticResource CashierTransactionConfirmButton}"
+                            IsDefault="True" Click="Save_Click"/>
                 </StackPanel>
             </Grid>
         </Border>

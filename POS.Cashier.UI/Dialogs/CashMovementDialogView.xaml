@@ -3,289 +3,102 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Cash Movement"
         Style="{StaticResource CashierDialogWindow}"
-        Width="520"
-        Height="590"
-        MinWidth="480"
-        MinHeight="520"
+        Width="560"
+        Height="610"
+        MinWidth="500"
+        MinHeight="540"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
+    <Grid KeyboardNavigation.TabNavigation="Cycle">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="72"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="66"/>
+        </Grid.RowDefinitions>
 
-    <Window.Resources>
+        <Border Grid.Row="0" Style="{StaticResource CashierTransactionDialogHeader}" Margin="10,10,10,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="54"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CashierTransactionHeaderIcon}" Background="{Binding ThemeColorHex}">
+                    <TextBlock Text="Rs." Foreground="White" FontSize="13" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding HeaderTitle}" Style="{StaticResource CashierDialogTitle}"/>
+                    <TextBlock Text="Select a reason and confirm the cash movement"
+                               Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="ENTER = CONFIRM   |   ESC = CANCEL"
+                           Style="{StaticResource CashierShortcutHint}" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
 
-        <Style TargetType="TextBlock" x:Key="SectionLabel" BasedOn="{StaticResource CashierFieldLabel}">
-            <Setter Property="Foreground" Value="#334155"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-
-        <Style TargetType="TextBox" x:Key="DialogTextBox" BasedOn="{StaticResource CashierTextBox}">
-            <Setter Property="Height" Value="42"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="Padding" Value="10,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Background" Value="#F8FAFC"/>
-            <Setter Property="Foreground" Value="#111827"/>
-            <Setter Property="BorderBrush" Value="#94A3B8"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style TargetType="Button" x:Key="DialogButton" BasedOn="{StaticResource CashierButton}">
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="Heavy"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#334155"/>
-            <Setter Property="Padding" Value="14,0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+        <ScrollViewer Grid.Row="1" Margin="10" Padding="6"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="AMOUNT" Style="{StaticResource CashierTransactionFieldLabel}"/>
+                        <Border Style="{StaticResource CashierTransactionAmountPanel}"
+                                Background="{StaticResource CashierTransactionDueBrush}"
+                                BorderBrush="{StaticResource CashierTransactionDueBorderBrush}"
+                                Margin="0,6,0,0">
+                            <TextBlock Text="{Binding Amount, StringFormat='Rs. {0:N2}'}"
+                                       Style="{StaticResource CashierTransactionAmountText}"
+                                       Foreground="White"/>
                         </Border>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.92"/>
-                            </Trigger>
-
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.82"/>
-                            </Trigger>
-
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="ReasonItemStyle" TargetType="ListBoxItem">
-            <Setter Property="Height" Value="44"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bd"
-                                Background="White"
-                                BorderBrush="#E2E8F0"
-                                BorderThickness="0,0,0,1"
-                                Padding="{TemplateBinding Padding}">
-                            <TextBlock x:Name="ItemText"
-                                       Text="{Binding}"
-                                       Foreground="#111827"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#EAF2FF"/>
-                            </Trigger>
-
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{Binding DataContext.ThemeColorHex, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                                <Setter TargetName="ItemText" Property="Foreground" Value="White"/>
-                                <Setter TargetName="ItemText" Property="FontWeight" Value="Heavy"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-    </Window.Resources>
-
-    <Border Margin="12"
-            Background="#F8FAFC"
-            BorderBrush="#1E293B"
-            BorderThickness="1"
-            CornerRadius="2">
-
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="58"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="58"/>
-            </Grid.RowDefinitions>
-
-            <!-- HEADER -->
-            <Border Grid.Row="0"
-                    Background="{Binding ThemeColorHex}"
-                    CornerRadius="2,2,0,0">
-
-                <Grid Margin="16,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0"
-                                VerticalAlignment="Center">
-
-                        <TextBlock Text="{Binding HeaderTitle}"
-                                   Foreground="White"
-                                   FontSize="19"
-                                   FontWeight="Heavy"/>
-
-                        <TextBlock Text="Select reason and confirm cash movement"
-                                   Foreground="#E2E8F0"
-                                   FontSize="12"
-                                   Margin="0,2,0,0"/>
                     </StackPanel>
-
-                    <TextBlock Grid.Column="1"
-                               Text="Esc = Close"
-                               Foreground="#E2E8F0"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-                </Grid>
-            </Border>
-
-            <!-- BODY -->
-            <Grid Grid.Row="1"
-                  Margin="18">
-
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="14"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <!-- AMOUNT -->
-                <Border Grid.Row="0"
-                        Background="White"
-                        BorderBrush="#CBD5E1"
-                        BorderThickness="1"
-                        Padding="14">
-
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0"
-                                   Text="AMOUNT (Rs.)"
-                                   Style="{StaticResource SectionLabel}"/>
-
-                        <TextBox Grid.Row="1"
-                                 Text="{Binding Amount, StringFormat=N2}"
-                                 IsReadOnly="True"
-                                 FontSize="38"
-                                 FontWeight="Heavy"
-                                 TextAlignment="Right"
-                                 Foreground="{Binding ThemeColorHex}"
-                                 Background="#F8FAFC"
-                                 Height="62"
-                                 VerticalContentAlignment="Center"
-                                 Padding="12,0"
-                                 BorderThickness="1"
-                                 BorderBrush="#CBD5E1"/>
-                    </Grid>
                 </Border>
 
-                <!-- REASON -->
-                <Border Grid.Row="2"
-                        Background="White"
-                        BorderBrush="#CBD5E1"
-                        BorderThickness="1"
-                        Padding="14">
-
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="184"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0"
-                                   Text="SELECT REASON *"
-                                   Style="{StaticResource SectionLabel}"/>
-
-                        <ListBox x:Name="ReasonListBox" Grid.Row="1"
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="SELECT REASON" Style="{StaticResource CashierTransactionFieldLabel}"/>
+                        <ListBox x:Name="ReasonListBox"
                                  ItemsSource="{Binding ReasonCategories}"
                                  SelectedItem="{Binding SelectedReason, UpdateSourceTrigger=PropertyChanged}"
+                                 ItemContainerStyle="{StaticResource CashierTransactionReasonListItem}"
+                                 BorderBrush="{StaticResource CashierBorderBrush}"
                                  BorderThickness="1"
-                                 BorderBrush="#CBD5E1"
-                                 Background="White"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                 ItemContainerStyle="{StaticResource ReasonItemStyle}"/>
-                    </Grid>
+                                 Background="{StaticResource CashierInputBrush}"
+                                 MinHeight="150"
+                                 MaxHeight="190"
+                                 Margin="0,6,0,0"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                    </StackPanel>
                 </Border>
 
-                <!-- REMARKS -->
-                <Border Grid.Row="4"
-                        Background="White"
-                        BorderBrush="#CBD5E1"
-                        BorderThickness="1"
-                        Padding="14"
-                        Margin="0,14,0,0">
-
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0"
-                                   Text="REMARKS (Optional)"
-                                   Style="{StaticResource SectionLabel}"/>
-
-                        <TextBox Grid.Row="1"
-                                 Text="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource DialogTextBox}"/>
-                    </Grid>
+                <Border Style="{StaticResource CashierTransactionContentPanel}">
+                    <StackPanel>
+                        <TextBlock Text="REMARKS (OPTIONAL; REQUIRED FOR OTHER)"
+                                   Style="{StaticResource CashierTransactionFieldLabel}"/>
+                        <TextBox Text="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource CashierTransactionMultilineTextBox}"
+                                 Margin="0,6,0,0" MaxLength="500"/>
+                    </StackPanel>
                 </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
+            <Grid>
+                <TextBlock Text="The active cashier is recorded as the authorized operator."
+                           Style="{StaticResource CashierTransactionFooterHint}"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="CANCEL" IsCancel="True" Click="CancelBtn_Click"
+                            Style="{StaticResource CashierTransactionCancelButton}" Margin="0,0,10,0"/>
+                    <Button Content="{Binding ButtonText}" Command="{Binding ConfirmCommand}"
+                            IsDefault="True" Style="{StaticResource CashierTransactionConfirmButton}"
+                            Background="{Binding ThemeColorHex}"/>
+                </StackPanel>
             </Grid>
-
-            <!-- FOOTER -->
-            <Border Grid.Row="2"
-                    Background="#E5E7EB"
-                    BorderBrush="#CBD5E1"
-                    BorderThickness="0,1,0,0"
-                    CornerRadius="0,0,6,6">
-
-                <Grid Margin="14,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button Grid.Column="0"
-                            Content="CANCEL"
-                            Style="{StaticResource DialogButton}"
-                            Background="#F1F5F9"
-                            Foreground="#1E293B"
-                            IsCancel="True"
-                            Click="CancelBtn_Click"/>
-
-                    <Button Grid.Column="1"
-                            Content="{Binding ButtonText}"
-                            Command="{Binding ConfirmCommand}"
-                            Style="{StaticResource DialogButton}"
-                            Background="{Binding ThemeColorHex}"
-                            Foreground="White"
-                            IsDefault="True"
-                            Margin="10,0,0,0"/>
-                </Grid>
-            </Border>
-        </Grid>
-    </Border>
+        </Border>
+    </Grid>
 </Window>

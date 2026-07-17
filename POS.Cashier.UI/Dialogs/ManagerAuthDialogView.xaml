@@ -3,76 +3,77 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Manager Authorization"
         Style="{StaticResource CashierDialogWindow}"
-        Width="430"
-        Height="390"
-        MinWidth="400"
-        MinHeight="360"
+        Width="470"
+        Height="430"
+        MinWidth="430"
+        MinHeight="390"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
-    <Grid>
+    <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Grid.RowDefinitions>
-            <RowDefinition Height="52"/>
+            <RowDefinition Height="72"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="64"/>
+            <RowDefinition Height="66"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource CashierDialogHeader}">
+        <Border Grid.Row="0" Style="{StaticResource CashierTransactionDialogHeader}" Margin="10,10,10,0">
             <Grid>
-                <TextBlock Text="MANAGER AUTHORIZATION"
-                           Style="{StaticResource CashierDialogTitle}"/>
-                <TextBlock Text="ENTER confirms · ESC cancels"
-                           Style="{StaticResource CashierShortcutHint}"
-                           HorizontalAlignment="Right"/>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="54"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource CashierTransactionHeaderIcon}">
+                    <TextBlock Text="M" Foreground="White" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="MANAGER AUTHORIZATION" Style="{StaticResource CashierDialogTitle}"/>
+                    <TextBlock Text="Manager or administrator credentials are required"
+                               Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="ENTER = AUTHORIZE   |   ESC = CANCEL"
+                           Style="{StaticResource CashierShortcutHint}" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1"
-                Style="{StaticResource CashierPanel}"
-                Margin="16">
+        <Border Grid.Row="1" Style="{StaticResource CashierTransactionContentPanel}" Margin="10">
             <StackPanel>
-                <TextBlock Text="This action requires manager or administrator credentials."
-                           Style="{StaticResource CashierMutedText}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,18"/>
+                <Border Style="{StaticResource CashierTransactionSectionPanel}" Margin="0,0,0,14">
+                    <TextBlock Text="Enter the approving user's credentials. The password is cleared immediately after validation."
+                               Style="{StaticResource CashierTransactionFooterHint}"/>
+                </Border>
 
-                <TextBlock Text="Username" Style="{StaticResource CashierFieldLabel}"/>
+                <TextBlock Text="USERNAME" Style="{StaticResource CashierTransactionFieldLabel}"/>
                 <TextBox x:Name="UsernameBox"
                          Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource CashierTextBox}"
-                         Margin="0,6,0,14"
-                         MaxLength="100"/>
+                         Style="{StaticResource CashierTransactionInputTextBox}"
+                         Margin="0,6,0,14" MaxLength="100"/>
 
-                <TextBlock Text="Password" Style="{StaticResource CashierFieldLabel}"/>
+                <TextBlock Text="PASSWORD" Style="{StaticResource CashierTransactionFieldLabel}"/>
                 <PasswordBox x:Name="PwdBox"
-                             Style="{StaticResource CashierPasswordBox}"
-                             Margin="0,6,0,14"
-                             MaxLength="256"/>
+                             Style="{StaticResource CashierTransactionPasswordBox}"
+                             Margin="0,6,0,14" MaxLength="256"/>
 
-                <Border Style="{StaticResource CashierStatusPanel}">
+                <Border Style="{StaticResource CashierTransactionSectionPanel}">
                     <TextBlock Text="{Binding ErrorMessage}"
                                Style="{StaticResource CashierValidationText}"
-                               MinHeight="18"
-                               TextAlignment="Center"/>
+                               MinHeight="18" TextAlignment="Center" TextWrapping="Wrap"/>
                 </Border>
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}">
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="CANCEL"
-                        Style="{StaticResource CashierButton}"
-                        IsCancel="True"
-                        Margin="0,0,10,0"
-                        Click="CancelBtn_Click"/>
-                <Button Content="AUTHORIZE"
-                        Style="{StaticResource CashierPrimaryButton}"
-                        MinWidth="130"
-                        IsDefault="True"
+                <Button Content="CANCEL" IsCancel="True" Click="CancelBtn_Click"
+                        Style="{StaticResource CashierTransactionCancelButton}" Margin="0,0,10,0"/>
+                <Button Content="AUTHORIZE" IsDefault="True"
                         Command="{Binding AuthenticateCommand}"
-                        CommandParameter="{Binding ElementName=PwdBox}"/>
+                        CommandParameter="{Binding ElementName=PwdBox}"
+                        Style="{StaticResource CashierTransactionPrimaryButton}"/>
             </StackPanel>
         </Border>
     </Grid>

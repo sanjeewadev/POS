@@ -1,4 +1,4 @@
-﻿namespace POS.Cashier.AuditTests;
+namespace POS.Cashier.AuditTests;
 
 internal static class SourcePolicyAuditTests
 {
@@ -426,6 +426,133 @@ internal static class SourcePolicyAuditTests
         AuditAssert.False(
             salesView.Contains("new CustomerCreditTenderDialog", StringComparison.Ordinal),
             "Category 1A must not introduce an unapproved Customer Credit dialog or workflow change.");
+
+        return Task.CompletedTask;
+    }
+
+    public static Task TransactionAndAuthorizationDialogsUseCategoryOneFamilyAsync()
+    {
+        string styles = Read(
+            "POS.Cashier.UI",
+            "Resources",
+            "CashierTransactionDialogs.xaml");
+
+        string[] requiredStyles =
+        {
+            "x:Key=\"CashierTransactionContentPanel\"",
+            "x:Key=\"CashierTransactionComboBox\"",
+            "x:Key=\"CashierTransactionPasswordBox\"",
+            "x:Key=\"CashierTransactionMultilineTextBox\"",
+            "x:Key=\"CashierTransactionDangerButton\"",
+            "x:Key=\"CashierTransactionWarningButton\"",
+            "x:Key=\"CashierTransactionMetricPanel\"",
+            "x:Key=\"CashierTransactionQuantityTextBox\"",
+            "x:Key=\"CashierTransactionReasonListItem\""
+        };
+
+        foreach (string styleKey in requiredStyles)
+            AuditAssert.Contains(styles, styleKey, $"shared Category 1B style {styleKey}");
+
+        string[] dialogs =
+        {
+            "CustomerAccountPaymentDialog.xaml",
+            "SellGiftVoucherDialog.xaml",
+            "FloatCashDialog.xaml",
+            "CashMovementDialogView.xaml",
+            "ManagerAuthDialogView.xaml",
+            "CartCancellationReasonDialog.xaml",
+            "DrawerReasonDialog.xaml",
+            "FreeItemReasonModalWindow.xaml",
+            "LockRecoveryActionDialog.xaml"
+        };
+
+        foreach (string fileName in dialogs)
+        {
+            string dialog = Read("POS.Cashier.UI", "Dialogs", fileName);
+            AuditAssert.Contains(
+                dialog,
+                "Style=\"{StaticResource CashierTransactionDialogHeader}\"",
+                $"{fileName} shared transaction header");
+            AuditAssert.Contains(
+                dialog,
+                "KeyboardNavigation.TabNavigation=\"Cycle\"",
+                $"{fileName} controlled Tab navigation");
+            AuditAssert.Contains(
+                dialog,
+                "WindowStartupLocation=\"CenterOwner\"",
+                $"{fileName} owner centering");
+            AuditAssert.False(
+                dialog.Contains("<Window.Resources>", StringComparison.Ordinal),
+                $"{fileName} must not retain duplicated local transaction styles.");
+            AuditAssert.False(
+                System.Text.RegularExpressions.Regex.IsMatch(dialog, "#[0-9A-Fa-f]{6}"),
+                $"{fileName} must use shared palette resources instead of hard-coded hexadecimal colours.");
+        }
+
+        string account = Read(
+            "POS.Cashier.UI",
+            "Dialogs",
+            "CustomerAccountPaymentDialog.xaml");
+        AuditAssert.Contains(
+            account,
+            "Style=\"{StaticResource CashierTransactionMoneyInputTextBox}\"",
+            "Customer Account Payment shared money input");
+        AuditAssert.Contains(
+            account,
+            "x:Name=\"BusyText\"",
+            "Customer Account Payment busy state");
+
+        string sellVoucher = Read(
+            "POS.Cashier.UI",
+            "Dialogs",
+            "SellGiftVoucherDialog.xaml");
+        AuditAssert.Contains(
+            sellVoucher,
+            "Command=\"{Binding SearchVoucherCommand}\"",
+            "Sell Gift Voucher validation route");
+        AuditAssert.Contains(
+            sellVoucher,
+            "IsEnabled=\"{Binding HasValidatedVoucher}\"",
+            "Sell Gift Voucher confirmation gate");
+
+        string floatCash = Read("POS.Cashier.UI", "Dialogs", "FloatCashDialog.xaml");
+        AuditAssert.Contains(floatCash, "x:Name=\"Qty5000TextBox\"", "Float Cash initial quantity field");
+        AuditAssert.Contains(floatCash, "Command=\"{Binding FloatInCommand}\"", "Float In command");
+        AuditAssert.Contains(floatCash, "Command=\"{Binding FloatOutCommand}\"", "Float Out command");
+        AuditAssert.Contains(floatCash, "VerticalScrollBarVisibility=\"Auto\"", "Float Cash scroll safety");
+
+        string movement = Read("POS.Cashier.UI", "Dialogs", "CashMovementDialogView.xaml");
+        AuditAssert.Contains(
+            movement,
+            "ItemContainerStyle=\"{StaticResource CashierTransactionReasonListItem}\"",
+            "Cash Movement shared reason list");
+        AuditAssert.Contains(
+            movement,
+            "Command=\"{Binding ConfirmCommand}\"",
+            "Cash Movement confirmation command");
+
+        string manager = Read("POS.Cashier.UI", "Dialogs", "ManagerAuthDialogView.xaml");
+        AuditAssert.Contains(
+            manager,
+            "Style=\"{StaticResource CashierTransactionPasswordBox}\"",
+            "Manager Authorization shared password input");
+        AuditAssert.Contains(
+            manager,
+            "CommandParameter=\"{Binding ElementName=PwdBox}\"",
+            "Manager Authorization password handoff");
+
+        string freeIssue = Read(
+            "POS.Cashier.UI",
+            "Dialogs",
+            "FreeItemReasonModalWindow.xaml");
+        AuditAssert.Contains(
+            freeIssue,
+            "Command=\"{Binding ConfirmCommand}\"",
+            "Free Issue confirmation command");
+        AuditAssert.Contains(
+            freeIssue,
+            "IsEnabled=\"{Binding CanConfirm}\"",
+            "Free Issue confirmation gate");
 
         return Task.CompletedTask;
     }

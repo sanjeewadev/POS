@@ -228,4 +228,123 @@
     </Style>
 
 
+    <Style x:Key="CashierTransactionContentPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierPanel}">
+        <Setter Property="Padding" Value="14"/>
+        <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionSectionPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierStatusPanel}">
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionComboBox"
+           TargetType="ComboBox"
+           BasedOn="{StaticResource CashierComboBox}">
+        <Setter Property="MinHeight" Value="42"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="8,0"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionPasswordBox"
+           TargetType="PasswordBox"
+           BasedOn="{StaticResource CashierPasswordBox}">
+        <Setter Property="MinHeight" Value="42"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Padding" Value="10,0"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionMultilineTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierTextBox}">
+        <Setter Property="MinHeight" Value="78"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="AcceptsReturn" Value="True"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionDangerButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierDangerButton}">
+        <Setter Property="MinWidth" Value="174"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionWarningButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierProtectedButton}">
+        <Setter Property="MinWidth" Value="174"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionMetricPanel" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource CashierPanelAltBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionMetricLabel"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierMutedText}">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionMetricValue" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="19"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Margin" Value="0,3,0,0"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionQuantityTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierTransactionInputTextBox}">
+        <Setter Property="Width" Value="92"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Background" Value="{StaticResource CashierInputFocusBrush}"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionReasonListItem" TargetType="ListBoxItem">
+        <Setter Property="MinHeight" Value="42"/>
+        <Setter Property="Padding" Value="11,0"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="{StaticResource CashierInputBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierGridLineBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierSelectionBrush}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource CashierPrimaryBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CashierTransactionFooterHint"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierMutedText}">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
 </ResourceDictionary>
