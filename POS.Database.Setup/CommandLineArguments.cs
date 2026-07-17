@@ -79,14 +79,21 @@ internal sealed class CommandLineArguments
 
     public string GetRequiredSecret(string name, string environmentVariable)
     {
-        string value = GetOptional(name, string.Empty);
-        if (string.IsNullOrWhiteSpace(value))
-            value = Environment.GetEnvironmentVariable(environmentVariable) ?? string.Empty;
+        if (_values.ContainsKey(name))
+        {
+            throw new ArgumentException(
+                $"Secret option --{name} is not accepted on the command line. " +
+                $"Set process environment variable {environmentVariable} instead.");
+        }
+
+        string value =
+            Environment.GetEnvironmentVariable(environmentVariable)
+            ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new ArgumentException(
-                $"Required secret --{name} or environment variable {environmentVariable} was not supplied.");
+                $"Required secret environment variable {environmentVariable} was not supplied.");
         }
 
         return value;

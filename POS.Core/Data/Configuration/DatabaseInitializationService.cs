@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
+using POS.Core.Configuration;
 
 namespace POS.Core.Data.Configuration;
 
@@ -51,18 +52,45 @@ public sealed class DatabaseInitializationService
 
         try
         {
-            // A successful connection alone is insufficient. Querying a stable
-            // core table also detects a missing or incompatible central schema.
+            IReadOnlyList<string> appliedMigrations =
+                (await context.Database
+                    .GetAppliedMigrationsAsync(cancellationToken))
+                .ToList();
+
+            string? latestMigration =
+                appliedMigrations
+                    .OrderBy(value => value, StringComparer.Ordinal)
+                    .LastOrDefault();
+
+            if (!string.Equals(
+                    latestMigration,
+                    ProductReleaseInfo.RequiredSqlServerMigration,
+                    StringComparison.Ordinal))
+            {
+                throw new DatabaseConfigurationException(
+                    $"The network database schema is not compatible with " +
+                    $"{ProductReleaseInfo.ProductName} " +
+                    $"{ProductReleaseInfo.ProductVersion}. " +
+                    "Run the matching server setup or upgrade utility.");
+            }
+
+            // A successful connection and migration-history check are not
+            // sufficient by themselves. Query a stable core table as a final
+            // permission and schema check.
             _ = await context.Users
                 .AsNoTracking()
                 .Select(user => user.Id)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+        catch (DatabaseConfigurationException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             throw new DatabaseConfigurationException(
                 "The store server was reached, but the POS network database schema is missing or incompatible. " +
-                "Run the approved server database setup/update utility on the BackOffice server PC.",
+                "Run the matching server setup or upgrade utility on the BackOffice server PC.",
                 ex);
         }
     }

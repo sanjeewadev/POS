@@ -1,0 +1,107 @@
+#ifndef SourceRoot
+  #error SourceRoot must be supplied by Build-POS-Production-Installers.ps1
+#endif
+#ifndef OutputDir
+  #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
+#endif
+#ifndef AppVersion
+  #define AppVersion "1.0.0"
+#endif
+
+#define AppName "Advanced POS Server"
+#define PublisherName "Advanced POS"
+#define AppExeName "POS.BackOffice.UI.exe"
+
+[Setup]
+AppId={{7A34BE87-6A8F-4A91-A12B-11D000000001}
+AppName={#AppName}
+AppVersion={#AppVersion}
+AppPublisher={#PublisherName}
+DefaultDirName={autopf}\Advanced POS\Server
+DefaultGroupName=Advanced POS
+DisableProgramGroupPage=yes
+OutputDir={#OutputDir}
+OutputBaseFilename=Advanced_POS_Server_Setup_{#AppVersion}
+Compression=lzma2/ultra64
+SolidCompression=yes
+WizardStyle=modern
+PrivilegesRequired=admin
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+UninstallDisplayIcon={app}\BackOffice\{#AppExeName}
+SetupLogging=yes
+CloseApplications=yes
+RestartApplications=no
+UsePreviousAppDir=yes
+UsePreviousTasks=yes
+
+[Types]
+Name: "serveronly"; Description: "Server and BackOffice"
+Name: "servercashier"; Description: "Server, BackOffice, and Cashier on this computer"
+Name: "custom"; Description: "Custom installation"; Flags: iscustom
+
+[Components]
+Name: "server"; Description: "SQL database tools and BackOffice"; Types: serveronly servercashier custom; Flags: fixed
+Name: "cashier"; Description: "Cashier application on the server computer"; Types: servercashier
+
+[Tasks]
+Name: "desktopbackoffice"; Description: "Create a BackOffice desktop shortcut"; GroupDescription: "Desktop shortcuts:"; Flags: checkedonce
+Name: "desktopcashier"; Description: "Create a Cashier desktop shortcut"; GroupDescription: "Desktop shortcuts:"; Components: cashier; Flags: checkedonce
+
+[Files]
+Source: "{#SourceRoot}\Server\BackOffice\*"; DestDir: "{app}\BackOffice"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\Server\Cashier\*"; DestDir: "{app}\Cashier"; Components: cashier; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\Server\DatabaseSetup\*"; DestDir: "{app}\DatabaseSetup"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\Server\DeploymentWizard\*"; DestDir: "{app}\DeploymentWizard"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\Server\Tools\*"; DestDir: "{app}\Tools"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\Server\Docs\*"; DestDir: "{app}\Docs"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs
+#ifdef SqlExpressInstaller
+Source: "{#SqlExpressInstaller}"; DestDir: "{tmp}"; DestName: "SQLEXPR_x64_ENU.exe"; Flags: deleteafterinstall
+#endif
+
+[Icons]
+Name: "{group}\Advanced POS BackOffice"; Filename: "{app}\BackOffice\POS.BackOffice.UI.exe"; WorkingDir: "{app}\BackOffice"
+Name: "{autodesktop}\Advanced POS BackOffice"; Filename: "{app}\BackOffice\POS.BackOffice.UI.exe"; WorkingDir: "{app}\BackOffice"; Tasks: desktopbackoffice
+Name: "{group}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier
+Name: "{autodesktop}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier; Tasks: desktopcashier
+Name: "{group}\Configure Advanced POS Server"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"""; WorkingDir: "{app}"
+Name: "{group}\Backup POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Backup-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
+Name: "{group}\Restore POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Restore-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
+Name: "{group}\Check POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Check-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
+Name: "{group}\POS Server Status"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Show-POS-Server-Status.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
+
+[Run]
+#ifdef SqlExpressInstaller
+Filename: "{tmp}\SQLEXPR_x64_ENU.exe"; Parameters: "/Q /ACTION=Install /FEATURES=SQLEngine /INSTANCENAME=SQLEXPRESS /INSTANCEID=SQLEXPRESS /SQLSVCSTARTUPTYPE=Automatic /SQLSYSADMINACCOUNTS=""BUILTIN\ADMINISTRATORS"" /TCPENABLED=0 /NPENABLED=0 /IACCEPTSQLSERVERLICENSETERMS /UPDATEENABLED=False"; StatusMsg: "Installing SQL Server Express..."; Flags: waituntilterminated runhidden; Check: ShouldInstallSqlExpress
+#endif
+Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"""; WorkingDir: "{app}"; Description: "Configure the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}\Temp"
+
+[Code]
+function SqlExpressServiceExists(): Boolean;
+begin
+  Result :=
+    RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\MSSQL$SQLEXPRESS') or
+    RegKeyExists(HKLM, 'SYSTEM\CurrentControlSet\Services\MSSQL$SQLEXPRESS');
+end;
+
+function ShouldInstallSqlExpress(): Boolean;
+begin
+  Result := not SqlExpressServiceExists();
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+#ifndef SqlExpressInstaller
+  if not SqlExpressServiceExists() then
+  begin
+    Result :=
+      'SQL Server Express instance SQLEXPRESS is not installed. ' +
+      'Install the approved SQL Server Express prerequisite first, or rebuild ' +
+      'this server installer with -SqlServerExpressInstallerPath.';
+  end;
+#endif
+end;

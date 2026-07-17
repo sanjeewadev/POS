@@ -125,6 +125,7 @@ try {
     if ($existingRules.Count -eq 1) {
         $existingRule = $existingRules[0]
         $portFilters = @($existingRule | Get-NetFirewallPortFilter)
+        $addressFilters = @($existingRule | Get-NetFirewallAddressFilter)
         $validRule =
             $existingRule.Direction -eq "Inbound" -and
             $existingRule.Action -eq "Allow" -and
@@ -133,12 +134,23 @@ try {
                 "Private",
                 [StringComparison]::OrdinalIgnoreCase) -ge 0 -and
             $portFilters.Count -eq 1 -and
+            $addressFilters.Count -eq 1 -and
             ([string]$portFilters[0].Protocol -eq "TCP" -or
              [string]$portFilters[0].Protocol -eq "6") -and
             [string]$portFilters[0].LocalPort -eq [string]$Port
 
         if (-not $validRule) {
             throw "An existing firewall rule named '$firewallRuleName' does not match the required Private inbound TCP configuration. No firewall rule was changed."
+        }
+
+        $remoteAddress = [string]$addressFilters[0].RemoteAddress
+        if ($remoteAddress.IndexOf(
+                "LocalSubnet",
+                [StringComparison]::OrdinalIgnoreCase) -lt 0) {
+            $existingRule |
+                Get-NetFirewallAddressFilter |
+                Set-NetFirewallAddressFilter `
+                    -RemoteAddress LocalSubnet | Out-Null
         }
     }
 
@@ -155,6 +167,7 @@ try {
             -Action Allow `
             -Protocol TCP `
             -LocalPort $Port `
+            -RemoteAddress LocalSubnet `
             -Profile Private `
             -Enabled True | Out-Null
     }
