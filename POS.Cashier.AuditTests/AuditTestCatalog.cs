@@ -32,6 +32,7 @@ internal static class AuditTestCatalog
         new("Cashier Discount Rule entry point is removed while historical snapshots remain", AuditGroups.SourcePolicy, SourcePolicyAuditTests.DiscountRuleEntryPointIsRemovedAsync),
         new("Cashier bottom actions are compact and organized", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CashierBottomPanelIsCompactAndOrganizedAsync),
         new("Cash Payment dialog and shared tender numpad are polished", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CashPaymentDialogAndSharedNumpadArePolishedAsync),
+        new("Checkout tender dialogs use the Category 1 transaction family", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CheckoutTenderDialogsUseTransactionFamilyAsync),
         new("Cashier dialogs use controlled owner-aware placement and native chrome", AuditGroups.SourcePolicy, CashierWindowStabilizationSourcePolicyAuditTests.DialogPlacementAndNativeChromeAreControlledAsync),
         new("Cashier repeated submissions and modal closing are guarded", AuditGroups.SourcePolicy, CashierWindowStabilizationSourcePolicyAuditTests.RepeatedSubmissionAndModalCloseAreGuardedAsync),
         new("Float Cash and owned Cashier dialog routes are controlled", AuditGroups.SourcePolicy, CashierWindowStabilizationSourcePolicyAuditTests.FloatCashAndOwnedDialogRoutesAreControlledAsync),

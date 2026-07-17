@@ -155,4 +155,77 @@
         <Setter Property="Padding" Value="10,6"/>
     </Style>
 
+    <Style x:Key="CashierTransactionInputTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierTextBox}">
+        <Setter Property="MinHeight" Value="42"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionMoneyInputTextBox"
+           TargetType="TextBox"
+           BasedOn="{StaticResource CashierMoneyInputTextBox}">
+        <Setter Property="MinHeight" Value="48"/>
+        <Setter Property="FontSize" Value="23"/>
+        <Setter Property="Padding" Value="10,0"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionReadOnlyPanel"
+           TargetType="Border"
+           BasedOn="{StaticResource CashierTransactionAmountPanel}">
+        <Setter Property="Height" Value="48"/>
+        <Setter Property="Background" Value="{StaticResource CashierPanelAltBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionReadOnlyValue" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="23"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionDetailLabel"
+           TargetType="TextBlock"
+           BasedOn="{StaticResource CashierMutedText}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionDetailValue" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource CashierTextBrush}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionPrimaryButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierPrimaryButton}">
+        <Setter Property="MinWidth" Value="118"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionSecondaryButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierButton}">
+        <Setter Property="MinWidth" Value="100"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style x:Key="CashierTransactionProtectedButton"
+           TargetType="Button"
+           BasedOn="{StaticResource CashierProtectedButton}">
+        <Setter Property="MinWidth" Value="150"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+
 </ResourceDictionary>

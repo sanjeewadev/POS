@@ -315,6 +315,121 @@ internal static class SourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task CheckoutTenderDialogsUseTransactionFamilyAsync()
+    {
+        string styles = Read(
+            "POS.Cashier.UI",
+            "Resources",
+            "CashierTransactionDialogs.xaml");
+        AuditAssert.Contains(
+            styles,
+            "x:Key=\"CashierTransactionInputTextBox\"",
+            "shared transaction text input");
+        AuditAssert.Contains(
+            styles,
+            "x:Key=\"CashierTransactionMoneyInputTextBox\"",
+            "shared transaction money input");
+        AuditAssert.Contains(
+            styles,
+            "x:Key=\"CashierTransactionReadOnlyPanel\"",
+            "shared transaction read-only amount panel");
+        AuditAssert.Contains(
+            styles,
+            "x:Key=\"CashierTransactionProtectedButton\"",
+            "shared protected transaction action");
+
+        string[] tenderDialogs =
+        {
+            "CardTenderDialog.xaml",
+            "ChequeTenderDialog.xaml",
+            "GiftVoucherTenderDialog.xaml"
+        };
+
+        foreach (string fileName in tenderDialogs)
+        {
+            string dialog = Read("POS.Cashier.UI", "Dialogs", fileName);
+            AuditAssert.Contains(
+                dialog,
+                "Style=\"{StaticResource CashierTransactionDialogHeader}\"",
+                $"{fileName} transaction header");
+            AuditAssert.Contains(
+                dialog,
+                "Style=\"{StaticResource CashierTransactionConfirmButton}\"",
+                $"{fileName} transaction confirmation button");
+            AuditAssert.Contains(
+                dialog,
+                "VerticalScrollBarVisibility=\"Auto\"",
+                $"{fileName} high-scaling overflow protection");
+            AuditAssert.Contains(
+                dialog,
+                "KeyboardNavigation.TabNavigation=\"Cycle\"",
+                $"{fileName} keyboard navigation");
+            AuditAssert.Contains(
+                dialog,
+                "WindowStartupLocation=\"CenterOwner\"",
+                $"{fileName} owner centering");
+            AuditAssert.False(
+                dialog.Contains("<Window.Resources>", StringComparison.Ordinal),
+                $"{fileName} must use shared transaction styles instead of local styles.");
+        }
+
+        string card = Read("POS.Cashier.UI", "Dialogs", "CardTenderDialog.xaml");
+        AuditAssert.Contains(
+            card,
+            "Style=\"{StaticResource CashierTransactionMoneyInputTextBox}\"",
+            "Card Payment shared money input");
+        AuditAssert.Contains(
+            card,
+            "<components:TenderNumpadControl",
+            "Card Payment shared tender numpad");
+        AuditAssert.Contains(
+            card,
+            "IsEnabled=\"{Binding CanConfirm}\"",
+            "Card Payment confirmation availability");
+
+        string cheque = Read("POS.Cashier.UI", "Dialogs", "ChequeTenderDialog.xaml");
+        AuditAssert.Contains(
+            cheque,
+            "Style=\"{StaticResource CashierTransactionMoneyInputTextBox}\"",
+            "Cheque Payment shared money input");
+        AuditAssert.Contains(
+            cheque,
+            "<components:TenderNumpadControl",
+            "Cheque Payment shared tender numpad");
+        AuditAssert.Contains(
+            cheque,
+            "Style=\"{StaticResource CashierDatePicker}\"",
+            "Cheque Payment shared date input");
+
+        string voucher = Read(
+            "POS.Cashier.UI",
+            "Dialogs",
+            "GiftVoucherTenderDialog.xaml");
+        AuditAssert.Contains(
+            voucher,
+            "CashierTransactionProtectedButton",
+            "Gift Voucher manager-approval action");
+        AuditAssert.Contains(
+            voucher,
+            "Command=\"{Binding SearchVoucherCommand}\"",
+            "Gift Voucher verification command");
+        AuditAssert.Contains(
+            voucher,
+            "IsEnabled=\"{Binding CanConfirm}\"",
+            "Gift Voucher confirmation availability");
+
+        string salesView = Read("POS.Cashier.UI", "Views", "SalesView.xaml.cs");
+        AuditAssert.Contains(
+            salesView,
+            "AddConfirmedCustomerCreditPayment(amount)",
+            "existing direct Customer Credit checkout route");
+        AuditAssert.False(
+            salesView.Contains("new CustomerCreditTenderDialog", StringComparison.Ordinal),
+            "Category 1A must not introduce an unapproved Customer Credit dialog or workflow change.");
+
+        return Task.CompletedTask;
+    }
+
     public static Task PaidInAndPaidOutDoNotRequireManagerPasswordAsync()
     {
         string source = Read("POS.Cashier.UI", "ViewModels", "CashMovementViewModel.cs");
