@@ -189,6 +189,45 @@ namespace POS.Core.Repositories
                 string safeImportedBy =
                     NormalizeText(importedBy);
 
+                InstalledLicense? existingIdentical =
+                    await context.InstalledLicenses
+                        .FirstOrDefaultAsync(
+                            installed =>
+                                installed.IsActive &&
+                                installed.LicenseId ==
+                                    license.LicenseId &&
+                                installed.LicenseType ==
+                                    license.LicenseType &&
+                                installed.StoreId ==
+                                    license.StoreId &&
+                                installed.TerminalNo ==
+                                    license.TerminalNo &&
+                                installed.MachineCode ==
+                                    license.MachineCode &&
+                                installed.Signature ==
+                                    license.Signature);
+
+                if (existingIdentical != null)
+                {
+                    existingIdentical.LastVerifiedAt = now;
+                    existingIdentical.ImportedBy = safeImportedBy;
+                    existingIdentical.LicenseStatus =
+                        CalculateCurrentStatus(
+                            existingIdentical,
+                            now);
+
+                    await context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return await context
+                        .InstalledLicenses
+                        .AsNoTracking()
+                        .FirstAsync(
+                            installed =>
+                                installed.Id ==
+                                    existingIdentical.Id);
+                }
+
                 await DeactivatePreviousLicensesAsync(
                     context,
                     license,

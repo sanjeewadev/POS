@@ -5,7 +5,7 @@
   #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 
 #define AppName "Advanced POS Server"
@@ -16,6 +16,7 @@
 AppId={{7A34BE87-6A8F-4A91-A12B-11D000000001}
 AppName={#AppName}
 AppVersion={#AppVersion}
+AppVerName={#AppName} {#AppVersion}
 AppPublisher={#PublisherName}
 DefaultDirName={autopf}\Advanced POS\Server
 DefaultGroupName=Advanced POS
@@ -29,11 +30,17 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\BackOffice\{#AppExeName}
+UninstallDisplayName={#AppName} {#AppVersion}
+CreateUninstallRegKey=yes
+UpdateUninstallLogAppName=yes
 SetupLogging=yes
 CloseApplications=yes
 RestartApplications=no
 UsePreviousAppDir=yes
 UsePreviousTasks=yes
+UsePreviousGroup=yes
+UsePreviousLanguage=yes
+UsePreviousSetupType=yes
 
 [Types]
 Name: "serveronly"; Description: "Server and BackOffice"
@@ -64,6 +71,7 @@ Name: "{group}\Advanced POS BackOffice"; Filename: "{app}\BackOffice\POS.BackOff
 Name: "{autodesktop}\Advanced POS BackOffice"; Filename: "{app}\BackOffice\POS.BackOffice.UI.exe"; WorkingDir: "{app}\BackOffice"; Tasks: desktopbackoffice
 Name: "{group}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier
 Name: "{autodesktop}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier; Tasks: desktopcashier
+Name: "{group}\Activate Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; Parameters: "--activate"; WorkingDir: "{app}\Cashier"; Components: cashier
 Name: "{group}\Configure Advanced POS Server"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"
 Name: "{group}\Backup POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Backup-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\Restore POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Restore-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
@@ -71,12 +79,13 @@ Name: "{group}\Check POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powe
 Name: "{group}\POS Server Status"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Show-POS-Server-Status.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 
 [Run]
-Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"; Description: "Configure the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated
+Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"; Description: "Configure the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated; Check: ShouldRunServerConfiguration
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\Cashier"; Check: IsServerOnlyInstall
 Type: files; Name: "{autodesktop}\Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
 Type: files; Name: "{group}\Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
+Type: files; Name: "{group}\Activate Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Temp"
@@ -84,6 +93,52 @@ Type: filesandordirs; Name: "{app}\Temp"
 [Code]
 var
   SqlExpressRestartRequired: Boolean;
+  MaintenancePage: TInputOptionWizardPage;
+  ExistingInstallationDetected: Boolean;
+
+function HasExistingServerInstallation(): Boolean;
+begin
+  Result :=
+    RegKeyExists(
+      HKLM64,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7A34BE87-6A8F-4A91-A12B-11D000000001}_is1') or
+    RegKeyExists(
+      HKLM,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7A34BE87-6A8F-4A91-A12B-11D000000001}_is1');
+end;
+
+procedure InitializeWizard();
+begin
+  ExistingInstallationDetected :=
+    HasExistingServerInstallation();
+
+  if ExistingInstallationDetected then
+  begin
+    MaintenancePage := CreateInputOptionPage(
+      wpWelcome,
+      'Upgrade or repair Advanced POS Server',
+      'An existing Server installation was detected.',
+      'Choose how setup should handle the installed system. The SQL database, ' +
+      'store data, users, licences, connection profiles, terminal assignments, ' +
+      'and backup files are preserved.',
+      True,
+      False);
+
+    MaintenancePage.Add(
+      'Upgrade or repair application files and keep the current configuration');
+    MaintenancePage.Add(
+      'Upgrade application files and open Server configuration after setup');
+    MaintenancePage.SelectedValueIndex := 0;
+  end;
+end;
+
+function ShouldRunServerConfiguration(): Boolean;
+begin
+  Result :=
+    (not ExistingInstallationDetected) or
+    ((MaintenancePage <> nil) and
+     (MaintenancePage.SelectedValueIndex = 1));
+end;
 
 function SqlExpressServiceExists(): Boolean;
 begin

@@ -15,6 +15,7 @@ using POS.Core.Services.Exports;
 using POS.Core.Services.Licensing;
 using POS.Core.Services.Returns;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -163,7 +164,47 @@ namespace POS.Cashier.UI
             try
             {
                 await InitializeDatabaseAsync();
-                await InitializeTerminalAndLicenseAsync();
+
+                LicenseSummary summary =
+                    await InitializeTerminalAndLicenseAsync();
+
+                bool activationRequested =
+                    e.Args.Any(
+                        argument =>
+                            string.Equals(
+                                argument,
+                                "--activate",
+                                StringComparison.OrdinalIgnoreCase));
+
+                if (activationRequested ||
+                    !summary.CanRunCashier)
+                {
+                    bool activationCompleted =
+                        ShowLicenseRecoveryDialog(
+                            summary);
+
+                    if (!activationCompleted)
+                    {
+                        Shutdown();
+                        return;
+                    }
+
+                    summary =
+                        await Services
+                            .GetRequiredService<
+                                LicenseManagerService>()
+                            .GetCurrentLicenseSummaryAsync();
+                }
+
+                if (summary.OverallStatus ==
+                    LicenseStatus.ExpiringSoon)
+                {
+                    MessageBox.Show(
+                        summary.StatusMessage,
+                        "License Expiry Warning",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
 
                 _tillRepository =
                     Services.GetRequiredService<TillRepository>();
@@ -247,7 +288,8 @@ namespace POS.Cashier.UI
             }
         }
 
-        private async Task InitializeTerminalAndLicenseAsync()
+        private async Task<LicenseSummary>
+            InitializeTerminalAndLicenseAsync()
         {
             if (Services == null)
                 throw new InvalidOperationException(
@@ -299,21 +341,26 @@ namespace POS.Cashier.UI
                 await licenseManager
                     .GetCurrentLicenseSummaryAsync();
 
-            if (!summary.CanRunCashier)
-            {
-                throw new InvalidOperationException(
-                    summary.StatusMessage);
-            }
+            return summary;
+        }
 
-            if (summary.OverallStatus ==
-                LicenseStatus.ExpiringSoon)
-            {
-                MessageBox.Show(
-                    summary.StatusMessage,
-                    "License Expiry Warning",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-            }
+        private bool ShowLicenseRecoveryDialog(
+            LicenseSummary summary)
+        {
+            if (Services == null)
+                return false;
+
+            var dialog =
+                new CashierLicenseRecoveryDialog(
+                    Services.GetRequiredService<
+                        LicenseManagerService>(),
+                    summary);
+
+            bool? result =
+                dialog.ShowDialog();
+
+            return result == true &&
+                   dialog.ActivationCompleted;
         }
 
         private static void ValidateTerminalConfiguration(

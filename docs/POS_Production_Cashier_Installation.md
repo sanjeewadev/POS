@@ -17,7 +17,7 @@ Each physical Cashier computer must have a different terminal number.
 
 1. Sign in using the Windows account that will normally run Cashier.
 2. Connect the computer to the trusted store LAN.
-3. Run `Advanced_POS_Cashier_Setup_1.0.0.exe` as Administrator.
+3. Run `Advanced_POS_Cashier_Setup_1.0.1.exe` as Administrator.
 4. The Cashier production wizard opens automatically.
 5. Enter the server connection details and the unique terminal identity.
 6. Enter the SQL password in the masked password fields.
@@ -35,7 +35,9 @@ When no terminal licence is selected during setup, record the machine code shown
 - machine code;
 - required expiry date.
 
-Rerun **Configure Advanced POS Cashier** from the Start Menu and select the generated `.poslic` file, or import it through BackOffice License Management.
+Start **Activate Advanced POS Cashier** from the Start Menu. The activation window displays the current machine code, can copy or save a complete offline licence request, and imports the signed `.poslic` file directly on the target Cashier computer.
+
+BackOffice Terminal Management can copy the registered machine information for a remote terminal, but the final terminal licence is imported on the physical Cashier computer that will use it.
 
 ## Hardware setup
 
@@ -66,3 +68,13 @@ The Cashier installer does not delete an existing `%LOCALAPPDATA%\POS\pos_local.
 The **Configure Advanced POS Cashier** Start-menu entry can be run again after an interrupted or failed configuration. Repeating the same terminal assignment on the same computer is safe and verifies the existing configuration.
 
 When the selected terminal belongs to another computer, do not choose a different number merely to bypass the message. Release the old machine through BackOffice **Terminal Management → RELEASE MACHINE**, then retry configuration. The Cashier installer never installs SQL Server.
+
+## Missing or expired licence
+
+Starting Cashier with a missing, expired, or invalid terminal licence opens **Advanced POS — Cashier Activation Required** instead of closing. Sales remain locked, but the operator or technician can copy the machine code, save a licence request, import a renewed terminal licence, and continue to login without restarting the application.
+
+A store licence problem must be corrected from BackOffice on the server computer. The Cashier activation window accepts terminal licences only.
+
+## Upgrading or repairing an installed Cashier
+
+Run the matching newer Cashier installer over the existing installation. Select **Upgrade or repair application files and keep the current configuration**. The encrypted database profile, terminal assignment, machine registration, licence, and local hardware settings are preserved. Select the reconfiguration option only when those settings genuinely need to change.

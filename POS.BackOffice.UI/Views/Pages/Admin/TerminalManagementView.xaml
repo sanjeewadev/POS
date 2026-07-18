@@ -431,6 +431,12 @@
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             VerticalAlignment="Bottom">
+                    <Button Content="COPY LICENCE REQUEST"
+                            Command="{Binding CopyLicenseRequestCommand}"
+                            IsEnabled="{Binding CanCopyLicenseRequest}"
+                            Style="{StaticResource ClassicButton}"
+                            Margin="0,0,8,0"/>
+
                     <Button Content="SAVE NAME"
                             Command="{Binding SaveTerminalNameCommand}"
                             IsEnabled="{Binding CanManageSelected}"

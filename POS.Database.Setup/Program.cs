@@ -8,7 +8,7 @@ namespace POS.Database.Setup;
 internal static class Program
 {
     private const string ProductName = "Advanced POS Database Setup";
-    private const string VersionText = "Production 1.0.0";
+    private const string VersionText = "Production 1.0.1";
 
     public static async Task<int> Main(string[] args)
     {

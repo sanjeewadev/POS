@@ -30,6 +30,8 @@ namespace POS.Core.Models.Licensing
 
         public string CurrentTerminalNo { get; set; } = string.Empty;
 
+        public string CurrentTerminalName { get; set; } = string.Empty;
+
         // =========================================================
         // TERMINAL LICENSE
         // =========================================================

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using POS.Core.Models;
 using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services;
@@ -54,8 +55,13 @@ namespace POS.Core.Services.Licensing
                 _machineFingerprintService
                     .GetMachineName();
 
+            TerminalSettings? currentTerminalSettings =
+                await GetCurrentTerminalSettingsAsync();
+
             string terminalNo =
-                await GetCurrentTerminalNoAsync();
+                currentTerminalSettings?.TerminalNo
+                    ?.Trim() ??
+                string.Empty;
 
             InstalledLicense? storeLicense =
                 await _licenseRepository
@@ -137,6 +143,11 @@ namespace POS.Core.Services.Licensing
                     CurrentTerminalNo =
                         terminalNo,
 
+                    CurrentTerminalName =
+                        currentTerminalSettings?.TerminalName
+                            ?.Trim() ??
+                        string.Empty,
+
                     TerminalLicenseId =
                         terminalLicense?.LicenseId ??
                         string.Empty,
@@ -172,6 +183,39 @@ namespace POS.Core.Services.Licensing
             ApplyStatusMessage(summary);
 
             return summary;
+        }
+
+        public async Task<LicenseRequestInfo>
+            GetCurrentTerminalLicenseRequestAsync()
+        {
+            LicenseSummary summary =
+                await GetCurrentLicenseSummaryAsync();
+
+            return LicenseRequestService
+                .CreateCurrentTerminalRequest(
+                    summary);
+        }
+
+        public async Task<InstalledLicense>
+            ImportTerminalLicenseFileAsync(
+                string filePath,
+                string importedBy)
+        {
+            var result =
+                await _licenseFileService
+                    .ReadLicenseFileWithRawJsonAsync(
+                        filePath);
+
+            if (!result.Document.IsTerminalLicense)
+            {
+                throw new InvalidOperationException(
+                    "The selected file is not a terminal licence. " +
+                    "Store licences must be imported from BackOffice.");
+            }
+
+            return await ImportLicenseFileAsync(
+                filePath,
+                importedBy);
         }
 
         public async Task<InstalledLicense>
@@ -274,8 +318,9 @@ namespace POS.Core.Services.Licensing
                             .OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException(
-                        "This terminal license belongs " +
-                        "to a different computer.");
+                        "The selected terminal licence was created for " +
+                        $"machine '{document.MachineCode}', but this " +
+                        $"computer requires '{currentMachineCode}'.");
                 }
 
                 if (!string.Equals(
@@ -469,20 +514,26 @@ namespace POS.Core.Services.Licensing
         private async Task<string>
             GetCurrentTerminalNoAsync()
         {
+            TerminalSettings? settings =
+                await GetCurrentTerminalSettingsAsync();
+
+            return settings?.TerminalNo
+                ?.Trim() ??
+                string.Empty;
+        }
+
+        private async Task<TerminalSettings?>
+            GetCurrentTerminalSettingsAsync()
+        {
             try
             {
                 string machineName =
                     _machineFingerprintService
                         .GetMachineName();
 
-                var settings =
-                    await _terminalSettingsRepository
-                        .GetByMachineNameAsync(
-                            machineName);
-
-                return settings?.TerminalNo
-                    ?.Trim() ??
-                    string.Empty;
+                return await _terminalSettingsRepository
+                    .GetByMachineNameAsync(
+                        machineName);
             }
             catch (Exception ex)
             {

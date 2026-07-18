@@ -5,7 +5,7 @@
   #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 
 #define AppName "Advanced POS Cashier"
@@ -16,6 +16,7 @@
 AppId={{7A34BE87-6A8F-4A91-A12B-11D000000002}
 AppName={#AppName}
 AppVersion={#AppVersion}
+AppVerName={#AppName} {#AppVersion}
 AppPublisher={#PublisherName}
 DefaultDirName={autopf}\Advanced POS\Cashier
 DefaultGroupName=Advanced POS
@@ -29,11 +30,17 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\Cashier\{#AppExeName}
+UninstallDisplayName={#AppName} {#AppVersion}
+CreateUninstallRegKey=yes
+UpdateUninstallLogAppName=yes
 SetupLogging=yes
 CloseApplications=yes
 RestartApplications=no
 UsePreviousAppDir=yes
 UsePreviousTasks=yes
+UsePreviousGroup=yes
+UsePreviousLanguage=yes
+UsePreviousSetupType=yes
 
 [Tasks]
 Name: "desktopcashier"; Description: "Create a Cashier desktop shortcut"; GroupDescription: "Desktop shortcuts:"; Flags: checkedonce
@@ -48,10 +55,59 @@ Source: "{#SourceRoot}\Cashier\Docs\*"; DestDir: "{app}\Docs"; Flags: ignorevers
 [Icons]
 Name: "{group}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"
 Name: "{autodesktop}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Tasks: desktopcashier
+Name: "{group}\Activate Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; Parameters: "--activate"; WorkingDir: "{app}\Cashier"
 Name: "{group}\Configure Advanced POS Cashier"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"; Description: "Configure this Cashier terminal"; StatusMsg: "Opening Advanced POS Cashier configuration..."; Flags: waituntilterminated
+Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"; Description: "Configure this Cashier terminal"; StatusMsg: "Opening Advanced POS Cashier configuration..."; Flags: waituntilterminated; Check: ShouldRunCashierConfiguration
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Temp"
+[Code]
+var
+  MaintenancePage: TInputOptionWizardPage;
+  ExistingInstallationDetected: Boolean;
+
+function HasExistingCashierInstallation(): Boolean;
+begin
+  Result :=
+    RegKeyExists(
+      HKLM64,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7A34BE87-6A8F-4A91-A12B-11D000000002}_is1') or
+    RegKeyExists(
+      HKLM,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7A34BE87-6A8F-4A91-A12B-11D000000002}_is1');
+end;
+
+procedure InitializeWizard();
+begin
+  ExistingInstallationDetected :=
+    HasExistingCashierInstallation();
+
+  if ExistingInstallationDetected then
+  begin
+    MaintenancePage := CreateInputOptionPage(
+      wpWelcome,
+      'Upgrade or repair Advanced POS Cashier',
+      'An existing Cashier installation was detected.',
+      'Choose how setup should handle the installed system. ' +
+      'The database connection, terminal assignment, machine registration, ' +
+      'licence, printer settings, and drawer settings are preserved.',
+      True,
+      False);
+
+    MaintenancePage.Add(
+      'Upgrade or repair application files and keep the current configuration');
+    MaintenancePage.Add(
+      'Upgrade application files and open Cashier configuration after setup');
+    MaintenancePage.SelectedValueIndex := 0;
+  end;
+end;
+
+function ShouldRunCashierConfiguration(): Boolean;
+begin
+  Result :=
+    (not ExistingInstallationDetected) or
+    ((MaintenancePage <> nil) and
+     (MaintenancePage.SelectedValueIndex = 1));
+end;

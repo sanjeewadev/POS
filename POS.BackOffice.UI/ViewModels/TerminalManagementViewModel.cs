@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using POS.Core.Models.Licensing;
 using POS.Core.Models.Terminals;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Services.Licensing;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -20,13 +22,18 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly AuthService
             _authService;
 
+        private readonly LicenseManagerService
+            _licenseManagerService;
+
         public TerminalManagementViewModel(
             TerminalManagementRepository
                 repository,
-            AuthService authService)
+            AuthService authService,
+            LicenseManagerService licenseManagerService)
         {
             _repository = repository;
             _authService = authService;
+            _licenseManagerService = licenseManagerService;
 
             Terminals =
                 new ObservableCollection<
@@ -105,6 +112,11 @@ namespace POS.BackOffice.UI.ViewModels
             CanManageSelected &&
             SelectedTerminal?.HasMachineAssignment == true;
 
+        public bool CanCopyLicenseRequest =>
+            HasSelectedTerminal &&
+            SelectedTerminal?.HasMachineAssignment == true &&
+            !IsBusy;
+
         partial void OnSelectedTerminalChanged(
             RegisteredTerminalSummary? value)
         {
@@ -118,6 +130,9 @@ namespace POS.BackOffice.UI.ViewModels
 
             OnPropertyChanged(
                 nameof(CanReleaseSelected));
+
+            OnPropertyChanged(
+                nameof(CanCopyLicenseRequest));
         }
 
         partial void OnIsAdministratorChanged(
@@ -144,6 +159,9 @@ namespace POS.BackOffice.UI.ViewModels
 
             OnPropertyChanged(
                 nameof(CanReleaseSelected));
+
+            OnPropertyChanged(
+                nameof(CanCopyLicenseRequest));
         }
 
         [RelayCommand]
@@ -498,6 +516,68 @@ namespace POS.BackOffice.UI.ViewModels
                 SetStatus(
                     "The machine code could not be copied.",
                     "#B91C1C");
+            }
+        }
+
+        [RelayCommand]
+        private async Task CopyLicenseRequestAsync()
+        {
+            if (!EnsureSelectedTerminal() ||
+                IsBusy)
+            {
+                return;
+            }
+
+            if (SelectedTerminal!.HasMachineAssignment == false)
+            {
+                SetStatus(
+                    "The selected terminal has no machine assignment.",
+                    "#B91C1C");
+                return;
+            }
+
+            try
+            {
+                IsBusy = true;
+
+                LicenseSummary storeSummary =
+                    await _licenseManagerService
+                        .GetCurrentLicenseSummaryAsync();
+
+                LicenseRequestInfo request =
+                    LicenseRequestService
+                        .CreateTerminalRequest(
+                            storeSummary.StoreId,
+                            storeSummary.StoreName,
+                            SelectedTerminal.TerminalNo,
+                            SelectedTerminal.TerminalName,
+                            SelectedTerminal.MachineName,
+                            SelectedTerminal.MachineCode,
+                            SelectedTerminal.LicenseStatus,
+                            SelectedTerminal.LicenseExpiryDate);
+
+                Clipboard.SetText(
+                    request.BuildRequestText());
+
+                SetStatus(
+                    "Terminal licence request copied.",
+                    "#008000");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Copy terminal licence request",
+                    ex);
+
+                SetStatus(
+                    "The terminal licence request could not be copied. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "#B91C1C");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 

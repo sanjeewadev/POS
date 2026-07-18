@@ -17,7 +17,7 @@ The server computer hosts SQL Server Express, the production POS database, BackO
 ## Installation
 
 1. Sign in using the Windows account that will normally run BackOffice.
-2. Run `Advanced_POS_Server_Setup_1.0.0.exe` as Administrator.
+2. Run `Advanced_POS_Server_Setup_1.0.1.exe` as Administrator.
 3. Choose whether Cashier should also be installed on the server computer.
 4. The production wizard opens automatically.
 5. Select one mode:
