@@ -28,9 +28,11 @@ internal static class CashierWindowStabilizationSourcePolicyAuditTests
 
     private static readonly string[] RoutineDialogFiles =
     {
+        "ActiveCartRecoveryDialog.xaml",
         "B2BCustomerDialogView.xaml",
         "CardTenderDialog.xaml",
         "CartCancellationReasonDialog.xaml",
+        "CashierConfirmationDialog.xaml",
         "CashMovementDialogView.xaml",
         "CashTenderDialog.xaml",
         "ChequeTenderDialog.xaml",

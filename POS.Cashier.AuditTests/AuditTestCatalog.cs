@@ -43,6 +43,8 @@ internal static class AuditTestCatalog
         new("Cashier keyboard map and fast payment completion are controlled", AuditGroups.SourcePolicy, CashierKeyboardFlowSourcePolicyAuditTests.KeyboardMapAndPaymentCompletionAreControlledAsync),
         new("Cashier processing lock and payment rows are visible", AuditGroups.SourcePolicy, CashierKeyboardFlowSourcePolicyAuditTests.ProcessingLockAndPaymentRowsAreVisibleAsync),
         new("Cashier grid and lookup keyboard flow are readable", AuditGroups.SourcePolicy, CashierKeyboardFlowSourcePolicyAuditTests.GridAndLookupKeyboardFlowAreReadableAsync),
+        new("Cashier confirmations and cart recovery are keyboard controlled", AuditGroups.SourcePolicy, CashierKeyboardFlowSourcePolicyAuditTests.ConfirmationAndRecoveryDialogsAreKeyboardControlledAsync),
+        new("Cashier Num Lock visibility and modal focus are controlled", AuditGroups.SourcePolicy, CashierKeyboardFlowSourcePolicyAuditTests.NumLockVisibilityAndModalFocusAreControlledAsync),
         new("Transaction and authorization dialogs use the Category 1 family", AuditGroups.SourcePolicy, SourcePolicyAuditTests.TransactionAndAuthorizationDialogsUseCategoryOneFamilyAsync),
         new("Cashier operational windows use the Category 2 family", AuditGroups.SourcePolicy, SourcePolicyAuditTests.OperationalWindowsUseCategoryTwoFamilyAsync),
         new("Cashier summary and control windows use the Category 3 family", AuditGroups.SourcePolicy, SourcePolicyAuditTests.SummaryAndControlWindowsUseCategoryThreeFamilyAsync),

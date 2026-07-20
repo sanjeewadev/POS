@@ -103,6 +103,92 @@ internal static class CashierKeyboardFlowSourcePolicyAuditTests
         return Task.CompletedTask;
     }
 
+    public static Task ConfirmationAndRecoveryDialogsAreKeyboardControlledAsync()
+    {
+        string sales = Read("POS.Cashier.UI", "Views", "SalesView.xaml.cs");
+        string confirmation = Read(
+            "POS.Cashier.UI",
+            "Dialogs",
+            "CashierConfirmationDialog.xaml.cs");
+        string recovery = Read(
+            "POS.Cashier.UI",
+            "Dialogs",
+            "ActiveCartRecoveryDialog.xaml.cs");
+
+        AuditAssert.Contains(
+            sales,
+            "new CashierConfirmationDialog(",
+            "keyboard-native Cashier confirmation route");
+        AuditAssert.Contains(
+            sales,
+            "new ActiveCartRecoveryDialog(",
+            "keyboard-native recovered-cart route");
+        AuditAssert.Contains(
+            confirmation,
+            "e.Key == Key.Left || e.Key == Key.Right",
+            "confirmation Left and Right navigation");
+        AuditAssert.Contains(
+            confirmation,
+            "e.Key == Key.Escape",
+            "confirmation Escape cancellation");
+        AuditAssert.Contains(
+            confirmation,
+            "e.Key == Key.Enter",
+            "confirmation explicit Enter selection");
+        AuditAssert.Contains(
+            recovery,
+            "e.Key == Key.Enter",
+            "recovered-cart explicit Enter selection");
+        AuditAssert.Contains(
+            recovery,
+            "ActiveCartRecoveryAction.CancelCart",
+            "recovered-cart audited cancellation choice");
+        AuditAssert.Contains(
+            recovery,
+            "ActiveCartRecoveryAction.LogOff",
+            "recovered-cart log-off choice");
+        AuditAssert.False(
+            sales.Contains(
+                "MessageBoxButton.YesNo,\n                MessageBoxImage.Warning",
+                StringComparison.Ordinal),
+            "Primary remove-line flow must not use a Windows MessageBox confirmation.");
+
+        return Task.CompletedTask;
+    }
+
+    public static Task NumLockVisibilityAndModalFocusAreControlledAsync()
+    {
+        string view = Read("POS.Cashier.UI", "Views", "SalesView.xaml");
+        string code = Read("POS.Cashier.UI", "Views", "SalesView.xaml.cs");
+
+        AuditAssert.Contains(
+            view,
+            "x:Name=\"NumLockWarningBorder\"",
+            "visible Num Lock warning indicator");
+        AuditAssert.Contains(
+            view,
+            "Text=\"NUM LOCK OFF\"",
+            "clear Num Lock warning text");
+        AuditAssert.Contains(
+            code,
+            "Keyboard.IsKeyToggled(Key.NumLock)",
+            "physical keypad Num Lock state check");
+        AuditAssert.Contains(
+            code,
+            "e.Key == Key.NumLock",
+            "live Num Lock status refresh");
+        AuditAssert.Contains(
+            code,
+            "DimmingCurtain.Visibility = Visibility.Visible",
+            "modal Cashier dimming guard");
+        AuditAssert.Contains(
+            code,
+            "_isDialogOpen = false;",
+            "modal Cashier input restoration");
+
+        return Task.CompletedTask;
+    }
+
     private static string Read(params string[] parts)
     {
         string path = Path.Combine(

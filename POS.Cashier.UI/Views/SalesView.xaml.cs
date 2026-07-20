@@ -87,8 +87,24 @@ namespace POS.Cashier.UI.Views
                 this,
                 _autoLockTimeoutMinutes);
 
+            UpdateNumLockStatus();
             await HandleActiveCartRecoveryAsync();
             ReturnFocusToTerminalInput();
+        }
+
+        private void SalesView_Activated(object? sender, EventArgs e)
+        {
+            UpdateNumLockStatus();
+        }
+
+        private void UpdateNumLockStatus()
+        {
+            if (NumLockWarningBorder == null)
+                return;
+
+            NumLockWarningBorder.Visibility = Keyboard.IsKeyToggled(Key.NumLock)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
 
         private async Task HandleActiveCartRecoveryAsync()
@@ -104,17 +120,21 @@ namespace POS.Cashier.UI.Views
                 if (active == null)
                     return;
 
-                MessageBoxResult choice = MessageBox.Show(
-                    $"An unfinished cart was recovered.\n\n" +
-                    $"Reference: {active.ReferenceNo}\n" +
-                    $"Items: {active.ItemCount}\n" +
-                    $"Value: Rs. {active.NetTotal:N2}\n\n" +
-                    "Yes = Resume Cart\nNo = Cancel Cart\nCancel = Log Off",
-                    "Recover Cashier Cart",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Warning);
+                _isDialogOpen = true;
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Visible;
 
-                if (choice == MessageBoxResult.Yes)
+                var recoveryDialog = new ActiveCartRecoveryDialog(
+                    active.ReferenceNo,
+                    active.ItemCount,
+                    active.NetTotal)
+                {
+                    Owner = this
+                };
+
+                recoveryDialog.ShowDialog();
+
+                if (recoveryDialog.SelectedAction == ActiveCartRecoveryAction.Resume)
                 {
                     await ViewModel.RestoreActiveCartAsync(active);
                     await ViewModel.ShowNotificationAsync(
@@ -123,7 +143,7 @@ namespace POS.Cashier.UI.Views
                     return;
                 }
 
-                if (choice == MessageBoxResult.No)
+                if (recoveryDialog.SelectedAction == ActiveCartRecoveryAction.CancelCart)
                 {
                     var reasonDialog = new CartCancellationReasonDialog
                     {
@@ -163,6 +183,13 @@ namespace POS.Cashier.UI.Views
                     "Cart Recovery Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
             }
         }
 
@@ -345,6 +372,14 @@ namespace POS.Cashier.UI.Views
             if (ViewModel.IsCheckoutInProgress)
             {
                 e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.NumLock)
+            {
+                _ = Dispatcher.BeginInvoke(
+                    new Action(UpdateNumLockStatus),
+                    DispatcherPriority.Input);
                 return;
             }
 
@@ -1008,7 +1043,7 @@ namespace POS.Cashier.UI.Views
 
         private void ConfirmAndRemoveSelectedCartLine()
         {
-            if (ViewModel == null)
+            if (ViewModel == null || _isDialogOpen)
                 return;
 
             if (ViewModel.IsPaymentModeActive)
@@ -1020,32 +1055,58 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            if (ViewModel.SelectedCartItem == null)
+            CartItem? selectedItem = ViewModel.SelectedCartItem;
+            if (selectedItem == null)
             {
-                _ = ViewModel.ShowNotificationAsync("Please select an item to remove.", "#F59E0B");
+                _ = ViewModel.ShowNotificationAsync(
+                    "Please select an item to remove.",
+                    "#F59E0B");
                 return;
             }
 
-            string itemName = string.IsNullOrWhiteSpace(ViewModel.SelectedCartItem.Description)
-                ? "selected item"
-                : ViewModel.SelectedCartItem.Description;
+            string itemName = string.IsNullOrWhiteSpace(selectedItem.Description)
+                ? "Selected item"
+                : selectedItem.Description.Trim();
+            string detail =
+                $"{itemName}\n" +
+                $"Quantity: {selectedItem.QuantityUomDisplay}\n" +
+                $"Amount: Rs. {selectedItem.FinalLineAmount:N2}";
 
-            MessageBoxResult result = MessageBox.Show(
-                $"Remove '{itemName}' from this sale?",
-                "Remove Item",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+            _isDialogOpen = true;
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
 
-            if (result != MessageBoxResult.Yes)
-                return;
+            try
+            {
+                var dialog = new CashierConfirmationDialog(
+                    "Remove Sale Line",
+                    "Remove Selected Line",
+                    "Remove this line from the current sale?",
+                    detail,
+                    "Remove Line",
+                    "Keep Line")
+                {
+                    Owner = this
+                };
 
-            ViewModel.RemoveSelectedItem();
-            ResetTerminalActionMode();
+                if (dialog.ShowDialog() != true)
+                    return;
+
+                ViewModel.RemoveSelectedItem();
+                ResetTerminalActionMode();
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
+            }
         }
 
         private async void CancelSaleBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (ViewModel == null)
+            if (ViewModel == null || _isDialogOpen)
                 return;
 
             if (ViewModel.IsPaymentModeActive)
@@ -1064,19 +1125,20 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            var dialog = new CartCancellationReasonDialog
-            {
-                Owner = this
-            };
-
-            if (dialog.ShowDialog() != true)
-            {
-                ReturnFocusToTerminalInput();
-                return;
-            }
+            _isDialogOpen = true;
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
+                var dialog = new CartCancellationReasonDialog
+                {
+                    Owner = this
+                };
+
+                if (dialog.ShowDialog() != true)
+                    return;
+
                 await ViewModel.CancelCurrentCartAsync(
                     dialog.ReasonCode,
                     dialog.ReasonText);
@@ -1092,8 +1154,14 @@ namespace POS.Cashier.UI.Views
                     $"Cart cancellation failed: {ex.Message}",
                     "#EF4444");
             }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
 
-            ReturnFocusToTerminalInput();
+                _isDialogOpen = false;
+                ReturnFocusToTerminalInput();
+            }
         }
 
         // =========================================================
@@ -2475,20 +2543,46 @@ namespace POS.Cashier.UI.Views
 
         private void LogOffBtn_Click(object sender, RoutedEventArgs e)
         {
-            string message = ViewModel?.Cart.Any() == true
-                ? "The active cart will be saved for recovery. Log off now?"
-                : "Are you sure you want to pause the register and log off?";
+            if (_isDialogOpen || _isReturningToLogin)
+                return;
 
-            MessageBoxResult result = MessageBox.Show(
-                message,
-                "Log Off",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+            bool hasActiveCart = ViewModel?.Cart.Any() == true;
+            string message = hasActiveCart
+                ? "Pause this register and return to the Cashier login screen?"
+                : "Return to the Cashier login screen?";
+            string detail = hasActiveCart
+                ? "The active cart will be saved and offered for recovery at the next login."
+                : "The current cashier session will end. The open shift remains unchanged.";
 
-            if (result == MessageBoxResult.Yes)
-                PerformLogOff();
-            else
+            _isDialogOpen = true;
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+
+            try
+            {
+                var dialog = new CashierConfirmationDialog(
+                    "Cashier Log Off",
+                    "Log Off Cashier",
+                    message,
+                    detail,
+                    "Log Off",
+                    "Stay Signed In",
+                    isDangerAction: false)
+                {
+                    Owner = this
+                };
+
+                if (dialog.ShowDialog() == true)
+                    PerformLogOff();
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                _isDialogOpen = false;
                 ReturnFocusToTerminalInput();
+            }
         }
 
         private async void PerformLogOff()
