@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using POS.Core.Configuration;
+using POS.Core.Data.Configuration;
 
 namespace POS.Deployment.Wizard;
 
@@ -55,15 +56,29 @@ public partial class MainWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        ServerHostTextBox.Text =
-            _role == DeploymentRole.Server
-                ? NetworkAddressHelper.GetPreferredIpv4Address()
-                : string.Empty;
+        bool existingProfileLoaded =
+            LoadExistingConnectionProfile();
+
+        LoadExistingTerminalIdentity();
 
         InstallModeComboBox.SelectedIndex = 0;
 
         if (_role == DeploymentRole.Server)
         {
+            ServerHostTextBox.Text = "localhost";
+            ServerHostTextBox.IsReadOnly = true;
+            ServerHostLabel.Text = "Local server connection";
+
+            string lanAddress =
+                NetworkAddressHelper.GetPreferredIpv4Address();
+
+            ServerAddressHintTextBlock.Text =
+                $"BackOffice and a Cashier installed on this same computer use " +
+                $"localhost, so router or LAN IP changes do not break them. " +
+                $"Remote Cashiers should use server computer name " +
+                $"'{Environment.MachineName}' where possible. Current LAN IP: " +
+                $"{lanAddress}.";
+
             RoleTextBlock.Text = _serverCashierSelected
                 ? "Server, BackOffice, and Cashier production installation"
                 : "Server and BackOffice production installation";
@@ -82,8 +97,8 @@ public partial class MainWindow : Window
                     : Visibility.Collapsed;
 
             StatusTextBlock.Text = _serverCashierSelected
-                ? "Choose the production database mode and confirm the server Cashier identity."
-                : "This is a Server and BackOffice-only installation. No Cashier terminal will be reserved or assigned.";
+                ? "Choose the production database mode and confirm the server Cashier identity. The local connection is protected from router IP changes."
+                : "This is a Server and BackOffice-only installation. No Cashier terminal will be reserved or assigned. The local connection is protected from router IP changes.";
         }
         else
         {
@@ -97,10 +112,101 @@ public partial class MainWindow : Window
             TrustedNetworkCheckBox.Visibility = Visibility.Collapsed;
             InstallCashierOnServerCheckBox.Visibility = Visibility.Collapsed;
             TerminalPanel.Visibility = Visibility.Visible;
-            ServerHostLabel.Text = "POS Server IP address";
-            RunButton.Content = "Configure Cashier";
-            StatusTextBlock.Text =
-                "Enter the server connection and this terminal's unique identity.";
+            ServerHostLabel.Text = "POS Server computer name or IP address";
+            ServerAddressHintTextBlock.Text =
+                "Prefer the Server PC computer name, for example POS-SERVER. " +
+                "The name normally remains usable when a router assigns a new " +
+                "IP address. Use an IP address only when computer-name " +
+                "resolution is unavailable.";
+            RunButton.Content = existingProfileLoaded
+                ? "Repair Cashier Connection"
+                : "Configure Cashier";
+            StatusTextBlock.Text = existingProfileLoaded
+                ? "The existing encrypted connection values were loaded. Change only the server name or IP when repairing a network change, then verify the terminal assignment."
+                : "Enter the server connection and this terminal's unique identity.";
+        }
+    }
+
+    private bool LoadExistingConnectionProfile()
+    {
+        if (!File.Exists(ProfilePath))
+            return false;
+
+        try
+        {
+            DatabaseConnectionSettings settings =
+                new DatabaseConnectionSettingsStore(ProfilePath)
+                    .LoadOrDefault();
+
+            if (!settings.IsCentralSqlServer)
+                return false;
+
+            ServerHostTextBox.Text = settings.ServerHost;
+            PortTextBox.Text = settings.ServerPort.ToString();
+            DatabaseNameTextBox.Text = settings.DatabaseName;
+            ApplicationLoginTextBox.Text = settings.UserName;
+            PasswordBox.Password = settings.Password;
+            ConfirmPasswordBox.Password = settings.Password;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppendOutput(
+                "The existing encrypted database profile could not be loaded: " +
+                ex.Message);
+            return false;
+        }
+    }
+
+    private void LoadExistingTerminalIdentity()
+    {
+        string settingsFileName =
+            _role == DeploymentRole.Server
+                ? "deployment.server.json"
+                : "deployment.terminal.json";
+
+        string settingsPath = Path.Combine(
+            ProgramDataRoot,
+            settingsFileName);
+
+        if (!File.Exists(settingsPath))
+            return;
+
+        try
+        {
+            using JsonDocument document =
+                JsonDocument.Parse(
+                    File.ReadAllText(settingsPath));
+
+            if (document.RootElement.TryGetProperty(
+                    "TerminalNo",
+                    out JsonElement terminalNoValue))
+            {
+                string terminalNo =
+                    terminalNoValue.GetString() ??
+                    string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(terminalNo))
+                    TerminalNoTextBox.Text = terminalNo.Trim();
+            }
+
+            if (document.RootElement.TryGetProperty(
+                    "TerminalName",
+                    out JsonElement terminalNameValue))
+            {
+                string terminalName =
+                    terminalNameValue.GetString() ??
+                    string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(terminalName))
+                    TerminalNameTextBox.Text = terminalName.Trim();
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendOutput(
+                "The previous terminal deployment record could not be loaded: " +
+                ex.Message);
         }
     }
 
@@ -403,6 +509,9 @@ public partial class MainWindow : Window
                 InstallMode = mode.ToString(),
                 SqlServerInstance = instance,
                 ServerHost = ServerHostTextBox.Text.Trim(),
+                ServerComputerName = Environment.MachineName,
+                ServerLanAddress = NetworkAddressHelper.GetPreferredIpv4Address(),
+                RecommendedCashierHost = Environment.MachineName,
                 Port = ParsePort(),
                 DatabaseName = DatabaseNameTextBox.Text.Trim(),
                 ApplicationLogin = ApplicationLoginTextBox.Text.Trim(),
@@ -415,6 +524,9 @@ public partial class MainWindow : Window
                 TerminalNo = _serverCashierSelected
                     ? TerminalNoTextBox.Text.Trim()
                     : string.Empty,
+                TerminalName = _serverCashierSelected
+                    ? TerminalNameTextBox.Text.Trim()
+                    : string.Empty,
                 MachineCode = machineCode ?? string.Empty
             });
 
@@ -422,11 +534,16 @@ public partial class MainWindow : Window
         AppendOutput(string.Empty);
         AppendOutput("SERVER PRODUCTION SETUP PASSED.");
         AppendOutput($"BackOffice profile: {ProfilePath}");
+        AppendOutput($"Remote Cashier server name: {Environment.MachineName}");
+        AppendOutput($"Current server LAN IP: {NetworkAddressHelper.GetPreferredIpv4Address()}");
         AppendOutput($"Installation report: {reportPath}");
 
         MessageBox.Show(
             this,
-            "The production server and BackOffice database connection were configured successfully.",
+            "The production server and BackOffice database connection were configured successfully.\n\n" +
+            $"Remote Cashiers should use server computer name: {Environment.MachineName}\n" +
+            $"Current LAN IP: {NetworkAddressHelper.GetPreferredIpv4Address()}\n\n" +
+            "Keep the server computer name stable. A router DHCP reservation remains recommended as a backup.",
             "Advanced POS Server Setup",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
@@ -718,7 +835,8 @@ public partial class MainWindow : Window
     private void ValidateCommonInputs()
     {
         if (string.IsNullOrWhiteSpace(ServerHostTextBox.Text))
-            throw new InvalidOperationException("The POS Server IP address is required.");
+            throw new InvalidOperationException(
+                "The POS Server computer name or IP address is required.");
 
         _ = ParsePort();
 

@@ -5,7 +5,7 @@
   #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.0.2"
 #endif
 
 #define AppName "Advanced POS Server"
@@ -72,6 +72,7 @@ Name: "{autodesktop}\Advanced POS BackOffice"; Filename: "{app}\BackOffice\POS.B
 Name: "{group}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier
 Name: "{autodesktop}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier; Tasks: desktopcashier
 Name: "{group}\Activate Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; Parameters: "--activate"; WorkingDir: "{app}\Cashier"; Components: cashier
+Name: "{group}\Repair or Configure Advanced POS Cashier"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"; Components: cashier
 Name: "{group}\Configure Advanced POS Server"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"
 Name: "{group}\Backup POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Backup-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\Restore POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Restore-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
@@ -82,10 +83,12 @@ Name: "{group}\POS Server Status"; Filename: "{sys}\WindowsPowerShell\v1.0\power
 Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"; Description: "Configure the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated; Check: ShouldRunServerConfiguration
 
 [InstallDelete]
+Type: files; Name: "{group}\Configure Advanced POS Cashier.lnk"
 Type: filesandordirs; Name: "{app}\Cashier"; Check: IsServerOnlyInstall
 Type: files; Name: "{autodesktop}\Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
 Type: files; Name: "{group}\Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
 Type: files; Name: "{group}\Activate Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
+Type: files; Name: "{group}\Repair or Configure Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Temp"

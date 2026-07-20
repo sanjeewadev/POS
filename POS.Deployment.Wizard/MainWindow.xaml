@@ -79,6 +79,11 @@
                         </StackPanel>
                     </Grid>
 
+                    <TextBlock x:Name="ServerAddressHintTextBlock"
+                               TextWrapping="Wrap"
+                               Foreground="#5B6570"
+                               Margin="0,-5,0,12" />
+
                     <StackPanel x:Name="SqlInstancePanel">
                         <TextBlock Text="SQL Server instance on this computer"
                                    FontWeight="SemiBold" />

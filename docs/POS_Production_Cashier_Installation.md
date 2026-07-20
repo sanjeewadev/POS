@@ -17,7 +17,7 @@ Each physical Cashier computer must have a different terminal number.
 
 1. Sign in using the Windows account that will normally run Cashier.
 2. Connect the computer to the trusted store LAN.
-3. Run `Advanced_POS_Cashier_Setup_1.0.1.exe` as Administrator.
+3. Run `Advanced_POS_Cashier_Setup_1.0.2.exe` as Administrator.
 4. The Cashier production wizard opens automatically.
 5. Enter the server connection details and the unique terminal identity.
 6. Enter the SQL password in the masked password fields.
@@ -78,3 +78,13 @@ A store licence problem must be corrected from BackOffice on the server computer
 ## Upgrading or repairing an installed Cashier
 
 Run the matching newer Cashier installer over the existing installation. Select **Upgrade or repair application files and keep the current configuration**. The encrypted database profile, terminal assignment, machine registration, licence, and local hardware settings are preserved. Select the reconfiguration option only when those settings genuinely need to change.
+
+## Version 1.0.2 server-address rule
+
+For a remote Cashier, enter the Server PC computer name when the store network resolves Windows computer names. Example: `POS-SERVER`. This normally survives router DHCP address changes.
+
+Use a numeric IP address only when computer-name resolution is unavailable. In that case, the router must reserve that address for the Server PC.
+
+When repairing an existing Cashier, open **Repair or Configure Advanced POS Cashier**. The current encrypted database name, login, password, port, terminal number, and terminal name are reloaded when available. Change only the server computer name or IP unless another setting genuinely changed.
+
+After a repair, restart Cashier so the new encrypted profile is loaded.

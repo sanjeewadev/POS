@@ -19,12 +19,24 @@ $serviceName = "MSSQL`$$instanceName"
 
 Write-Host "Advanced POS Server Status" -ForegroundColor Cyan
 Write-Host "Computer: $env:COMPUTERNAME"
-Write-Host "Endpoint: $($config.ServerHost):$($config.Port)"
+Write-Host "Local endpoint: localhost:$($config.Port)"
+Write-Host "Recorded deployment host: $($config.ServerHost)"
+Write-Host "Remote Cashier target: $env:COMPUTERNAME"
 Write-Host "Database: $($config.DatabaseName)"
+Write-Host "Current LAN IPv4 addresses:"
+Get-NetIPAddress `
+    -AddressFamily IPv4 `
+    -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.IPAddress -notlike "127.*" -and
+        $_.IPAddress -notlike "169.254.*"
+    } |
+    Select-Object InterfaceAlias, IPAddress |
+    Format-Table -AutoSize
 Write-Host
 
 Get-Service -Name $serviceName | Select-Object Name, Status, StartType | Format-Table -AutoSize
-Test-NetConnection -ComputerName ([string]$config.ServerHost) -Port ([int]$config.Port) |
+Test-NetConnection -ComputerName localhost -Port ([int]$config.Port) |
     Select-Object ComputerName, RemotePort, TcpTestSucceeded | Format-List
 
 & $setup status `

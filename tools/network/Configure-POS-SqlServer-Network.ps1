@@ -38,6 +38,32 @@ function Get-SqlInstanceId {
     return [string]$property.Value
 }
 
+function Invoke-ServiceControlCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $scExe = Join-Path $env:SystemRoot "System32\sc.exe"
+    if (-not (Test-Path -LiteralPath $scExe -PathType Leaf)) {
+        throw "Windows Service Control was not found: $scExe"
+    }
+
+    $process = Start-Process `
+        -FilePath $scExe `
+        -ArgumentList $Arguments `
+        -Wait `
+        -PassThru `
+        -NoNewWindow
+
+    if ($process.ExitCode -ne 0) {
+        throw (
+            "Service Control command failed with exit code {0}: {1}" -f `
+                $process.ExitCode,
+                ($Arguments -join " "))
+    }
+}
+
 function Write-RegistryBackup {
     param(
         [string]$Path,
@@ -56,6 +82,36 @@ function Write-RegistryBackup {
         -DisplayName $FirewallRuleName `
         -ErrorAction SilentlyContinue)
 
+    $serviceRegistryPath =
+        "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName"
+
+    if (-not (Test-Path -LiteralPath $serviceRegistryPath)) {
+        throw "SQL Server service registry key was not found: $serviceRegistryPath"
+    }
+
+    $serviceSettings =
+        Get-ItemProperty -LiteralPath $serviceRegistryPath
+
+    $failureActionsProperty =
+        $serviceSettings.PSObject.Properties["FailureActions"]
+
+    $failureFlagProperty =
+        $serviceSettings.PSObject.Properties[
+            "FailureActionsOnNonCrashFailures"]
+
+    $failureActionsBase64 = ""
+    if ($null -ne $failureActionsProperty -and
+        $null -ne $failureActionsProperty.Value) {
+        $failureActionsBase64 =
+            [Convert]::ToBase64String(
+                [byte[]]$failureActionsProperty.Value)
+    }
+
+    $failureFlagValue = 0
+    if ($null -ne $failureFlagProperty) {
+        $failureFlagValue = [int]$failureFlagProperty.Value
+    }
+
     $data = [ordered]@{
         GeneratedAt = (Get-Date).ToString("o")
         InstanceName = $InstanceName
@@ -68,6 +124,11 @@ function Write-RegistryBackup {
         TcpPort = [string]$ipAll.TcpPort
         FirewallRuleName = $FirewallRuleName
         FirewallRuleExisted = $firewallExists
+        ServiceStart = [int]$serviceSettings.Start
+        FailureActionsExisted = $null -ne $failureActionsProperty
+        FailureActionsBase64 = $failureActionsBase64
+        FailureActionsOnNonCrashFailuresExisted = ($null -ne $failureFlagProperty)
+        FailureActionsOnNonCrashFailures = $failureFlagValue
     }
 
     $folder = Split-Path -Parent $Path
@@ -203,6 +264,23 @@ try {
         }
     }
 
+    Set-Service `
+        -Name $serviceName `
+        -StartupType Automatic
+
+    Invoke-ServiceControlCommand -Arguments @(
+        "failure",
+        $serviceName,
+        "reset=",
+        "86400",
+        "actions=",
+        "restart/60000/restart/60000/restart/60000")
+
+    Invoke-ServiceControlCommand -Arguments @(
+        "failureflag",
+        $serviceName,
+        "1")
+
     Restart-Service -Name $serviceName -Force
 
     $deadline = (Get-Date).AddSeconds(60)
@@ -251,4 +329,5 @@ Write-Host "POS SQL Server network configuration completed." -ForegroundColor Gr
 Write-Host "Instance:  $InstanceName"
 Write-Host "TCP port:  $Port"
 Write-Host "Firewall:  $firewallRuleName (Private networks only)"
+Write-Host "Service:   Automatic startup with three controlled restart actions"
 Write-Host "Backup:    $BackupPath"

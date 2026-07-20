@@ -17,7 +17,7 @@ The server computer hosts SQL Server Express, the production POS database, BackO
 ## Installation
 
 1. Sign in using the Windows account that will normally run BackOffice.
-2. Run `Advanced_POS_Server_Setup_1.0.1.exe` as Administrator.
+2. Run `Advanced_POS_Server_Setup_1.0.2.exe` as Administrator.
 3. Choose whether Cashier should also be installed on the server computer.
 4. The production wizard opens automatically.
 5. Select one mode:
@@ -69,3 +69,17 @@ Choose **Server and BackOffice** when the server computer will not process sales
 Choose **Server, BackOffice, and Cashier** only when the same physical computer will also operate as a checkout. The installer then binds the selected terminal to that computer.
 
 The customer-ready Server setup includes the approved Microsoft-signed SQL Server 2022 Express Core prerequisite. Existing `SQLEXPRESS` installations are detected and retained. A Server setup built without the prerequisite is diagnostic only and must not be given to a customer whose computer may not already contain SQL Server.
+
+## Version 1.0.2 connection-resilience rules
+
+The Server deployment wizard saves the local BackOffice and same-computer Cashier database endpoint as `localhost,1433`. Do not replace this with the Wi-Fi or Ethernet IP address on a one-computer installation.
+
+For remote Cashiers, record the Server PC computer name displayed by the wizard. Configure a DHCP reservation for the Server PC as a backup, keep the computer name stable, and disable sleep during store hours.
+
+The SQL Server service is configured for Automatic startup and three controlled restart actions. After setup, run **POS Server Status** from the Advanced POS Start-menu folder and confirm:
+
+- SQL Server status is Running;
+- startup type is Automatic;
+- TCP port 1433 succeeds;
+- the displayed Server computer name is correct;
+- the current LAN IPv4 address is expected.

@@ -56,9 +56,18 @@ namespace POS.BackOffice.UI
             // Default remains standalone SQLite until a locally encrypted
             // central SQL Server profile is created by the approved setup flow.
             // ==========================================
-            var databaseSettings =
-                new DatabaseConnectionSettingsStore()
-                    .LoadOrDefault();
+            var databaseSettingsStore =
+                new DatabaseConnectionSettingsStore();
+
+            DatabaseConnectionSettings databaseSettings =
+                databaseSettingsStore.LoadOrDefault();
+
+            databaseSettings =
+                LocalServerConnectionProfileRecovery
+                    .RepairIfApplicable(
+                        databaseSettingsStore,
+                        databaseSettings,
+                        "BackOffice");
 
             services.AddSingleton(databaseSettings);
             services.AddDbContextFactory<AppDbContext>(options =>
@@ -262,7 +271,9 @@ namespace POS.BackOffice.UI
 
                 string message =
                     _serviceConfigurationError is DatabaseConfigurationException
-                        ? _serviceConfigurationError.Message
+                        ? _serviceConfigurationError.Message +
+                          "\n\nOpen Start > Advanced POS > Configure Advanced POS Server " +
+                          "to repair the local server profile, then reopen BackOffice."
                         : "BackOffice services could not be configured.";
 
                 MessageBox.Show(
@@ -307,7 +318,9 @@ namespace POS.BackOffice.UI
 
                 string message =
                     ex is DatabaseConfigurationException
-                        ? ex.Message
+                        ? ex.Message +
+                          "\n\nOpen Start > Advanced POS > Configure Advanced POS Server " +
+                          "to repair the local server profile, then reopen BackOffice."
                         : "The POS database could not be initialized. Close BackOffice and try again.";
 
                 MessageBox.Show(

@@ -37,6 +37,58 @@ if (-not [bool]$data.FirewallRuleExisted) {
 }
 
 $serviceName = [string]$data.ServiceName
+$serviceRegistryPath =
+    "HKLM:\SYSTEM\CurrentControlSet\Services\$serviceName"
+
+if ($null -ne $data.PSObject.Properties["ServiceStart"]) {
+    Set-ItemProperty `
+        -LiteralPath $serviceRegistryPath `
+        -Name Start `
+        -Value ([int]$data.ServiceStart)
+}
+
+if ($null -ne $data.PSObject.Properties["FailureActionsExisted"]) {
+    if ([bool]$data.FailureActionsExisted) {
+        [byte[]]$failureActions =
+            [Convert]::FromBase64String(
+                [string]$data.FailureActionsBase64)
+
+        New-ItemProperty `
+            -Path $serviceRegistryPath `
+            -Name FailureActions `
+            -PropertyType Binary `
+            -Value $failureActions `
+            -Force | Out-Null
+    }
+    else {
+        Remove-ItemProperty `
+            -LiteralPath $serviceRegistryPath `
+            -Name FailureActions `
+            -ErrorAction SilentlyContinue
+    }
+}
+
+$failureFlagBackupProperty =
+    $data.PSObject.Properties[
+        "FailureActionsOnNonCrashFailuresExisted"]
+
+if ($null -ne $failureFlagBackupProperty) {
+    if ([bool]$data.FailureActionsOnNonCrashFailuresExisted) {
+        New-ItemProperty `
+            -Path $serviceRegistryPath `
+            -Name FailureActionsOnNonCrashFailures `
+            -PropertyType DWord `
+            -Value ([int]$data.FailureActionsOnNonCrashFailures) `
+            -Force | Out-Null
+    }
+    else {
+        Remove-ItemProperty `
+            -LiteralPath $serviceRegistryPath `
+            -Name FailureActionsOnNonCrashFailures `
+            -ErrorAction SilentlyContinue
+    }
+}
+
 Restart-Service -Name $serviceName -Force
 
 $deadline = (Get-Date).AddSeconds(60)

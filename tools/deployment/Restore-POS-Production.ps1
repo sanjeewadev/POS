@@ -74,7 +74,7 @@ try {
     try {
         & $setup provision-restore `
             --instance ([string]$config.SqlServerInstance) `
-            --host ([string]$config.ServerHost) `
+            --host localhost `
             --port ([string]$config.Port) `
             --database ([string]$config.DatabaseName) `
             --app-login ([string]$config.ApplicationLogin) `

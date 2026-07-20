@@ -871,13 +871,18 @@ internal static class SourcePolicyAuditTests
     public static Task StartupEnforcesLicencesBeforeLoginAsync()
     {
         string source = Read("POS.Cashier.UI", "App.xaml.cs");
-        int database = source.IndexOf(
-            "await InitializeDatabaseAsync()",
+        string startup = ExtractMethodWindow(
+            source,
+            "protected override async void OnStartup(",
+            9000);
+
+        int database = startup.IndexOf(
+            "await EnsureDatabaseAvailableAsync()",
             StringComparison.Ordinal);
-        int initialize = source.IndexOf(
+        int initialize = startup.IndexOf(
             "await InitializeTerminalAndLicenseAsync()",
             StringComparison.Ordinal);
-        int login = source.IndexOf(
+        int login = startup.IndexOf(
             "await ShowLoginWindowAsync()",
             StringComparison.Ordinal);
 
@@ -887,7 +892,21 @@ internal static class SourcePolicyAuditTests
             login >= 0 &&
             database < initialize &&
             initialize < login,
-            "Cashier startup must initialize the database, enforce the terminal licence, and only then show login.");
+            "Cashier startup must establish the database connection, enforce the terminal licence, and only then show login.");
+
+        string databaseRecovery = ExtractMethodWindow(
+            source,
+            "private async Task<bool> EnsureDatabaseAvailableAsync()",
+            4000);
+        AuditAssert.Contains(
+            databaseRecovery,
+            "await InitializeDatabaseAsync()",
+            "Cashier database initialization before recovery");
+        AuditAssert.Contains(
+            databaseRecovery,
+            "DatabaseConnectionRecoveryDialog",
+            "Cashier database recovery dialog");
+
         AuditAssert.Contains(source, "CanRunCashier", "Cashier run licence gate");
         AuditAssert.Contains(source, "ExpiringSoon", "licence expiry warning path");
         AuditAssert.Contains(
@@ -900,17 +919,21 @@ internal static class SourcePolicyAuditTests
             "Data",
             "Configuration",
             "DatabaseInitializationService.cs");
-        AuditAssert.Contains(
+        string databaseInitializationFlow = ExtractMethodWindow(
             databaseInitialization,
+            "private async Task InitializeAsync(",
+            5000);
+        AuditAssert.Contains(
+            databaseInitializationFlow,
             "_settings.IsStandaloneSqlite",
             "standalone database initialization branch");
         AuditAssert.Contains(
-            databaseInitialization,
-            "Database.MigrateAsync",
+            databaseInitializationFlow,
+            ".MigrateAsync(",
             "standalone startup migration path");
         AuditAssert.Contains(
-            databaseInitialization,
-            "Database.CanConnectAsync",
+            databaseInitializationFlow,
+            ".CanConnectAsync(",
             "central database connectivity validation");
         return Task.CompletedTask;
     }

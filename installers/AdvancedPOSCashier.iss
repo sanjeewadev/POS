@@ -5,7 +5,7 @@
   #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.0.2"
 #endif
 
 #define AppName "Advanced POS Cashier"
@@ -56,10 +56,13 @@ Source: "{#SourceRoot}\Cashier\Docs\*"; DestDir: "{app}\Docs"; Flags: ignorevers
 Name: "{group}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"
 Name: "{autodesktop}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Tasks: desktopcashier
 Name: "{group}\Activate Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; Parameters: "--activate"; WorkingDir: "{app}\Cashier"
-Name: "{group}\Configure Advanced POS Cashier"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"
+Name: "{group}\Repair or Configure Advanced POS Cashier"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"; Description: "Configure this Cashier terminal"; StatusMsg: "Opening Advanced POS Cashier configuration..."; Flags: waituntilterminated; Check: ShouldRunCashierConfiguration
+Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"; Description: "Repair or configure this Cashier terminal"; StatusMsg: "Opening Advanced POS Cashier configuration..."; Flags: waituntilterminated; Check: ShouldRunCashierConfiguration
+
+[InstallDelete]
+Type: files; Name: "{group}\Configure Advanced POS Cashier.lnk"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Temp"

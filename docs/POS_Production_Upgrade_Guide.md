@@ -47,3 +47,20 @@ The maintenance path preserves:
 - Do not choose reconfiguration during a normal application-only update.
 - Do not delete the pre-upgrade backup until the upgraded store passes acceptance.
 - Uninstall does not remove the customer database or production backups.
+
+## Upgrade to Version 1.0.2
+
+Version 1.0.2 adds store-connection recovery without changing the database schema.
+
+1. Close all Advanced POS applications.
+2. Create and verify a production database backup.
+3. Run `Advanced_POS_Server_Setup_1.0.2.exe` on the Server PC first.
+4. Choose the option that keeps the current configuration unless the local Server profile must be repaired.
+5. Open BackOffice and verify store data.
+6. Run `Advanced_POS_Cashier_Setup_1.0.2.exe` on each remote Cashier.
+7. Keep the current configuration or open repair when the saved server address is obsolete.
+8. Prefer the Server PC computer name; otherwise use its reserved IP.
+9. Restart Cashier after connection repair.
+10. Complete a sale, verify stock, restart the Server, and restart one Cashier.
+
+Do not uninstall Version 1.0.1 before this normal in-place upgrade. The permanent Server and Cashier AppIds remain unchanged.

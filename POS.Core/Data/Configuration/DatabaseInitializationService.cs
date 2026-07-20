@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
-using POS.Core.Data;
 using POS.Core.Configuration;
+using POS.Core.Data;
 
 namespace POS.Core.Data.Configuration;
 
 public sealed class DatabaseInitializationService
 {
+    private const int SqlServerStartupAttemptCount = 3;
+    private static readonly TimeSpan SqlServerRetryDelay =
+        TimeSpan.FromSeconds(2);
+
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly DatabaseConnectionSettings _settings;
 
@@ -28,28 +32,65 @@ public sealed class DatabaseInitializationService
     private async Task InitializeAsync(
         CancellationToken cancellationToken)
     {
-        await using AppDbContext context =
-            await _contextFactory.CreateDbContextAsync(cancellationToken);
-
         if (_settings.IsStandaloneSqlite)
         {
-            await context.Database.MigrateAsync(cancellationToken);
+            await using AppDbContext sqliteContext =
+                await _contextFactory.CreateDbContextAsync(
+                    cancellationToken);
+
+            await sqliteContext.Database
+                .MigrateAsync(cancellationToken);
             return;
         }
 
-        bool canConnect;
-        try
+        Exception? lastConnectionException = null;
+
+        for (int attempt = 1;
+             attempt <= SqlServerStartupAttemptCount;
+             attempt++)
         {
-            canConnect = await context.Database.CanConnectAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw CreateServerUnavailableException(ex);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await using AppDbContext context =
+                await _contextFactory.CreateDbContextAsync(
+                    cancellationToken);
+
+            bool canConnect = false;
+
+            try
+            {
+                canConnect = await context.Database
+                    .CanConnectAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                lastConnectionException = ex;
+            }
+
+            if (canConnect)
+            {
+                await ValidateSqlServerSchemaAsync(
+                    context,
+                    cancellationToken);
+                return;
+            }
+
+            if (attempt < SqlServerStartupAttemptCount)
+            {
+                await Task.Delay(
+                    SqlServerRetryDelay,
+                    cancellationToken);
+            }
         }
 
-        if (!canConnect)
-            throw CreateServerUnavailableException();
+        throw CreateServerUnavailableException(
+            lastConnectionException);
+    }
 
+    private static async Task ValidateSqlServerSchemaAsync(
+        AppDbContext context,
+        CancellationToken cancellationToken)
+    {
         try
         {
             IReadOnlyList<string> appliedMigrations =
@@ -100,7 +141,9 @@ public sealed class DatabaseInitializationService
     {
         string message =
             $"Store server unavailable: {_settings.ServerHost},{_settings.ServerPort}. " +
-            "Check that the server PC and SQL Server service are running and that this terminal is connected to the store network.";
+            $"Advanced POS made {SqlServerStartupAttemptCount} controlled connection attempts. " +
+            "Check that the server PC and SQL Server service are running and that this terminal is connected to the store network. " +
+            "Use Repair Connection when the router, server computer name, server IP address, or SQL port changed.";
 
         return innerException == null
             ? new DatabaseConfigurationException(message)

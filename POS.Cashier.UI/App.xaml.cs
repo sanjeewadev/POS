@@ -53,9 +53,18 @@ namespace POS.Cashier.UI
         {
             var services = new ServiceCollection();
 
-            var databaseSettings =
-                new DatabaseConnectionSettingsStore()
-                    .LoadOrDefault();
+            var databaseSettingsStore =
+                new DatabaseConnectionSettingsStore();
+
+            DatabaseConnectionSettings databaseSettings =
+                databaseSettingsStore.LoadOrDefault();
+
+            databaseSettings =
+                LocalServerConnectionProfileRecovery
+                    .RepairIfApplicable(
+                        databaseSettingsStore,
+                        databaseSettings,
+                        "Cashier");
 
             services.AddSingleton(databaseSettings);
             services.AddDbContextFactory<AppDbContext>(options =>
@@ -139,17 +148,26 @@ namespace POS.Cashier.UI
                     "Service configuration",
                     _serviceConfigurationError);
 
-                string message =
-                    _serviceConfigurationError is DatabaseConfigurationException
-                        ? _serviceConfigurationError.Message
-                        : "Cashier services could not be configured.";
+                if (_serviceConfigurationError is
+                    DatabaseConfigurationException configurationException)
+                {
+                    var recoveryDialog =
+                        new DatabaseConnectionRecoveryDialog(
+                            configurationException,
+                            retryAsync: null);
 
-                MessageBox.Show(
-                    message +
-                    "\n\nTechnical details were saved in the local POS Logs folder.",
-                    "Cashier Startup Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    MainWindow = recoveryDialog;
+                    recoveryDialog.ShowDialog();
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Cashier services could not be configured." +
+                        "\n\nTechnical details were saved in the local POS Logs folder.",
+                        "Cashier Startup Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
 
                 Shutdown();
                 return;
@@ -163,7 +181,14 @@ namespace POS.Cashier.UI
 
             try
             {
-                await InitializeDatabaseAsync();
+                bool databaseAvailable =
+                    await EnsureDatabaseAvailableAsync();
+
+                if (!databaseAvailable)
+                {
+                    Shutdown();
+                    return;
+                }
 
                 LicenseSummary summary =
                     await InitializeTerminalAndLicenseAsync();
@@ -259,6 +284,35 @@ namespace POS.Cashier.UI
 
             await ShowLoginWindowAsync(currentWindow);
             return true;
+        }
+
+        private async Task<bool> EnsureDatabaseAvailableAsync()
+        {
+            try
+            {
+                await InitializeDatabaseAsync();
+                return true;
+            }
+            catch (DatabaseConfigurationException ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Database startup connection",
+                    ex);
+
+                var recoveryDialog =
+                    new DatabaseConnectionRecoveryDialog(
+                        ex,
+                        InitializeDatabaseAsync);
+
+                MainWindow = recoveryDialog;
+
+                bool? result =
+                    recoveryDialog.ShowDialog();
+
+                return result == true &&
+                       recoveryDialog.ConnectionRestored;
+            }
         }
 
         private async Task InitializeDatabaseAsync()

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$')]
-    [string]$Version = "1.0.1",
+    [string]$Version = "1.0.2",
 
     [string]$OutputDirectory = "",
     [string]$InnoCompilerPath = "",
@@ -413,7 +413,9 @@ try {
         "docs\POS_Production_Terminal_Replacement.md",
         "docs\POS_Production_Upgrade_Guide.md",
         "docs\Phase11D_Production_Deployment_and_Recovery.md",
-        "docs\Phase11D1_Production_Installer_Hotfix.md"
+        "docs\Phase11D1_Production_Installer_Hotfix.md",
+        "docs\Phase11D2_Installed_System_Licence_Recovery_and_Upgrade.md",
+        "docs\Phase11D3_Store_Connection_Resilience_and_Recovery.md"
     )
 
     foreach ($relative in $documents) {

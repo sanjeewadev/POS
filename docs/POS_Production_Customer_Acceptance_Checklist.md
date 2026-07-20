@@ -61,3 +61,16 @@
 - [ ] Customer knows the server must remain on during trading.
 - [ ] Customer knows where backups are stored.
 - [ ] Technician retained no private licensing key or customer password in the store package.
+
+## Version 1.0.2 connection and recovery acceptance
+
+- [ ] Server and same-computer Cashier use `localhost,1433`.
+- [ ] Every remote Cashier uses the Server PC computer name or a reserved IP.
+- [ ] Server PC sleep and hibernation are disabled during store hours.
+- [ ] SQL Server service is Running and Automatic.
+- [ ] SQL Server TCP 1433 is reachable from each Cashier.
+- [ ] Temporarily stop SQL Server and confirm Cashier displays the recovery window.
+- [ ] Restart SQL Server and confirm **Retry Connection** continues to login.
+- [ ] Open **Repair or Configure Advanced POS Cashier** and confirm existing values load.
+- [ ] Save a diagnostic report and confirm it does not contain the SQL password.
+- [ ] Restart the router and confirm remote Cashiers reconnect after the LAN returns.
