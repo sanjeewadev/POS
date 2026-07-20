@@ -81,6 +81,69 @@ namespace POS.Cashier.UI.Dialogs
                 await ViewModel.ReloadAsync();
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape || ViewModel == null)
+                return;
+
+            ViewModel.CancelCommand.Execute(null);
+            e.Handled = true;
+        }
+
+        private async void SearchTxt_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (e.Key == Key.Enter)
+            {
+                await ViewModel.ReloadAsync();
+                FocusCustomerGrid();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Down || e.Key == Key.Up)
+            {
+                FocusCustomerGrid();
+                e.Handled = true;
+            }
+        }
+
+        private void CustomerDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (ViewModel == null)
+                return;
+
+            if (e.Key == Key.Enter)
+            {
+                if (ViewModel.SelectedCustomer != null && ViewModel.CanAttachToInvoice)
+                    ViewModel.AttachCommand.Execute(null);
+
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Escape)
+            {
+                ViewModel.CancelCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
+
+        private void FocusCustomerGrid()
+        {
+            if (ViewModel?.SelectedCustomer == null)
+            {
+                SearchTxt.Focus();
+                return;
+            }
+
+            CustomerDataGrid.SelectedItem = ViewModel.SelectedCustomer;
+            CustomerDataGrid.ScrollIntoView(ViewModel.SelectedCustomer);
+            CustomerDataGrid.Focus();
+        }
+
         private void CustomerDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (ViewModel == null)

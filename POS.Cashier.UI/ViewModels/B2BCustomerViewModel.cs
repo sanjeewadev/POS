@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -175,7 +176,7 @@ namespace POS.Cashier.UI.ViewModels
                 foreach (var customer in results)
                     Customers.Add(customer);
 
-                SelectedCustomer = null;
+                SelectedCustomer = Customers.FirstOrDefault();
             }
             catch
             {

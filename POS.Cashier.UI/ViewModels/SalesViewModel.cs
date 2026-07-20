@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -31,6 +32,11 @@ namespace POS.Cashier.UI.ViewModels
         private readonly IReceiptPrintService _printService;
         private readonly CashDrawerAuditService _drawerAuditService;
         private readonly SalesTaxService _salesTaxService = new();
+        private readonly SemaphoreSlim _barcodeProcessingGate = new(1, 1);
+        private int _pendingBarcodeOperations;
+
+        public bool IsBarcodeProcessing =>
+            Volatile.Read(ref _pendingBarcodeOperations) > 0;
 
         private bool _isVatRegisteredStore;
 
@@ -77,7 +83,7 @@ namespace POS.Cashier.UI.ViewModels
         [ObservableProperty] private DateTime _currentDate = DateTime.Now;
 
         [ObservableProperty] private string _terminalInput = string.Empty;
-        [ObservableProperty] private string _terminalInputMode = "SCAN / QTY";
+        [ObservableProperty] private string _terminalInputMode = "READY TO SCAN";
 
         [ObservableProperty] private string _customerName = "Walk-In";
         [ObservableProperty] private int _loyaltyPoints = 0;
@@ -367,7 +373,7 @@ namespace POS.Cashier.UI.ViewModels
 
         public void AppendTerminalInput(string value)
         {
-            if (string.IsNullOrWhiteSpace(value))
+            if (IsCheckoutInProgress || string.IsNullOrWhiteSpace(value))
                 return;
 
             TerminalInput += value;
@@ -389,6 +395,9 @@ namespace POS.Cashier.UI.ViewModels
 
         public async Task HandleTerminalEnterAsync()
         {
+            if (IsCheckoutInProgress)
+                return;
+
             string input = (TerminalInput ?? string.Empty).Trim();
 
             if (IsPaymentModeActive)
@@ -412,30 +421,35 @@ namespace POS.Cashier.UI.ViewModels
             if (string.IsNullOrWhiteSpace(input))
                 return;
 
+            // In Scan mode every non-empty value is a barcode, PLU or item code.
+            // Quantity is changed only after the explicit Quantity command is selected.
             TerminalInput = string.Empty;
-
-            if (SelectedCartItem != null &&
-                IsLikelyQuantityInput(input) &&
-                decimal.TryParse(input, out decimal qty))
-            {
-                SetSelectedLineQuantity(qty);
-                return;
-            }
-
-            await ProcessBarcodeAsync(input);
+            await ProcessBarcodeInOrderAsync(input);
         }
 
-        private static bool IsLikelyQuantityInput(string input)
+        private async Task ProcessBarcodeInOrderAsync(string barcode)
         {
-            if (string.IsNullOrWhiteSpace(input))
-                return false;
+            Interlocked.Increment(ref _pendingBarcodeOperations);
+            OnPropertyChanged(nameof(IsBarcodeProcessing));
 
-            if (input.Length > 4)
-                return false;
+            try
+            {
+                await _barcodeProcessingGate.WaitAsync();
 
-            return decimal.TryParse(input, out decimal value) &&
-                   value > 0 &&
-                   value <= 999m;
+                try
+                {
+                    await ProcessBarcodeAsync(barcode);
+                }
+                finally
+                {
+                    _barcodeProcessingGate.Release();
+                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _pendingBarcodeOperations);
+                OnPropertyChanged(nameof(IsBarcodeProcessing));
+            }
         }
 
         public void ApplyTerminalInputAsQuantityToSelected()
@@ -934,7 +948,7 @@ namespace POS.Cashier.UI.ViewModels
             PaymentLines.Clear();
             SelectedPaymentLine = null;
             IsPaymentModeActive = false;
-            TerminalInputMode = "SCAN / QTY";
+            TerminalInputMode = "READY TO SCAN";
             TerminalInput = string.Empty;
             RecalculatePaymentTotals();
             PaymentStatusText = "Payment cancelled. Sale mode active.";
@@ -973,7 +987,7 @@ namespace POS.Cashier.UI.ViewModels
 
             _ = ShowNotificationAsync(
                 BalanceDue <= 0m
-                    ? $"Cash payment added. Change Rs. {BalanceReturned:N2}. Press Enter to complete sale."
+                    ? $"Cash payment added. Change Rs. {BalanceReturned:N2}."
                     : $"Cash payment added. Balance due Rs. {BalanceDue:N2}.",
                 BalanceDue <= 0m ? "#10B981" : "#D97706");
         }
@@ -1050,7 +1064,7 @@ namespace POS.Cashier.UI.ViewModels
             SelectedPaymentLine = PaymentLines.LastOrDefault();
             TerminalInput = string.Empty;
             RecalculatePaymentTotals();
-            _ = ShowNotificationAsync(BalanceDue <= 0m ? "Cheque payment added. Press Enter to complete sale." : $"Cheque payment added. Balance due Rs. {BalanceDue:N2}.", BalanceDue <= 0m ? "#10B981" : "#D97706");
+            _ = ShowNotificationAsync(BalanceDue <= 0m ? "Cheque payment added." : $"Cheque payment added. Balance due Rs. {BalanceDue:N2}.", BalanceDue <= 0m ? "#10B981" : "#D97706");
         }
 
         public void AddConfirmedCustomerCreditPayment(decimal amount)
@@ -1200,7 +1214,7 @@ namespace POS.Cashier.UI.ViewModels
                 forfeitedAmount > 0m
                     ? $"Gift voucher added. Applied Rs. {amountToApply:N2}. Forfeited Rs. {forfeitedAmount:N2}."
                     : BalanceDue <= 0m
-                        ? "Gift voucher payment added. Press Enter to complete sale."
+                        ? "Gift voucher payment added."
                         : $"Gift voucher payment added. Balance due Rs. {BalanceDue:N2}.",
                 BalanceDue <= 0m || forfeitedAmount > 0m ? "#10B981" : "#D97706");
         }
@@ -2244,7 +2258,7 @@ namespace POS.Cashier.UI.ViewModels
             SelectedCartItem = null;
             SelectedPaymentLine = null;
             IsPaymentModeActive = false;
-            TerminalInputMode = "SCAN / QTY";
+            TerminalInputMode = "READY TO SCAN";
             TerminalInput = string.Empty;
             ActiveB2BCustomer = null;
             CustomerName = "Walk-In";
@@ -2621,7 +2635,11 @@ namespace POS.Cashier.UI.ViewModels
                 return false;
             }
 
-            _isCheckoutInProgress = true;
+            SetCheckoutInProgress(true);
+            TerminalInputMode = "PROCESSING";
+            TerminalInput = string.Empty;
+            PaymentStatusText = "Processing sale. Please wait.";
+            PaymentStatusColor = "#0F3B66";
 
             try
             {
@@ -2821,7 +2839,17 @@ namespace POS.Cashier.UI.ViewModels
             }
             finally
             {
-                _isCheckoutInProgress = false;
+                SetCheckoutInProgress(false);
+
+                if (IsPaymentModeActive)
+                {
+                    TerminalInputMode = "PAYMENT";
+                    RecalculatePaymentTotals();
+                }
+                else
+                {
+                    TerminalInputMode = "READY TO SCAN";
+                }
             }
         }
 

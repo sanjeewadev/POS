@@ -8,6 +8,7 @@ using POS.Core.Models.DTOs;
 using POS.Core.Configuration;
 using POS.Core.Services;
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -33,6 +34,7 @@ namespace POS.Cashier.UI.Views
             Normal,
             Quantity,
             FixedDiscount,
+            InvoiceDiscount,
             PercentDiscount,
             NewPrice
         }
@@ -70,6 +72,7 @@ namespace POS.Cashier.UI.Views
                     0,
                     120);
 
+            viewModel.PropertyChanged += ViewModel_PropertyChanged;
             Loaded += SalesView_Loaded;
             Closed += SalesView_Closed;
         }
@@ -167,15 +170,42 @@ namespace POS.Cashier.UI.Views
             object? sender,
             EventArgs e)
         {
+            if (ViewModel != null)
+                ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+
             _lockService.Stop();
+        }
+
+        private void ViewModel_PropertyChanged(
+            object? sender,
+            PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SalesViewModel.SelectedCartItem))
+                ScrollSelectedCartLineIntoView();
+        }
+
+        private void ScrollSelectedCartLineIntoView()
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!IsVisible || ViewModel?.SelectedCartItem == null)
+                    return;
+
+                CartDataGrid.SelectedItem = ViewModel.SelectedCartItem;
+                CartDataGrid.ScrollIntoView(ViewModel.SelectedCartItem);
+            }), DispatcherPriority.Background);
         }
 
         private void ReturnFocusToTerminalInput()
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!IsVisible)
+                if (!IsVisible ||
+                    _isDialogOpen ||
+                    ViewModel?.IsCheckoutInProgress == true)
+                {
                     return;
+                }
 
                 Focus();
                 Keyboard.Focus(this);
@@ -223,7 +253,7 @@ namespace POS.Cashier.UI.Views
             _terminalActionMode = TerminalActionMode.Normal;
 
             if (ViewModel != null && !ViewModel.IsPaymentModeActive)
-                ViewModel.TerminalInputMode = "SCAN / QTY";
+                ViewModel.TerminalInputMode = "READY TO SCAN";
         }
 
         private bool HasTerminalInput()
@@ -257,6 +287,10 @@ namespace POS.Cashier.UI.Views
                     ApplyFixedDiscountFromTerminalInput();
                     break;
 
+                case TerminalActionMode.InvoiceDiscount:
+                    ViewModel.ApplyTerminalInputAsInvoiceDiscount();
+                    break;
+
                 case TerminalActionMode.PercentDiscount:
                     ApplyPercentDiscountFromTerminalInput();
                     break;
@@ -281,6 +315,12 @@ namespace POS.Cashier.UI.Views
             if (_isDialogOpen)
                 return;
 
+            if (ViewModel?.IsCheckoutInProgress == true)
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (IsEditableTextInputSource(e.OriginalSource))
                 return;
 
@@ -302,8 +342,19 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            // Ctrl shortcuts
-            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            if (ViewModel.IsCheckoutInProgress)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            bool controlPressed =
+                (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            bool shiftPressed =
+                (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+
+            // Ctrl shortcuts retained for existing document functions.
+            if (controlPressed)
             {
                 if (e.Key == Key.P)
                 {
@@ -330,14 +381,26 @@ namespace POS.Cashier.UI.Views
                 }
             }
 
+            if (shiftPressed && e.Key == Key.Delete)
+            {
+                CancelSaleBtn_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Enter)
             {
                 e.Handled = true;
 
+                // Ignore key-repeat so a held Enter cannot submit twice.
+                if (e.IsRepeat)
+                    return;
+
                 if (ExecutePendingTerminalAction())
                     return;
 
-                // Stop empty Enter from reaching DataGrid/WPF and ringing.
+                // Empty Enter in Scan mode is deliberately a no-op because
+                // barcode scanners commonly append Enter automatically.
                 if (!ViewModel.IsPaymentModeActive &&
                     string.IsNullOrWhiteSpace(ViewModel.TerminalInput))
                 {
@@ -383,14 +446,18 @@ namespace POS.Cashier.UI.Views
                 }
 
                 ResetTerminalActionMode();
-                _ = ViewModel.ShowNotificationAsync("Ready.", "#64748B");
+                _ = ViewModel.ShowNotificationAsync("Ready to scan.", "#64748B");
                 ReturnFocusToTerminalInput();
                 return;
             }
 
             if (e.Key == Key.Delete)
             {
-                ConfirmAndRemoveSelectedCartLine();
+                if (ViewModel.IsPaymentModeActive)
+                    ViewModel.RemoveSelectedPaymentLine();
+                else
+                    ConfirmAndRemoveSelectedCartLine();
+
                 e.Handled = true;
                 ReturnFocusToTerminalInput();
                 return;
@@ -412,52 +479,60 @@ namespace POS.Cashier.UI.Views
 
             if (e.Key == Key.F3)
             {
-                FixedDiscountShortcut();
+                if (shiftPressed)
+                    PercentDiscountShortcut();
+                else
+                    FixedDiscountShortcut();
+
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F4)
             {
-                PercentDiscountShortcut();
+                InvoiceDiscountShortcut();
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F5)
             {
-                NewPriceShortcut();
+                CustomerBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
+            if (e.Key == Key.F6)
+            {
+                SuspendBtn_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
 
             if (e.Key == Key.F7)
             {
-                CustomerBtn_Click(this, new RoutedEventArgs());
+                RecallBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F8)
             {
-                SuspendRecallBtn_Click(this, new RoutedEventArgs());
+                await OpenCashTenderDialogAsync();
                 e.Handled = true;
                 return;
             }
 
             if (e.Key == Key.F9)
             {
-                ViewModel.EnterPaymentMode();
-                ResetTerminalActionMode();
+                await OpenCardTenderDialogAsync("Card");
                 e.Handled = true;
-                ReturnFocusToTerminalInput();
                 return;
             }
 
             if (e.Key == Key.F10)
             {
-                PrintBtn_Click(this, new RoutedEventArgs());
+                SubTotalBtn_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }
@@ -471,134 +546,194 @@ namespace POS.Cashier.UI.Views
 
             if (e.Key == Key.F12)
             {
-                LockTerminal(
-                    "Locked manually with F12.");
-
+                LockTerminal("Locked manually with F12.");
                 e.Handled = true;
                 return;
             }
 
-            if (e.Key == Key.Add || e.Key == Key.OemPlus)
+            if (e.Key == Key.Multiply)
             {
-                ViewModel.IncreaseSelectedQuantity();
+                QuantityShortcut();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Add)
+            {
+                await OpenCashTenderDialogAsync();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Subtract)
+            {
+                if (ViewModel.IsPaymentModeActive)
+                    ViewModel.RemoveSelectedPaymentLine();
+                else
+                    ConfirmAndRemoveSelectedCartLine();
+
                 e.Handled = true;
                 ReturnFocusToTerminalInput();
                 return;
             }
 
-            if (e.Key == Key.Subtract || e.Key == Key.OemMinus)
+            if (e.Key == Key.Divide)
             {
-                ViewModel.DecreaseSelectedQuantity();
+                // Intentionally unassigned in the first keyboard-flow release.
                 e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Up || e.Key == Key.Down)
+            {
+                e.Handled = true;
+
+                if (HasTerminalInput())
+                    return;
+
+                if (ViewModel.IsPaymentModeActive)
+                    MovePaymentSelection(e.Key == Key.Up ? -1 : 1);
+                else
+                    MoveCartSelection(e.Key == Key.Up ? -1 : 1);
+
                 ReturnFocusToTerminalInput();
                 return;
             }
 
-            if (e.Key == Key.Up)
+            if (e.Key == Key.Left || e.Key == Key.Right)
             {
-                MoveCartSelection(-1);
+                // Reserved for choices inside dialogs; no destructive action
+                // is attached to Left or Right on the main sale screen.
                 e.Handled = true;
-                ReturnFocusToTerminalInput();
                 return;
             }
 
-            if (e.Key == Key.Down)
+            if (e.Key == Key.Home || e.Key == Key.End)
             {
-                MoveCartSelection(1);
                 e.Handled = true;
-                ReturnFocusToTerminalInput();
-                return;
-            }
 
-            if (e.Key == Key.Home)
-            {
-                MoveCartSelectionToStart();
-                e.Handled = true;
-                ReturnFocusToTerminalInput();
-                return;
-            }
+                if (HasTerminalInput())
+                    return;
 
-            if (e.Key == Key.End)
-            {
-                MoveCartSelectionToEnd();
-                e.Handled = true;
+                if (ViewModel.IsPaymentModeActive)
+                {
+                    MovePaymentSelectionToBoundary(toStart: e.Key == Key.Home);
+                }
+                else if (e.Key == Key.Home)
+                {
+                    MoveCartSelectionToStart();
+                }
+                else
+                {
+                    MoveCartSelectionToEnd();
+                }
+
                 ReturnFocusToTerminalInput();
             }
         }
 
-        private void QuantityShortcut()
+        private bool CanStartTerminalAction(
+            string actionName,
+            bool requireSelectedLine)
         {
-            if (ViewModel == null)
-                return;
+            if (ViewModel == null || ViewModel.IsCheckoutInProgress)
+                return false;
+
+            if (ViewModel.IsBarcodeProcessing)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Wait for the pending scan before {actionName}.",
+                    "#F59E0B");
+
+                ReturnFocusToTerminalInput();
+                return false;
+            }
+
+            if (ViewModel.IsPaymentModeActive)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Cancel payment mode before {actionName}.",
+                    "#F59E0B");
+
+                ReturnFocusToTerminalInput();
+                return false;
+            }
+
+            if (requireSelectedLine && ViewModel.SelectedCartItem == null)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Select a sale line first.",
+                    "#F59E0B");
+
+                ReturnFocusToTerminalInput();
+                return false;
+            }
 
             if (HasTerminalInput())
             {
-                ViewModel.ApplyTerminalInputAsQuantityToSelected();
-                ResetTerminalActionMode();
+                _ = ViewModel.ShowNotificationAsync(
+                    "Press Enter to scan the current input, or Esc to clear it first.",
+                    "#F59E0B");
+
                 ReturnFocusToTerminalInput();
-                return;
+                return false;
             }
+
+            return true;
+        }
+
+        private void QuantityShortcut()
+        {
+            if (!CanStartTerminalAction("changing quantity", requireSelectedLine: true))
+                return;
 
             SetTerminalActionMode(
                 TerminalActionMode.Quantity,
-                "QTY",
+                "LINE EDIT - QTY",
                 "Quantity mode. Type quantity and press Enter.");
         }
 
         private void FixedDiscountShortcut()
         {
-            if (ViewModel == null)
+            if (!CanStartTerminalAction("adding a line discount", requireSelectedLine: true))
                 return;
-
-            if (HasTerminalInput())
-            {
-                ApplyFixedDiscountFromTerminalInput();
-                ResetTerminalActionMode();
-                ReturnFocusToTerminalInput();
-                return;
-            }
 
             SetTerminalActionMode(
                 TerminalActionMode.FixedDiscount,
-                "RS DISC",
-                "Rs Discount mode. Type amount and press Enter.");
+                "LINE EDIT - RS DISC",
+                "Line discount mode. Type rupee amount and press Enter.");
+        }
+
+        private void InvoiceDiscountShortcut()
+        {
+            if (!CanStartTerminalAction("adding an invoice discount", requireSelectedLine: false))
+                return;
+
+            SetTerminalActionMode(
+                TerminalActionMode.InvoiceDiscount,
+                "INVOICE DISC",
+                "Invoice discount mode. Type rupee amount and press Enter.");
         }
 
         private void PercentDiscountShortcut()
         {
-            if (ViewModel == null)
+            if (!CanStartTerminalAction("adding a percentage discount", requireSelectedLine: true))
                 return;
-
-            if (HasTerminalInput())
-            {
-                ApplyPercentDiscountFromTerminalInput();
-                ResetTerminalActionMode();
-                ReturnFocusToTerminalInput();
-                return;
-            }
 
             SetTerminalActionMode(
                 TerminalActionMode.PercentDiscount,
-                "% DISC",
-                "% Discount mode. Type percentage and press Enter.");
+                "LINE EDIT - % DISC",
+                "Percentage discount mode. Type percentage and press Enter.");
         }
 
         private void NewPriceShortcut()
         {
-            if (ViewModel == null)
+            if (!CanStartTerminalAction("changing price", requireSelectedLine: true))
                 return;
-
-            if (HasTerminalInput())
-            {
-                ApplyNewPriceFromTerminalInput();
-                ResetTerminalActionMode();
-                ReturnFocusToTerminalInput();
-                return;
-            }
 
             SetTerminalActionMode(
                 TerminalActionMode.NewPrice,
-                "NEW PRICE",
+                "LINE EDIT - NEW PRICE",
                 "New Price mode. Type final price and press Enter.");
         }
 
@@ -679,6 +814,36 @@ namespace POS.Cashier.UI.Views
             }
 
             ViewModel.ApplyNewPriceToSelected(newPrice, approvedBy);
+        }
+
+        private void MovePaymentSelection(int direction)
+        {
+            if (ViewModel == null || ViewModel.PaymentLines.Count == 0)
+                return;
+
+            int currentIndex = ViewModel.SelectedPaymentLine == null
+                ? -1
+                : ViewModel.PaymentLines.IndexOf(ViewModel.SelectedPaymentLine);
+
+            currentIndex = Math.Clamp(
+                currentIndex < 0 ? 0 : currentIndex + direction,
+                0,
+                ViewModel.PaymentLines.Count - 1);
+
+            ViewModel.SelectedPaymentLine = ViewModel.PaymentLines[currentIndex];
+            PaymentDataGrid.SelectedItem = ViewModel.SelectedPaymentLine;
+            PaymentDataGrid.ScrollIntoView(ViewModel.SelectedPaymentLine);
+        }
+
+        private void MovePaymentSelectionToBoundary(bool toStart)
+        {
+            if (ViewModel == null || ViewModel.PaymentLines.Count == 0)
+                return;
+
+            int index = toStart ? 0 : ViewModel.PaymentLines.Count - 1;
+            ViewModel.SelectedPaymentLine = ViewModel.PaymentLines[index];
+            PaymentDataGrid.SelectedItem = ViewModel.SelectedPaymentLine;
+            PaymentDataGrid.ScrollIntoView(ViewModel.SelectedPaymentLine);
         }
 
         private void MoveCartSelection(int direction)
@@ -800,8 +965,7 @@ namespace POS.Cashier.UI.Views
             object sender,
             RoutedEventArgs e)
         {
-            ViewModel?.ApplyTerminalInputAsInvoiceDiscount();
-            ReturnFocusToTerminalInput();
+            InvoiceDiscountShortcut();
         }
 
         private void PercentDiscountBtn_Click(object sender, RoutedEventArgs e)
@@ -809,15 +973,18 @@ namespace POS.Cashier.UI.Views
             PercentDiscountShortcut();
         }
 
-        private void PlusBtn_Click(object sender, RoutedEventArgs e)
+        private async void PlusBtn_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel?.IncreaseSelectedQuantity();
-            ReturnFocusToTerminalInput();
+            await OpenCashTenderDialogAsync();
         }
 
         private void MinusBtn_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel?.DecreaseSelectedQuantity();
+            if (ViewModel?.IsPaymentModeActive == true)
+                ViewModel.RemoveSelectedPaymentLine();
+            else
+                ConfirmAndRemoveSelectedCartLine();
+
             ReturnFocusToTerminalInput();
         }
 
@@ -933,14 +1100,52 @@ namespace POS.Cashier.UI.Views
         // PAYMENT FLOW
         // =========================================================
 
+        private bool CanStartPaymentAction(string actionName)
+        {
+            if (ViewModel == null || ViewModel.IsCheckoutInProgress)
+                return false;
+
+            if (ViewModel.IsBarcodeProcessing)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Wait for the pending scan before {actionName}.",
+                    "#F59E0B");
+                return false;
+            }
+
+            if (_terminalActionMode != TerminalActionMode.Normal)
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    $"Complete or cancel the current line edit before {actionName}.",
+                    "#F59E0B");
+                return false;
+            }
+
+            if (!ViewModel.IsPaymentModeActive && HasTerminalInput())
+            {
+                _ = ViewModel.ShowNotificationAsync(
+                    "Press Enter to scan the current input, or Esc to clear it before payment.",
+                    "#F59E0B");
+                return false;
+            }
+
+            return true;
+        }
+
         private void SubTotalBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (!CanStartPaymentAction("opening payment mode"))
+            {
+                ReturnFocusToTerminalInput();
+                return;
+            }
+
             ViewModel?.EnterPaymentMode();
             ResetTerminalActionMode();
             ReturnFocusToTerminalInput();
         }
 
-        private void PayBtn_Click(object sender, RoutedEventArgs e)
+        private async void PayBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel == null)
                 return;
@@ -953,49 +1158,57 @@ namespace POS.Cashier.UI.Views
             if (buttonText.Equals("Cust Credit", StringComparison.OrdinalIgnoreCase) ||
                 buttonText.Equals("Customer Credit", StringComparison.OrdinalIgnoreCase))
             {
+                if (!CanStartPaymentAction("adding customer credit"))
+                {
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
                 EnsurePaymentModeStarted();
                 decimal amount = GetTerminalInputAmountOrZero();
                 if (amount <= 0m)
                     amount = ViewModel.BalanceDue;
+
                 ViewModel.AddConfirmedCustomerCreditPayment(amount);
+                await FinalizePaymentIfCompleteAsync();
                 ReturnFocusToTerminalInput();
                 return;
             }
 
-            if (buttonText.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+            if (buttonText.StartsWith("Cash", StringComparison.OrdinalIgnoreCase))
             {
-                OpenCashTenderDialog();
+                await OpenCashTenderDialogAsync();
                 return;
             }
 
             if (buttonText.Equals("VISA", StringComparison.OrdinalIgnoreCase))
             {
-                OpenCardTenderDialog("VISA");
+                await OpenCardTenderDialogAsync("VISA");
                 return;
             }
 
             if (buttonText.Equals("MasterCard", StringComparison.OrdinalIgnoreCase))
             {
-                OpenCardTenderDialog("MasterCard");
+                await OpenCardTenderDialogAsync("MasterCard");
                 return;
             }
 
             if (buttonText.Equals("AMEX", StringComparison.OrdinalIgnoreCase))
             {
-                OpenCardTenderDialog("AMEX");
+                await OpenCardTenderDialogAsync("AMEX");
                 return;
             }
 
             if (buttonText.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
             {
-                OpenChequeTenderDialog();
+                await OpenChequeTenderDialogAsync();
                 return;
             }
 
             if (buttonText.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase) ||
                 buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
             {
-                OpenGiftVoucherTenderDialog();
+                await OpenGiftVoucherTenderDialogAsync();
                 return;
             }
 
@@ -1003,13 +1216,15 @@ namespace POS.Cashier.UI.Views
             ReturnFocusToTerminalInput();
         }
 
-        private void OpenCashTenderDialog()
+        private async Task OpenCashTenderDialogAsync()
         {
-            if (ViewModel == null)
+            if (ViewModel == null || !CanStartPaymentAction("opening Cash payment"))
+            {
+                ReturnFocusToTerminalInput();
                 return;
+            }
 
             decimal typedAmount = GetTerminalInputAmountOrZero();
-
             EnsurePaymentModeStarted();
 
             if (!ViewModel.IsPaymentModeActive)
@@ -1017,7 +1232,7 @@ namespace POS.Cashier.UI.Views
 
             if (ViewModel.BalanceDue <= 0m)
             {
-                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                await FinalizePaymentIfCompleteAsync();
                 ReturnFocusToTerminalInput();
                 return;
             }
@@ -1040,19 +1255,23 @@ namespace POS.Cashier.UI.Views
                     tenderViewModel.AppliedAmount,
                     tenderViewModel.TenderedAmount,
                     tenderViewModel.ChangeAmount);
+
+                await FinalizePaymentIfCompleteAsync();
             }
 
             ResetTerminalActionMode();
             ReturnFocusToTerminalInput();
         }
 
-        private void OpenCardTenderDialog(string cardType)
+        private async Task OpenCardTenderDialogAsync(string cardType)
         {
-            if (ViewModel == null)
+            if (ViewModel == null || !CanStartPaymentAction("opening Card payment"))
+            {
+                ReturnFocusToTerminalInput();
                 return;
+            }
 
             decimal typedAmount = GetTerminalInputAmountOrZero();
-
             EnsurePaymentModeStarted();
 
             if (!ViewModel.IsPaymentModeActive)
@@ -1060,7 +1279,7 @@ namespace POS.Cashier.UI.Views
 
             if (ViewModel.BalanceDue <= 0m)
             {
-                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                await FinalizePaymentIfCompleteAsync();
                 ReturnFocusToTerminalInput();
                 return;
             }
@@ -1084,19 +1303,23 @@ namespace POS.Cashier.UI.Views
                     tenderViewModel.CardAmount,
                     tenderViewModel.LastSixDigits,
                     tenderViewModel.ReferenceNo);
+
+                await FinalizePaymentIfCompleteAsync();
             }
 
             ResetTerminalActionMode();
             ReturnFocusToTerminalInput();
         }
 
-        private void OpenChequeTenderDialog()
+        private async Task OpenChequeTenderDialogAsync()
         {
-            if (ViewModel == null)
+            if (ViewModel == null || !CanStartPaymentAction("opening Cheque payment"))
+            {
+                ReturnFocusToTerminalInput();
                 return;
+            }
 
             decimal typedAmount = GetTerminalInputAmountOrZero();
-
             EnsurePaymentModeStarted();
 
             if (!ViewModel.IsPaymentModeActive)
@@ -1104,7 +1327,7 @@ namespace POS.Cashier.UI.Views
 
             if (ViewModel.BalanceDue <= 0m)
             {
-                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                await FinalizePaymentIfCompleteAsync();
                 ReturnFocusToTerminalInput();
                 return;
             }
@@ -1128,16 +1351,21 @@ namespace POS.Cashier.UI.Views
                     tenderViewModel.ChequeNo,
                     tenderViewModel.BankOrBranchText,
                     tenderViewModel.ChequeDate);
+
+                await FinalizePaymentIfCompleteAsync();
             }
 
             ResetTerminalActionMode();
             ReturnFocusToTerminalInput();
         }
 
-        private void OpenGiftVoucherTenderDialog()
+        private async Task OpenGiftVoucherTenderDialogAsync()
         {
-            if (ViewModel == null)
+            if (ViewModel == null || !CanStartPaymentAction("opening Gift Voucher payment"))
+            {
+                ReturnFocusToTerminalInput();
                 return;
+            }
 
             EnsurePaymentModeStarted();
 
@@ -1146,7 +1374,7 @@ namespace POS.Cashier.UI.Views
 
             if (ViewModel.BalanceDue <= 0m)
             {
-                _ = ViewModel.ShowNotificationAsync("Invoice is already fully paid.", "#10B981");
+                await FinalizePaymentIfCompleteAsync();
                 ReturnFocusToTerminalInput();
                 return;
             }
@@ -1180,10 +1408,26 @@ namespace POS.Cashier.UI.Views
                     dialog.AmountToApply,
                     dialog.ForfeitedAmount,
                     dialog.AuthorizedBy);
+
+                await FinalizePaymentIfCompleteAsync();
             }
 
             ResetTerminalActionMode();
             ReturnFocusToTerminalInput();
+        }
+
+        private async Task FinalizePaymentIfCompleteAsync()
+        {
+            if (ViewModel == null ||
+                !ViewModel.IsPaymentModeActive ||
+                ViewModel.BalanceDue > 0m ||
+                !ViewModel.CanConfirmPaymentSale)
+            {
+                return;
+            }
+
+            ResetTerminalActionMode();
+            await ViewModel.FinalizeCheckoutAsync();
         }
 
         private void EnsurePaymentModeStarted()
@@ -1321,7 +1565,7 @@ namespace POS.Cashier.UI.Views
             ReturnFocusToTerminalInput();
         }
 
-        private void AlternatePaymentBtn_Click(object sender, RoutedEventArgs e)
+        private async void AlternatePaymentBtn_Click(object sender, RoutedEventArgs e)
         {
             if (ViewModel == null)
                 return;
@@ -1330,14 +1574,14 @@ namespace POS.Cashier.UI.Views
 
             if (buttonText.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
             {
-                OpenChequeTenderDialog();
+                await OpenChequeTenderDialogAsync();
                 return;
             }
 
             if (buttonText.Equals("Gift Voucher", StringComparison.OrdinalIgnoreCase) ||
                 buttonText.Equals("GiftVoucher", StringComparison.OrdinalIgnoreCase))
             {
-                OpenGiftVoucherTenderDialog();
+                await OpenGiftVoucherTenderDialogAsync();
                 return;
             }
 
@@ -1382,8 +1626,12 @@ namespace POS.Cashier.UI.Views
 
         private void SeekBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (BlockDialogIfPaymentMode("opening product search"))
+            if (!CanStartTerminalAction(
+                    "opening product search",
+                    requireSelectedLine: false))
+            {
                 return;
+            }
 
             if (_isDialogOpen)
                 return;
@@ -1422,42 +1670,68 @@ namespace POS.Cashier.UI.Views
             NewPriceShortcut();
         }
 
-        private async void SuspendRecallBtn_Click(object sender, RoutedEventArgs e)
+        private async void SuspendBtn_Click(object sender, RoutedEventArgs e)
+        {
+            await SuspendCurrentCartAsync();
+        }
+
+        private async Task SuspendCurrentCartAsync()
         {
             if (ViewModel == null)
                 return;
 
-            if (BlockDialogIfPaymentMode("suspend/recall"))
-                return;
-
-            if (_isDialogOpen)
-                return;
-
-            string action = GetButtonText(sender);
-
-            if (action.Equals("Suspend", StringComparison.OrdinalIgnoreCase))
+            if (!CanStartTerminalAction(
+                    "suspending the sale",
+                    requireSelectedLine: false) ||
+                _isDialogOpen)
             {
-                try
-                {
-                    CashierCartSessionDto held =
-                        await ViewModel.SuspendCurrentCartAsync();
+                return;
+            }
 
-                    await ViewModel.ShowNotificationAsync(
-                        $"Cart suspended as {held.ReferenceNo}.",
-                        "#10B981");
-                }
-                catch (Exception ex)
-                {
-                    await ViewModel.ShowNotificationAsync(
-                        $"Suspend failed: {ex.Message}",
-                        "#EF4444");
-                }
+            try
+            {
+                CashierCartSessionDto held =
+                    await ViewModel.SuspendCurrentCartAsync();
 
+                ResetTerminalActionMode();
+                await ViewModel.ShowNotificationAsync(
+                    $"Cart suspended as {held.ReferenceNo}.",
+                    "#10B981");
+            }
+            catch (Exception ex)
+            {
+                await ViewModel.ShowNotificationAsync(
+                    $"Suspend failed: {ex.Message}",
+                    "#EF4444");
+            }
+            finally
+            {
                 ReturnFocusToTerminalInput();
+            }
+        }
+
+        private async void RecallBtn_Click(object sender, RoutedEventArgs e)
+        {
+            await OpenRecallDialogAsync();
+        }
+
+        private async Task OpenRecallDialogAsync()
+        {
+            if (ViewModel == null)
+                return;
+
+            if (!CanStartTerminalAction(
+                    "recalling a sale",
+                    requireSelectedLine: false) ||
+                _isDialogOpen)
+            {
                 return;
             }
 
             _isDialogOpen = true;
+
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
 
             try
             {
@@ -1484,6 +1758,7 @@ namespace POS.Cashier.UI.Views
                     CashierCartSessionDto recalled =
                         await ViewModel.RecallHeldCartAsync(dialog.SelectedCart.Id);
 
+                    ResetTerminalActionMode();
                     await ViewModel.ShowNotificationAsync(
                         $"Recalled {recalled.ReferenceNo}. Payment must be entered again.",
                         "#10B981");
@@ -1518,6 +1793,9 @@ namespace POS.Cashier.UI.Views
             }
             finally
             {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+
                 _isDialogOpen = false;
                 ReturnFocusToTerminalInput();
             }
@@ -1630,13 +1908,10 @@ namespace POS.Cashier.UI.Views
             if (ViewModel == null)
                 return;
 
-            if (ViewModel.IsPaymentModeActive)
+            if (!CanStartTerminalAction(
+                    "changing customer",
+                    requireSelectedLine: false))
             {
-                _ = ViewModel.ShowNotificationAsync(
-                    "Cancel payment mode before changing customer.",
-                    "#F59E0B");
-
-                ReturnFocusToTerminalInput();
                 return;
             }
 
@@ -1677,13 +1952,10 @@ namespace POS.Cashier.UI.Views
             if (ViewModel == null)
                 return;
 
-            if (ViewModel.IsPaymentModeActive)
+            if (!CanStartTerminalAction(
+                    "changing customer",
+                    requireSelectedLine: false))
             {
-                _ = ViewModel.ShowNotificationAsync(
-                    "Cancel payment mode before changing customer.",
-                    "#F59E0B");
-
-                ReturnFocusToTerminalInput();
                 return;
             }
 

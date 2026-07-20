@@ -133,8 +133,8 @@ internal static class SourcePolicyAuditTests
             "More selected icon action");
         AuditAssert.Contains(bottom, "Tag=\"&#xE735;\"",
             "filled Loyalty star");
-        AuditAssert.Contains(view, "Content=\"Seek\"",
-            "Seek selected icon action");
+        AuditAssert.Contains(view, "Content=\"Search  F1\"",
+            "Search selected icon action and shortcut");
         AuditAssert.Contains(view, "Content=\"Cancel\"",
             "Cancel selected icon action");
         AuditAssert.Contains(view, "Content=\"Enter\"",

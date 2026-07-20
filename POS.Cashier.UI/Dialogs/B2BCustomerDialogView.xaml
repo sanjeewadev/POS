@@ -11,6 +11,7 @@
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown"
         KeyboardNavigation.TabNavigation="Cycle">
 
     <Window.InputBindings>
@@ -89,11 +90,8 @@
                         <TextBox x:Name="SearchTxt"
                                  Grid.Column="1"
                                  Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource CashierOperationalSearchTextBox}">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
-                            </TextBox.InputBindings>
-                        </TextBox>
+                                 Style="{StaticResource CashierOperationalSearchTextBox}"
+                                 PreviewKeyDown="SearchTxt_PreviewKeyDown"/>
 
                         <Button Grid.Column="2"
         Content="SEARCH"
@@ -131,6 +129,7 @@
                               BorderThickness="1"
                               FontWeight="Normal"
                               Foreground="Black"
+                              PreviewKeyDown="CustomerDataGrid_PreviewKeyDown"
                               MouseDoubleClick="CustomerDataGrid_MouseDoubleClick">
 
                         <DataGrid.Columns>

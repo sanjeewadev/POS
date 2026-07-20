@@ -72,7 +72,7 @@ namespace POS.Cashier.UI.Dialogs
             Close();
         }
 
-        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (_viewModel == null)
                 return;
@@ -84,13 +84,71 @@ namespace POS.Cashier.UI.Dialogs
                 return;
             }
 
+            if (e.Key == Key.Left)
+            {
+                bool moved = false;
+
+                if (IsSourceInside(BatchDataGrid, e.OriginalSource as DependencyObject))
+                {
+                    VariantDataGrid.Focus();
+                    moved = true;
+                }
+                else if (IsSourceInside(VariantDataGrid, e.OriginalSource as DependencyObject))
+                {
+                    ParentDataGrid.Focus();
+                    moved = true;
+                }
+
+                if (moved)
+                    e.Handled = true;
+
+                return;
+            }
+
+            if (e.Key == Key.Right)
+            {
+                bool moved = false;
+
+                if (IsSourceInside(ParentDataGrid, e.OriginalSource as DependencyObject))
+                {
+                    FocusVariantGridSoon();
+                    moved = true;
+                }
+                else if (IsSourceInside(VariantDataGrid, e.OriginalSource as DependencyObject) &&
+                         _viewModel.SelectedVariant?.HasBatchTracking == true)
+                {
+                    BatchDataGrid.Focus();
+                    moved = true;
+                }
+
+                if (moved)
+                    e.Handled = true;
+
+                return;
+            }
+
             if (e.Key != Key.Enter)
                 return;
 
             if (IsSourceInside(SearchTxt, e.OriginalSource as DependencyObject))
             {
-                if (_viewModel.SearchCommand.CanExecute(null))
-                    _viewModel.SearchCommand.Execute(null);
+                await _viewModel.SearchAsync();
+
+                if (_isCompletingWindowAction)
+                    return;
+
+                if (_viewModel.ParentResults.Count > 0)
+                {
+                    _viewModel.SelectedParent ??= _viewModel.ParentResults[0];
+                    ParentDataGrid.SelectedItem = _viewModel.SelectedParent;
+                    ParentDataGrid.ScrollIntoView(_viewModel.SelectedParent);
+                    ParentDataGrid.Focus();
+                }
+                else
+                {
+                    SearchTxt.Focus();
+                    SearchTxt.SelectAll();
+                }
 
                 e.Handled = true;
                 return;

@@ -25,6 +25,15 @@ namespace POS.Cashier.UI.ViewModels
         public Guid CurrentCartToken => _cartToken;
         public bool IsCheckoutInProgress => _isCheckoutInProgress;
 
+        private void SetCheckoutInProgress(bool value)
+        {
+            if (_isCheckoutInProgress == value)
+                return;
+
+            _isCheckoutInProgress = value;
+            OnPropertyChanged(nameof(IsCheckoutInProgress));
+        }
+
         public CashierCartOwnerDto CurrentCartOwner => new()
         {
             TerminalNo = TerminalNo,
@@ -331,7 +340,7 @@ namespace POS.Cashier.UI.ViewModels
                 SelectedCartItem = Cart.LastOrDefault();
                 PaymentLines.Clear();
                 IsPaymentModeActive = false;
-                TerminalInputMode = "SCAN / QTY";
+                TerminalInputMode = "READY TO SCAN";
                 PaymentStatusText = "Recovered cart. Payment must be entered again.";
                 PaymentStatusColor = "#D97706";
                 RecalculateTotals();
