@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly bool _serverCashierSelected;
     private readonly SetupProcessRunner _runner = new();
     private bool _running;
+    private ServerInspectionReport? _latestServerInspection;
 
     private string DatabaseSetupExecutable =>
         Path.Combine(
@@ -54,14 +55,14 @@ public partial class MainWindow : Window
         Loaded += OnLoaded;
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private async void OnLoaded(object sender, RoutedEventArgs e)
     {
+        FitWindowToWorkArea();
+
         bool existingProfileLoaded =
             LoadExistingConnectionProfile();
 
         LoadExistingTerminalIdentity();
-
-        InstallModeComboBox.SelectedIndex = 0;
 
         if (_role == DeploymentRole.Server)
         {
@@ -96,12 +97,20 @@ public partial class MainWindow : Window
                     ? Visibility.Visible
                     : Visibility.Collapsed;
 
-            StatusTextBlock.Text = _serverCashierSelected
-                ? "Choose the production database mode and confirm the server Cashier identity. The local connection is protected from router IP changes."
-                : "This is a Server and BackOffice-only installation. No Cashier terminal will be reserved or assigned. The local connection is protected from router IP changes.";
+            SelectInstallMode(
+                existingProfileLoaded
+                    ? ServerInstallMode.UpgradeRepair
+                    : ServerInstallMode.NewStore);
+
+            StatusTextBlock.Text = existingProfileLoaded
+                ? "Existing encrypted Server settings were loaded. Inspecting the SQL installation before selecting Upgrade or Repair."
+                : "Inspecting this computer for an existing Advanced POS production database.";
+
+            await DetectExistingServerInstallationAsync();
         }
         else
         {
+            InstallModeComboBox.SelectedIndex = 0;
             Title = "Advanced POS Cashier Setup";
             RoleTextBlock.Text =
                 "Cashier terminal production installation";
@@ -125,6 +134,31 @@ public partial class MainWindow : Window
                 ? "The existing encrypted connection values were loaded. Change only the server name or IP when repairing a network change, then verify the terminal assignment."
                 : "Enter the server connection and this terminal's unique identity.";
         }
+    }
+
+    private void FitWindowToWorkArea()
+    {
+        Rect workArea = SystemParameters.WorkArea;
+        const double workAreaMargin = 20;
+
+        double availableWidth = Math.Max(
+            640,
+            workArea.Width - workAreaMargin);
+
+        double availableHeight = Math.Max(
+            520,
+            workArea.Height - workAreaMargin);
+
+        MinWidth = Math.Min(MinWidth, availableWidth);
+        MinHeight = Math.Min(MinHeight, availableHeight);
+        MaxWidth = availableWidth;
+        MaxHeight = availableHeight;
+
+        Width = Math.Min(1040, availableWidth);
+        Height = Math.Min(800, availableHeight);
+
+        Left = workArea.Left + Math.Max(0, (workArea.Width - Width) / 2);
+        Top = workArea.Top + Math.Max(0, (workArea.Height - Height) / 2);
     }
 
     private bool LoadExistingConnectionProfile()
@@ -210,6 +244,213 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task DetectExistingServerInstallationAsync()
+    {
+        if (_role != DeploymentRole.Server)
+            return;
+
+        RunButton.IsEnabled = false;
+
+        try
+        {
+            _latestServerInspection =
+                await InspectServerInstallationAsync(
+                    writeOutput: true);
+
+            ApplyServerInspectionToUi(_latestServerInspection);
+        }
+        catch (Exception ex)
+        {
+            AppendOutput(
+                "Automatic existing-installation inspection could not be completed: " +
+                ex.Message);
+
+            StatusTextBlock.Text =
+                "Automatic inspection was unavailable. Confirm the correct installation mode before starting setup.";
+        }
+        finally
+        {
+            RunButton.IsEnabled = true;
+        }
+    }
+
+    private async Task<ServerInspectionReport> InspectServerInstallationAsync(
+        bool writeOutput)
+    {
+        string reportsFolder = Path.Combine(
+            ProgramDataRoot,
+            "Reports");
+
+        Directory.CreateDirectory(reportsFolder);
+
+        string reportPath = Path.Combine(
+            reportsFolder,
+            $"Server_Inspection_{DateTime.Now:yyyyMMdd_HHmmss_fff}.json");
+
+        if (writeOutput)
+            AppendOutput("Inspecting the existing SQL Server database and application login...");
+
+        ProcessResult result = await RunDatabaseSetupAsync(
+            new[]
+            {
+                "inspect-server",
+                "--instance",
+                SqlInstanceTextBox.Text.Trim(),
+                "--database",
+                DatabaseNameTextBox.Text.Trim(),
+                "--app-login",
+                ApplicationLoginTextBox.Text.Trim(),
+                "--report",
+                reportPath
+            });
+
+        result.ThrowIfFailed("Existing installation inspection");
+
+        ServerInspectionReport inspection =
+            await ReadServerInspectionReportAsync(reportPath);
+
+        if (writeOutput)
+        {
+            AppendOutput(
+                $"Inspection result: DatabaseExists={inspection.DatabaseExists}, " +
+                $"LoginExists={inspection.LoginExists}, " +
+                $"AdvancedPOS={inspection.IsAdvancedPosDatabase}, " +
+                $"LatestMigration={inspection.LatestMigration}.");
+        }
+
+        return inspection;
+    }
+
+    private void ApplyServerInspectionToUi(
+        ServerInspectionReport inspection)
+    {
+        if (inspection.DatabaseExists)
+        {
+            SelectInstallMode(ServerInstallMode.UpgradeRepair);
+
+            if (inspection.DatabaseIsNewerThanApplication)
+            {
+                StatusTextBlock.Text =
+                    "A newer Advanced POS database was detected. This setup version will refuse to downgrade it.";
+            }
+            else if (!inspection.IsAdvancedPosDatabase)
+            {
+                StatusTextBlock.Text =
+                    "A database with the selected name exists, but its Advanced POS identity could not be verified. It will not be modified.";
+            }
+            else if (inspection.LoginExists)
+            {
+                StatusTextBlock.Text =
+                    "Existing Advanced POS store detected. Upgrade / Repair was selected automatically; data and licences will be preserved.";
+            }
+            else
+            {
+                StatusTextBlock.Text =
+                    "Existing Advanced POS database detected without its restricted login. Upgrade / Repair will preserve data and recreate the login safely.";
+            }
+
+            return;
+        }
+
+        if (inspection.LoginExists)
+        {
+            SelectInstallMode(ServerInstallMode.UpgradeRepair);
+            StatusTextBlock.Text =
+                "A partial setup was detected: the SQL login exists but the production database is missing. Setup will stop safely and require backup recovery or technician review.";
+            return;
+        }
+
+        SelectInstallMode(ServerInstallMode.NewStore);
+        StatusTextBlock.Text =
+            "No existing Advanced POS database or login was found. New Store was selected automatically.";
+    }
+
+    private static void ValidateServerModeAgainstInspection(
+        ServerInstallMode mode,
+        ServerInspectionReport inspection)
+    {
+        if (mode == ServerInstallMode.NewStore &&
+            (inspection.DatabaseExists || inspection.LoginExists))
+        {
+            throw new InvalidOperationException(
+                inspection.DatabaseExists
+                    ? "An existing database was detected. Choose 'Upgrade or repair an existing Advanced POS store'. The database was not changed."
+                    : "The application login already exists but the database is missing. This partial setup requires technician review or backup recovery before New Store can continue.");
+        }
+
+        if (mode == ServerInstallMode.UpgradeRepair)
+        {
+            if (!inspection.DatabaseExists)
+            {
+                throw new InvalidOperationException(
+                    inspection.LoginExists
+                        ? "The application login exists, but the production database is missing. Restore a verified backup or contact support; setup will not create an empty replacement."
+                        : "No existing Advanced POS store was found. Choose New Store or Restore Backup instead.");
+            }
+
+            if (inspection.IsEmptyDatabase)
+            {
+                throw new InvalidOperationException(
+                    "The selected database exists but contains no application tables. It was not modified. Confirm whether it is an incomplete setup before removing it or restore a verified backup.");
+            }
+
+            if (!inspection.IsAdvancedPosDatabase)
+            {
+                throw new InvalidOperationException(
+                    "The selected database does not contain the expected Advanced POS identity tables and migration history. Verify the database name or restore the correct backup.");
+            }
+
+            if (inspection.DatabaseIsNewerThanApplication)
+            {
+                throw new InvalidOperationException(
+                    "The selected database was created by a newer Advanced POS version. Install the matching or newer Server version; database downgrade is not allowed.");
+            }
+        }
+
+        if (mode == ServerInstallMode.MigrateSqlite &&
+            (inspection.DatabaseExists || inspection.LoginExists))
+        {
+            throw new InvalidOperationException(
+                "SQLite migration requires unused database and login names. Existing SQL resources were detected and were not changed. Choose Upgrade / Repair, Restore Backup, or different safe names.");
+        }
+    }
+
+    private static async Task<ServerInspectionReport> ReadServerInspectionReportAsync(
+        string reportPath)
+    {
+        if (!File.Exists(reportPath))
+        {
+            throw new FileNotFoundException(
+                "The Server inspection report was not created.",
+                reportPath);
+        }
+
+        await using FileStream stream = File.OpenRead(reportPath);
+        using JsonDocument document = await JsonDocument.ParseAsync(stream);
+        JsonElement root = document.RootElement;
+
+        return new ServerInspectionReport(
+            ReadBoolean(root, "DatabaseExists"),
+            ReadBoolean(root, "LoginExists"),
+            ReadBoolean(root, "IsEmptyDatabase"),
+            ReadBoolean(root, "IsAdvancedPosDatabase"),
+            ReadBoolean(root, "IsRequiredMigrationApplied"),
+            ReadBoolean(root, "DatabaseIsNewerThanApplication"),
+            root.TryGetProperty("LatestMigration", out JsonElement migration)
+                ? migration.GetString() ?? string.Empty
+                : string.Empty,
+            root.TryGetProperty("UserTableCount", out JsonElement tableCount) &&
+            tableCount.TryGetInt64(out long count)
+                ? count
+                : 0);
+    }
+
+    private static bool ReadBoolean(
+        JsonElement root,
+        string propertyName) =>
+        root.TryGetProperty(propertyName, out JsonElement value) &&
+        value.ValueKind == JsonValueKind.True;
+
     private void InstallModeComboBox_OnSelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -217,24 +458,69 @@ public partial class MainWindow : Window
         if (!IsLoaded || _role != DeploymentRole.Server)
             return;
 
+        UpdateInstallModeUi();
+    }
+
+    private void UpdateInstallModeUi()
+    {
         ServerInstallMode mode = GetServerInstallMode();
+
+        SourceFilePanel.Visibility = Visibility.Collapsed;
 
         switch (mode)
         {
             case ServerInstallMode.NewStore:
-                SourceFilePanel.Visibility = Visibility.Collapsed;
+                InstallModeHintTextBlock.Text =
+                    "Use only when no Advanced POS production database exists. " +
+                    "Setup will refuse to overwrite an existing database or login.";
+                RunButton.Content = "Start New Store Setup";
+                break;
+
+            case ServerInstallMode.UpgradeRepair:
+                InstallModeHintTextBlock.Text =
+                    "Preserves the existing database, users, stock, sales, licences, " +
+                    "terminal assignments, and settings. Setup creates a verified backup, " +
+                    "applies pending migrations, and repairs the restricted SQL login and local profile.";
+                RunButton.Content = "Upgrade / Repair Existing Store";
                 break;
 
             case ServerInstallMode.MigrateSqlite:
                 SourceFilePanel.Visibility = Visibility.Visible;
                 SourceFileLabel.Text = "Existing standalone SQLite database";
+                InstallModeHintTextBlock.Text =
+                    "Creates a new SQL Server production database and transfers the selected standalone store. " +
+                    "Existing SQL resources with the same names are never overwritten.";
+                RunButton.Content = "Migrate Existing Store";
                 break;
 
             case ServerInstallMode.RestoreBackup:
                 SourceFilePanel.Visibility = Visibility.Visible;
                 SourceFileLabel.Text = "Existing SQL Server backup (.bak)";
+                InstallModeHintTextBlock.Text =
+                    "Restores a verified SQL Server backup. When a database already exists, " +
+                    "setup creates a safety backup before replacing it.";
+                RunButton.Content = "Restore Store Backup";
                 break;
         }
+    }
+
+    private void SelectInstallMode(ServerInstallMode mode)
+    {
+        foreach (object item in InstallModeComboBox.Items)
+        {
+            if (item is ComboBoxItem comboItem &&
+                comboItem.Tag is string value &&
+                Enum.TryParse(value, out ServerInstallMode itemMode) &&
+                itemMode == mode)
+            {
+                InstallModeComboBox.SelectedItem = comboItem;
+                UpdateInstallModeUi();
+                return;
+            }
+        }
+
+        InstallModeComboBox.SelectedIndex = 0;
+        UpdateInstallModeUi();
     }
 
     private void InstallCashierOnServerCheckBox_OnChanged(
@@ -346,7 +632,19 @@ public partial class MainWindow : Window
         ServerInstallMode mode = GetServerInstallMode();
         string sourceFile = SourceFileTextBox.Text.Trim();
 
-        if (mode != ServerInstallMode.NewStore &&
+        if (mode != ServerInstallMode.RestoreBackup)
+        {
+            _latestServerInspection =
+                await InspectServerInstallationAsync(
+                    writeOutput: true);
+
+            ValidateServerModeAgainstInspection(
+                mode,
+                _latestServerInspection);
+        }
+
+        if ((mode == ServerInstallMode.MigrateSqlite ||
+             mode == ServerInstallMode.RestoreBackup) &&
             !File.Exists(sourceFile))
         {
             throw new FileNotFoundException(
@@ -435,6 +733,7 @@ public partial class MainWindow : Window
         string command = mode switch
         {
             ServerInstallMode.NewStore => "provision-empty",
+            ServerInstallMode.UpgradeRepair => "upgrade-existing",
             ServerInstallMode.MigrateSqlite => "provision",
             ServerInstallMode.RestoreBackup => "provision-restore",
             _ => throw new InvalidOperationException("Unsupported server installation mode.")
@@ -471,7 +770,10 @@ public partial class MainWindow : Window
             arguments.Add("--confirm-destructive-restore");
         }
 
-        AppendOutput("Provisioning the production database...");
+        AppendOutput(
+            mode == ServerInstallMode.UpgradeRepair
+                ? "Backing up, upgrading, and repairing the existing production database..."
+                : "Provisioning the production database...");
 
         ProcessResult setupResult = await RunDatabaseSetupAsync(arguments);
         setupResult.ThrowIfFailed("Production database provisioning");
@@ -530,9 +832,14 @@ public partial class MainWindow : Window
                 MachineCode = machineCode ?? string.Empty
             });
 
-        StatusTextBlock.Text = "Server production setup completed successfully.";
+        StatusTextBlock.Text = mode == ServerInstallMode.UpgradeRepair
+            ? "Existing Advanced POS store upgraded or repaired successfully."
+            : "Server production setup completed successfully.";
         AppendOutput(string.Empty);
-        AppendOutput("SERVER PRODUCTION SETUP PASSED.");
+        AppendOutput(
+            mode == ServerInstallMode.UpgradeRepair
+                ? "EXISTING STORE UPGRADE OR REPAIR PASSED."
+                : "SERVER PRODUCTION SETUP PASSED.");
         AppendOutput($"BackOffice profile: {ProfilePath}");
         AppendOutput($"Remote Cashier server name: {Environment.MachineName}");
         AppendOutput($"Current server LAN IP: {NetworkAddressHelper.GetPreferredIpv4Address()}");
@@ -540,7 +847,9 @@ public partial class MainWindow : Window
 
         MessageBox.Show(
             this,
-            "The production server and BackOffice database connection were configured successfully.\n\n" +
+            (mode == ServerInstallMode.UpgradeRepair
+                ? "The existing Advanced POS store was backed up, verified, upgraded, and repaired successfully. Existing business data and licences were preserved.\n\n"
+                : "The production server and BackOffice database connection were configured successfully.\n\n") +
             $"Remote Cashiers should use server computer name: {Environment.MachineName}\n" +
             $"Current LAN IP: {NetworkAddressHelper.GetPreferredIpv4Address()}\n\n" +
             "Keep the server computer name stable. A router DHCP reservation remains recommended as a backup.",
@@ -959,6 +1268,16 @@ public partial class MainWindow : Window
         Close();
     }
 }
+
+internal sealed record ServerInspectionReport(
+    bool DatabaseExists,
+    bool LoginExists,
+    bool IsEmptyDatabase,
+    bool IsAdvancedPosDatabase,
+    bool IsRequiredMigrationApplied,
+    bool DatabaseIsNewerThanApplication,
+    string LatestMigration,
+    long UserTableCount);
 
 internal sealed record TerminalSetupReport(
     string MachineCode,

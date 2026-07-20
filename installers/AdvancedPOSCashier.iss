@@ -5,7 +5,7 @@
   #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.2"
+  #define AppVersion "1.0.3"
 #endif
 
 #define AppName "Advanced POS Cashier"

@@ -74,3 +74,15 @@
 - [ ] Open **Repair or Configure Advanced POS Cashier** and confirm existing values load.
 - [ ] Save a diagnostic report and confirm it does not contain the SQL password.
 - [ ] Restart the router and confirm remote Cashiers reconnect after the LAN returns.
+
+## Version 1.0.3 setup and upgrade acceptance
+
+- [ ] Deployment wizard fits inside the Windows work area.
+- [ ] **Start Setup** and **Close** remain visible while the setup form scrolls.
+- [ ] Existing valid database automatically selects **Upgrade or repair existing store**.
+- [ ] New Store safely refuses an existing database or login.
+- [ ] Upgrade/Repair creates a verified pre-upgrade backup before migrations.
+- [ ] Existing users, items, stock, sales, licences, settings, and terminal assignments remain unchanged after upgrade.
+- [ ] Missing restricted application login is recreated safely for a valid Advanced POS database.
+- [ ] Unknown, empty, inaccessible, or newer databases are refused without modification.
+- [ ] Re-running Upgrade/Repair is idempotent and succeeds without duplicating data.

@@ -17,13 +17,14 @@ The server computer hosts SQL Server Express, the production POS database, BackO
 ## Installation
 
 1. Sign in using the Windows account that will normally run BackOffice.
-2. Run `Advanced_POS_Server_Setup_1.0.2.exe` as Administrator.
+2. Run `Advanced_POS_Server_Setup_1.0.3.exe` as Administrator.
 3. Choose whether Cashier should also be installed on the server computer.
 4. The production wizard opens automatically.
 5. Select one mode:
-   - **New store** — creates a clean `POS_Production` database.
-   - **Migrate SQLite** — copies all supported data from a verified standalone database.
-   - **Restore backup** — restores a verified SQL Server `.bak` file.
+   - **New store** — creates a clean `POS_Production` database only when no database or login exists.
+   - **Upgrade or repair existing store** — preserves data, creates a verified backup, applies pending migrations, and repairs the restricted login/profile.
+   - **Migrate SQLite** — copies all supported data from a verified standalone database into unused SQL names.
+   - **Restore backup** — creates a safety backup when possible, then restores a verified SQL Server `.bak` file.
 6. Confirm the server LAN IP, fixed SQL port, database name, restricted login, and strong password.
 7. Confirm that the active network is the trusted private store LAN.
 8. When Cashier is enabled on the server, assign a unique terminal number and name.
@@ -83,3 +84,11 @@ The SQL Server service is configured for Automatic startup and three controlled 
 - TCP port 1433 succeeds;
 - the displayed Server computer name is correct;
 - the current LAN IPv4 address is expected.
+
+## Version 1.0.3 setup, upgrade, and repair rules
+
+The wizard inspects the selected SQL database and login before making changes. When a valid existing Advanced POS database is detected, **Upgrade or repair existing store** is selected automatically.
+
+The fixed footer keeps **Start Setup** and **Close** visible while the form scrolls, including on displays using Windows scaling.
+
+New Store never overwrites an existing database or login. Upgrade/Repair refuses unknown databases, empty or partial states requiring technician review, inaccessible databases, and databases created by a newer application version.

@@ -17,7 +17,7 @@ Each physical Cashier computer must have a different terminal number.
 
 1. Sign in using the Windows account that will normally run Cashier.
 2. Connect the computer to the trusted store LAN.
-3. Run `Advanced_POS_Cashier_Setup_1.0.2.exe` as Administrator.
+3. Run `Advanced_POS_Cashier_Setup_1.0.3.exe` as Administrator.
 4. The Cashier production wizard opens automatically.
 5. Enter the server connection details and the unique terminal identity.
 6. Enter the SQL password in the masked password fields.

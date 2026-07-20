@@ -8,8 +8,9 @@ internal sealed class SetupUserException : InvalidOperationException
 {
     public SetupUserException(
         string code,
-        string message)
-        : base(message)
+        string message,
+        Exception? innerException = null)
+        : base(message, innerException)
     {
         Code = string.IsNullOrWhiteSpace(code)
             ? "SETUP_ERROR"

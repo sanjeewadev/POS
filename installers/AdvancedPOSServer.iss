@@ -5,7 +5,7 @@
   #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.2"
+  #define AppVersion "1.0.3"
 #endif
 
 #define AppName "Advanced POS Server"
@@ -73,16 +73,17 @@ Name: "{group}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.ex
 Name: "{autodesktop}\Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; WorkingDir: "{app}\Cashier"; Components: cashier; Tasks: desktopcashier
 Name: "{group}\Activate Advanced POS Cashier"; Filename: "{app}\Cashier\POS.Cashier.UI.exe"; Parameters: "--activate"; WorkingDir: "{app}\Cashier"; Components: cashier
 Name: "{group}\Repair or Configure Advanced POS Cashier"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode cashier --install-root ""{app}"""; WorkingDir: "{app}"; Components: cashier
-Name: "{group}\Configure Advanced POS Server"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"
+Name: "{group}\Configure, Upgrade or Repair Advanced POS Server"; Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"
 Name: "{group}\Backup POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Backup-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\Restore POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Restore-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\Check POS Database"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Check-POS-Production.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 Name: "{group}\POS Server Status"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -NoProfile -ExecutionPolicy Bypass -File ""{app}\Tools\Show-POS-Server-Status.ps1"" -InstallRoot ""{app}"""; WorkingDir: "{app}\Tools"
 
 [Run]
-Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"; Description: "Configure the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated; Check: ShouldRunServerConfiguration
+Filename: "{app}\DeploymentWizard\POS.Deployment.Wizard.exe"; Parameters: "--mode server --install-root ""{app}"" --server-cashier {code:GetServerCashierArgument}"; WorkingDir: "{app}"; Description: "Configure, upgrade, or repair the production POS Server"; StatusMsg: "Opening Advanced POS Server configuration..."; Flags: waituntilterminated; Check: ShouldRunServerConfiguration
 
 [InstallDelete]
+Type: files; Name: "{group}\Configure Advanced POS Server.lnk"
 Type: files; Name: "{group}\Configure Advanced POS Cashier.lnk"
 Type: filesandordirs; Name: "{app}\Cashier"; Check: IsServerOnlyInstall
 Type: files; Name: "{autodesktop}\Advanced POS Cashier.lnk"; Check: IsServerOnlyInstall
@@ -130,7 +131,7 @@ begin
     MaintenancePage.Add(
       'Upgrade or repair application files and keep the current configuration');
     MaintenancePage.Add(
-      'Upgrade application files and open Server configuration after setup');
+      'Upgrade application files and open Server upgrade or repair after setup');
     MaintenancePage.SelectedValueIndex := 0;
   end;
 end;

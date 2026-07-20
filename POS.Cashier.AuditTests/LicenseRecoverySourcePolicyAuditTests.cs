@@ -181,7 +181,7 @@ internal static class LicenseRecoverySourcePolicyAuditTests
             "ProductReleaseInfo.cs");
         AuditAssert.Contains(
             releaseInfo,
-            "ProductVersion = \"1.0.2\"",
+            "ProductVersion = \"1.0.3\"",
             "installed-system recovery release version");
 
         LicenseRequestInfo request =

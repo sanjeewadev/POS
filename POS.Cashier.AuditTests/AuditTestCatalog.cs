@@ -60,6 +60,7 @@ internal static class AuditTestCatalog
         new("POS Network SQL Server setup and migration path is controlled", AuditGroups.SourcePolicy, SqlServerMigrationSourcePolicyAuditTests.DedicatedSqlServerBaselineIsControlledAsync),
         new("Production deployment and recovery are controlled", AuditGroups.SourcePolicy, ProductionDeploymentSourcePolicyAuditTests.ProductionDeploymentIsControlledAsync),
         new("Store connection recovery and network resilience are controlled", AuditGroups.SourcePolicy, ConnectionResilienceSourcePolicyAuditTests.StoreConnectionRecoveryIsControlledAsync),
+        new("Production setup upgrade repair and wizard layout are controlled", AuditGroups.SourcePolicy, SetupUpgradeRepairSourcePolicyAuditTests.SetupUpgradeRepairAndWizardLayoutAreControlledAsync),
         new("Cashier licence recovery and installed upgrades are controlled", AuditGroups.SourcePolicy, LicenseRecoverySourcePolicyAuditTests.CashierLicenceRecoveryAndUpgradeAreControlledAsync),
         new("Live POS database path is never an audit database", AuditGroups.SourcePolicy, SourcePolicyAuditTests.LiveDatabasePathIsExcludedAsync)
     };

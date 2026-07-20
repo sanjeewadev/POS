@@ -9,6 +9,7 @@ public enum DeploymentRole
 internal enum ServerInstallMode
 {
     NewStore,
+    UpgradeRepair,
     MigrateSqlite,
     RestoreBackup
 }

@@ -8,7 +8,7 @@ namespace POS.Database.Setup;
 internal static class Program
 {
     private const string ProductName = "Advanced POS Database Setup";
-    private const string VersionText = "Production 1.0.2";
+    private static string VersionText => $"Production {ProductReleaseInfo.ProductVersion}";
 
     public static async Task<int> Main(string[] args)
     {
@@ -38,6 +38,14 @@ internal static class Program
 
                 case "provision-empty":
                     await ProvisionEmptyAsync(options);
+                    return 0;
+
+                case "inspect-server":
+                    await InspectServerAsync(options);
+                    return 0;
+
+                case "upgrade-existing":
+                    await UpgradeExistingAsync(options);
                     return 0;
 
                 case "provision-restore":
@@ -302,6 +310,167 @@ internal static class Program
         }
     }
 
+    private static async Task InspectServerAsync(
+        CommandLineArguments options)
+    {
+        string instance = options.GetOptional("instance", @".\SQLEXPRESS");
+        string database = options.GetRequired("database");
+        string appLogin = options.GetRequired("app-login");
+        string reportPath = options.GetRequired("report");
+
+        var provisioning = new ServerProvisioningService();
+        ServerInstallationInspection inspection =
+            await provisioning.InspectInstallationAsync(
+                instance,
+                database,
+                appLogin);
+
+        await new SetupReportWriter().WriteAsync(
+            reportPath,
+            new
+            {
+                Status = "Passed",
+                Mode = "InspectServer",
+                ProductVersion = ProductReleaseInfo.ProductVersion,
+                GeneratedAt = DateTimeOffset.Now,
+                Instance = instance,
+                Database = database,
+                ApplicationLogin = appLogin,
+                inspection.DatabaseExists,
+                inspection.LoginExists,
+                inspection.IsEmptyDatabase,
+                inspection.IsAdvancedPosDatabase,
+                inspection.IsRequiredMigrationApplied,
+                inspection.DatabaseIsNewerThanApplication,
+                inspection.LatestMigration,
+                inspection.UserTableCount
+            });
+
+        Console.WriteLine("POS SERVER INSTALLATION INSPECTION PASSED.");
+        Console.WriteLine($"Database exists: {inspection.DatabaseExists}");
+        Console.WriteLine($"Application login exists: {inspection.LoginExists}");
+        Console.WriteLine($"Advanced POS database identity: {inspection.IsAdvancedPosDatabase}");
+        Console.WriteLine($"Latest migration: {inspection.LatestMigration}");
+    }
+
+    private static async Task UpgradeExistingAsync(
+        CommandLineArguments options)
+    {
+        string instance = options.GetOptional("instance", @".\SQLEXPRESS");
+        string database = options.GetRequired("database");
+        string appLogin = options.GetRequired("app-login");
+        string appPassword = options.GetRequiredSecret(
+            "app-password",
+            "POS_SETUP_APP_PASSWORD");
+        string profilePath = options.GetRequired("profile");
+        string host = options.GetOptional("host", "127.0.0.1");
+        int port = options.GetInt(
+            "port",
+            DatabaseConnectionSettings.DefaultSqlServerPort);
+        string reportPath = options.GetRequired("report");
+
+        var provisioning = new ServerProvisioningService();
+        var backup = new SqlServerBackupService();
+        var profile = new ProfileCommandService();
+
+        Console.WriteLine("Inspecting the existing Advanced POS installation...");
+        ServerInstallationInspection inspection =
+            await provisioning.InspectInstallationAsync(
+                instance,
+                database,
+                appLogin);
+
+        ServerProvisioningService.EnsureExistingInstallationCanBeUpgraded(
+            inspection);
+
+        Console.WriteLine("Checking the existing production database before upgrade...");
+        await provisioning.VerifyDatabaseIntegrityAsync(
+            instance,
+            database);
+
+        Console.WriteLine("Creating a verified pre-upgrade safety backup...");
+        string preUpgradeBackup = await CreateDefaultBackupAsync(
+            backup,
+            instance,
+            database,
+            "PreUpgrade");
+
+        Console.WriteLine("Applying pending Advanced POS database migrations...");
+        await provisioning.ApplyMigrationsAsync(
+            instance,
+            database);
+
+        Console.WriteLine("Creating or repairing the restricted application login...");
+        await provisioning.EnsureApplicationLoginAsync(
+            instance,
+            database,
+            appLogin,
+            appPassword);
+
+        Console.WriteLine("Verifying the restricted application connection...");
+        await provisioning.VerifyApplicationLoginAsync(
+            host,
+            port,
+            database,
+            appLogin,
+            appPassword);
+
+        Console.WriteLine("Writing the encrypted local database profile...");
+        profile.WriteSqlServerProfile(
+            profilePath,
+            host,
+            port,
+            database,
+            appLogin,
+            appPassword);
+
+        Console.WriteLine("Checking production database integrity...");
+        await provisioning.VerifyDatabaseIntegrityAsync(
+            instance,
+            database);
+
+        Console.WriteLine("Creating a verified post-upgrade backup...");
+        string postUpgradeBackup = await CreateDefaultBackupAsync(
+            backup,
+            instance,
+            database,
+            "PostUpgrade");
+
+        DatabaseSummary summary =
+            await provisioning.GetDatabaseSummaryAsync(
+                instance,
+                database);
+
+        await new SetupReportWriter().WriteAsync(
+            reportPath,
+            new
+            {
+                Status = "Passed",
+                Mode = "UpgradeRepair",
+                ProductVersion = ProductReleaseInfo.ProductVersion,
+                GeneratedAt = DateTimeOffset.Now,
+                Instance = instance,
+                Host = host,
+                Port = port,
+                Database = database,
+                ApplicationLogin = appLogin,
+                LoginExistedBeforeRepair = inspection.LoginExists,
+                EncryptedProfile = Path.GetFullPath(profilePath),
+                PreUpgradeBackup = preUpgradeBackup,
+                PostUpgradeBackup = postUpgradeBackup,
+                DatabaseTableCount = summary.TableCount,
+                DatabaseRowCount = summary.RowCount,
+                LatestMigration = summary.LatestMigration
+            });
+
+        Console.WriteLine("POS NETWORK EXISTING-STORE UPGRADE OR REPAIR PASSED.");
+        PrintProvisioningSummary(
+            database,
+            summary,
+            profilePath,
+            postUpgradeBackup);
+    }
+
     private static async Task ProvisionEmptyAsync(
         CommandLineArguments options)
     {
@@ -422,7 +591,8 @@ internal static class Program
             preRestoreBackup = await CreateDefaultBackupAsync(
                 backup,
                 instance,
-                database);
+                database,
+                "PreRestore");
         }
 
         Console.WriteLine(
@@ -473,7 +643,8 @@ internal static class Program
         string verificationBackup = await CreateDefaultBackupAsync(
             backup,
             instance,
-            database);
+            database,
+            "PostRestore");
 
         DatabaseSummary summary =
             await provisioning.GetDatabaseSummaryAsync(
@@ -759,14 +930,20 @@ internal static class Program
     private static async Task<string> CreateDefaultBackupAsync(
         SqlServerBackupService backup,
         string instance,
-        string database)
+        string database,
+        string? purpose = null)
     {
         string backupDirectory =
             await backup.GetDefaultBackupDirectoryAsync(instance);
 
+        string safePurpose = string.IsNullOrWhiteSpace(purpose)
+            ? string.Empty
+            : "_" + string.Concat(
+                purpose.Where(char.IsLetterOrDigit));
+
         string backupPath = Path.Combine(
             backupDirectory,
-            $"{database}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
+            $"{database}{safePurpose}_{DateTime.Now:yyyyMMdd_HHmmss_fff}.bak");
 
         await backup.CreateAndVerifyBackupAsync(
             instance,
@@ -806,6 +983,8 @@ internal static class Program
         Console.WriteLine("  provision             Create a production database by migrating SQLite");
         Console.WriteLine("  provision-rehearsal   Create or replace a disposable rehearsal database");
         Console.WriteLine("  provision-empty       Create a clean new-store production database");
+        Console.WriteLine("  inspect-server        Inspect existing database and login state without changing them");
+        Console.WriteLine("  upgrade-existing      Back up, migrate, and repair an existing Advanced POS store");
         Console.WriteLine("  provision-restore     Restore and repair a production SQL backup");
         Console.WriteLine("  configure-terminal    Bind this computer to a terminal and write its profile");
         Console.WriteLine("  import-license        Import a signed store or terminal licence");
