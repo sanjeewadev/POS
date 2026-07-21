@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.Services;
 using POS.Core.Services.Exports;
+using POS.Core.Services;
 using System;
 using System.Windows;
 using System.Windows.Input;
@@ -44,8 +45,28 @@ namespace POS.BackOffice.UI.Views.Dialogs
 
         private void Copy_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(PreviewTextBox.Text))
+            if (string.IsNullOrWhiteSpace(PreviewTextBox.Text))
+                return;
+
+            try
+            {
                 Clipboard.SetText(PreviewTextBox.Text);
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Copy Supplier Debit Note",
+                    ex);
+
+                MessageBox.Show(
+                    "The document text could not be copied because the Windows " +
+                    "clipboard is busy. BackOffice will remain open. Try again in " +
+                    "a moment.",
+                    "Copy Debit Note",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e)

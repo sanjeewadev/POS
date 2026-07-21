@@ -226,6 +226,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Print Gift Voucher",
+                    ex);
+
                 SetStatus($"Voucher printing failed: {ex.Message}", "#EF4444");
             }
             finally
@@ -273,32 +278,56 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            var dialog = new SaveFileDialog
+            try
             {
-                Title = "Export Gift Voucher Register",
-                Filter = "CSV files (*.csv)|*.csv",
-                FileName = $"GiftVoucher_Register_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
-            };
-            if (dialog.ShowDialog() != true)
-                return;
-
-            var csv = new StringBuilder();
-            csv.AppendLine("VoucherNo,Barcode,Value,Redeemed,Forfeited,Status,Batch,Expiry,Created,Activated,SoldInvoice,RedeemedDate,RedeemedInvoice,PrintCount,LastPrintedBy,Remarks");
-            foreach (GiftVoucherSearchDto row in Vouchers)
-            {
-                csv.AppendLine(string.Join(",", new[]
+                var dialog = new SaveFileDialog
                 {
-                    Csv(row.VoucherNo), Csv(row.Barcode), row.VoucherAmount.ToString("0.00", CultureInfo.InvariantCulture),
-                    row.RedeemedAmount.ToString("0.00", CultureInfo.InvariantCulture), row.ForfeitedAmount.ToString("0.00", CultureInfo.InvariantCulture),
-                    Csv(row.DisplayStatus), Csv(row.BatchNo), Csv(row.ExpiryDate?.ToString("yyyy-MM-dd") ?? string.Empty),
-                    Csv(row.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")), Csv(row.ActivatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty),
-                    Csv(row.SoldInvoiceNo), Csv(row.RedeemedDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty), Csv(row.RedeemedInvoiceNo),
-                    row.PrintCount.ToString(CultureInfo.InvariantCulture), Csv(row.LastPrintedBy), Csv(row.Remarks)
-                }));
-            }
+                    Title = "Export Gift Voucher Register",
+                    Filter = "CSV files (*.csv)|*.csv",
+                    FileName = $"GiftVoucher_Register_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+                };
+                if (dialog.ShowDialog() != true)
+                    return;
 
-            File.WriteAllText(dialog.FileName, csv.ToString(), new UTF8Encoding(true));
-            SetStatus($"Exported {Vouchers.Count} voucher(s).", "#10B981");
+                var csv = new StringBuilder();
+                csv.AppendLine("VoucherNo,Barcode,Value,Redeemed,Forfeited,Status,Batch,Expiry,Created,Activated,SoldInvoice,RedeemedDate,RedeemedInvoice,PrintCount,LastPrintedBy,Remarks");
+                foreach (GiftVoucherSearchDto row in Vouchers)
+                {
+                    csv.AppendLine(string.Join(",", new[]
+                    {
+                        Csv(row.VoucherNo), Csv(row.Barcode), row.VoucherAmount.ToString("0.00", CultureInfo.InvariantCulture),
+                        row.RedeemedAmount.ToString("0.00", CultureInfo.InvariantCulture), row.ForfeitedAmount.ToString("0.00", CultureInfo.InvariantCulture),
+                        Csv(row.DisplayStatus), Csv(row.BatchNo), Csv(row.ExpiryDate?.ToString("yyyy-MM-dd") ?? string.Empty),
+                        Csv(row.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")), Csv(row.ActivatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty),
+                        Csv(row.SoldInvoiceNo), Csv(row.RedeemedDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty), Csv(row.RedeemedInvoiceNo),
+                        row.PrintCount.ToString(CultureInfo.InvariantCulture), Csv(row.LastPrintedBy), Csv(row.Remarks)
+                    }));
+                }
+
+                File.WriteAllText(
+                    dialog.FileName,
+                    csv.ToString(),
+                    new UTF8Encoding(true));
+
+                SetStatus($"Exported {Vouchers.Count} voucher(s).", "#10B981");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Export Gift Voucher CSV",
+                    ex);
+
+                SetStatus("Gift Voucher export failed.", "#EF4444");
+
+                MessageBox.Show(
+                    "The Gift Voucher register could not be exported. " +
+                    "BackOffice will remain open. Check the selected folder and " +
+                    "available disk space, then try again.",
+                    "Gift Voucher Export Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         private async Task RunReasonActionAsync(

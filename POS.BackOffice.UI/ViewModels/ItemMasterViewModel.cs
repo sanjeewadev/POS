@@ -12,6 +12,7 @@ using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -800,96 +801,121 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task GenerateVariantsAsync()
         {
             string itemCode = BuildItemCode();
-            if (!ValidateBeforeVariantGeneration(itemCode)) return;
-
-            var existingSupplierLinks = CaptureSupplierLinksBySku();
-            GeneratedVariants.Clear();
-            SelectedVariantSuppliers.Clear();
-            SelectedVariantForSupplierEdit = null;
-
-            var usedBarcodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var usedSkus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            if (!DynamicProperties.Any())
-            {
-                var standardVariant = new ItemVariant
-                {
-                    SkuCode = itemCode,
-                    VariantDescription = "Standard",
-                    Barcode = await GenerateInternalBarcodeAsync(usedBarcodes),
-                    AverageCost = BulkCost,
-                    CostPrice = BulkCost,
-                    RetailPrice = BulkRetailPrice,
-                    WholesalePrice = BulkWholesalePrice,
-                    MinimumPrice = BulkMinimumPrice,
-                    MaximumPrice = BulkMaximumPrice,
-                    ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel,
-                    ItemSuppliers = new List<ItemSupplier>(),
-                    PropertyMappings = new List<ItemPropertyMapping>(),
-                    IsSelectedForSupplierAssignment = false,
-                    IsDeactivated = CurrentItem.IsDeactivated,
-                    DeactivatedAt = CurrentItem.IsDeactivated ? DateTime.Now : null
-                };
-
-                ApplyParentDisplayNames(standardVariant);
-                RestoreSupplierLinksIfAvailable(standardVariant, existingSupplierLinks);
-                GeneratedVariants.Add(standardVariant);
-                UpdateSupplierAssignmentSelectionCount();
-                StatusMessage = "1 standard variant generated.";
-                NotifyCommandStates();
+            if (!ValidateBeforeVariantGeneration(itemCode))
                 return;
-            }
 
-            var groupedSelections = DynamicProperties
-                .GroupBy(p => p.Group.Id)
-                .Select(g => g.OrderBy(p => p.Value.DisplayOrder).ThenBy(p => p.Value.ValueName).ToList())
-                .ToList();
-
-            var combinations = GenerateCombinations(groupedSelections);
-
-            foreach (var combo in combinations)
+            try
             {
-                string sku = BuildSkuForCombination(itemCode, combo, usedSkus);
-                string description = string.Join(" / ", combo.Select(c => c.Value.ValueName));
+                bool isStandardOnly = !DynamicProperties.Any();
+                var existingSupplierLinks = CaptureSupplierLinksBySku();
+                var generatedVariants = new List<ItemVariant>();
+                var usedBarcodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var usedSkus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                var variant = new ItemVariant
+                if (isStandardOnly)
                 {
-                    SkuCode = sku,
-                    VariantDescription = description,
-                    Barcode = await GenerateInternalBarcodeAsync(usedBarcodes),
-                    AverageCost = BulkCost,
-                    CostPrice = BulkCost,
-                    RetailPrice = BulkRetailPrice,
-                    WholesalePrice = BulkWholesalePrice,
-                    MinimumPrice = BulkMinimumPrice,
-                    MaximumPrice = BulkMaximumPrice,
-                    ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel,
-                    ItemSuppliers = new List<ItemSupplier>(),
-                    PropertyMappings = new List<ItemPropertyMapping>(),
-                    IsSelectedForSupplierAssignment = false,
-                    IsDeactivated = CurrentItem.IsDeactivated,
-                    DeactivatedAt = CurrentItem.IsDeactivated ? DateTime.Now : null
-                };
-
-                foreach (var selection in combo)
-                {
-                    variant.PropertyMappings.Add(new ItemPropertyMapping
+                    var standardVariant = new ItemVariant
                     {
-                        AttributeGroupId = selection.Group.Id,
-                        AttributeValueId = selection.Value.Id
-                    });
+                        SkuCode = itemCode,
+                        VariantDescription = "Standard",
+                        Barcode = await GenerateInternalBarcodeAsync(usedBarcodes),
+                        AverageCost = BulkCost,
+                        CostPrice = BulkCost,
+                        RetailPrice = BulkRetailPrice,
+                        WholesalePrice = BulkWholesalePrice,
+                        MinimumPrice = BulkMinimumPrice,
+                        MaximumPrice = BulkMaximumPrice,
+                        ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel,
+                        ItemSuppliers = new List<ItemSupplier>(),
+                        PropertyMappings = new List<ItemPropertyMapping>(),
+                        IsSelectedForSupplierAssignment = false,
+                        IsDeactivated = CurrentItem.IsDeactivated,
+                        DeactivatedAt = CurrentItem.IsDeactivated ? DateTime.Now : null
+                    };
+
+                    ApplyParentDisplayNames(standardVariant);
+                    RestoreSupplierLinksIfAvailable(standardVariant, existingSupplierLinks);
+                    generatedVariants.Add(standardVariant);
+                }
+                else
+                {
+                    var groupedSelections = DynamicProperties
+                        .GroupBy(p => p.Group.Id)
+                        .Select(g => g.OrderBy(p => p.Value.DisplayOrder).ThenBy(p => p.Value.ValueName).ToList())
+                        .ToList();
+
+                    var combinations = GenerateCombinations(groupedSelections);
+
+                    foreach (var combo in combinations)
+                    {
+                        string sku = BuildSkuForCombination(itemCode, combo, usedSkus);
+                        string description = string.Join(" / ", combo.Select(c => c.Value.ValueName));
+
+                        var variant = new ItemVariant
+                        {
+                            SkuCode = sku,
+                            VariantDescription = description,
+                            Barcode = await GenerateInternalBarcodeAsync(usedBarcodes),
+                            AverageCost = BulkCost,
+                            CostPrice = BulkCost,
+                            RetailPrice = BulkRetailPrice,
+                            WholesalePrice = BulkWholesalePrice,
+                            MinimumPrice = BulkMinimumPrice,
+                            MaximumPrice = BulkMaximumPrice,
+                            ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel,
+                            ItemSuppliers = new List<ItemSupplier>(),
+                            PropertyMappings = new List<ItemPropertyMapping>(),
+                            IsSelectedForSupplierAssignment = false,
+                            IsDeactivated = CurrentItem.IsDeactivated,
+                            DeactivatedAt = CurrentItem.IsDeactivated ? DateTime.Now : null
+                        };
+
+                        foreach (var selection in combo)
+                        {
+                            variant.PropertyMappings.Add(new ItemPropertyMapping
+                            {
+                                AttributeGroupId = selection.Group.Id,
+                                AttributeValueId = selection.Value.Id
+                            });
+                        }
+
+                        ApplyParentDisplayNames(variant);
+                        RestoreSupplierLinksIfAvailable(variant, existingSupplierLinks);
+                        generatedVariants.Add(variant);
+                    }
                 }
 
-                ApplyParentDisplayNames(variant);
-                RestoreSupplierLinksIfAvailable(variant, existingSupplierLinks);
-                GeneratedVariants.Add(variant);
+                GeneratedVariants.Clear();
+                foreach (ItemVariant variant in generatedVariants)
+                    GeneratedVariants.Add(variant);
+
+                SelectedVariantSuppliers.Clear();
+                SelectedVariantForSupplierEdit = null;
+                UpdateSupplierAssignmentSelectionCount();
+                StatusMessage = isStandardOnly
+                    ? "1 standard variant generated."
+                    : $"{generatedVariants.Count} variant(s) generated.";
             }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Generate Item Master variants",
+                    ex);
 
-            UpdateSupplierAssignmentSelectionCount();
-            StatusMessage = $"{GeneratedVariants.Count} variant(s) generated.";
-            NotifyCommandStates();
+                StatusMessage = "Variant generation failed.";
+
+                _messageBoxService.ShowError(
+                    "Variants could not be generated. Existing variants were preserved. " +
+                    "BackOffice will remain open. Technical details were saved in the " +
+                    "local POS Logs folder.",
+                    "Variant Generation Error");
+            }
+            finally
+            {
+                NotifyCommandStates();
+            }
         }
-
         private Dictionary<string, List<ItemSupplier>> CaptureSupplierLinksBySku()
         {
             var result = new Dictionary<string, List<ItemSupplier>>(StringComparer.OrdinalIgnoreCase);
@@ -1203,33 +1229,79 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanAssignSupplierToSelectedVariants))]
         private void AssignSupplierToSelectedVariants()
         {
-            UpdateSupplierAssignmentSelectionCount();
-            var selectedVariants = GeneratedVariants.Where(v => v.IsSelectedForSupplierAssignment).ToList();
-            if (!selectedVariants.Any()) return;
-
-            decimal defaultCost = selectedVariants.FirstOrDefault(v => v.CostPrice > 0)?.CostPrice ?? BulkCost;
-            if (defaultCost < 0) defaultCost = 0m;
-
-            var dialog = new AssignVariantSuppliersDialog(AvailableSuppliers.ToList(), defaultCost, 1, selectedVariants.Count)
+            try
             {
-                Owner = GetDialogOwner()
-            };
+                UpdateSupplierAssignmentSelectionCount();
+                var selectedVariants = GeneratedVariants
+                    .Where(v => v.IsSelectedForSupplierAssignment)
+                    .ToList();
 
-            if (dialog.ShowDialog() != true || dialog.SelectedSupplier == null) return;
+                if (!selectedVariants.Any())
+                    return;
 
-            int addedCount = 0, updatedCount = 0;
-            foreach (var variant in selectedVariants)
-            {
-                AddOrUpdateSupplierLinkForVariant(variant, dialog.SelectedSupplier, dialog.SupplierCost, dialog.MinimumOrderQuantity, ref addedCount, ref updatedCount);
+                decimal defaultCost = selectedVariants
+                    .FirstOrDefault(v => v.CostPrice > 0)?.CostPrice
+                    ?? BulkCost;
+
+                if (defaultCost < 0)
+                    defaultCost = 0m;
+
+                var dialog = new AssignVariantSuppliersDialog(
+                    AvailableSuppliers.ToList(),
+                    defaultCost,
+                    1,
+                    selectedVariants.Count)
+                {
+                    Owner = GetDialogOwner()
+                };
+
+                if (dialog.ShowDialog() != true ||
+                    dialog.SelectedSupplier == null)
+                {
+                    return;
+                }
+
+                int addedCount = 0;
+                int updatedCount = 0;
+
+                foreach (var variant in selectedVariants)
+                {
+                    AddOrUpdateSupplierLinkForVariant(
+                        variant,
+                        dialog.SelectedSupplier,
+                        dialog.SupplierCost,
+                        dialog.MinimumOrderQuantity,
+                        ref addedCount,
+                        ref updatedCount);
+                }
+
+                if (SelectedVariantForSupplierEdit != null &&
+                    selectedVariants.Any(v => string.Equals(
+                        v.SkuCode,
+                        SelectedVariantForSupplierEdit.SkuCode,
+                        StringComparison.OrdinalIgnoreCase)))
+                {
+                    RebuildSelectedVariantSuppliers();
+                }
+
+                StatusMessage =
+                    $"Assigned: {addedCount}, Updated: {updatedCount}. Click SAVE.";
+
+                NotifyCommandStates();
             }
-
-            if (SelectedVariantForSupplierEdit != null && selectedVariants.Any(v => string.Equals(v.SkuCode, SelectedVariantForSupplierEdit.SkuCode, StringComparison.OrdinalIgnoreCase)))
+            catch (Exception ex)
             {
-                RebuildSelectedVariantSuppliers();
-            }
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Assign suppliers to Item Master variants",
+                    ex);
 
-            StatusMessage = $"Assigned: {addedCount}, Updated: {updatedCount}. Click SAVE.";
-            NotifyCommandStates();
+                _messageBoxService.ShowError(
+                    "Supplier assignment could not be completed. Existing variant " +
+                    "supplier links were preserved where possible. BackOffice will " +
+                    "remain open. Technical details were saved in the local POS Logs folder.",
+                    "Supplier Assignment Error");
+            }
         }
 
         private void AddOrUpdateSupplierLinkForVariant(ItemVariant variant, Supplier supplier, decimal cost, int moq, ref int addedCount, ref int updatedCount)
@@ -1618,22 +1690,53 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task DeleteUnusedItemAsync()
         {
             int parentId = GetCurrentParentId();
-            if (parentId <= 0) return;
+            if (parentId <= 0)
+                return;
+
             IsBusy = true;
+
             try
             {
-                var deleteCheck = await _itemMasterRepository.CanHardDeleteMatrixAsync(parentId);
+                var deleteCheck = await _itemMasterRepository
+                    .CanHardDeleteMatrixAsync(parentId);
+
                 if (!deleteCheck.CanDelete)
                 {
-                    _messageBoxService.ShowWarning("This item cannot be deleted.", "Delete Blocked");
+                    _messageBoxService.ShowWarning(
+                        "This item cannot be deleted.",
+                        "Delete Blocked");
                     return;
                 }
             }
-            finally { IsBusy = false; }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Check Item Master hard-delete eligibility",
+                    ex);
 
-            if (!_messageBoxService.ShowConfirmation($"Permanently delete unused item '{GetCurrentItemName()}'?", "Confirm Delete", MessageBoxImage.Warning)) return;
+                _messageBoxService.ShowError(
+                    "The item delete check could not be completed. " +
+                    "BackOffice will remain open. Technical details were saved in " +
+                    "the local POS Logs folder.",
+                    "Delete Check Failed");
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+
+            if (!_messageBoxService.ShowConfirmation(
+                    $"Permanently delete unused item '{GetCurrentItemName()}'?",
+                    "Confirm Delete",
+                    MessageBoxImage.Warning))
+            {
+                return;
+            }
 
             IsBusy = true;
+
             try
             {
                 await _itemMasterRepository.HardDeleteMatrixAsync(parentId);
@@ -1641,43 +1744,105 @@ namespace POS.BackOffice.UI.ViewModels
                 Clear();
                 _messageBoxService.ShowInformation("Unused item deleted.", "Deleted");
             }
-            finally { IsBusy = false; }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Delete unused Item Master item",
+                    ex);
+
+                _messageBoxService.ShowError(
+                    "The unused item could not be deleted. BackOffice will remain open. " +
+                    "Refresh the item list before trying again.",
+                    "Delete Failed");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanDeactivateItem))]
         private async Task DeactivateItemAsync()
         {
             int parentId = GetCurrentParentId();
-            if (parentId <= 0) return;
-            if (!_messageBoxService.ShowConfirmation($"Deactivate item '{GetCurrentItemName()}'?", "Confirm Deactivation", MessageBoxImage.Warning)) return;
+            if (parentId <= 0)
+                return;
+
+            if (!_messageBoxService.ShowConfirmation(
+                    $"Deactivate item '{GetCurrentItemName()}'?",
+                    "Confirm Deactivation",
+                    MessageBoxImage.Warning))
+            {
+                return;
+            }
 
             IsBusy = true;
+
             try
             {
                 await _itemMasterRepository.DeactivateMatrixAsync(parentId);
                 await LoadMasterGridInternalAsync();
                 Clear();
             }
-            finally { IsBusy = false; }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Deactivate Item Master item",
+                    ex);
+
+                _messageBoxService.ShowError(
+                    "The item could not be deactivated. BackOffice will remain open. " +
+                    "Refresh the item list before trying again.",
+                    "Deactivation Failed");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanReactivateItem))]
         private async Task ReactivateItemAsync()
         {
             int parentId = GetCurrentParentId();
-            if (parentId <= 0) return;
-            if (!_messageBoxService.ShowConfirmation($"Reactivate item '{GetCurrentItemName()}'?", "Confirm Reactivation", MessageBoxImage.Question)) return;
+            if (parentId <= 0)
+                return;
+
+            if (!_messageBoxService.ShowConfirmation(
+                    $"Reactivate item '{GetCurrentItemName()}'?",
+                    "Confirm Reactivation",
+                    MessageBoxImage.Question))
+            {
+                return;
+            }
 
             IsBusy = true;
+
             try
             {
                 await _itemMasterRepository.ReactivateMatrixAsync(parentId);
                 await LoadMasterGridInternalAsync();
                 Clear();
             }
-            finally { IsBusy = false; }
-        }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Reactivate Item Master item",
+                    ex);
 
+                _messageBoxService.ShowError(
+                    "The item could not be reactivated. BackOffice will remain open. " +
+                    "Refresh the item list before trying again.",
+                    "Reactivation Failed");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
         [RelayCommand(CanExecute = nameof(CanDeactivateItem))]
         private async Task DeleteAsync() => await DeactivateItemAsync();
 

@@ -80,8 +80,28 @@ namespace POS.BackOffice.UI.ViewModels
             if (CurrentPage is TPage)
                 return;
 
-            CurrentPage =
-                _serviceProvider.GetRequiredService<TPage>();
+            try
+            {
+                object nextPage =
+                    _serviceProvider.GetRequiredService<TPage>();
+
+                CurrentPage = nextPage;
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    $"Navigate to {typeof(TPage).FullName}",
+                    ex);
+
+                MessageBox.Show(
+                    "The selected page could not be opened. BackOffice will remain " +
+                    "on the current page. Technical details were saved in the local " +
+                    "POS Logs folder.",
+                    "Page Could Not Open",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         // ==========================================

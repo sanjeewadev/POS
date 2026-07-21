@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -123,6 +124,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Initialize Express Item Admin",
+                    ex);
+
                 StatusMessage = "Failed to load express item admin page.";
 
                 MessageBox.Show(
@@ -173,23 +179,27 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                SearchResults.Clear();
-
                 var results = await _repository.SearchSellableItemsAsync(search);
 
+                SearchResults.Clear();
                 foreach (var item in results)
                     SearchResults.Add(item);
 
                 SearchResultCount = SearchResults.Count;
-
                 StatusMessage = $"Found {SearchResultCount} item(s).";
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Search Express Item candidates",
+                    ex);
+
                 StatusMessage = "Item search failed.";
 
                 MessageBox.Show(
-                    $"Item search failed:\n\n{ex.Message}",
+                    "The item search could not be completed. Existing results were preserved. " +
+                    "BackOffice will remain open. Technical details were saved in the local POS Logs folder.",
                     "Database Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -309,6 +319,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Save Express Item button",
+                    ex);
+
                 StatusMessage = "Failed to save express button.";
 
                 MessageBox.Show(
@@ -363,6 +378,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Delete Express Item button",
+                    ex);
+
                 StatusMessage = "Failed to delete express button.";
 
                 MessageBox.Show(
@@ -384,19 +404,77 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task ClearAsync()
         {
-            await PrepareBlankLayoutAsync();
+            if (IsBusy)
+                return;
 
-            SelectedLayout = null;
-            SelectedSearchItem = null;
+            IsBusy = true;
 
-            StatusMessage = "Form cleared.";
+            try
+            {
+                await PrepareBlankLayoutAsync();
+
+                SelectedLayout = null;
+                SelectedSearchItem = null;
+
+                StatusMessage = "Form cleared.";
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Clear Express Item form",
+                    ex);
+
+                StatusMessage = "Failed to clear the express item form.";
+
+                MessageBox.Show(
+                    "The express item form could not be cleared. " +
+                    "BackOffice will remain open. Technical details were saved " +
+                    "in the local POS Logs folder.",
+                    "Express Item Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         [RelayCommand]
         private async Task RefreshAsync()
         {
-            await LoadLayoutsAsync();
-            StatusMessage = "Express button list refreshed.";
+            if (IsBusy)
+                return;
+
+            IsBusy = true;
+
+            try
+            {
+                await LoadLayoutsAsync();
+                StatusMessage = "Express button list refreshed.";
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Refresh Express Item layouts",
+                    ex);
+
+                StatusMessage = "Failed to refresh the express button list.";
+
+                MessageBox.Show(
+                    "The express button list could not be refreshed. " +
+                    "BackOffice will remain open. Technical details were saved " +
+                    "in the local POS Logs folder.",
+                    "Express Item Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         private async Task PrepareBlankLayoutAsync()
@@ -417,9 +495,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task LoadLayoutsAsync()
         {
-            Layouts.Clear();
-
             var rows = await _repository.GetAdminLayoutsAsync();
+
+            Layouts.Clear();
 
             foreach (var row in rows)
                 Layouts.Add(row);

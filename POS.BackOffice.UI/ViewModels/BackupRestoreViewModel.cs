@@ -192,6 +192,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Read current database before backup",
+                    ex);
+
                 SetStatus(
                     $"Current database could not be read: " +
                     $"{ex.Message}",
@@ -199,30 +204,55 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            Directory.CreateDirectory(
-                _backupService.GetDefaultBackupFolder());
+            SaveFileDialog dialog;
 
-            SaveFileDialog dialog =
-                new()
-                {
-                    Title = "Save Manual POS Backup",
-                    InitialDirectory =
-                        _backupService
-                            .GetDefaultBackupFolder(),
-                    FileName =
-                        _backupService
-                            .GetSuggestedBackupFileName(
-                                currentInfo.StoreDisplayName),
-                    Filter =
-                        "POS Backup Files (*.posbackup)|*.posbackup",
-                    DefaultExt =
-                        BackupService.BackupExtension,
-                    AddExtension = true,
-                    OverwritePrompt = true
-                };
+            try
+            {
+                string backupFolder =
+                    _backupService.GetDefaultBackupFolder();
 
-            if (dialog.ShowDialog() != true)
+                Directory.CreateDirectory(backupFolder);
+
+                dialog =
+                    new SaveFileDialog
+                    {
+                        Title = "Save Manual POS Backup",
+                        InitialDirectory = backupFolder,
+                        FileName =
+                            _backupService
+                                .GetSuggestedBackupFileName(
+                                    currentInfo.StoreDisplayName),
+                        Filter =
+                            "POS Backup Files (*.posbackup)|*.posbackup",
+                        DefaultExt =
+                            BackupService.BackupExtension,
+                        AddExtension = true,
+                        OverwritePrompt = true
+                    };
+
+                if (dialog.ShowDialog() != true)
+                    return;
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Prepare manual backup destination",
+                    ex);
+
+                SetStatus(
+                    "The backup destination could not be opened.",
+                    "#B91C1C");
+
+                MessageBox.Show(
+                    "The backup folder or Save dialog could not be opened. " +
+                    "BackOffice will remain open. Check folder permissions and " +
+                    "available drives, then try again.",
+                    "Backup Destination Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
                 return;
+            }
 
             try
             {
@@ -283,9 +313,21 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Create manual POS backup",
+                    ex);
+
                 SetStatus(
                     $"Create backup failed: {ex.Message}",
                     "#B91C1C");
+
+                MessageBox.Show(
+                    "The backup could not be created. BackOffice will remain open. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "Backup Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
             finally
             {
@@ -296,16 +338,36 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task SelectBackupFileAsync()
         {
-            string filePath =
-                SelectBackupFile();
+            try
+            {
+                string filePath =
+                    SelectBackupFile();
 
-            if (string.IsNullOrWhiteSpace(filePath))
-                return;
+                if (string.IsNullOrWhiteSpace(filePath))
+                    return;
 
-            SelectedBackupFile = filePath;
+                SelectedBackupFile = filePath;
 
-            await VerifySelectedBackupCoreAsync(
-                recordHistory: false);
+                await VerifySelectedBackupCoreAsync(
+                    recordHistory: false);
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Select POS backup file",
+                    ex);
+
+                ApplyVerificationFailure(
+                    "The backup file could not be selected.");
+
+                MessageBox.Show(
+                    "The backup file dialog could not be opened. " +
+                    "BackOffice will remain open.",
+                    "Backup Selection Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]
@@ -331,10 +393,43 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            BackupResult verification =
-                await _backupService
-                    .VerifyBackupAsync(
-                        SelectedBackupFile);
+            BackupResult verification;
+
+            try
+            {
+                IsBusy = true;
+                SetStatus(
+                    "Verifying the selected backup before restore...",
+                    "#2B5B84");
+
+                verification =
+                    await _backupService
+                        .VerifyBackupAsync(
+                            SelectedBackupFile);
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Verify backup before restore",
+                    ex);
+
+                ApplyVerificationFailure(
+                    "The selected backup could not be verified.");
+
+                MessageBox.Show(
+                    "The selected backup could not be read or verified. " +
+                    "BackOffice will remain open. Technical details were saved " +
+                    "in the local POS Logs folder.",
+                    "Backup Verification Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
 
             if (!verification.Success)
             {
@@ -435,6 +530,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Restore POS backup",
+                    ex);
+
                 SetStatus(
                     $"Restore failed: {ex.Message}",
                     "#B91C1C");
@@ -468,6 +568,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Open POS backup folder",
+                    ex);
+
                 SetStatus(
                     $"Failed to open backup folder: " +
                     $"{ex.Message}",
@@ -545,6 +650,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Verify selected POS backup",
+                    ex);
+
                 ApplyVerificationFailure(
                     $"Verification failed: {ex.Message}");
             }
@@ -731,21 +841,42 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool EnsureSelectedBackupFile()
         {
-            if (!string.IsNullOrWhiteSpace(
-                    SelectedBackupFile) &&
-                File.Exists(SelectedBackupFile))
+            try
             {
+                if (!string.IsNullOrWhiteSpace(
+                        SelectedBackupFile) &&
+                    File.Exists(SelectedBackupFile))
+                {
+                    return true;
+                }
+
+                string selectedFile =
+                    SelectBackupFile();
+
+                if (string.IsNullOrWhiteSpace(selectedFile))
+                    return false;
+
+                SelectedBackupFile = selectedFile;
                 return true;
             }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Select required POS backup file",
+                    ex);
 
-            string selectedFile =
-                SelectBackupFile();
+                ApplyVerificationFailure(
+                    "The backup file could not be selected.");
 
-            if (string.IsNullOrWhiteSpace(selectedFile))
+                MessageBox.Show(
+                    "The backup file dialog could not be opened. " +
+                    "BackOffice will remain open.",
+                    "Backup Selection Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
                 return false;
-
-            SelectedBackupFile = selectedFile;
-            return true;
+            }
         }
 
         private string GetCurrentUserName()

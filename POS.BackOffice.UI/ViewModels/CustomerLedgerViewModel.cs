@@ -159,20 +159,42 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            string text = _statementFormatter.Format(CurrentSummary, FilterStartDate, FilterEndDate);
-            var document = new FlowDocument
+            try
             {
-                FontFamily = new FontFamily("Consolas"),
-                FontSize = 10,
-                PagePadding = new Thickness(36),
-                ColumnGap = 0,
-                ColumnWidth = double.PositiveInfinity
-            };
-            document.Blocks.Add(new Paragraph(new Run(text)) { Margin = new Thickness(0) });
+                string text = _statementFormatter.Format(CurrentSummary, FilterStartDate, FilterEndDate);
+                var document = new FlowDocument
+                {
+                    FontFamily = new FontFamily("Consolas"),
+                    FontSize = 10,
+                    PagePadding = new Thickness(36),
+                    ColumnGap = 0,
+                    ColumnWidth = double.PositiveInfinity
+                };
+                document.Blocks.Add(new Paragraph(new Run(text)) { Margin = new Thickness(0) });
 
-            var printDialog = new PrintDialog();
-            if (printDialog.ShowDialog() == true)
-                printDialog.PrintDocument(((IDocumentPaginatorSource)document).DocumentPaginator, $"Customer Statement - {CurrentSummary.CustomerCode}");
+                var printDialog = new PrintDialog();
+                if (printDialog.ShowDialog() == true)
+                {
+                    printDialog.PrintDocument(
+                        ((IDocumentPaginatorSource)document).DocumentPaginator,
+                        $"Customer Statement - {CurrentSummary.CustomerCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Print Customer Ledger statement",
+                    ex);
+
+                MessageBox.Show(
+                    "The customer statement could not be printed. " +
+                    "BackOffice will remain open. Check the printer and Windows " +
+                    "Print Spooler, then try again.",
+                    "Customer Statement Print Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]

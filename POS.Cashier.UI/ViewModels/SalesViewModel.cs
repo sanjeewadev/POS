@@ -1491,50 +1491,88 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            string authorizedBy = CashierName;
-            Window? owner = Application.Current?.MainWindow;
-
-            var authVM = App.Services!.GetRequiredService<ManagerAuthViewModel>();
-            var authDialog = new POS.Cashier.UI.Dialogs.ManagerAuthDialogView(authVM)
+            try
             {
-                Owner = owner
-            };
+                string authorizedBy = CashierName;
+                Window? owner = Application.Current?.MainWindow;
 
-            if (authDialog.ShowDialog() != true)
-                return;
+                IServiceProvider services = App.Services
+                    ?? throw new InvalidOperationException(
+                        "Cashier services are not available.");
 
-            authorizedBy = authVM.AuthorizedUsername;
+                var authVM = services.GetRequiredService<ManagerAuthViewModel>();
+                var authDialog = new POS.Cashier.UI.Dialogs.ManagerAuthDialogView(authVM)
+                {
+                    Owner = owner
+                };
 
-            var floatVM = App.Services!.GetRequiredService<FloatCashViewModel>();
-            floatVM.Initialize(_currentShiftId, authorizedBy);
+                if (authDialog.ShowDialog() != true)
+                    return;
 
-            var floatDialog = new POS.Cashier.UI.Dialogs.FloatCashDialog(floatVM)
+                authorizedBy = authVM.AuthorizedUsername;
+
+                var floatVM = services.GetRequiredService<FloatCashViewModel>();
+                floatVM.Initialize(_currentShiftId, authorizedBy);
+
+                var floatDialog = new POS.Cashier.UI.Dialogs.FloatCashDialog(floatVM)
+                {
+                    Owner = owner
+                };
+                floatDialog.ShowDialog();
+            }
+            catch (Exception ex)
             {
-                Owner = owner
-            };
-            floatDialog.ShowDialog();
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Open Float Cash workflow",
+                    ex);
 
-            await Task.CompletedTask;
+                await ShowNotificationAsync(
+                    "Float Cash could not be opened. Cashier remains available.",
+                    "#EF4444");
+            }
         }
 
         [RelayCommand]
         public async Task PrintXReportAsync()
         {
-            ShiftCashSummaryDto summary = await _tillRepository
-                .GetShiftCashSummaryAsync(_currentShiftId, false)
-                ?? throw new InvalidOperationException("The active shift summary could not be loaded.");
+            try
+            {
+                ShiftCashSummaryDto summary = await _tillRepository
+                    .GetShiftCashSummaryAsync(_currentShiftId, false)
+                    ?? throw new InvalidOperationException(
+                        "The active shift summary could not be loaded.");
 
-            if (string.IsNullOrWhiteSpace(_receiptPrinterName))
-                throw new InvalidOperationException("No receipt printer is configured in Terminal Settings.");
+                if (string.IsNullOrWhiteSpace(_receiptPrinterName))
+                {
+                    throw new InvalidOperationException(
+                        "No receipt printer is configured in Terminal Settings.");
+                }
 
-            string reportText = App.Services!
-                .GetRequiredService<ShiftReportTextFormatter>()
-                .FormatXReport(summary, _receiptPaperWidth);
+                IServiceProvider services = App.Services
+                    ?? throw new InvalidOperationException(
+                        "Cashier services are not available.");
 
-            await _printService.PrintTextAsync(
-                reportText,
-                _receiptPrinterName,
-                "POS X Report");
+                string reportText = services
+                    .GetRequiredService<ShiftReportTextFormatter>()
+                    .FormatXReport(summary, _receiptPaperWidth);
+
+                await _printService.PrintTextAsync(
+                    reportText,
+                    _receiptPrinterName,
+                    "POS X Report");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "Cashier",
+                    "Print X Report command",
+                    ex);
+
+                await ShowNotificationAsync(
+                    "X Report could not be printed. Cashier remains available.",
+                    "#EF4444");
+            }
         }
 
         private async Task AddToCartFromMessageAsync(AddToCartRequest request)

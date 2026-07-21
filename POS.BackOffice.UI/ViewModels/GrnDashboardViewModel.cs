@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -111,6 +112,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Initialize GRN Dashboard",
+                    ex);
+
                 StatusMessage = "Failed to initialize GRN dashboard.";
 
                 _messageBoxService.ShowError(
@@ -125,9 +131,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task LoadFilterSuppliersAsync()
         {
-            FilterSuppliers.Clear();
-
             var suppliers = await _supplierRepository.GetAllAsync();
+
+            FilterSuppliers.Clear();
 
             foreach (var supplier in suppliers
                          .Where(s => !s.IsDeactivated)
@@ -222,16 +228,18 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task RefreshDatabaseAsync()
         {
-            await LoadFilterSuppliersAsync();
-            await LoadDataAsync();
+            await LoadDataAsync(refreshSuppliers: true);
         }
 
-        private async Task LoadDataAsync()
+        private async Task LoadDataAsync(bool refreshSuppliers = false)
         {
             IsBusy = true;
 
             try
             {
+                if (refreshSuppliers)
+                    await LoadFilterSuppliersAsync();
+
                 await LoadDataInternalAsync();
                 StatusMessage = $"{GrnDocuments.Count} GRN document(s) loaded.";
             }
@@ -245,6 +253,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Load GRN Dashboard",
+                    ex);
+
                 StatusMessage = "Failed to load GRN documents.";
 
                 _messageBoxService.ShowError(
@@ -259,13 +272,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task LoadDataInternalAsync()
         {
-            GrnDocuments.Clear();
-
             if (FilterStartDate.HasValue &&
                 FilterEndDate.HasValue &&
                 FilterEndDate.Value.Date < FilterStartDate.Value.Date)
             {
-                throw new InvalidOperationException("Filter end date cannot be before start date.");
+                throw new InvalidOperationException(
+                    "Filter end date cannot be before start date.");
             }
 
             var data = await _grnHistoryRepository.GetGrnSummariesAsync(
@@ -276,6 +288,7 @@ namespace POS.BackOffice.UI.ViewModels
                 FilterEndDate,
                 ShowCancelledGrns);
 
+            GrnDocuments.Clear();
             foreach (var grn in data)
                 GrnDocuments.Add(grn);
         }

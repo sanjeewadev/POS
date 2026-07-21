@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
 using POS.Core.Services.Exports;
 
 namespace POS.BackOffice.UI.ViewModels
@@ -125,6 +126,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Initialize Purchase Order Dashboard",
+                    ex);
+
                 StatusMessage = "Failed to initialize PO dashboard.";
 
                 _messageBoxService.ShowError(
@@ -139,9 +145,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task LoadFilterSuppliersAsync()
         {
-            FilterSuppliers.Clear();
-
             var suppliers = await _supplierRepository.GetAllAsync();
+
+            FilterSuppliers.Clear();
 
             foreach (var supplier in suppliers
                          .Where(s => !s.IsDeactivated)
@@ -243,16 +249,18 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
         private async Task RefreshDatabaseAsync()
         {
-            await LoadFilterSuppliersAsync();
-            await LoadDataAsync();
+            await LoadDataAsync(refreshSuppliers: true);
         }
 
-        private async Task LoadDataAsync()
+        private async Task LoadDataAsync(bool refreshSuppliers = false)
         {
             IsBusy = true;
 
             try
             {
+                if (refreshSuppliers)
+                    await LoadFilterSuppliersAsync();
+
                 await LoadDataInternalAsync();
 
                 StatusMessage = $"{PurchaseOrders.Count} purchase order(s) loaded.";
@@ -267,6 +275,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Load Purchase Order Dashboard",
+                    ex);
+
                 StatusMessage = "Failed to load purchase orders.";
 
                 _messageBoxService.ShowError(
@@ -281,13 +294,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task LoadDataInternalAsync()
         {
-            PurchaseOrders.Clear();
-
             if (FilterStartDate.HasValue &&
                 FilterEndDate.HasValue &&
                 FilterEndDate.Value.Date < FilterStartDate.Value.Date)
             {
-                throw new InvalidOperationException("Filter end date cannot be before start date.");
+                throw new InvalidOperationException(
+                    "Filter end date cannot be before start date.");
             }
 
             var data = await _poRepository.GetPoSummariesAsync(
@@ -298,6 +310,7 @@ namespace POS.BackOffice.UI.ViewModels
                 FilterEndDate,
                 ShowCancelledPurchaseOrders);
 
+            PurchaseOrders.Clear();
             foreach (var po in data)
                 PurchaseOrders.Add(po);
         }

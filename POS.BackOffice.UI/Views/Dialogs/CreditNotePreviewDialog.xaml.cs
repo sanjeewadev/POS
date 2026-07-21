@@ -1,4 +1,5 @@
 using System;
+using POS.Core.Services;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -49,8 +50,28 @@ namespace POS.BackOffice.UI.Views.Dialogs
 
         private void Copy_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(PreviewTextBox.Text))
+            if (string.IsNullOrWhiteSpace(PreviewTextBox.Text))
+                return;
+
+            try
+            {
                 Clipboard.SetText(PreviewTextBox.Text);
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Copy Customer Credit Note",
+                    ex);
+
+                MessageBox.Show(
+                    "The document text could not be copied because the Windows " +
+                    "clipboard is busy. BackOffice will remain open. Try again in " +
+                    "a moment.",
+                    "Copy Credit Note",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();

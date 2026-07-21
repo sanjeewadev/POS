@@ -94,15 +94,16 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task SubmitAsync()
         {
-            if (!CanSubmit || SelectedClaim == null)
-                throw new InvalidOperationException("Select a Draft claim.");
-
             await RunBusyAsync(async () =>
             {
+                if (!CanSubmit || SelectedClaim == null)
+                    throw new InvalidOperationException("Select a Draft claim.");
+
                 await _claimRepository.MarkSubmittedAsync(
                     SelectedClaim.Id,
                     CurrentUsername(),
                     "Submitted from Supplier Claims page.");
+
                 await LoadClaimsCoreAsync();
                 SetStatus("Supplier claim submitted.", "#166534");
             });
@@ -238,6 +239,11 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Supplier Claims operation",
+                    ex);
+
                 SetStatus(ex.Message, "#B91C1C");
             }
             finally

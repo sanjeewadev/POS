@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using POS.Core.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -71,7 +72,16 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Audit Engine Error: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Load Float Cash Log",
+                    ex);
+
+                MessageBox.Show(
+                    $"Audit Engine Error: {ex.Message}",
+                    "Database Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
@@ -90,11 +100,34 @@ namespace POS.BackOffice.UI.ViewModels
             if (clickedShift == null)
                 return;
 
-            SelectedShift = clickedShift;
-            IsDrillDownOpen = true;
-            ShiftMovements.Clear();
-            foreach (CashMovementDto record in await _repository.GetShiftLedgerAsync(clickedShift.ShiftId))
-                ShiftMovements.Add(record);
+            try
+            {
+                var records = await _repository
+                    .GetShiftLedgerAsync(clickedShift.ShiftId);
+
+                SelectedShift = clickedShift;
+                ShiftMovements.Clear();
+
+                foreach (CashMovementDto record in records)
+                    ShiftMovements.Add(record);
+
+                IsDrillDownOpen = true;
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Open Float Cash Log drill-down",
+                    ex);
+
+                MessageBox.Show(
+                    "The selected shift details could not be loaded. " +
+                    "BackOffice will remain open. Technical details were saved " +
+                    "in the local POS Logs folder.",
+                    "Shift Details",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]
@@ -109,47 +142,73 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            var dialog = new SaveFileDialog
+            try
             {
-                Title = "Export Shift Cash Audit",
-                Filter = "CSV files (*.csv)|*.csv",
-                FileName = $"Shift_Cash_Audit_{StartDate:yyyyMMdd}_{EndDate:yyyyMMdd}.csv",
-                AddExtension = true,
-                DefaultExt = ".csv"
-            };
-
-            if (dialog.ShowDialog() != true)
-                return;
-
-            var csv = new StringBuilder();
-            csv.AppendLine("ShiftId,ZReportNo,Terminal,Cashier,OpenedAt,ClosedAt,Status,OpeningCash,CashTender,CardTender,ChequeTender,OtherTender,PaidInAndFloatIn,PaidOutAndRefunds,ExpectedCash,CountedCash,Variance,AuthorizedBy");
-            foreach (ShiftAuditDto row in Shifts)
-            {
-                csv.AppendLine(string.Join(",", new[]
+                var dialog = new SaveFileDialog
                 {
-                    row.ShiftId.ToString(CultureInfo.InvariantCulture),
-                    Csv(row.ZReportNo),
-                    Csv(row.TerminalNo),
-                    Csv(row.CashierName),
-                    Csv(row.OpenTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
-                    Csv(row.CloseTime?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? string.Empty),
-                    Csv(row.Status),
-                    Money(row.OpeningFloat),
-                    Money(row.CashTenderTotal),
-                    Money(row.CardTenderTotal),
-                    Money(row.ChequeTenderTotal),
-                    Money(row.OtherTenderTotal),
-                    Money(row.TotalCashIn - row.CashTenderTotal),
-                    Money(row.TotalCashOut),
-                    Money(row.ExpectedCash),
-                    Money(row.ActualCash),
-                    Money(row.Variance),
-                    Csv(row.AuthorizedBy)
-                }));
-            }
+                    Title = "Export Shift Cash Audit",
+                    Filter = "CSV files (*.csv)|*.csv",
+                    FileName = $"Shift_Cash_Audit_{StartDate:yyyyMMdd}_{EndDate:yyyyMMdd}.csv",
+                    AddExtension = true,
+                    DefaultExt = ".csv"
+                };
 
-            File.WriteAllText(dialog.FileName, csv.ToString(), new UTF8Encoding(true));
-            MessageBox.Show("Shift cash audit CSV exported successfully.", "CSV Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (dialog.ShowDialog() != true)
+                    return;
+
+                var csv = new StringBuilder();
+                csv.AppendLine("ShiftId,ZReportNo,Terminal,Cashier,OpenedAt,ClosedAt,Status,OpeningCash,CashTender,CardTender,ChequeTender,OtherTender,PaidInAndFloatIn,PaidOutAndRefunds,ExpectedCash,CountedCash,Variance,AuthorizedBy");
+                foreach (ShiftAuditDto row in Shifts)
+                {
+                    csv.AppendLine(string.Join(",", new[]
+                    {
+                        row.ShiftId.ToString(CultureInfo.InvariantCulture),
+                        Csv(row.ZReportNo),
+                        Csv(row.TerminalNo),
+                        Csv(row.CashierName),
+                        Csv(row.OpenTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)),
+                        Csv(row.CloseTime?.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) ?? string.Empty),
+                        Csv(row.Status),
+                        Money(row.OpeningFloat),
+                        Money(row.CashTenderTotal),
+                        Money(row.CardTenderTotal),
+                        Money(row.ChequeTenderTotal),
+                        Money(row.OtherTenderTotal),
+                        Money(row.TotalCashIn - row.CashTenderTotal),
+                        Money(row.TotalCashOut),
+                        Money(row.ExpectedCash),
+                        Money(row.ActualCash),
+                        Money(row.Variance),
+                        Csv(row.AuthorizedBy)
+                    }));
+                }
+
+                File.WriteAllText(
+                    dialog.FileName,
+                    csv.ToString(),
+                    new UTF8Encoding(true));
+
+                MessageBox.Show(
+                    "Shift cash audit CSV exported successfully.",
+                    "CSV Export",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Export Float Cash Log CSV",
+                    ex);
+
+                MessageBox.Show(
+                    "The shift cash audit could not be exported. " +
+                    "BackOffice will remain open. Check the selected folder and " +
+                    "available disk space, then try again.",
+                    "CSV Export Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         private static string Money(decimal value) => value.ToString("0.00", CultureInfo.InvariantCulture);

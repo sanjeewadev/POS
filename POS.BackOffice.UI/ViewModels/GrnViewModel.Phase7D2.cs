@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Models.DTOs;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -83,35 +84,50 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand(CanExecute = nameof(CanOpenBulkSellingPriceDialog))]
         private async Task OpenBulkSellingPriceDialogAsync()
         {
-            if (!await RecalculateTotalsAuthoritativelyAsync(showErrors: true))
-                return;
-
-            var rows = GrnLines
-                .Where(line => line.ReceivedQty > 0m)
-                .OrderBy(line => line.ItemCode)
-                .ThenBy(line => line.SkuCode)
-                .ToList();
-
-            if (rows.Count == 0)
+            try
             {
-                _messageBoxService.ShowWarning(
-                    "Add received items to the GRN before opening the selling-price tool.",
-                    "No GRN Rows");
-                return;
+                if (!await RecalculateTotalsAuthoritativelyAsync(showErrors: true))
+                    return;
+
+                var rows = GrnLines
+                    .Where(line => line.ReceivedQty > 0m)
+                    .OrderBy(line => line.ItemCode)
+                    .ThenBy(line => line.SkuCode)
+                    .ToList();
+
+                if (rows.Count == 0)
+                {
+                    _messageBoxService.ShowWarning(
+                        "Add received items to the GRN before opening the selling-price tool.",
+                        "No GRN Rows");
+                    return;
+                }
+
+                var dialog = new GrnBulkSellingPriceDialog(rows)
+                {
+                    Owner = GetDialogOwner()
+                };
+
+                if (dialog.ShowDialog() != true)
+                    return;
+
+                NotifyPriceUpdateSummary();
+                await RecalculateTotalsAuthoritativelyAsync(showErrors: true);
+                StatusMessage = PriceUpdateSummaryText;
             }
-
-            var dialog = new GrnBulkSellingPriceDialog(rows)
+            catch (Exception ex)
             {
-                Owner = GetDialogOwner()
-            };
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Open GRN bulk selling-price dialog",
+                    ex);
 
-            if (dialog.ShowDialog() != true)
-                return;
-
-            NotifyPriceUpdateSummary();
-            await RecalculateTotalsAuthoritativelyAsync(showErrors: true);
-
-            StatusMessage = PriceUpdateSummaryText;
+                _messageBoxService.ShowError(
+                    "The GRN selling-price tool could not be opened or completed. " +
+                    "The current GRN remains available and BackOffice will remain open. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "GRN Selling-Price Error");
+            }
         }
 
         private bool CanOpenBulkSellingPriceDialog()
