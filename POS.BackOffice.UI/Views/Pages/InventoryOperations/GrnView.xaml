@@ -681,10 +681,17 @@
                                                 Binding="{Binding LandedCost, StringFormat=N2}"
                                                 IsReadOnly="True"
                                                 Width="90"/>
-                            <DataGridTextColumn Header="Expiry"
-                                                Binding="{Binding ExpiryDisplayText}"
-                                                IsReadOnly="True"
-                                                Width="90"/>
+                            <DataGridTemplateColumn Header="Expiry" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <DatePicker SelectedDate="{Binding ExpiryDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    IsEnabled="{Binding IsExpiryEnabled, Mode=OneWay}"
+                                                    ToolTip="{Binding ExpiryRequirementText, Mode=OneWay}"
+                                                    SelectedDateFormat="Short"
+                                                    Height="23"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Current Retail"
                                                 Binding="{Binding CurrentRetailPrice, StringFormat=N2}"
                                                 IsReadOnly="True"

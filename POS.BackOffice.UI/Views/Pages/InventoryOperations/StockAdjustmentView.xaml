@@ -454,7 +454,7 @@
                                                         Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding BatchDisplayText}"
+                                            <TextBox Text="{Binding BatchDisplayText, Mode=OneWay}"
                                                      Style="{StaticResource CopyableGridTextBox}"
                                                      Foreground="#003366"
                                                      FontWeight="Bold"/>
@@ -466,7 +466,7 @@
                                                         Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding BatchBarcodeDisplayText}"
+                                            <TextBox Text="{Binding BatchBarcodeDisplayText, Mode=OneWay}"
                                                      Style="{StaticResource CopyableGridTextBox}"
                                                      Foreground="#111827"/>
                                         </DataTemplate>
@@ -654,7 +654,7 @@
                                             CellStyle="{StaticResource FrozenCell}">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding BatchDisplayText}"
+                                <TextBox Text="{Binding BatchDisplayText, Mode=OneWay}"
                                          Style="{StaticResource CopyableGridTextBox}"
                                          Foreground="#003366"
                                          FontWeight="Bold"/>
@@ -666,7 +666,7 @@
                                             Width="125">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Text="{Binding BatchBarcodeDisplayText}"
+                                <TextBox Text="{Binding BatchBarcodeDisplayText, Mode=OneWay}"
                                          Style="{StaticResource CopyableGridTextBox}"
                                          Foreground="#111827"/>
                             </DataTemplate>

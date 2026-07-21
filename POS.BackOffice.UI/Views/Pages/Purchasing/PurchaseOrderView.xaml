@@ -359,6 +359,7 @@
                         <ColumnDefinition Width="85"/>
                         <ColumnDefinition Width="105"/>
                         <ColumnDefinition Width="95"/>
+                        <ColumnDefinition Width="90"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="145"/>
                     </Grid.ColumnDefinitions>
@@ -378,7 +379,11 @@
                              Text="{Binding BulkMatrixExpectedCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Style="{StaticResource ClassicInput}"
                              HorizontalContentAlignment="Right"/>
-                    <Button Grid.Column="6"
+                    <Button Grid.Column="5"
+                            Content="APPLY COST"
+                            Command="{Binding ApplyBulkMatrixExpectedCostCommand}"
+                            Style="{StaticResource ClassicButton}"/>
+                    <Button Grid.Column="7"
                             Content="ADD MATRIX ITEMS"
                             Command="{Binding AddMatrixCommand}"
                             Style="{StaticResource PrimaryButton}"/>
