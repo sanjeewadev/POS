@@ -1,4 +1,4 @@
-<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.BarcodePrinterView"
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.BarcodePrinterView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -546,8 +546,10 @@
                                       IsChecked="{Binding PrintConfig.PrintStoreName, Mode=TwoWay}"
                                       Margin="0,0,0,5"/>
 
-                            <TextBox Text="{Binding PrintConfig.StoreName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox Text="{Binding PrintConfig.StoreName, Mode=OneWay}"
+                                     IsReadOnly="True"
                                      IsEnabled="{Binding PrintConfig.PrintStoreName}"
+                                     ToolTip="Configured in Store Settings. The barcode page does not maintain a separate store name."
                                      Style="{StaticResource ClassicInput}"
                                      Margin="20,0,0,8"/>
 

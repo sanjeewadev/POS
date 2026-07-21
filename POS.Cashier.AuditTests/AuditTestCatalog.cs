@@ -1,4 +1,4 @@
-namespace POS.Cashier.AuditTests;
+﻿namespace POS.Cashier.AuditTests;
 
 internal static class AuditTestCatalog
 {
@@ -51,6 +51,7 @@ internal static class AuditTestCatalog
         new("BackOffice repeated navigation and page initialization are reliable", AuditGroups.SourcePolicy, BackOfficeNavigationSourcePolicyAuditTests.NavigationLifecycleIsControlledAsync),
         new("BackOffice purchasing and stock operational controls are wired", AuditGroups.SourcePolicy, BackOfficeOperationalSourcePolicyAuditTests.PurchasingAndStockControlsAreWiredAsync),
         new("Recoverable BackOffice and Cashier UI failures are contained", AuditGroups.SourcePolicy, UiCrashResilienceSourcePolicyAuditTests.RecoverableUiFailuresAreContainedAsync),
+        new("Store identity and licence requests are consistent", AuditGroups.SourcePolicy, StoreIdentitySourcePolicyAuditTests.StoreIdentityAndLicenceRequestsAreConsistentAsync),
         new("Paid In and Paid Out UI do not require manager password", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PaidInAndPaidOutDoNotRequireManagerPasswordAsync),
         new("Below-minimum New Price captures manager identity", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PriceOverrideUiCapturesManagerIdentityAsync),
         new("Checkout failure path writes a technical log", AuditGroups.SourcePolicy, SourcePolicyAuditTests.CheckoutFailurePathWritesTechnicalLogAsync),

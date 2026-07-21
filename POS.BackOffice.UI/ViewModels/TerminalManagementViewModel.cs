@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -548,7 +548,8 @@ namespace POS.BackOffice.UI.ViewModels
                     LicenseRequestService
                         .CreateTerminalRequest(
                             storeSummary.StoreId,
-                            storeSummary.StoreName,
+                            storeSummary.CurrentStoreName,
+                            storeSummary.CurrentLegalName,
                             SelectedTerminal.TerminalNo,
                             SelectedTerminal.TerminalName,
                             SelectedTerminal.MachineName,

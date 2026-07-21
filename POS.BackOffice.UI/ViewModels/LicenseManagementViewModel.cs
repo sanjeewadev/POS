@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using POS.Core.Models.Licensing;
+using POS.Core.Services;
 using POS.Core.Services.Licensing;
 using LicensingStatus = POS.Core.Models.Licensing.LicenseStatus;
 
@@ -29,7 +30,17 @@ namespace POS.BackOffice.UI.ViewModels
         private string _storeId = "-";
 
         [ObservableProperty]
-        private string _storeName = "-";
+        private string _currentStoreName = "-";
+
+        [ObservableProperty]
+        private string _licensedStoreName = "-";
+
+        [ObservableProperty]
+        private string _storeNameIdentityMessage =
+            "Store Settings is the operational name used by POS.";
+
+        [ObservableProperty]
+        private string _storeNameIdentityColor = "#64748B";
 
         [ObservableProperty]
         private string _licenseId = "-";
@@ -208,24 +219,85 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
-        private void CopyLicenseRequestInfo()
+        private async Task CopyStoreLicenseRequestAsync()
         {
+            if (IsBusy)
+                return;
+
             try
             {
-                string requestInfo =
-                    $"Store ID: {StoreId}{Environment.NewLine}" +
-                    $"Store Name: {StoreName}{Environment.NewLine}" +
-                    $"Terminal No: {CurrentTerminalNo}{Environment.NewLine}" +
-                    $"Machine Name: {CurrentMachineName}{Environment.NewLine}" +
-                    $"Machine Code: {CurrentMachineCode}{Environment.NewLine}";
+                IsBusy = true;
 
-                Clipboard.SetText(requestInfo);
+                LicenseRequestInfo request =
+                    await _licenseManagerService
+                        .GetCurrentStoreLicenseRequestAsync();
 
-                SetStatus("License request details copied to clipboard.", "#10B981");
+                Clipboard.SetText(
+                    request.BuildRequestText());
+
+                SetStatus(
+                    "Store licence request copied. Store Settings supplied the current store name.",
+                    "#10B981");
             }
             catch (Exception ex)
             {
-                SetStatus($"Failed to copy license request details: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Copy store licence request",
+                    ex);
+
+                SetStatus(
+                    "The store licence request could not be copied. Technical details were saved in the local POS Logs folder.",
+                    "#EF4444");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task CopyTerminalLicenseRequestAsync()
+        {
+            if (IsBusy)
+                return;
+
+            try
+            {
+                IsBusy = true;
+
+                LicenseRequestInfo request =
+                    await _licenseManagerService
+                        .GetCurrentTerminalLicenseRequestAsync();
+
+                if (string.IsNullOrWhiteSpace(
+                        request.StoreId))
+                {
+                    throw new InvalidOperationException(
+                        "Import the store licence first. A terminal licence must use the permanent Store ID from the active store licence.");
+                }
+
+                Clipboard.SetText(
+                    request.BuildRequestText());
+
+                SetStatus(
+                    "Terminal licence request copied. Store Settings supplied the current store name.",
+                    "#10B981");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Copy terminal licence request",
+                    ex);
+
+                SetStatus(
+                    $"The terminal licence request could not be copied: {ex.Message}",
+                    "#EF4444");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -236,7 +308,30 @@ namespace POS.BackOffice.UI.ViewModels
         private void ApplySummary(LicenseSummary summary)
         {
             StoreId = ToDisplayText(summary.StoreId);
-            StoreName = ToDisplayText(summary.StoreName);
+            CurrentStoreName = ToDisplayText(
+                summary.CurrentStoreName);
+            LicensedStoreName = ToDisplayText(
+                summary.LicensedStoreName);
+
+            if (summary.StoreNameDiffersFromLicence)
+            {
+                StoreNameIdentityMessage =
+                    "The signed licence contains an older store name. POS operations and new licence requests use the current Store Settings name.";
+                StoreNameIdentityColor = "#B45309";
+            }
+            else if (string.IsNullOrWhiteSpace(
+                         summary.LicensedStoreName))
+            {
+                StoreNameIdentityMessage =
+                    "No signed store name is installed yet. Create the request from this page so the License Generator receives the current Store Settings name.";
+                StoreNameIdentityColor = "#1D4ED8";
+            }
+            else
+            {
+                StoreNameIdentityMessage =
+                    "The current Store Settings name matches the signed licence name.";
+                StoreNameIdentityColor = "#15803D";
+            }
 
             LicenseId = ToDisplayText(summary.StoreLicenseId);
             LicenseStatus = ToStatusText(summary.StoreLicenseStatus);

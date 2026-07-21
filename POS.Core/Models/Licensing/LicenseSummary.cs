@@ -10,7 +10,24 @@ namespace POS.Core.Models.Licensing
 
         public string StoreId { get; set; } = string.Empty;
 
+        // Current operational identity from Store Settings.
+        // StoreName is retained for compatibility with existing UI code.
         public string StoreName { get; set; } = string.Empty;
+
+        public string CurrentStoreName { get; set; } = string.Empty;
+
+        public string CurrentLegalName { get; set; } = string.Empty;
+
+        // Historical signed name from the active store/terminal licence.
+        public string LicensedStoreName { get; set; } = string.Empty;
+
+        public bool StoreNameDiffersFromLicence =>
+            !string.IsNullOrWhiteSpace(CurrentStoreName) &&
+            !string.IsNullOrWhiteSpace(LicensedStoreName) &&
+            !string.Equals(
+                CurrentStoreName.Trim(),
+                LicensedStoreName.Trim(),
+                StringComparison.OrdinalIgnoreCase);
 
         public string StoreLicenseId { get; set; } = string.Empty;
 

@@ -6,9 +6,14 @@ namespace POS.Core.Models.Licensing
 {
     public sealed class LicenseRequestInfo
     {
+        public LicenseType RequestedLicenseType { get; init; } =
+            LicenseType.TerminalLicense;
+
         public string StoreId { get; init; } = string.Empty;
 
         public string StoreName { get; init; } = string.Empty;
+
+        public string LegalName { get; init; } = string.Empty;
 
         public string TerminalNo { get; init; } = string.Empty;
 
@@ -24,18 +29,35 @@ namespace POS.Core.Models.Licensing
 
         public DateTime? CurrentExpiryDate { get; init; }
 
+        public bool IsStoreLicenseRequest =>
+            RequestedLicenseType == LicenseType.StoreLicense;
+
+        public bool IsTerminalLicenseRequest =>
+            RequestedLicenseType == LicenseType.TerminalLicense;
+
         public string BuildRequestText()
         {
             var builder = new StringBuilder();
 
-            builder.AppendLine("ADVANCED POS TERMINAL LICENCE REQUEST");
+            builder.AppendLine(
+                IsStoreLicenseRequest
+                    ? "ADVANCED POS STORE LICENCE REQUEST"
+                    : "ADVANCED POS TERMINAL LICENCE REQUEST");
             builder.AppendLine();
+            builder.AppendLine(
+                $"Request Type: {ToLicenseTypeText(RequestedLicenseType)}");
             builder.AppendLine($"Store ID: {Display(StoreId)}");
             builder.AppendLine($"Store Name: {Display(StoreName)}");
-            builder.AppendLine($"Terminal Number: {Display(TerminalNo)}");
-            builder.AppendLine($"Terminal Name: {Display(TerminalName)}");
-            builder.AppendLine($"Machine Name: {Display(MachineName)}");
-            builder.AppendLine($"Machine Code: {Display(MachineCode)}");
+            builder.AppendLine($"Legal Name: {Display(LegalName)}");
+
+            if (IsTerminalLicenseRequest)
+            {
+                builder.AppendLine($"Terminal Number: {Display(TerminalNo)}");
+                builder.AppendLine($"Terminal Name: {Display(TerminalName)}");
+                builder.AppendLine($"Machine Name: {Display(MachineName)}");
+                builder.AppendLine($"Machine Code: {Display(MachineCode)}");
+            }
+
             builder.AppendLine($"Application Version: {Display(ApplicationVersion)}");
             builder.AppendLine($"Current Licence Status: {ToStatusText(CurrentStatus)}");
             builder.AppendLine(
@@ -49,6 +71,11 @@ namespace POS.Core.Models.Licensing
 
         public string BuildSuggestedFileName()
         {
+            string store = SafeFilePart(StoreName, "Store");
+
+            if (IsStoreLicenseRequest)
+                return $"POS_Store_Licence_Request_{store}.txt";
+
             string terminal = SafeFilePart(TerminalNo, "Terminal");
             string machine = SafeFilePart(MachineName, "Machine");
 
@@ -68,6 +95,13 @@ namespace POS.Core.Models.Licensing
                 LicenseStatus.Revoked => "Revoked",
                 _ => "Unknown"
             };
+        }
+
+        public static string ToLicenseTypeText(LicenseType licenseType)
+        {
+            return licenseType == LicenseType.StoreLicense
+                ? "Store License"
+                : "Terminal License";
         }
 
         private static string Display(string? value)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
@@ -22,6 +22,9 @@ namespace POS.Core.Services.Licensing
         private readonly
             LicenseSignatureService
             _licenseSignatureService;
+        private readonly
+            StoreSettingsRepository
+            _storeSettingsRepository;
 
         public LicenseManagerService(
             LicenseRepository licenseRepository,
@@ -31,7 +34,9 @@ namespace POS.Core.Services.Licensing
                 machineFingerprintService,
             LicenseFileService licenseFileService,
             LicenseSignatureService
-                licenseSignatureService)
+                licenseSignatureService,
+            StoreSettingsRepository
+                storeSettingsRepository)
         {
             _licenseRepository = licenseRepository;
             _terminalSettingsRepository =
@@ -42,6 +47,8 @@ namespace POS.Core.Services.Licensing
                 licenseFileService;
             _licenseSignatureService =
                 licenseSignatureService;
+            _storeSettingsRepository =
+                storeSettingsRepository;
         }
 
         public async Task<LicenseSummary>
@@ -72,6 +79,26 @@ namespace POS.Core.Services.Licensing
                     .GetActiveTerminalLicenseAsync(
                         machineCode,
                         terminalNo);
+
+            StoreSettings? storeSettings =
+                await _storeSettingsRepository
+                    .GetActiveAsync();
+
+            string licensedStoreName =
+                FirstNonBlank(
+                    storeLicense?.StoreName,
+                    terminalLicense?.StoreName);
+
+            string currentStoreName =
+                FirstNonBlank(
+                    storeSettings?.StoreName,
+                    storeSettings?.LegalName,
+                    licensedStoreName);
+
+            string currentLegalName =
+                FirstNonBlank(
+                    storeSettings?.LegalName,
+                    currentStoreName);
 
             LicenseStatus storeStatus =
                 ValidateInstalledLicense(
@@ -114,10 +141,20 @@ namespace POS.Core.Services.Licensing
                         terminalLicense?.StoreId ??
                         string.Empty,
 
+                    // Operational display/request identity always comes
+                    // from Store Settings. The signed licence name remains
+                    // available separately for audit and mismatch display.
                     StoreName =
-                        storeLicense?.StoreName ??
-                        terminalLicense?.StoreName ??
-                        string.Empty,
+                        currentStoreName,
+
+                    CurrentStoreName =
+                        currentStoreName,
+
+                    CurrentLegalName =
+                        currentLegalName,
+
+                    LicensedStoreName =
+                        licensedStoreName,
 
                     StoreLicenseId =
                         storeLicense?.LicenseId ??
@@ -183,6 +220,17 @@ namespace POS.Core.Services.Licensing
             ApplyStatusMessage(summary);
 
             return summary;
+        }
+
+        public async Task<LicenseRequestInfo>
+            GetCurrentStoreLicenseRequestAsync()
+        {
+            LicenseSummary summary =
+                await GetCurrentLicenseSummaryAsync();
+
+            return LicenseRequestService
+                .CreateCurrentStoreRequest(
+                    summary);
         }
 
         public async Task<LicenseRequestInfo>
@@ -956,5 +1004,17 @@ namespace POS.Core.Services.Licensing
         {
             return (value ?? string.Empty).Trim();
         }
+        private static string FirstNonBlank(
+            params string?[] values)
+        {
+            foreach (string? value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value.Trim();
+            }
+
+            return string.Empty;
+        }
+
     }
 }

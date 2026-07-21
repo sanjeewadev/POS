@@ -1,4 +1,4 @@
-<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Admin.LicenseManagementView"
+﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.Admin.LicenseManagementView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -296,12 +296,34 @@
                                     <ColumnDefinition Width="125"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Store Name" Style="{StaticResource InlineLabel}"/>
+                                <TextBlock Text="Current Store Name" Style="{StaticResource InlineLabel}"/>
                                 <TextBox Grid.Column="1"
-                                         Text="{Binding StoreName}"
+                                         Text="{Binding CurrentStoreName}"
                                          IsReadOnly="True"
                                          Style="{StaticResource ClassicInput}"/>
                             </Grid>
+
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="125"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Licensed Store Name" Style="{StaticResource InlineLabel}"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding LicensedStoreName}"
+                                         IsReadOnly="True"
+                                         Style="{StaticResource ClassicInput}"/>
+                            </Grid>
+
+                            <Border Background="{DynamicResource HighlightBackgroundBrush}"
+                                    BorderBrush="{DynamicResource LightBorderBrush}"
+                                    BorderThickness="1"
+                                    Padding="7"
+                                    Margin="0,0,0,5">
+                                <TextBlock Text="{Binding StoreNameIdentityMessage}"
+                                           Foreground="{Binding StoreNameIdentityColor}"
+                                           TextWrapping="Wrap"/>
+                            </Border>
 
                             <Grid Margin="0,0,0,5">
                                 <Grid.ColumnDefinitions>
@@ -466,18 +488,23 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <TextBlock Text="Copy these details when requesting a terminal license from support."
+                                    <TextBlock Text="Create licence requests here. Store Settings supplies the operational store name automatically; do not type it again in the License Generator."
                                                Style="{StaticResource HelpText}"
                                                Margin="0,0,0,8"/>
-                                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                                    <WrapPanel Grid.Row="1">
+                                        <Button Content="COPY STORE LICENCE REQUEST"
+                                                Command="{Binding CopyStoreLicenseRequestCommand}"
+                                                Style="{StaticResource ClassicBtn}"
+                                                Margin="0,0,8,6"/>
+                                        <Button Content="COPY TERMINAL LICENCE REQUEST"
+                                                Command="{Binding CopyTerminalLicenseRequestCommand}"
+                                                Style="{StaticResource ClassicBtn}"
+                                                Margin="0,0,8,6"/>
                                         <Button Content="COPY MACHINE CODE"
                                                 Command="{Binding CopyMachineCodeCommand}"
                                                 Style="{StaticResource ClassicBtn}"
-                                                Margin="0,0,8,0"/>
-                                        <Button Content="COPY REQUEST DETAILS"
-                                                Command="{Binding CopyLicenseRequestInfoCommand}"
-                                                Style="{StaticResource ClassicBtn}"/>
-                                    </StackPanel>
+                                                Margin="0,0,0,6"/>
+                                    </WrapPanel>
                                 </Grid>
                             </Border>
                         </Grid>

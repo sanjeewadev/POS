@@ -1,4 +1,4 @@
-using POS.Core.Models.Licensing;
+﻿using POS.Core.Models.Licensing;
 using POS.Core.Repositories;
 using POS.Core.Services.Licensing;
 
@@ -188,6 +188,7 @@ internal static class LicenseRecoverySourcePolicyAuditTests
             LicenseRequestService.CreateTerminalRequest(
                 "STORE-001",
                 "Audit Store",
+                "Audit Store (Pvt) Ltd",
                 "01",
                 "Main Cashier",
                 "AUDIT-PC",

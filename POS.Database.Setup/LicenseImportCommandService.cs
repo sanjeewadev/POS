@@ -44,7 +44,8 @@ internal sealed class LicenseImportCommandService
             terminalSettings,
             machineFingerprint,
             new LicenseFileService(),
-            new LicenseSignatureService());
+            new LicenseSignatureService(),
+            new StoreSettingsRepository(factory));
 
         return await licenseManager.ImportLicenseFileAsync(
             fullLicensePath,
