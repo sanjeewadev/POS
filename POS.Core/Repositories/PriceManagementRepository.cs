@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
@@ -27,6 +28,7 @@ namespace POS.Core.Repositories
         public async Task<List<PriceManagementSummaryDto>> GetPricingSummariesAsync(
             string marginFilter = "All",
             string trackingFilter = "All",
+            string itemTypeFilter = "All",
             string searchText = "")
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -59,9 +61,22 @@ namespace POS.Core.Repositories
                         )));
             }
 
+            if (itemTypeFilter == "Stock Items")
+            {
+                query = query.Where(v =>
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem);
+            }
+            else if (itemTypeFilter == "Services")
+            {
+                query = query.Where(v =>
+                    v.ItemParent.ItemType == ItemTypeCodes.Service);
+            }
+
             if (trackingFilter == "Average Cost")
             {
-                query = query.Where(v => !v.ItemParent.HasBatchTracking);
+                query = query.Where(v =>
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
+                    !v.ItemParent.HasBatchTracking);
             }
             else if (trackingFilter == "Batch")
             {
@@ -73,8 +88,14 @@ namespace POS.Core.Repositories
             else if (trackingFilter == "Batch + Expiry")
             {
                 query = query.Where(v =>
+                    v.ItemParent.ItemType == ItemTypeCodes.StockItem &&
                     v.ItemParent.HasBatchTracking &&
                     (v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry));
+            }
+            else if (trackingFilter == "Service / No Stock")
+            {
+                query = query.Where(v =>
+                    v.ItemParent.ItemType == ItemTypeCodes.Service);
             }
 
             var variants = await query
@@ -98,6 +119,7 @@ namespace POS.Core.Repositories
 
                     ItemCode = v.ItemParent.ItemCode,
                     ItemName = v.ItemParent.ItemName,
+                    ItemType = v.ItemParent.ItemType,
                     CategoryName = v.ItemParent.Category != null ? v.ItemParent.Category.CategoryName : string.Empty,
                     Uom = v.ItemParent.UnitOfMeasure != null ? v.ItemParent.UnitOfMeasure.UomCode : v.ItemParent.BaseUom,
 
@@ -187,6 +209,7 @@ namespace POS.Core.Repositories
                         : variant.Uom,
 
                     CategoryName = variant.CategoryName,
+                    ItemType = variant.ItemType,
 
                     HasBatchTracking = variant.HasBatchTracking,
                     HasExpiryTracking = variant.HasExpiryTracking,
@@ -317,18 +340,27 @@ namespace POS.Core.Repositories
                     oldWholesalePrice != newWholesalePrice ||
                     oldMaximumPrice != newMaximumPrice;
 
-                var currentStockBatches = await context.ItemBatches
-                    .Where(b =>
-                        b.ItemVariantId == variant.Id &&
-                        !b.IsDeactivated &&
-                        b.CurrentStock != 0)
-                    .OrderBy(b => b.BatchNo)
-                    .ThenBy(b => b.Id)
-                    .ToListAsync();
+                bool canSyncCurrentStock =
+                    applySellingPriceToCurrentStock &&
+                    string.Equals(
+                        variant.ItemParent.ItemType,
+                        ItemTypeCodes.StockItem,
+                        StringComparison.Ordinal);
+
+                var currentStockBatches = canSyncCurrentStock
+                    ? await context.ItemBatches
+                        .Where(b =>
+                            b.ItemVariantId == variant.Id &&
+                            !b.IsDeactivated &&
+                            b.CurrentStock != 0)
+                        .OrderBy(b => b.BatchNo)
+                        .ThenBy(b => b.Id)
+                        .ToListAsync()
+                    : new List<ItemBatch>();
 
                 bool batchPriceChanged = false;
 
-                if (applySellingPriceToCurrentStock)
+                if (canSyncCurrentStock)
                 {
                     batchPriceChanged = currentStockBatches.Any(b =>
                         RoundMoney(b.RetailPrice) != newRetailPrice ||
@@ -392,7 +424,7 @@ namespace POS.Core.Repositories
                 variant.MaximumPrice = newMaximumPrice;
                 variant.UpdatedAt = now;
 
-                if (applySellingPriceToCurrentStock)
+                if (canSyncCurrentStock)
                 {
                     foreach (var batch in currentStockBatches)
                     {

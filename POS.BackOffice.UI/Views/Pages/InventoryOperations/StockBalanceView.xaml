@@ -210,23 +210,35 @@
                                Margin="15,0"
                                TextWrapping="Wrap"/>
 
-                    <Border Grid.Column="2"
-                            Background="#E0FFFF"
-                            BorderBrush="#005555"
-                            BorderThickness="1"
-                            Padding="10,3"
-                            VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="View:"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="#003366"
+                                   Margin="0,0,6,0"/>
 
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Busy: "
-                                       Foreground="#003366"
-                                       FontWeight="Bold"/>
+                        <ComboBox ItemsSource="{Binding InventoryViews}"
+                                  SelectedItem="{Binding SelectedInventoryView, Mode=TwoWay}"
+                                  Style="{StaticResource ClassicCombo}"
+                                  Width="195"
+                                  Margin="0,0,10,0"/>
 
-                            <TextBlock Text="{Binding IsBusy}"
-                                       Foreground="#003366"
-                                       FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
+                        <Border Background="#E0FFFF"
+                                BorderBrush="#005555"
+                                BorderThickness="1"
+                                Padding="10,3">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Busy: "
+                                           Foreground="#003366"
+                                           FontWeight="Bold"/>
+
+                                <TextBlock Text="{Binding IsBusy}"
+                                           Foreground="#003366"
+                                           FontWeight="Bold"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                 </Grid>
 
                 <Grid Margin="0,2,0,8">
@@ -283,24 +295,74 @@
                             VerticalAlignment="Bottom"/>
                 </Grid>
 
-                <WrapPanel Orientation="Horizontal">
-                    <CheckBox Content="Hide Zero Stock Items"
-                              IsChecked="{Binding HideZeroStock, Mode=TwoWay}"
-                              Foreground="#333"
-                              FontWeight="SemiBold"
-                              Margin="0,0,25,0"/>
+                <StackPanel>
+                    <WrapPanel Orientation="Horizontal">
+                        <WrapPanel.Style>
+                            <Style TargetType="WrapPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedInventoryView}"
+                                                 Value="Expiry Monitor">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </WrapPanel.Style>
 
-                    <CheckBox Content="Show Negative Stock Only"
-                              IsChecked="{Binding ShowNegativeOnly, Mode=TwoWay}"
-                              Foreground="DarkRed"
-                              FontWeight="Bold"
-                              Margin="0,0,25,0"/>
+                        <CheckBox Content="Hide Zero Stock Items"
+                                  IsChecked="{Binding HideZeroStock, Mode=TwoWay}"
+                                  Foreground="#333"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,25,0"/>
 
-                    <TextBlock Text="Average-cost items show the hidden GENERAL stock bucket. Batch-tracked items show real GRN batches and GRN batch barcodes."
-                               Foreground="#666"
-                               VerticalAlignment="Center"
-                               FontStyle="Italic"/>
-                </WrapPanel>
+                        <CheckBox Content="Show Negative Stock Only"
+                                  IsChecked="{Binding ShowNegativeOnly, Mode=TwoWay}"
+                                  Foreground="DarkRed"
+                                  FontWeight="Bold"
+                                  Margin="0,0,25,0"/>
+
+                        <TextBlock Text="Average-cost items show the hidden GENERAL stock bucket. Batch-tracked items show real GRN batches and GRN batch barcodes."
+                                   Foreground="#666"
+                                   VerticalAlignment="Center"
+                                   FontStyle="Italic"/>
+                    </WrapPanel>
+
+                    <WrapPanel Orientation="Horizontal">
+                        <WrapPanel.Style>
+                            <Style TargetType="WrapPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedInventoryView}"
+                                                 Value="Expiry Monitor">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </WrapPanel.Style>
+
+                        <TextBlock Text="Expiry Filter:"
+                                   Style="{StaticResource InlineLabel}"
+                                   Foreground="#003366"/>
+
+                        <ComboBox ItemsSource="{Binding ExpiryFilters}"
+                                  SelectedItem="{Binding SelectedExpiryFilter, Mode=TwoWay}"
+                                  Style="{StaticResource ClassicCombo}"
+                                  Width="205"
+                                  Margin="0,0,20,0"/>
+
+                        <CheckBox Content="Positive stock only"
+                                  IsChecked="{Binding PositiveExpiryStockOnly, Mode=TwoWay}"
+                                  Foreground="#005500"
+                                  FontWeight="Bold"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,20,0"/>
+
+                        <TextBlock Text="Shows batch-level expiry risk for expiry-tracked Stock Items. Services are excluded because they do not hold stock."
+                                   Foreground="#666"
+                                   VerticalAlignment="Center"
+                                   FontStyle="Italic"/>
+                    </WrapPanel>
+                </StackPanel>
             </StackPanel>
         </Border>
 
@@ -310,6 +372,17 @@
                 BorderBrush="#A0A0A0"
                 BorderThickness="1"
                 Margin="0,0,0,5">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedInventoryView}"
+                                     Value="Expiry Monitor">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
 
             <DataGrid x:Name="dgStockBalance"
                       ItemsSource="{Binding StockBalances}"
@@ -661,8 +734,166 @@
             </DataGrid>
         </Border>
 
+        <!-- EXPIRY MONITOR GRID -->
+        <Border Grid.Row="1"
+                Background="White"
+                BorderBrush="#A0A0A0"
+                BorderThickness="1"
+                Margin="0,0,0,5">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedInventoryView}"
+                                     Value="Expiry Monitor">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+
+            <DataGrid x:Name="dgExpiryMonitor"
+                      ItemsSource="{Binding ExpiryRows}"
+                      SelectedItem="{Binding SelectedExpiryRow, Mode=TwoWay}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="All"
+                      HorizontalGridLinesBrush="#C0C0C0"
+                      VerticalGridLinesBrush="#D0D0D0"
+                      RowHeight="28"
+                      Background="White"
+                      BorderThickness="0"
+                      SelectionMode="Single"
+                      AlternatingRowBackground="#F9F9F9"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                <DataGrid.Resources>
+                    <Style TargetType="{x:Type DataGridCell}"
+                           BasedOn="{StaticResource BaseCell}"/>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Expiry Status"
+                                        Binding="{Binding ExpiryStatus}"
+                                        Width="115"
+                                        CellStyle="{StaticResource WarningCell}"/>
+
+                    <DataGridTextColumn Header="Days"
+                                        Binding="{Binding DaysRemainingText}"
+                                        Width="60"
+                                        ElementStyle="{StaticResource CenterText}"/>
+
+                    <DataGridTextColumn Header="Expiry Date"
+                                        Binding="{Binding ExpiryDate, StringFormat=yyyy-MM-dd, TargetNullValue=—}"
+                                        Width="95"/>
+
+                    <DataGridTemplateColumn Header="Item Code"
+                                            Width="95"
+                                            CellStyle="{StaticResource FrozenCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ItemCode, Mode=OneWay}"
+                                         Style="{StaticResource CopyableGridTextBox}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="SKU"
+                                            Width="125"
+                                            CellStyle="{StaticResource FrozenCell}">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding SkuCode, Mode=OneWay}"
+                                         Style="{StaticResource CopyableGridTextBox}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="Description"
+                                        Binding="{Binding Description}"
+                                        Width="210"
+                                        CellStyle="{StaticResource FrozenCell}"/>
+
+                    <DataGridTextColumn Header="Variant"
+                                        Binding="{Binding VariantDescription}"
+                                        Width="130"/>
+
+                    <DataGridTemplateColumn Header="Batch No"
+                                            Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding BatchDisplayText, Mode=OneWay}"
+                                         Style="{StaticResource CopyableGridTextBox}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Batch Barcode"
+                                            Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding BatchBarcodeDisplayText, Mode=OneWay}"
+                                         Style="{StaticResource CopyableGridTextBox}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="Category"
+                                        Binding="{Binding CategoryName}"
+                                        Width="120"/>
+
+                    <DataGridTextColumn Header="Supplier"
+                                        Binding="{Binding PrimarySupplierName}"
+                                        Width="150"/>
+
+                    <DataGridTextColumn Header="UOM"
+                                        Binding="{Binding Uom}"
+                                        Width="60"
+                                        ElementStyle="{StaticResource CenterText}"/>
+
+                    <DataGridTextColumn Header="Available Qty"
+                                        Binding="{Binding AvailableQty, Converter={StaticResource SmartQuantityConverter}}"
+                                        Width="95"
+                                        Foreground="#005500"
+                                        FontWeight="Bold"
+                                        ElementStyle="{StaticResource CenterBoldGreenText}"/>
+
+                    <DataGridTextColumn Header="Unit Cost"
+                                        Binding="{Binding UnitCost, StringFormat=N2}"
+                                        Width="85"
+                                        ElementStyle="{StaticResource RightText}"/>
+
+                    <DataGridTextColumn Header="Cost Value"
+                                        Binding="{Binding CostValue, StringFormat=N2}"
+                                        Width="105"
+                                        CellStyle="{StaticResource FinancialCell}"
+                                        ElementStyle="{StaticResource RightBoldText}"/>
+
+                    <DataGridTextColumn Header="Received"
+                                        Binding="{Binding ReceivedDate, StringFormat=yyyy-MM-dd}"
+                                        Width="95"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
         <!-- FOOTER TOTALS -->
         <Grid Grid.Row="2">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedInventoryView}"
+                                     Value="Expiry Monitor">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -855,5 +1086,85 @@
                 </StackPanel>
             </Border>
         </Grid>
+
+        <!-- EXPIRY MONITOR FOOTER -->
+        <Border Grid.Row="2"
+                Padding="15,10">
+            <Border.Style>
+                <Style TargetType="Border"
+                       BasedOn="{StaticResource ClassicGroupBox}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedInventoryView}"
+                                     Value="Expiry Monitor">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Rows: " FontWeight="Bold" Foreground="#555"/>
+                    <TextBlock Text="{Binding ExpiryRowCount}" FontWeight="Bold"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="Expired: " FontWeight="Bold" Foreground="DarkRed"/>
+                    <TextBlock Text="{Binding ExpiredRowCount}" FontWeight="Bold" Foreground="DarkRed"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                    <TextBlock Text="Within 7 Days: " FontWeight="Bold" Foreground="#B45309"/>
+                    <TextBlock Text="{Binding ExpiresWithin7DaysCount}" FontWeight="Bold" Foreground="#B45309"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="6" Orientation="Horizontal">
+                    <TextBlock Text="Within 30 Days: " FontWeight="Bold" Foreground="#B45309"/>
+                    <TextBlock Text="{Binding ExpiresWithin30DaysCount}" FontWeight="Bold" Foreground="#B45309"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="8" Orientation="Horizontal">
+                    <TextBlock Text="Missing Expiry: " FontWeight="Bold" Foreground="#991B1B"/>
+                    <TextBlock Text="{Binding MissingExpiryCount}" FontWeight="Bold" Foreground="#991B1B"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="9"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            Margin="20,0">
+                    <TextBlock Text="Visible Qty: " FontWeight="Bold" Foreground="#555"/>
+                    <TextBlock Text="{Binding ExpiryQuantityTotal, Converter={StaticResource SmartQuantityConverter}}"
+                               FontWeight="Bold"
+                               Foreground="#005500"
+                               Margin="0,0,15,0"/>
+                    <TextBlock Text="Cost Value: " FontWeight="Bold" Foreground="#555"/>
+                    <TextBlock Text="{Binding ExpiryCostValueTotal, StringFormat=Rs. \{0:N2\}}"
+                               FontWeight="Bold"
+                               Foreground="#003366"/>
+                </StackPanel>
+
+                <Button Grid.Column="10"
+                        Content="Export Expiry CSV"
+                        Command="{Binding ExportExpiryCsvCommand}"
+                        Style="{StaticResource ExcelBtn}"
+                        Height="34"
+                        Padding="20,0"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

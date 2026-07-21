@@ -127,7 +127,7 @@ namespace POS.BackOffice.UI.ViewModels
             new ItemTypeOption(
                 ItemTypeCodes.Service,
                 "Service",
-                "Does not track stock or batches. It can have prices and VAT and will be enabled in Cashier during the sales integration phase.")
+                "Does not track stock or batches. It can have a UOM, VAT category, standard cost, retail price, and wholesale price and is available in Cashier.")
         };
 
         public ObservableCollection<MatrixPropertySelection> DynamicProperties { get; } = new();
@@ -179,6 +179,16 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private bool _includeDeactivatedItems = false;
+
+        public ObservableCollection<string> ItemTypeFilters { get; } = new()
+        {
+            "All Items",
+            "Stock Items",
+            "Services"
+        };
+
+        [ObservableProperty]
+        private string _selectedItemTypeFilter = "All Items";
 
         [ObservableProperty]
         private ItemMasterSummaryDto? _selectedDatabaseItem;
@@ -691,6 +701,7 @@ namespace POS.BackOffice.UI.ViewModels
                     GeneratedVariants.Add(variant);
                 }
 
+                ApplyServiceSafetyDefaults();
                 RebuildBuilderSelectionFromVariants();
                 UpdateSupplierAssignmentSelectionCount();
 
@@ -1599,8 +1610,24 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task LoadMasterGridInternalAsync()
         {
             Items.Clear();
-            var data = await _itemMasterRepository.GetSummariesAsync(searchTerm: MasterSearchText, includeDeactivated: IncludeDeactivatedItems);
-            foreach (var item in data) Items.Add(item);
+
+            string? itemType = SelectedItemTypeFilter switch
+            {
+                "Stock Items" => ItemTypeCodes.StockItem,
+                "Services" => ItemTypeCodes.Service,
+                _ => null
+            };
+
+            var data = await _itemMasterRepository.GetSummariesAsync(
+                searchTerm: MasterSearchText,
+                includeDeactivated: IncludeDeactivatedItems,
+                itemType: itemType);
+
+            foreach (var item in data)
+                Items.Add(item);
+
+            StatusMessage =
+                $"Loaded {Items.Count} item record(s). Filter: {SelectedItemTypeFilter}.";
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -1851,6 +1878,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnMasterSearchTextChanged(string value) { if (_isInitialized) StatusMessage = "Type search text and click SEARCH."; }
         partial void OnIncludeDeactivatedItemsChanged(bool value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
+        partial void OnSelectedItemTypeFilterChanged(string value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
         partial void OnItemSuffixChanged(string value) { GenerateVariantsCommand.NotifyCanExecuteChanged(); SaveCommand.NotifyCanExecuteChanged(); }
         partial void OnSelectedUomChanged(UnitOfMeasure? value) =>
             SaveCommand.NotifyCanExecuteChanged();
@@ -1898,24 +1926,7 @@ namespace POS.BackOffice.UI.ViewModels
                         ItemTypeCodes.Service,
                         StringComparison.Ordinal))
                 {
-                    BulkHasBatchTracking = false;
-                    BulkHasExpiryTracking = false;
-                    BulkHasBatchExpiry = false;
-                    BulkIsScaleItem = false;
-                    BulkIsSerialized = false;
-                    BulkReorderLevel = 0;
-                    CurrentItem.IsPurchaseLocked = true;
-
-                    foreach (var variant in GeneratedVariants)
-                    {
-                        variant.ReorderLevel = 0;
-                        variant.ItemSuppliers.Clear();
-                        variant.IsSelectedForSupplierAssignment = false;
-                    }
-
-                    SelectedVariantSuppliers.Clear();
-                    SelectedSupplierAssignmentCount = 0;
-                    SelectAllVariantsForSupplierAssignment = false;
+                    ApplyServiceSafetyDefaults();
                 }
                 else if (!HasItemHistory)
                 {
@@ -1934,6 +1945,37 @@ namespace POS.BackOffice.UI.ViewModels
                 RaiseItemStateProperties();
                 NotifyCommandStates();
             }
+        }
+
+        private void ApplyServiceSafetyDefaults()
+        {
+            if (!IsServiceItem)
+                return;
+
+            BulkHasBatchTracking = false;
+            BulkHasExpiryTracking = false;
+            BulkHasBatchExpiry = false;
+            BulkIsScaleItem = false;
+            BulkIsSerialized = false;
+            BulkReorderLevel = 0;
+
+            CurrentItem.HasBatchTracking = false;
+            CurrentItem.HasExpiryTracking = false;
+            CurrentItem.HasBatchExpiry = false;
+            CurrentItem.IsScaleItem = false;
+            CurrentItem.IsSerialized = false;
+            CurrentItem.IsPurchaseLocked = true;
+
+            foreach (var variant in GeneratedVariants)
+            {
+                variant.ReorderLevel = 0;
+                variant.ItemSuppliers.Clear();
+                variant.IsSelectedForSupplierAssignment = false;
+            }
+
+            SelectedVariantSuppliers.Clear();
+            SelectedSupplierAssignmentCount = 0;
+            SelectAllVariantsForSupplierAssignment = false;
         }
 
         partial void OnSelectedTaxCategoryChanged(TaxCategory? value)

@@ -307,4 +307,114 @@ namespace POS.Core.Models.DTOs
             }
         }
     }
+    public static class ExpiryMonitorFilters
+    {
+        public const string All = "All Expiry-Tracked Stock";
+        public const string Expired = "Already Expired";
+        public const string Within7Days = "Expiring Within 7 Days";
+        public const string Within30Days = "Expiring Within 30 Days";
+        public const string Within60Days = "Expiring Within 60 Days";
+        public const string Within90Days = "Expiring Within 90 Days";
+        public const string MissingExpiry = "No Expiry Date";
+
+        public static IReadOnlyList<string> Values { get; } = new[]
+        {
+            All,
+            Expired,
+            Within7Days,
+            Within30Days,
+            Within60Days,
+            Within90Days,
+            MissingExpiry
+        };
+    }
+
+    public class ExpiryMonitorRowDto
+    {
+        public int BatchId { get; set; }
+        public int ParentId { get; set; }
+        public int VariantId { get; set; }
+
+        public string ItemCode { get; set; } = string.Empty;
+        public string SkuCode { get; set; } = string.Empty;
+        public string ItemBarcode { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string VariantDescription { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = string.Empty;
+        public string PrimarySupplierName { get; set; } = string.Empty;
+        public string Uom { get; set; } = string.Empty;
+
+        public string BatchNo { get; set; } = string.Empty;
+        public string BatchBarcode { get; set; } = string.Empty;
+
+        public DateTime ReceivedDate { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+
+        public decimal AvailableQty { get; set; }
+        public decimal UnitCost { get; set; }
+        public decimal CostValue => Math.Round(AvailableQty * UnitCost, 2);
+
+        public int? DaysRemaining =>
+            ExpiryDate.HasValue
+                ? (ExpiryDate.Value.Date - DateTime.Today).Days
+                : null;
+
+        public bool IsMissingExpiry => !ExpiryDate.HasValue;
+
+        public bool IsExpired =>
+            ExpiryDate.HasValue &&
+            ExpiryDate.Value.Date < DateTime.Today;
+
+        public bool IsExpiringWithin(int days) =>
+            ExpiryDate.HasValue &&
+            ExpiryDate.Value.Date >= DateTime.Today &&
+            ExpiryDate.Value.Date <= DateTime.Today.AddDays(days);
+
+        public string ExpiryStatus
+        {
+            get
+            {
+                if (!ExpiryDate.HasValue)
+                    return "No Expiry Date";
+
+                int days = DaysRemaining ?? 0;
+
+                if (days < 0)
+                    return "Expired";
+
+                if (days == 0)
+                    return "Expires Today";
+
+                if (days <= 7)
+                    return "Within 7 Days";
+
+                if (days <= 30)
+                    return "Within 30 Days";
+
+                if (days <= 60)
+                    return "Within 60 Days";
+
+                if (days <= 90)
+                    return "Within 90 Days";
+
+                return "Later";
+            }
+        }
+
+        public string DaysRemainingText =>
+            DaysRemaining.HasValue
+                ? DaysRemaining.Value.ToString()
+                : "—";
+
+        public string BatchDisplayText =>
+            string.IsNullOrWhiteSpace(BatchNo)
+                ? "-"
+                : BatchNo.Trim();
+
+        public string BatchBarcodeDisplayText =>
+            string.IsNullOrWhiteSpace(BatchBarcode)
+                ? "-"
+                : BatchBarcode.Trim();
+    }
+
 }

@@ -37,6 +37,16 @@ namespace POS.BackOffice.UI.ViewModels
         });
 
         [ObservableProperty]
+        private string _selectedItemTypeFilter = "All";
+
+        public ObservableCollection<string> ItemTypeFilters { get; } = new(new[]
+        {
+            "All",
+            "Stock Items",
+            "Services"
+        });
+
+        [ObservableProperty]
         private string _selectedTrackingFilter = "All";
 
         public ObservableCollection<string> TrackingFilters { get; } = new(new[]
@@ -44,7 +54,8 @@ namespace POS.BackOffice.UI.ViewModels
             "All",
             "Average Cost",
             "Batch",
-            "Batch + Expiry"
+            "Batch + Expiry",
+            "Service / No Stock"
         });
 
         // Kept only so old XAML bindings will not fail if an older view is still loaded.
@@ -106,6 +117,12 @@ namespace POS.BackOffice.UI.ViewModels
         private int _dirtyBatchCount = 0;
 
         [ObservableProperty]
+        private int _stockItemCount = 0;
+
+        [ObservableProperty]
+        private int _serviceItemCount = 0;
+
+        [ObservableProperty]
         private int _averageCostItemCount = 0;
 
         [ObservableProperty]
@@ -145,6 +162,11 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         partial void OnSelectedMarginFilterChanged(string value)
+        {
+            QueueReload();
+        }
+
+        partial void OnSelectedItemTypeFilterChanged(string value)
         {
             QueueReload();
         }
@@ -200,6 +222,7 @@ namespace POS.BackOffice.UI.ViewModels
                 var rows = await _repository.GetPricingSummariesAsync(
                     SelectedMarginFilter,
                     SelectedTrackingFilter,
+                    SelectedItemTypeFilter,
                     SearchText);
 
                 if (version != _loadVersion)
@@ -219,7 +242,9 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedItem = null;
 
                 TotalItems = PricingItems.Count;
-                AverageCostItemCount = PricingItems.Count(i => !i.HasBatchTracking);
+                StockItemCount = PricingItems.Count(i => !i.IsService);
+                ServiceItemCount = PricingItems.Count(i => i.IsService);
+                AverageCostItemCount = PricingItems.Count(i => !i.IsService && !i.HasBatchTracking);
                 BatchTrackedItemCount = PricingItems.Count(i => i.HasBatchTracking);
                 BatchExpiryItemCount = PricingItems.Count(i => i.HasBatchTracking && i.HasExpiryTracking);
 
@@ -248,6 +273,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             SearchText = string.Empty;
             SelectedMarginFilter = "All";
+            SelectedItemTypeFilter = "All";
             SelectedTrackingFilter = "All";
             SelectedExpiryFilter = "All";
 
@@ -323,13 +349,16 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
             }
 
+            int serviceChangeCount = dirtyRows.Count(i => i.IsService);
+
             string stockSyncText = ApplySellingPriceToCurrentStock
-                ? "Current active stock selling prices will also be updated."
+                ? "Current active stock selling prices will also be updated for Stock Items only. Service rows always update master prices only."
                 : "Only master prices will be updated.";
 
             var confirm = MessageBox.Show(
                 $"Save changed price rows?\n\n" +
-                $"Changed items: {dirtyRows.Count}\n\n" +
+                $"Changed items: {dirtyRows.Count}\n" +
+                $"Changed services: {serviceChangeCount}\n\n" +
                 $"{stockSyncText}",
                 "Save Price Changes",
                 MessageBoxButton.YesNo,

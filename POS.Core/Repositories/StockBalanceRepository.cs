@@ -255,6 +255,155 @@ namespace POS.Core.Repositories
             return result;
         }
 
+        public async Task<List<ExpiryMonitorRowDto>> GetExpiryMonitorAsync(
+            string searchText = "",
+            int? categoryId = null,
+            int? supplierId = null,
+            string expiryFilter = ExpiryMonitorFilters.All,
+            bool positiveStockOnly = true)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            string search = NormalizeText(searchText);
+            DateTime today = DateTime.Today;
+
+            var query = context.ItemBatches
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
+                        .ThenInclude(p => p.Category)
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
+                        .ThenInclude(p => p.UnitOfMeasure)
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemSuppliers)
+                        .ThenInclude(s => s.Supplier)
+                .AsNoTracking()
+                .Where(b =>
+                    !b.IsDeactivated &&
+                    !b.ItemVariant.IsDeactivated &&
+                    !b.ItemVariant.ItemParent.IsDeactivated &&
+                    b.ItemVariant.ItemParent.ItemType == ItemTypeCodes.StockItem &&
+                    b.ItemVariant.ItemParent.HasBatchTracking &&
+                    (b.ItemVariant.ItemParent.HasExpiryTracking ||
+                     b.ItemVariant.ItemParent.HasBatchExpiry) &&
+                    b.BatchNo != GeneralBatchNo)
+                .AsQueryable();
+
+            if (positiveStockOnly)
+            {
+                query = query.Where(b => b.CurrentStock > 0m);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string like = $"%{search}%";
+
+                query = query.Where(b =>
+                    EF.Functions.Like(b.ItemVariant.ItemParent.ItemCode, like) ||
+                    EF.Functions.Like(b.ItemVariant.ItemParent.ItemName, like) ||
+                    EF.Functions.Like(b.ItemVariant.SkuCode, like) ||
+                    EF.Functions.Like(b.ItemVariant.Barcode ?? string.Empty, like) ||
+                    EF.Functions.Like(b.BatchNo, like) ||
+                    EF.Functions.Like(b.InternalBatchBarcode ?? string.Empty, like));
+            }
+
+            if (categoryId.HasValue && categoryId.Value > 0)
+            {
+                query = query.Where(b =>
+                    b.ItemVariant.ItemParent.CategoryId == categoryId.Value);
+            }
+
+            if (supplierId.HasValue && supplierId.Value > 0)
+            {
+                query = query.Where(b =>
+                    b.ItemVariant.ItemSuppliers.Any(s =>
+                        s.SupplierId == supplierId.Value));
+            }
+
+            query = expiryFilter switch
+            {
+                ExpiryMonitorFilters.Expired =>
+                    query.Where(b =>
+                        b.ExpiryDate.HasValue &&
+                        b.ExpiryDate.Value < today),
+
+                ExpiryMonitorFilters.Within7Days =>
+                    query.Where(b =>
+                        b.ExpiryDate.HasValue &&
+                        b.ExpiryDate.Value >= today &&
+                        b.ExpiryDate.Value < today.AddDays(8)),
+
+                ExpiryMonitorFilters.Within30Days =>
+                    query.Where(b =>
+                        b.ExpiryDate.HasValue &&
+                        b.ExpiryDate.Value >= today &&
+                        b.ExpiryDate.Value < today.AddDays(31)),
+
+                ExpiryMonitorFilters.Within60Days =>
+                    query.Where(b =>
+                        b.ExpiryDate.HasValue &&
+                        b.ExpiryDate.Value >= today &&
+                        b.ExpiryDate.Value < today.AddDays(61)),
+
+                ExpiryMonitorFilters.Within90Days =>
+                    query.Where(b =>
+                        b.ExpiryDate.HasValue &&
+                        b.ExpiryDate.Value >= today &&
+                        b.ExpiryDate.Value < today.AddDays(91)),
+
+                ExpiryMonitorFilters.MissingExpiry =>
+                    query.Where(b => !b.ExpiryDate.HasValue),
+
+                _ => query
+            };
+
+            var batches = await query.ToListAsync();
+
+            return batches
+                .Select(batch =>
+                {
+                    var variant = batch.ItemVariant;
+                    var parent = variant.ItemParent;
+                    var primarySupplier = variant.ItemSuppliers
+                        .Where(link => link.Supplier != null)
+                        .OrderByDescending(link => link.IsPrimary)
+                        .ThenBy(link => link.Supplier!.SupplierName)
+                        .FirstOrDefault();
+
+                    return new ExpiryMonitorRowDto
+                    {
+                        BatchId = batch.Id,
+                        ParentId = variant.ItemParentId,
+                        VariantId = variant.Id,
+                        ItemCode = parent.ItemCode,
+                        SkuCode = variant.SkuCode,
+                        ItemBarcode = variant.Barcode ?? string.Empty,
+                        Description = parent.ItemName,
+                        VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
+                            ? "Standard"
+                            : variant.VariantDescription,
+                        CategoryName = parent.Category?.CategoryName ?? string.Empty,
+                        PrimarySupplierName = primarySupplier?.Supplier?.SupplierName
+                            ?? primarySupplier?.Supplier?.CompanyName
+                            ?? string.Empty,
+                        Uom = parent.UnitOfMeasure?.UomCode
+                            ?? parent.BaseUom
+                            ?? "PCS",
+                        BatchNo = batch.BatchNo,
+                        BatchBarcode = batch.InternalBatchBarcode ?? string.Empty,
+                        ReceivedDate = batch.ReceivedDate,
+                        ExpiryDate = batch.ExpiryDate,
+                        AvailableQty = batch.CurrentStock,
+                        UnitCost = Math.Round(batch.CostPrice, 2)
+                    };
+                })
+                .OrderBy(row => row.ExpiryDate ?? DateTime.MaxValue)
+                .ThenBy(row => row.Description)
+                .ThenBy(row => row.VariantDescription)
+                .ThenBy(row => row.BatchNo)
+                .ToList();
+        }
+
         private static List<POS.Core.Models.ItemBatch> GetStockRowsForVariant(
             IEnumerable<POS.Core.Models.ItemBatch>? sourceBatches,
             bool hasBatchTracking)

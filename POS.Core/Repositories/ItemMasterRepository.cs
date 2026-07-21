@@ -318,6 +318,7 @@ namespace POS.Core.Repositories
         public async Task<IReadOnlyList<ItemMasterSummaryDto>> GetSummariesAsync(
             string searchTerm = "",
             bool includeDeactivated = false,
+            string? itemType = null,
             int take = DefaultTakeLimit)
         {
             take = NormalizeTakeLimit(take);
@@ -330,6 +331,20 @@ namespace POS.Core.Repositories
             if (!includeDeactivated)
             {
                 query = query.Where(p => !p.IsDeactivated);
+            }
+
+            string normalizedItemType = (itemType ?? string.Empty).Trim();
+
+            if (string.Equals(
+                    normalizedItemType,
+                    ItemTypeCodes.StockItem,
+                    StringComparison.Ordinal) ||
+                string.Equals(
+                    normalizedItemType,
+                    ItemTypeCodes.Service,
+                    StringComparison.Ordinal))
+            {
+                query = query.Where(p => p.ItemType == normalizedItemType);
             }
 
             if (!string.IsNullOrWhiteSpace(searchTerm))

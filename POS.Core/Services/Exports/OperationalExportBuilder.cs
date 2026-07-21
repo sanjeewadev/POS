@@ -393,6 +393,41 @@ namespace POS.Core.Services.Exports
                 }));
         }
 
+        public string BuildExpiryMonitorCsv(
+            IReadOnlyCollection<ExpiryMonitorRowDto> rows)
+        {
+            EnsureRows(rows, "expiry monitor");
+
+            return _csv.Format(
+                new[]
+                {
+                    "ExpiryStatus", "DaysRemaining", "ExpiryDate", "ItemCode",
+                    "SkuCode", "ItemBarcode", "Description", "Variant", "BatchNo",
+                    "BatchBarcode", "Category", "Supplier", "Uom", "AvailableQty",
+                    "UnitCost", "CostValue", "ReceivedDate"
+                },
+                rows.Select(row => (IReadOnlyList<string?>)new string?[]
+                {
+                    row.ExpiryStatus,
+                    row.DaysRemaining?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                    row.ExpiryDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty,
+                    row.ItemCode,
+                    row.SkuCode,
+                    row.ItemBarcode,
+                    row.Description,
+                    row.VariantDescription,
+                    row.BatchNo,
+                    row.BatchBarcode,
+                    row.CategoryName,
+                    row.PrimarySupplierName,
+                    row.Uom,
+                    Quantity(row.AvailableQty),
+                    Money(row.UnitCost),
+                    Money(row.CostValue),
+                    row.ReceivedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                }));
+        }
+
         private static PdfTableColumnDto Column(string header, double width, bool numeric = false) =>
             new() { Header = header, WidthCentimeters = width, IsNumeric = numeric };
 

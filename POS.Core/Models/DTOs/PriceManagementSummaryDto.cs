@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using POS.Core.Configuration;
 
 namespace POS.Core.Models.DTOs
 {
@@ -28,6 +29,18 @@ namespace POS.Core.Models.DTOs
         public string VariantAttributes { get; set; } = string.Empty;
         public string Uom { get; set; } = "PCS";
         public string CategoryName { get; set; } = string.Empty;
+
+        public string ItemType { get; set; } = ItemTypeCodes.StockItem;
+
+        public bool IsService =>
+            string.Equals(
+                ItemType,
+                ItemTypeCodes.Service,
+                StringComparison.Ordinal);
+
+        public string ItemTypeText => IsService ? "Service" : "Stock Item";
+
+        public bool HasInventory => !IsService;
 
         public bool HasBatchTracking { get; set; }
         public bool HasExpiryTracking { get; set; }
@@ -198,6 +211,9 @@ namespace POS.Core.Models.DTOs
         {
             get
             {
+                if (IsService)
+                    return "Service / No Stock";
+
                 if (!HasBatchTracking)
                     return "Average Cost";
 
@@ -209,6 +225,9 @@ namespace POS.Core.Models.DTOs
         {
             get
             {
+                if (IsService)
+                    return "Standard Cost";
+
                 if (!HasBatchTracking)
                     return "Average Cost";
 
@@ -220,6 +239,9 @@ namespace POS.Core.Models.DTOs
         {
             get
             {
+                if (IsService)
+                    return "—";
+
                 if (ActiveStockRowCount <= 0)
                     return "-";
 
@@ -230,7 +252,13 @@ namespace POS.Core.Models.DTOs
             }
         }
 
+        public decimal? InventoryStockOnHand => IsService ? null : TotalSoh;
+
+        public decimal? InventoryStockValue => IsService ? null : CurrentStockValue;
+
         public decimal NewRetailValue => Math.Round(TotalSoh * RetailPrice, 2);
+
+        public decimal? InventoryRetailValue => IsService ? null : NewRetailValue;
 
         public decimal NewWholesaleValue => Math.Round(TotalSoh * WholesalePrice, 2);
 
@@ -424,6 +452,7 @@ namespace POS.Core.Models.DTOs
         {
             OnPropertyChanged(nameof(NewRetailValue));
             OnPropertyChanged(nameof(NewWholesaleValue));
+            OnPropertyChanged(nameof(InventoryRetailValue));
         }
 
         private static decimal RoundMoney(decimal value)
