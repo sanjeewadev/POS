@@ -481,7 +481,7 @@
                                         Width="150"/>
 
                     <DataGridTextColumn Header="Qty On Hand"
-                                        Binding="{Binding TotalQtyOnHand, Converter={StaticResource SmartQuantityConverter}}"
+                                        Binding="{Binding TotalQtyOnHand, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                         Width="105"
                                         ElementStyle="{StaticResource CenterBoldGreenText}"/>
 
@@ -651,7 +651,7 @@
                                         </DataGridTemplateColumn>
 
                                         <DataGridTextColumn Header="Stock"
-                                                            Binding="{Binding CurrentStock, Converter={StaticResource SmartQuantityConverter}}"
+                                                            Binding="{Binding CurrentStock, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                                             Width="75"
                                                             Foreground="#005500"
                                                             FontWeight="Bold"
@@ -856,7 +856,7 @@
                                         ElementStyle="{StaticResource CenterText}"/>
 
                     <DataGridTextColumn Header="Available Qty"
-                                        Binding="{Binding AvailableQty, Converter={StaticResource SmartQuantityConverter}}"
+                                        Binding="{Binding AvailableQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                         Width="95"
                                         Foreground="#005500"
                                         FontWeight="Bold"
@@ -960,7 +960,7 @@
                                    FontSize="12"
                                    FontWeight="SemiBold"/>
 
-                        <TextBlock Text="{Binding TotalPhysicalQty, Converter={StaticResource SmartQuantityConverter}}"
+                        <TextBlock Text="{Binding TotalPhysicalQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                    FontWeight="Bold"
                                    Foreground="#005500"
                                    FontSize="13"/>
@@ -1148,7 +1148,7 @@
                             HorizontalAlignment="Right"
                             Margin="20,0">
                     <TextBlock Text="Visible Qty: " FontWeight="Bold" Foreground="#555"/>
-                    <TextBlock Text="{Binding ExpiryQuantityTotal, Converter={StaticResource SmartQuantityConverter}}"
+                    <TextBlock Text="{Binding ExpiryQuantityTotal, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                FontWeight="Bold"
                                Foreground="#005500"
                                Margin="0,0,15,0"/>

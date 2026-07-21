@@ -102,8 +102,8 @@
                 <DataGridTextColumn Header="Authorized By" Binding="{Binding AuthorizedBy}" Width="110"/>
                 <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="*"/>
                 <DataGridTextColumn Header="Lines" Binding="{Binding LineCount}" Width="55"/>
-                <DataGridTextColumn Header="Increase" Binding="{Binding TotalIncreaseQty, StringFormat=N3}" Width="80"/>
-                <DataGridTextColumn Header="Decrease" Binding="{Binding TotalDecreaseQty, StringFormat=N3}" Width="80"/>
+                <DataGridTextColumn Header="Increase" Binding="{Binding TotalIncreaseQty, StringFormat={}{0:#,##0.###}}" Width="80"/>
+                <DataGridTextColumn Header="Decrease" Binding="{Binding TotalDecreaseQty, StringFormat={}{0:#,##0.###}}" Width="80"/>
                 <DataGridTextColumn Header="Impact" Binding="{Binding TotalImpact, StringFormat=N2}" Width="90"/>
                 <DataGridTextColumn Header="Reversed By" Binding="{Binding CancelledBy}" Width="100"/>
                 <DataGridTextColumn Header="Reversal Reason" Binding="{Binding CancellationReason}" Width="180"/>
@@ -126,9 +126,9 @@
                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
                 <DataGridTextColumn Header="Variant" Binding="{Binding VariantDescription}" Width="115"/>
                 <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo}" Width="105"/>
-                <DataGridTextColumn Header="System" Binding="{Binding SystemQty, StringFormat=N3}" Width="75"/>
-                <DataGridTextColumn Header="Actual" Binding="{Binding ActualQty, StringFormat=N3}" Width="75"/>
-                <DataGridTextColumn Header="Variance" Binding="{Binding VarianceQty, StringFormat=N3}" Width="75"/>
+                <DataGridTextColumn Header="System" Binding="{Binding SystemQty, StringFormat={}{0:#,##0.###}}" Width="75"/>
+                <DataGridTextColumn Header="Actual" Binding="{Binding ActualQty, StringFormat={}{0:#,##0.###}}" Width="75"/>
+                <DataGridTextColumn Header="Variance" Binding="{Binding VarianceQty, StringFormat={}{0:#,##0.###}}" Width="75"/>
                 <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCost, StringFormat=N2}" Width="80"/>
                 <DataGridTextColumn Header="Impact" Binding="{Binding CostImpact, StringFormat=N2}" Width="85"/>
                 <DataGridTextColumn Header="Reason" Binding="{Binding ReasonCode}" Width="145"/>

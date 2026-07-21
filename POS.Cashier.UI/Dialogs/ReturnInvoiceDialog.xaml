@@ -110,17 +110,17 @@
                                         IsReadOnly="True"
                                         ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                     <DataGridTextColumn Header="Sold"
-                                        Binding="{Binding SoldQuantity, StringFormat=0.###}"
+                                        Binding="{Binding SoldQuantity, StringFormat={}{0:#,##0.###}}"
                                         Width="70"
                                         IsReadOnly="True"
                                         ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                     <DataGridTextColumn Header="Returned"
-                                        Binding="{Binding PreviouslyReturnedQuantity, StringFormat=0.###}"
+                                        Binding="{Binding PreviouslyReturnedQuantity, StringFormat={}{0:#,##0.###}}"
                                         Width="85"
                                         IsReadOnly="True"
                                         ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                     <DataGridTextColumn Header="Remaining"
-                                        Binding="{Binding RemainingQuantity, StringFormat=0.###}"
+                                        Binding="{Binding RemainingQuantity, StringFormat={}{0:#,##0.###}}"
                                         Width="90"
                                         IsReadOnly="True"
                                         ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -489,7 +490,7 @@ namespace POS.Core.Repositories
                 Remarks = $"Free Issue return {NormalizeText(returnReference)}; supplier claim reduced without changing lifecycle status."
             };
             await context.FreeItemClaimAdjustments.AddAsync(adjustment);
-            AppendRemarks(claim, $"Customer return reduced claim by {quantity:N3} / Rs. {reduction:N2}.", createdBy);
+            AppendRemarks(claim, $"Customer return reduced claim by {QuantityDisplayFormatter.Format(quantity)} / Rs. {reduction:N2}.", createdBy);
         }
 
         public Task MarkSubmittedAsync(int claimId, string submittedBy, string remarks = "") =>

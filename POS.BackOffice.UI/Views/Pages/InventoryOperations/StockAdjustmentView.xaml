@@ -474,7 +474,7 @@
                                 </DataGridTemplateColumn>
 
                                 <DataGridTextColumn Header="System"
-                                                    Binding="{Binding SystemQty, Converter={StaticResource SmartQuantityConverter}}"
+                                                    Binding="{Binding SystemQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                                     Width="72"
                                                     IsReadOnly="True"
                                                     ElementStyle="{StaticResource CenterText}"/>
@@ -492,7 +492,7 @@
                                 </DataGridTemplateColumn>
 
                                 <DataGridTextColumn Header="Variance"
-                                                    Binding="{Binding Variance, Converter={StaticResource SmartQuantityConverter}}"
+                                                    Binding="{Binding Variance, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                                     Width="78"
                                                     IsReadOnly="True"
                                                     ElementStyle="{StaticResource CenterText}"/>
@@ -674,7 +674,7 @@
                     </DataGridTemplateColumn>
 
                     <DataGridTextColumn Header="System"
-                                        Binding="{Binding SystemQty, Converter={StaticResource SmartQuantityConverter}}"
+                                        Binding="{Binding SystemQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                         Width="75"
                                         IsReadOnly="True"
                                         ElementStyle="{StaticResource CenterText}"/>
@@ -693,7 +693,7 @@
                     </DataGridTextColumn>
 
                     <DataGridTextColumn Header="Variance"
-                                        Binding="{Binding VarianceQty, Converter={StaticResource SmartQuantityConverter}}"
+                                        Binding="{Binding VarianceQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                         Width="80"
                                         IsReadOnly="True">
                         <DataGridTextColumn.ElementStyle>
@@ -800,7 +800,7 @@
                                        FontSize="12"
                                        FontWeight="Bold"/>
 
-                            <TextBlock Text="{Binding TotalIncreaseQty, Converter={StaticResource SmartQuantityConverter}}"
+                            <TextBlock Text="{Binding TotalIncreaseQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                        HorizontalAlignment="Right"
                                        Foreground="#005500"
                                        FontSize="12"
@@ -813,7 +813,7 @@
                                        FontSize="12"
                                        FontWeight="Bold"/>
 
-                            <TextBlock Text="{Binding TotalDecreaseQty, Converter={StaticResource SmartQuantityConverter}}"
+                            <TextBlock Text="{Binding TotalDecreaseQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                        HorizontalAlignment="Right"
                                        Foreground="#991B1B"
                                        FontSize="12"

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -603,7 +604,7 @@ namespace POS.Core.Repositories
             {
                 return Denied(
                     rule,
-                    $"Free issue quantity exceeds invoice limit. Limit: {rule.MaxQtyPerInvoice:N3}.");
+                    $"Free issue quantity exceeds invoice limit. Limit: {QuantityDisplayFormatter.Format(rule.MaxQtyPerInvoice)}.");
             }
 
             if (rule.MaxValuePerInvoice > 0m &&
@@ -625,7 +626,7 @@ namespace POS.Core.Repositories
                     Rule = rule,
                     TodayUsedQty = todayUsage.TodayQty,
                     TodayUsedValue = todayUsage.TodayValue,
-                    Message = $"Free issue quantity exceeds daily limit. Used: {todayUsage.TodayQty:N3}, Limit: {rule.MaxQtyPerDay:N3}."
+                    Message = $"Free issue quantity exceeds daily limit. Used: {QuantityDisplayFormatter.Format(todayUsage.TodayQty)}, Limit: {QuantityDisplayFormatter.Format(rule.MaxQtyPerDay)}."
                 };
             }
 

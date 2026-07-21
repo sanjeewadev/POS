@@ -7,6 +7,7 @@ using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Services.Documents;
+using POS.Core.Utilities;
 
 namespace POS.Cashier.UI.Services
 {
@@ -328,7 +329,7 @@ namespace POS.Cashier.UI.Services
                     }
 
                     string quantityAndPrice =
-                        $"{line.Quantity:0.###} " +
+                        $"{QuantityDisplayFormatter.Format(line.Quantity)} " +
                         $"{SafeText(line.Uom, 6)} x " +
                         $"{FormatMoney(line.UnitPrice, storeSettings)}";
 

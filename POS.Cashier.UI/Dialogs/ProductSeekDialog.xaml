@@ -204,7 +204,7 @@
                                                     Width="90"
                                                     ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
                                 <DataGridTextColumn Header="Stock"
-                                                    Binding="{Binding StockOnHand, StringFormat={}{0:0.###}}"
+                                                    Binding="{Binding StockOnHand, StringFormat={}{0:#,##0.###}}"
                                                     Width="78"
                                                     ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                             </DataGrid.Columns>
@@ -266,7 +266,7 @@
                                                 Width="100"
                                                 ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                             <DataGridTextColumn Header="Available"
-                                                Binding="{Binding AvailableQty, StringFormat={}{0:0.###}}"
+                                                Binding="{Binding AvailableQty, StringFormat={}{0:#,##0.###}}"
                                                 Width="92"
                                                 ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                             <DataGridTextColumn Header="Cost"

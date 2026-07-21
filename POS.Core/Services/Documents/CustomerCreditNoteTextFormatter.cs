@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using POS.Core.Configuration;
 using POS.Core.Models;
+using POS.Core.Utilities;
 
 namespace POS.Core.Services.Documents
 {
@@ -65,7 +66,7 @@ namespace POS.Core.Services.Documents
             {
                 AppendWrapped(text, $"{lineNo}. {FirstNonEmpty(line.ItemDescription, "Item")}", columns);
 
-                string qtyText = $"{line.QuantityReturned:0.###} x {FormatMoney(line.RefundValue, settings)}";
+                string qtyText = $"{QuantityDisplayFormatter.Format(line.QuantityReturned)} x {FormatMoney(line.RefundValue, settings)}";
                 AppendTwoColumns(text, qtyText, FormatMoney(line.LineTotalRefund, settings), columns);
 
                 SalesLine? source = line.SalesLine;

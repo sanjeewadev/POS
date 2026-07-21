@@ -248,7 +248,7 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="#" Binding="{Binding Rank}" Width="30"/>
                             <DataGridTextColumn Header="Item / Service" Binding="{Binding ItemName}" Width="*"/>
-                            <DataGridTextColumn Header="Qty" Binding="{Binding NetQuantity, StringFormat=N3}" Width="65"/>
+                            <DataGridTextColumn Header="Qty" Binding="{Binding NetQuantity, StringFormat={}{0:#,##0.###}}" Width="65"/>
                             <DataGridTextColumn Header="Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="85"/>
                         </DataGrid.Columns>
                     </DataGrid>

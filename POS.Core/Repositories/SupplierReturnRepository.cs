@@ -8,6 +8,7 @@ using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Services.Returns;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -53,7 +54,7 @@ namespace POS.Core.Repositories
         public decimal ReturnableQty { get; set; }
 
         public string DisplayText =>
-            $"{SupplierInvoiceNo} | {GrnNumber} | {ReceivedDate:yyyy-MM-dd} | Returnable: {ReturnableQty:0.###}";
+            $"{SupplierInvoiceNo} | {GrnNumber} | {ReceivedDate:yyyy-MM-dd} | Returnable: {QuantityDisplayFormatter.Format(ReturnableQty)}";
     }
 
     public class SupplierReturnSourceDto
@@ -655,7 +656,7 @@ namespace POS.Core.Repositories
                 if (line.ReturnQty > batch.CurrentStock)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Current stock is only {batch.CurrentStock:N3}.");
+                        $"Cannot return {QuantityDisplayFormatter.Format(line.ReturnQty)} for item '{variant.SkuCode}'. Current stock is only {QuantityDisplayFormatter.Format(batch.CurrentStock)}.");
                 }
 
                 PreviousReturnAggregate previous = prior.TryGetValue(grnLine.Id, out PreviousReturnAggregate? found)
@@ -667,7 +668,7 @@ namespace POS.Core.Repositories
                 if (line.ReturnQty > remainingQuantity)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot return {line.ReturnQty:N3} for item '{variant.SkuCode}'. Remaining returnable GRN quantity is {remainingQuantity:N3}.");
+                        $"Cannot return {QuantityDisplayFormatter.Format(line.ReturnQty)} for item '{variant.SkuCode}'. Remaining returnable GRN quantity is {QuantityDisplayFormatter.Format(remainingQuantity)}.");
                 }
 
                 if (string.IsNullOrWhiteSpace(line.ReasonCode))
@@ -785,7 +786,7 @@ namespace POS.Core.Repositories
                 if (batch.CurrentStock < line.ReturnQty)
                 {
                     throw new InvalidOperationException(
-                        $"Insufficient stock in '{BuildBatchDisplayName(batch)}'. Current stock is {batch.CurrentStock:N3}, return quantity is {line.ReturnQty:N3}.");
+                        $"Insufficient stock in '{BuildBatchDisplayName(batch)}'. Current stock is {QuantityDisplayFormatter.Format(batch.CurrentStock)}, return quantity is {QuantityDisplayFormatter.Format(line.ReturnQty)}.");
                 }
 
                 batch.CurrentStock -= line.ReturnQty;

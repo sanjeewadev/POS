@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using POS.Core.Configuration;
 using POS.Core.Models.DTOs;
+using POS.Core.Utilities;
 
 namespace POS.Core.Services.Documents
 {
@@ -50,7 +51,7 @@ namespace POS.Core.Services.Documents
             foreach (SupplierDebitNoteLineDto line in document.Lines)
             {
                 AppendWrapped(text, $"{lineNo}. {FirstNonEmpty(line.Description, line.ItemCode, "Item")}", columns);
-                AppendTwoColumns(text, $"Qty {line.ReturnQuantity:0.###}", $"Rs. {Money(line.SupplierCredit)}", columns);
+                AppendTwoColumns(text, $"Qty {QuantityDisplayFormatter.Format(line.ReturnQuantity)}", $"Rs. {Money(line.SupplierCredit)}", columns);
                 AppendWrapped(text, $"Batch: {FirstNonEmpty(line.BatchNo, "-")} | Landed Cost: Rs. {Money(line.HistoricalLandedCost)}", columns);
 
                 if (string.Equals(line.TaxSnapshotStatus, TaxSnapshotStatuses.Complete, StringComparison.Ordinal))

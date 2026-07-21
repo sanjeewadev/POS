@@ -76,7 +76,7 @@
                                     Binding="{Binding LookupCode}"
                                     Width="180"/>
                 <DataGridTextColumn Header="In Stock Qty"
-                                    Binding="{Binding CurrentStock, StringFormat={}{0:N3}}"
+                                    Binding="{Binding CurrentStock, StringFormat={}{0:#,##0.###}}"
                                     Width="160">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">

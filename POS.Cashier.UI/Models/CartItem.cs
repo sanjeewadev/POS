@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using POS.Core.Configuration;
 using POS.Core.Services.Tax;
+using POS.Core.Utilities;
 
 namespace POS.Cashier.UI.Models
 {
@@ -903,7 +904,7 @@ namespace POS.Cashier.UI.Models
 
         private static string FormatQuantity(decimal value)
         {
-            return value.ToString("0.###");
+            return QuantityDisplayFormatter.Format(value);
         }
     }
 }

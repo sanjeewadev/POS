@@ -451,7 +451,7 @@
                                                 Width="180"
                                                 CellStyle="{StaticResource FrozenCell}"/>
                             <DataGridTextColumn Header="Qty"
-                                                Binding="{Binding ReceivedQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N3}"
+                                                Binding="{Binding ReceivedQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}"
                                                 Width="65"
                                                 CellStyle="{StaticResource EditableCell}"/>
                             <DataGridTextColumn Header="Unit Cost"
@@ -641,7 +641,7 @@
                                                 Width="95"
                                                 CellStyle="{StaticResource FrozenCell}"/>
                             <DataGridTextColumn Header="Qty"
-                                                Binding="{Binding ReceivedQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N3}"
+                                                Binding="{Binding ReceivedQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}"
                                                 Width="65"
                                                 CellStyle="{StaticResource EditableCell}"/>
                             <DataGridTextColumn Header="Unit Cost"

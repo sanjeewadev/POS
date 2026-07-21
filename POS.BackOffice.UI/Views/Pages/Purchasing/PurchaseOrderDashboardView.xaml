@@ -342,7 +342,7 @@
                                         Width="105"/>
 
                     <DataGridTextColumn Header="Ordered Qty"
-                                        Binding="{Binding TotalOrderedQty, StringFormat=N3}"
+                                        Binding="{Binding TotalOrderedQty, StringFormat={}{0:#,##0.###}}"
                                         Width="105">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenterText}"/>
@@ -350,7 +350,7 @@
                     </DataGridTextColumn>
 
                     <DataGridTextColumn Header="Received Qty"
-                                        Binding="{Binding TotalReceivedQty, StringFormat=N3}"
+                                        Binding="{Binding TotalReceivedQty, StringFormat={}{0:#,##0.###}}"
                                         Width="105">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenterText}"/>
@@ -656,7 +656,7 @@
                                         Width="65"/>
 
                     <DataGridTextColumn Header="Ordered"
-                                        Binding="{Binding OrderQty, StringFormat=N3}"
+                                        Binding="{Binding OrderQty, StringFormat={}{0:#,##0.###}}"
                                         Width="85">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenterText}">
@@ -666,7 +666,7 @@
                     </DataGridTextColumn>
 
                     <DataGridTextColumn Header="Received"
-                                        Binding="{Binding ReceivedQty, StringFormat=N3}"
+                                        Binding="{Binding ReceivedQty, StringFormat={}{0:#,##0.###}}"
                                         Width="85">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenterText}"/>

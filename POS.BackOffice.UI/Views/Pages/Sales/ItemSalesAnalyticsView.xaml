@@ -26,8 +26,8 @@
             <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Returns" Foreground="Gray"/><TextBlock Text="{Binding ReturnValue, StringFormat={}Rs. {0:N2}}" FontWeight="Bold"/></StackPanel></Border>
             <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Net Sales" Foreground="Gray"/><TextBlock Text="{Binding NetSales, StringFormat={}Rs. {0:N2}}" FontWeight="Bold"/></StackPanel></Border>
             <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Gross Profit" Foreground="Gray"/><TextBlock Text="{Binding GrossProfit, StringFormat={}Rs. {0:N2}}" FontWeight="Bold"/></StackPanel></Border>
-            <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Sold Qty" Foreground="Gray"/><TextBlock Text="{Binding SoldQuantity, StringFormat=N3}" FontWeight="Bold"/></StackPanel></Border>
-            <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Returned Qty" Foreground="Gray"/><TextBlock Text="{Binding ReturnedQuantity, StringFormat=N3}" FontWeight="Bold"/></StackPanel></Border>
+            <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Sold Qty" Foreground="Gray"/><TextBlock Text="{Binding SoldQuantity, StringFormat={}{0:#,##0.###}}" FontWeight="Bold"/></StackPanel></Border>
+            <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Returned Qty" Foreground="Gray"/><TextBlock Text="{Binding ReturnedQuantity, StringFormat={}{0:#,##0.###}}" FontWeight="Bold"/></StackPanel></Border>
             <Border Style="{StaticResource KpiBorder}" Margin="0"><StackPanel><TextBlock Text="Slow / Non-Selling" Foreground="Gray"/><TextBlock Text="{Binding SlowOrNonSellingCount}" FontWeight="Bold"/></StackPanel></Border>
         </UniformGrid>
         <TabControl Grid.Row="3">
@@ -40,9 +40,9 @@
                         <DataGridTextColumn Header="Item / Service" Binding="{Binding ItemName}" Width="*" MinWidth="180"/>
                         <DataGridTextColumn Header="Type" Binding="{Binding ItemType}" Width="85"/>
                         <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="110"/>
-                        <DataGridTextColumn Header="Sold" Binding="{Binding SoldQuantity, StringFormat=N3}" Width="70"/>
-                        <DataGridTextColumn Header="Returned" Binding="{Binding ReturnedQuantity, StringFormat=N3}" Width="75"/>
-                        <DataGridTextColumn Header="Net Qty" Binding="{Binding NetQuantity, StringFormat=N3}" Width="75"/>
+                        <DataGridTextColumn Header="Sold" Binding="{Binding SoldQuantity, StringFormat={}{0:#,##0.###}}" Width="70"/>
+                        <DataGridTextColumn Header="Returned" Binding="{Binding ReturnedQuantity, StringFormat={}{0:#,##0.###}}" Width="75"/>
+                        <DataGridTextColumn Header="Net Qty" Binding="{Binding NetQuantity, StringFormat={}{0:#,##0.###}}" Width="75"/>
                         <DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="90"/>
                         <DataGridTextColumn Header="Net Cost" Binding="{Binding NetCost, StringFormat=N2}" Width="85"/>
                         <DataGridTextColumn Header="Profit" Binding="{Binding GrossProfit, StringFormat=N2}" Width="85"/>
@@ -53,7 +53,7 @@
             </TabItem>
             <TabItem Header="Top Sellers">
                 <DataGrid ItemsSource="{Binding TopSellers}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" RowHeight="25" CellStyle="{StaticResource SelectedCellStyle}">
-                    <DataGrid.Columns><DataGridTextColumn Header="Item" Binding="{Binding ItemName}" Width="*"/><DataGridTextColumn Header="Type" Binding="{Binding ItemType}" Width="90"/><DataGridTextColumn Header="Net Qty" Binding="{Binding NetQuantity, StringFormat=N3}" Width="90"/><DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="110"/><DataGridTextColumn Header="Profit" Binding="{Binding GrossProfit, StringFormat=N2}" Width="110"/></DataGrid.Columns>
+                    <DataGrid.Columns><DataGridTextColumn Header="Item" Binding="{Binding ItemName}" Width="*"/><DataGridTextColumn Header="Type" Binding="{Binding ItemType}" Width="90"/><DataGridTextColumn Header="Net Qty" Binding="{Binding NetQuantity, StringFormat={}{0:#,##0.###}}" Width="90"/><DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="110"/><DataGridTextColumn Header="Profit" Binding="{Binding GrossProfit, StringFormat=N2}" Width="110"/></DataGrid.Columns>
                 </DataGrid>
             </TabItem>
             <TabItem Header="Slow / Non-Selling Stock">
@@ -63,7 +63,7 @@
             </TabItem>
             <TabItem Header="Selected Item Transactions">
                 <DataGrid ItemsSource="{Binding Transactions}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" RowHeight="25" CellStyle="{StaticResource SelectedCellStyle}">
-                    <DataGrid.Columns><DataGridTextColumn Header="Date" Binding="{Binding TransactionDate, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/><DataGridTextColumn Header="Type" Binding="{Binding TransactionType}" Width="110"/><DataGridTextColumn Header="Document" Binding="{Binding DocumentNo}" Width="130"/><DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/><DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat=N3}" Width="90"/><DataGridTextColumn Header="Value" Binding="{Binding Value, StringFormat=N2}" Width="110"/></DataGrid.Columns>
+                    <DataGrid.Columns><DataGridTextColumn Header="Date" Binding="{Binding TransactionDate, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/><DataGridTextColumn Header="Type" Binding="{Binding TransactionType}" Width="110"/><DataGridTextColumn Header="Document" Binding="{Binding DocumentNo}" Width="130"/><DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/><DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat={}{0:#,##0.###}}" Width="90"/><DataGridTextColumn Header="Value" Binding="{Binding Value, StringFormat=N2}" Width="110"/></DataGrid.Columns>
                 </DataGrid>
             </TabItem>
         </TabControl>

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using POS.Core.Utilities;
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -233,7 +234,7 @@ namespace POS.Cashier.UI.ViewModels
             if (safeQuantity <= 0m || safeQuantity > MaximumQuantity)
             {
                 ResetCalculatedValues();
-                SetStatus($"Free quantity must be between 0.001 and {MaximumQuantity:N3}.", "#B91C1C");
+                SetStatus($"Free quantity must be between 0.001 and {QuantityDisplayFormatter.Format(MaximumQuantity)}.", "#B91C1C");
                 return false;
             }
 

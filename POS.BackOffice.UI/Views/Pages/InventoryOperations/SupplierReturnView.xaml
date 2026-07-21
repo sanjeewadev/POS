@@ -434,25 +434,25 @@
                                                 ElementStyle="{StaticResource CenterText}"/>
 
                             <DataGridTextColumn Header="Received"
-                                                Binding="{Binding ReceivedQty, Converter={StaticResource SmartQuantityConverter}}"
+                                                Binding="{Binding ReceivedQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                                 Width="80"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
 
                             <DataGridTextColumn Header="Returned"
-                                                Binding="{Binding AlreadyReturnedQty, Converter={StaticResource SmartQuantityConverter}}"
+                                                Binding="{Binding AlreadyReturnedQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                                 Width="80"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
 
                             <DataGridTextColumn Header="Stock"
-                                                Binding="{Binding CurrentBatchStock, Converter={StaticResource SmartQuantityConverter}}"
+                                                Binding="{Binding CurrentBatchStock, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                                 Width="75"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
 
                             <DataGridTextColumn Header="Max"
-                                                Binding="{Binding MaxReturnQty, Converter={StaticResource SmartQuantityConverter}}"
+                                                Binding="{Binding MaxReturnQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                                 Width="75"
                                                 IsReadOnly="True"
                                                 ElementStyle="{StaticResource CenterText}"/>
@@ -632,7 +632,7 @@
                         </DataGridTemplateColumn>
 
                         <DataGridTextColumn Header="Max"
-                                            Binding="{Binding MaxReturnQty, Converter={StaticResource SmartQuantityConverter}}"
+                                            Binding="{Binding MaxReturnQty, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}"
                                             Width="75"
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource CenterText}"/>

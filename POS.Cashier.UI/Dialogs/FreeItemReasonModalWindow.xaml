@@ -65,7 +65,7 @@
                         <TextBlock Grid.Row="1" Grid.Column="2" Text="Batch" Style="{StaticResource CashierTransactionDetailLabel}"/>
                         <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding BatchNo}" Style="{StaticResource CashierTransactionDetailValue}"/>
                         <TextBlock Grid.Row="2" Text="Available Qty" Style="{StaticResource CashierTransactionDetailLabel}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MaximumQuantity, StringFormat=N3}" Style="{StaticResource CashierTransactionDetailValue}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding MaximumQuantity, StringFormat={}{0:#,##0.###}}" Style="{StaticResource CashierTransactionDetailValue}"/>
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="Unit Price" Style="{StaticResource CashierTransactionDetailLabel}"/>
                         <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding OriginalUnitPrice, StringFormat='Rs. {0:N2}'}" Style="{StaticResource CashierTransactionDetailValue}"/>
                     </Grid>

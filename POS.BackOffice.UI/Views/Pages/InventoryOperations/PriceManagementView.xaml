@@ -451,7 +451,7 @@
                                             IsReadOnly="True"/>
 
                         <DataGridTextColumn Header="SOH"
-                                            Binding="{Binding InventoryStockOnHand, Mode=OneWay, Converter={StaticResource SmartQuantityConverter}, TargetNullValue=—}"
+                                            Binding="{Binding InventoryStockOnHand, Mode=OneWay, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display, TargetNullValue=—}"
                                             Width="80"
                                             IsReadOnly="True"
                                             ElementStyle="{StaticResource CenterText}"/>

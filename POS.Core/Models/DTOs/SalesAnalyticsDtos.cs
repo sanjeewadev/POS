@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using POS.Core.Utilities;
 
 namespace POS.Core.Models.DTOs
 {
@@ -44,7 +45,7 @@ namespace POS.Core.Models.DTOs
             : Math.Round(GrossProfit / NetSales * 100m, 2);
         public DateTime? LastSaleDate { get; set; }
         public bool IsSlowOrNonSelling { get; set; }
-        public string StockDisplay => CurrentStock.HasValue ? CurrentStock.Value.ToString("N3") : "N/A";
+        public string StockDisplay => CurrentStock.HasValue ? QuantityDisplayFormatter.Format(CurrentStock.Value) : "N/A";
     }
 
     public sealed class ItemSalesTransactionDto

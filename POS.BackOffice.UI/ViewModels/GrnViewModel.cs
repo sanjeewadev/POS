@@ -12,6 +12,7 @@ using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Utilities;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -876,7 +877,7 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var item in ActiveMatrixVariants)
                 item.ReceivedQty = BulkMatrixQuantity;
 
-            StatusMessage = $"Bulk quantity {BulkMatrixQuantity:N3} applied to visible matrix variants.";
+            StatusMessage = $"Bulk quantity {QuantityDisplayFormatter.Format(BulkMatrixQuantity)} applied to visible matrix variants.";
         }
 
         [RelayCommand(CanExecute = nameof(CanApplyBulkMatrixUnitCost))]

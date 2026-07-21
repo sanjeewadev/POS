@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using POS.Core.Configuration;
 using POS.Core.Models;
+using POS.Core.Utilities;
 
 namespace POS.Core.Services.Documents
 {
@@ -181,7 +182,7 @@ namespace POS.Core.Services.Documents
                     columns);
 
                 string quantityAndPrice =
-                    $"{line.Quantity:0.###} {FirstNonEmpty(line.Uom, "PCS")} x {FormatMoney(line.UnitPrice, settings)}";
+                    $"{QuantityDisplayFormatter.Format(line.Quantity)} {FirstNonEmpty(line.Uom, "PCS")} x {FormatMoney(line.UnitPrice, settings)}";
 
                 AppendTwoColumns(
                     text,

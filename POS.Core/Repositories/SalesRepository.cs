@@ -9,6 +9,7 @@ using POS.Core.Enums;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Services.Tax;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -992,7 +993,7 @@ namespace POS.Core.Repositories
             if (batch.CurrentStock < line.Quantity)
             {
                 throw new InvalidOperationException(
-                    $"Not enough stock in batch '{batch.BatchNo}'. Available: {batch.CurrentStock:N3}, Required: {line.Quantity:N3}");
+                    $"Not enough stock in batch '{batch.BatchNo}'. Available: {QuantityDisplayFormatter.Format(batch.CurrentStock)}, Required: {QuantityDisplayFormatter.Format(line.Quantity)}");
             }
 
             if (batch.ExpiryDate.HasValue &&

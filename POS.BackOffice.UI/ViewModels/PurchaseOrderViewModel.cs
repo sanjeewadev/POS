@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Services;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Utilities;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -1790,7 +1791,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         private static string FormatQuantity(decimal value)
         {
-            return value.ToString("0.###");
+            return QuantityDisplayFormatter.Format(value);
         }
     }
 

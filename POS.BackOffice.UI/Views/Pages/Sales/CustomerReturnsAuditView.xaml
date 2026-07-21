@@ -81,7 +81,7 @@
                         <DataGridTextColumn Header="SKU" Binding="{Binding ItemCode}" Width="100"/>
                         <DataGridTextColumn Header="Description" Binding="{Binding ItemDescription}" Width="*" MinWidth="180"/>
                         <DataGridTextColumn Header="Type" Binding="{Binding ItemType}" Width="80"/>
-                        <DataGridTextColumn Header="Qty" Binding="{Binding QuantityReturned, StringFormat=N3}" Width="70"/>
+                        <DataGridTextColumn Header="Qty" Binding="{Binding QuantityReturned, StringFormat={}{0:#,##0.###}}" Width="70"/>
                         <DataGridTextColumn Header="Unit Refund" Binding="{Binding RefundValue, StringFormat=N2}" Width="90"/>
                         <DataGridTextColumn Header="Refund" Binding="{Binding LineTotalRefund, StringFormat=N2}" Width="90"/>
                         <DataGridTextColumn Header="Tax" Binding="{Binding TaxCategoryCode}" Width="85"/>

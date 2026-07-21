@@ -12,6 +12,7 @@ using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Documents;
+using POS.Core.Utilities;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -561,7 +562,7 @@ namespace POS.BackOffice.UI.ViewModels
                     if (newQty > item.MaxReturnQty)
                     {
                         MessageBox.Show(
-                            $"Cannot add more quantity for '{item.DisplayDescription}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.",
+                            $"Cannot add more quantity for '{item.DisplayDescription}'. Maximum returnable quantity is {QuantityDisplayFormatter.Format(item.MaxReturnQty)}.",
                             "Return Quantity Exceeded",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
@@ -644,7 +645,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (item.ReturnQty > item.MaxReturnQty)
             {
-                MessageBox.Show($"Cannot return {item.ReturnQty:N3} of '{item.DisplayDescription}'. Maximum returnable quantity is {item.MaxReturnQty:N3}.", "Return Quantity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Cannot return {QuantityDisplayFormatter.Format(item.ReturnQty)} of '{item.DisplayDescription}'. Maximum returnable quantity is {QuantityDisplayFormatter.Format(item.MaxReturnQty)}.", "Return Quantity Exceeded", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
@@ -903,7 +904,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (line.ReturnQty > line.MaxReturnQty)
             {
-                MessageBox.Show($"Cannot return {line.ReturnQty:N3} for '{line.DisplayDescription}'. Maximum returnable quantity is {line.MaxReturnQty:N3}.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Cannot return {QuantityDisplayFormatter.Format(line.ReturnQty)} for '{line.DisplayDescription}'. Maximum returnable quantity is {QuantityDisplayFormatter.Format(line.MaxReturnQty)}.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 

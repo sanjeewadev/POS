@@ -223,7 +223,7 @@
                                                 ElementStyle="{StaticResource RightText}"/>
 
                             <DataGridTextColumn Header="Stock"
-                                                Binding="{Binding StockOnHand, StringFormat={}{0:N3}}"
+                                                Binding="{Binding StockOnHand, StringFormat={}{0:#,##0.###}}"
                                                 Width="80"
                                                 ElementStyle="{StaticResource CenterText}"/>
                         </DataGrid.Columns>

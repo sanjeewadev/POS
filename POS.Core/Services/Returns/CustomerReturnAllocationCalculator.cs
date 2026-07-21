@@ -1,6 +1,7 @@
 using System;
 using POS.Core.Configuration;
 using POS.Core.Models.DTOs;
+using POS.Core.Utilities;
 
 namespace POS.Core.Services.Returns
 {
@@ -29,7 +30,7 @@ namespace POS.Core.Services.Returns
             if (input.RequestedQuantity - remainingQuantity > QuantityTolerance)
             {
                 throw new InvalidOperationException(
-                    $"Return quantity cannot exceed the remaining quantity of {remainingQuantity:0.###}.");
+                    $"Return quantity cannot exceed the remaining quantity of {QuantityDisplayFormatter.Format(remainingQuantity)}.");
             }
 
             decimal requestQuantity = RoundQuantity(input.RequestedQuantity);

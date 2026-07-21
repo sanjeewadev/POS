@@ -363,7 +363,7 @@
                     </DataGridTextColumn>
 
                     <DataGridTextColumn Header="Qty"
-                                        Binding="{Binding TotalReceivedQty, StringFormat=N3}"
+                                        Binding="{Binding TotalReceivedQty, StringFormat={}{0:#,##0.###}}"
                                         Width="90">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenterText}"/>
@@ -643,7 +643,7 @@
                                         Width="95"/>
 
                     <DataGridTextColumn Header="Qty"
-                                        Binding="{Binding ReceivedQty, StringFormat=N3}"
+                                        Binding="{Binding ReceivedQty, StringFormat={}{0:#,##0.###}}"
                                         Width="80">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenterText}">

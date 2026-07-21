@@ -8,6 +8,7 @@ using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Services.Tax;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -1025,7 +1026,7 @@ namespace POS.Core.Repositories
                     if (line.ReceivedQty > outstanding)
                     {
                         throw new InvalidOperationException(
-                            $"Cannot receive {line.ReceivedQty:N3} for item '{variant.SkuCode}'. PO ordered remaining quantity is {outstanding:N3}.");
+                            $"Cannot receive {QuantityDisplayFormatter.Format(line.ReceivedQty)} for item '{variant.SkuCode}'. PO ordered remaining quantity is {QuantityDisplayFormatter.Format(outstanding)}.");
                     }
                 }
             }
@@ -1349,7 +1350,7 @@ namespace POS.Core.Repositories
             if (line.ReceivedQty > outstanding)
             {
                 throw new InvalidOperationException(
-                    $"Cannot receive {line.ReceivedQty:N3} for item '{skuCode}'. PO ordered remaining quantity is {outstanding:N3}.");
+                    $"Cannot receive {QuantityDisplayFormatter.Format(line.ReceivedQty)} for item '{skuCode}'. PO ordered remaining quantity is {QuantityDisplayFormatter.Format(outstanding)}.");
             }
 
             poLine.ReceivedQty += line.ReceivedQty;

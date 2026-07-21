@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using POS.Core.Utilities;
 
 namespace POS.Core.Models.DTOs
 {
@@ -31,7 +32,7 @@ namespace POS.Core.Models.DTOs
             : TotalOrderedQty - TotalReceivedQty;
 
         public string DisplayText =>
-            $"{PoNumber} | {SupplierName} | Ordered: {TotalOrderedQty:N3} | Received: {TotalReceivedQty:N3}";
+            $"{PoNumber} | {SupplierName} | Ordered: {QuantityDisplayFormatter.Format(TotalOrderedQty)} | Received: {QuantityDisplayFormatter.Format(TotalReceivedQty)}";
     }
 
     public class GrnPoLineDto

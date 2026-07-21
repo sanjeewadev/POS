@@ -5,6 +5,7 @@ using System.Linq;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Utilities;
 
 namespace POS.Core.Services.Exports
 {
@@ -140,7 +141,7 @@ namespace POS.Core.Services.Exports
                 FooterText = "Sales completed in the period less customer returns processed in the period.",
                 SummaryLines = new[]
                 {
-                    $"Rows: {rows.Count:N0}    Net quantity: {rows.Sum(row => row.NetQuantity):N3}",
+                    $"Rows: {rows.Count:N0}    Net quantity: {QuantityDisplayFormatter.Format(rows.Sum(row => row.NetQuantity))}",
                     $"Net sales: Rs. {rows.Sum(row => row.NetSales):N2}    Gross profit: Rs. {rows.Sum(row => row.GrossProfit):N2}"
                 },
                 Columns = new[]
@@ -362,7 +363,7 @@ namespace POS.Core.Services.Exports
                 FooterText = "Free Issue supplier recoveries, net of recorded customer-return adjustments.",
                 SummaryLines = new[]
                 {
-                    $"Claims: {claims.Count:N0}    Original qty: {claims.Sum(row => row.Quantity):N3}    Returned qty: {claims.Sum(row => row.ReturnedQuantity):N3}",
+                    $"Claims: {claims.Count:N0}    Original qty: {QuantityDisplayFormatter.Format(claims.Sum(row => row.Quantity))}    Returned qty: {QuantityDisplayFormatter.Format(claims.Sum(row => row.ReturnedQuantity))}",
                     $"Original value: Rs. {claims.Sum(row => row.ClaimValue):N2}    Reductions: Rs. {claims.Sum(row => row.ClaimValueReduction):N2}    Net: Rs. {claims.Sum(row => row.NetClaimValue):N2}"
                 },
                 Columns = new[]

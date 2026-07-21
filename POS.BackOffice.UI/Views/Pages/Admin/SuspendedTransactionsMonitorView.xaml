@@ -27,7 +27,7 @@
                 <DataGridTextColumn Header="Cashier" Binding="{Binding CashierName}" Width="120"/>
                 <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*" MinWidth="150"/>
                 <DataGridTextColumn Header="Lines" Binding="{Binding ItemCount}" Width="60"/>
-                <DataGridTextColumn Header="Qty" Binding="{Binding TotalQuantity, StringFormat=N3}" Width="70"/>
+                <DataGridTextColumn Header="Qty" Binding="{Binding TotalQuantity, StringFormat={}{0:#,##0.###}}" Width="70"/>
                 <DataGridTextColumn Header="Value" Binding="{Binding NetTotal, StringFormat=N2}" Width="90"/>
                 <DataGridTextColumn Header="Recalls" Binding="{Binding RecallCount}" Width="65"/>
                 <DataGridTextColumn Header="Completed Invoice" Binding="{Binding CompletedInvoiceNo}" Width="130"/>
@@ -47,7 +47,7 @@
                         <DataGridTextColumn Header="#" Binding="{Binding LineNumber}" Width="45"/>
                         <DataGridTextColumn Header="Line Type" Binding="{Binding LineType}" Width="100"/>
                         <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                        <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat=N3}" Width="80"/>
+                        <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat={}{0:#,##0.###}}" Width="80"/>
                         <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="95"/>
                         <DataGridTextColumn Header="Line Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="100"/>
                     </DataGrid.Columns>

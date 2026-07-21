@@ -20,6 +20,7 @@ using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Documents;
 using POS.Core.Services.Tax;
+using POS.Core.Utilities;
 
 namespace POS.Cashier.UI.ViewModels
 {
@@ -676,7 +677,7 @@ namespace POS.Cashier.UI.ViewModels
                 qty > SelectedCartItem.AvailableBatchStock)
             {
                 _ = ShowNotificationAsync(
-                    $"Only {SelectedCartItem.AvailableBatchStock:N3} available in selected stock.",
+                    $"Only {QuantityDisplayFormatter.Format(SelectedCartItem.AvailableBatchStock)} available in selected stock.",
                     "#F59E0B");
                 return;
             }
@@ -685,7 +686,7 @@ namespace POS.Cashier.UI.ViewModels
             RecalculateTotals();
 
             _ = ShowNotificationAsync(
-                $"Quantity updated: {SelectedCartItem.Description} x {qty:N3}",
+                $"Quantity updated: {SelectedCartItem.Description} x {QuantityDisplayFormatter.Format(qty)}",
                 "#10B981");
         }
 
@@ -1780,7 +1781,7 @@ namespace POS.Cashier.UI.ViewModels
 
             if (quantity > selectedBatch.AvailableQty)
             {
-                _ = ShowNotificationAsync($"Only {selectedBatch.AvailableQty:N3} available in selected stock.", "#F59E0B");
+                _ = ShowNotificationAsync($"Only {QuantityDisplayFormatter.Format(selectedBatch.AvailableQty)} available in selected stock.", "#F59E0B");
                 return;
             }
 
@@ -1797,7 +1798,7 @@ namespace POS.Cashier.UI.ViewModels
             {
                 if (existingItem.Quantity + quantity > selectedBatch.AvailableQty)
                 {
-                    _ = ShowNotificationAsync($"Only {selectedBatch.AvailableQty:N3} available in selected stock.", "#F59E0B");
+                    _ = ShowNotificationAsync($"Only {QuantityDisplayFormatter.Format(selectedBatch.AvailableQty)} available in selected stock.", "#F59E0B");
                     return;
                 }
 
@@ -2113,7 +2114,7 @@ namespace POS.Cashier.UI.ViewModels
             if (freeQuantity <= 0m || freeQuantity > cartItem.Quantity)
             {
                 _ = ShowNotificationAsync(
-                    $"Free quantity must be between 0.001 and {cartItem.Quantity:N3}.",
+                    $"Free quantity must be between 0.001 and {QuantityDisplayFormatter.Format(cartItem.Quantity)}.",
                     "#EF4444");
                 return;
             }
@@ -2217,8 +2218,8 @@ namespace POS.Cashier.UI.ViewModels
             RecalculateTotals();
             _ = ShowNotificationAsync(
                 isSupplierRecoverable
-                    ? $"Supplier-funded Free Issue applied: {freeQuantity:N3} / Claim Rs. {claimValue:N2}"
-                    : $"Shop-funded Free Issue applied: {freeQuantity:N3} / Cost Rs. {costValue:N2}",
+                    ? $"Supplier-funded Free Issue applied: {QuantityDisplayFormatter.Format(freeQuantity)} / Claim Rs. {claimValue:N2}"
+                    : $"Shop-funded Free Issue applied: {QuantityDisplayFormatter.Format(freeQuantity)} / Cost Rs. {costValue:N2}",
                 "#10B981");
         }
 

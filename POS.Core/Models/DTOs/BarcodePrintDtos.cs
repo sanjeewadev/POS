@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using POS.Core.Utilities;
 
 namespace POS.Core.Models.DTOs
 {
@@ -138,10 +139,10 @@ namespace POS.Core.Models.DTOs
                 : "-";
 
         public string ReceivedQtyDisplayText =>
-            ReceivedQty.ToString("0.###");
+            QuantityDisplayFormatter.Format(ReceivedQty);
 
         public string AvailableQtyDisplayText =>
-            AvailableQty.ToString("0.###");
+            QuantityDisplayFormatter.Format(AvailableQty);
 
         public string PrintedStatusText
         {

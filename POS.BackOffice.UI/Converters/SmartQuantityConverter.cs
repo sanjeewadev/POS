@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
+using POS.Core.Utilities;
 
 namespace POS.BackOffice.UI.Converters
 {
@@ -20,6 +21,9 @@ namespace POS.BackOffice.UI.Converters
 
             if (!TryGetDecimal(value, culture, out decimal quantity))
                 return value.ToString() ?? string.Empty;
+
+            if (IsDisplayMode(parameter))
+                return QuantityDisplayFormatter.Format(quantity, culture);
 
             int decimalPlaces = ResolveDecimalPlaces(parameter);
 
@@ -52,6 +56,12 @@ namespace POS.BackOffice.UI.Converters
 
             return 0m;
         }
+
+        private static bool IsDisplayMode(object parameter) =>
+            string.Equals(
+                parameter?.ToString()?.Trim(),
+                "Display",
+                StringComparison.OrdinalIgnoreCase);
 
         private int ResolveDecimalPlaces(object parameter)
         {

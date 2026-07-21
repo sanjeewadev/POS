@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Models;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -337,7 +338,7 @@ namespace POS.Core.Repositories
                 return result.Fail($"Discount exceeds max value per invoice Rs. {rule.MaxValuePerInvoice:N2}.");
 
             if (rule.MaxQtyPerInvoice > 0m && quantity > rule.MaxQtyPerInvoice)
-                return result.Fail($"Quantity exceeds rule max quantity per invoice {rule.MaxQtyPerInvoice:N3}.");
+                return result.Fail($"Quantity exceeds rule max quantity per invoice {QuantityDisplayFormatter.Format(rule.MaxQtyPerInvoice)}.");
 
             decimal netAfterDiscount = Math.Round(grossAmount - discountAmount, 2);
             decimal netUnitPrice = quantity > 0m
@@ -362,7 +363,7 @@ namespace POS.Core.Repositories
             if (rule.MaxQtyPerDay > 0m &&
                 todayUsage.TotalQuantity + quantity > rule.MaxQtyPerDay)
             {
-                return result.Fail($"Rule daily quantity limit exceeded. Limit {rule.MaxQtyPerDay:N3}.");
+                return result.Fail($"Rule daily quantity limit exceeded. Limit {QuantityDisplayFormatter.Format(rule.MaxQtyPerDay)}.");
             }
 
             bool approvalRequired = rule.RequiresManagerApproval || rule.RequiresAdminApproval;
