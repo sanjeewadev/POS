@@ -398,6 +398,7 @@ namespace POS.BackOffice.UI
                     MainViewModel>();
 
             mainViewModel.RefreshSessionInformation();
+            await mainViewModel.RefreshStoreIdentityAsync();
             mainWindow.DataContext = mainViewModel;
 
             MainWindow = mainWindow;

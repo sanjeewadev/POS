@@ -11,11 +11,9 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Configuration;
-using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Services;
@@ -26,7 +24,7 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class GiftVoucherAdminViewModel : ObservableObject
     {
         private readonly GiftVoucherRepository _giftVoucherRepository;
-        private readonly IDbContextFactory<AppDbContext> _contextFactory;
+        private readonly StoreSettingsRepository _storeSettingsRepository;
         private readonly AuthService _authService;
         private readonly GiftVoucherTextFormatter _voucherFormatter;
 
@@ -58,12 +56,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         public GiftVoucherAdminViewModel(
             GiftVoucherRepository giftVoucherRepository,
-            IDbContextFactory<AppDbContext> contextFactory,
+            StoreSettingsRepository storeSettingsRepository,
             AuthService authService,
             GiftVoucherTextFormatter voucherFormatter)
         {
             _giftVoucherRepository = giftVoucherRepository ?? throw new ArgumentNullException(nameof(giftVoucherRepository));
-            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+            _storeSettingsRepository = storeSettingsRepository ?? throw new ArgumentNullException(nameof(storeSettingsRepository));
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _voucherFormatter = voucherFormatter ?? throw new ArgumentNullException(nameof(voucherFormatter));
         }
@@ -194,9 +192,9 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsBusy = true;
                 GiftVoucher voucher = await LoadVoucherAsync(giftVoucherId);
-                await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
-                StoreSettings settings = await context.StoreSettings.AsNoTracking().FirstOrDefaultAsync()
-                    ?? new StoreSettings { StoreName = "My Store", CurrencySymbol = "Rs." };
+                StoreSettings settings =
+                    await _storeSettingsRepository.GetActiveAsync()
+                    ?? StoreSettingsRepository.CreateDefaultSettings();
 
                 bool isReprint = voucher.PrintCount > 0;
                 string text = _voucherFormatter.Format(voucher, settings, isReprint);

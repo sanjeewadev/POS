@@ -1,5 +1,6 @@
 using POS.Core.Models.Licensing;
 using POS.Core.Services.Licensing;
+using POS.Core.Utilities;
 
 namespace POS.Cashier.AuditTests;
 
@@ -10,8 +11,11 @@ internal static class StoreIdentitySourcePolicyAuditTests
         VerifyRequestModels();
         VerifyCurrentStoreIdentityFeedsLicensing();
         VerifyBackOfficeIdentityUi();
+        VerifyBackOfficeShellUsesCurrentStoreIdentity();
         VerifyStoreSettingsIsAuthoritative();
+        VerifyGiftVoucherUsesActiveStoreIdentity();
         VerifyBarcodeStoreNameIsReadOnly();
+        VerifyNoCustomerSpecificIdentityLiterals();
 
         return Task.CompletedTask;
     }
@@ -160,6 +164,175 @@ internal static class StoreIdentitySourcePolicyAuditTests
             viewModel,
             "GetCurrentTerminalLicenseRequestAsync",
             "Terminal request service call");
+    }
+
+
+    private static void VerifyBackOfficeShellUsesCurrentStoreIdentity()
+    {
+        AuditAssert.Equal(
+            "Advanced POS BackOffice",
+            StoreIdentityDisplayFormatter.BuildBackOfficeTitle(
+                string.Empty,
+                string.Empty),
+            "Neutral BackOffice title");
+
+        AuditAssert.Equal(
+            "Advanced POS BackOffice — Current Trading Name",
+            StoreIdentityDisplayFormatter.BuildBackOfficeTitle(
+                " Current Trading Name ",
+                "Current Legal Name (Pvt) Ltd"),
+            "Trading-name BackOffice title");
+
+        AuditAssert.Equal(
+            "Advanced POS BackOffice — Current Legal Name (Pvt) Ltd",
+            StoreIdentityDisplayFormatter.BuildBackOfficeTitle(
+                string.Empty,
+                " Current Legal Name (Pvt) Ltd "),
+            "Legal-name BackOffice title fallback");
+
+        string shell = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Layout",
+            "ManagementShellView.xaml");
+        string mainViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "MainViewModel.cs");
+        string app = Read(
+            "POS.BackOffice.UI",
+            "App.xaml.cs");
+        string settingsViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "StoreSettingsViewModel.cs");
+
+        AuditAssert.Contains(
+            shell,
+            "Title=\"{Binding ApplicationTitleText, Mode=OneWay}\"",
+            "Dynamic BackOffice title binding");
+        AuditAssert.Contains(
+            mainViewModel,
+            "StoreSettingsRepository",
+            "BackOffice title Store Settings dependency");
+        AuditAssert.Contains(
+            mainViewModel,
+            "RefreshStoreIdentityAsync",
+            "BackOffice title initialization");
+        AuditAssert.Contains(
+            mainViewModel,
+            "StoreIdentityDisplayFormatter.BuildBackOfficeTitle",
+            "BackOffice title formatter");
+        AuditAssert.Contains(
+            app,
+            "await mainViewModel.RefreshStoreIdentityAsync();",
+            "BackOffice startup store identity load");
+        AuditAssert.Contains(
+            settingsViewModel,
+            "_mainViewModel.ApplyStoreIdentity",
+            "Live BackOffice title refresh after Store Settings save");
+    }
+
+    private static void VerifyGiftVoucherUsesActiveStoreIdentity()
+    {
+        string viewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "GiftVoucherAdminViewModel.cs");
+
+        AuditAssert.Contains(
+            viewModel,
+            "StoreSettingsRepository",
+            "Gift Voucher Store Settings dependency");
+        AuditAssert.Contains(
+            viewModel,
+            "_storeSettingsRepository.GetActiveAsync()",
+            "Gift Voucher active store identity lookup");
+        AuditAssert.False(
+            viewModel.Contains(
+                "context.StoreSettings.AsNoTracking().FirstOrDefaultAsync()",
+                StringComparison.Ordinal),
+            "Gift Voucher printing still selects an arbitrary Store Settings row.");
+    }
+
+    private static void VerifyNoCustomerSpecificIdentityLiterals()
+    {
+        string[] sourceRoots =
+        {
+            "POS.BackOffice.UI",
+            "POS.Cashier.UI",
+            "POS.Core",
+            "POS.Database.Setup",
+            "POS.Deployment.Wizard"
+        };
+
+        string[] prohibitedTerms =
+        {
+            "KUMARA",
+            "KOTTAWA"
+        };
+
+        string[] sourceExtensions =
+        {
+            ".cs",
+            ".xaml",
+            ".ps1",
+            ".iss"
+        };
+
+        foreach (string sourceRoot in sourceRoots)
+        {
+            string root = Path.Combine(
+                AuditPaths.RepositoryRoot,
+                sourceRoot);
+
+            foreach (string file in Directory.EnumerateFiles(
+                         root,
+                         "*.*",
+                         SearchOption.AllDirectories))
+            {
+                string relativePath =
+                    Path.GetRelativePath(
+                        AuditPaths.RepositoryRoot,
+                        file);
+
+                string[] pathSegments =
+                    relativePath.Split(
+                        Path.DirectorySeparatorChar,
+                        Path.AltDirectorySeparatorChar);
+
+                if (pathSegments.Any(segment =>
+                        string.Equals(
+                            segment,
+                            "bin",
+                            StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(
+                            segment,
+                            "obj",
+                            StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                if (!sourceExtensions.Contains(
+                        Path.GetExtension(file),
+                        StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string text = File.ReadAllText(file);
+
+                foreach (string prohibitedTerm in prohibitedTerms)
+                {
+                    AuditAssert.False(
+                        text.Contains(
+                            prohibitedTerm,
+                            StringComparison.OrdinalIgnoreCase),
+                        $"Customer-specific store identity literal '{prohibitedTerm}' remains in {relativePath}.");
+                }
+            }
+        }
     }
 
 

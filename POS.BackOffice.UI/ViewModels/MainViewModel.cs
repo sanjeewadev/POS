@@ -3,9 +3,12 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.Views.Pages.Admin;
 using POS.BackOffice.UI.Views.Pages.File;
+using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Utilities;
 using System;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -15,6 +18,7 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly AuthService _authService;
+        private readonly StoreSettingsRepository _storeSettingsRepository;
         private readonly DispatcherTimer _clockTimer;
 
         [ObservableProperty]
@@ -29,12 +33,18 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _applicationVersionText = "Ver: -";
 
+        [ObservableProperty]
+        private string _applicationTitleText =
+            StoreIdentityDisplayFormatter.BackOfficeProductTitle;
+
         public MainViewModel(
             IServiceProvider serviceProvider,
-            AuthService authService)
+            AuthService authService,
+            StoreSettingsRepository storeSettingsRepository)
         {
             _serviceProvider = serviceProvider;
             _authService = authService;
+            _storeSettingsRepository = storeSettingsRepository;
 
             RefreshSessionInformation();
             UpdateClock();
@@ -66,6 +76,41 @@ namespace POS.BackOffice.UI.ViewModels
             ApplicationVersionText = version == null
                 ? "Ver: -"
                 : $"Ver: {version.Major}.{version.Minor}.{version.Build}";
+        }
+
+        public async Task RefreshStoreIdentityAsync()
+        {
+            try
+            {
+                var settings =
+                    await _storeSettingsRepository
+                        .GetActiveAsync();
+
+                ApplyStoreIdentity(
+                    settings?.StoreName,
+                    settings?.LegalName);
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Load management shell store identity",
+                    ex);
+
+                ApplicationTitleText =
+                    StoreIdentityDisplayFormatter
+                        .BackOfficeProductTitle;
+            }
+        }
+
+        public void ApplyStoreIdentity(
+            string? storeName,
+            string? legalName)
+        {
+            ApplicationTitleText =
+                StoreIdentityDisplayFormatter.BuildBackOfficeTitle(
+                    storeName,
+                    legalName);
         }
 
         private void UpdateClock()

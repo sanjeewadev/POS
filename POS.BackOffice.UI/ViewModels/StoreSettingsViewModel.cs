@@ -17,18 +17,24 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly AuthService
             _authService;
 
+        private readonly MainViewModel
+            _mainViewModel;
+
         private StoreSettings?
             _loadedSettings;
 
         public StoreSettingsViewModel(
             StoreSettingsRepository
                 storeSettingsRepository,
-            AuthService authService)
+            AuthService authService,
+            MainViewModel mainViewModel)
         {
             _storeSettingsRepository =
                 storeSettingsRepository;
 
             _authService = authService;
+
+            _mainViewModel = mainViewModel;
         }
 
         // =====================================================
@@ -210,6 +216,10 @@ namespace POS.BackOffice.UI.ViewModels
                 _loadedSettings = saved;
 
                 ApplySettings(saved);
+
+                _mainViewModel.ApplyStoreIdentity(
+                    saved.StoreName,
+                    saved.LegalName);
 
                 SetStatus(
                     "Store settings saved. " +
