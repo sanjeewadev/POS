@@ -261,19 +261,31 @@ internal static class SqlServerMigrationSourcePolicyAuditTests
             .ToArray();
 
         AuditAssert.True(
-            primaryMigrations.Length == 1,
-            $"expected one SQL Server baseline migration, found {primaryMigrations.Length}");
+            primaryMigrations.Length == 2,
+            $"expected the SQL Server baseline and collation repair migrations, found {primaryMigrations.Length}");
         AuditAssert.True(
-            designers.Length == 1,
-            $"expected one SQL Server migration designer, found {designers.Length}");
+            designers.Length == 2,
+            $"expected two SQL Server migration designers, found {designers.Length}");
         AuditAssert.True(
             snapshots.Length == 1,
             $"expected one SQL Server model snapshot, found {snapshots.Length}");
 
-        string migration = File.ReadAllText(primaryMigrations[0]);
-        string designer = File.ReadAllText(designers[0]);
+        string baselineMigrationPath = primaryMigrations.Single(path =>
+            Path.GetFileName(path).Contains(
+                "Phase11B1_InitialSqlServerBaseline",
+                StringComparison.Ordinal));
+        string repairMigrationPath = primaryMigrations.Single(path =>
+            Path.GetFileName(path).Contains(
+                "RepairOperationalTextCollations",
+                StringComparison.Ordinal));
+
+        string migration = File.ReadAllText(baselineMigrationPath);
+        string repairMigration = File.ReadAllText(repairMigrationPath);
+        string designer = string.Join(
+            Environment.NewLine,
+            designers.Select(File.ReadAllText));
         string snapshot = File.ReadAllText(snapshots[0]);
-        string combined = migration + designer + snapshot;
+        string combined = migration + repairMigration + designer + snapshot;
 
         AuditAssert.Contains(
             migration,

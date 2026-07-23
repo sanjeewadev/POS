@@ -63,6 +63,7 @@ internal static class AuditTestCatalog
         new("Cashier lock screen has audited Manager recovery and safe exit", AuditGroups.SourcePolicy, LockRecoverySourcePolicyAuditTests.ManagerRecoveryAndSafeExitAreControlledAsync),
         new("Phase 11A dual database-provider foundation is controlled", AuditGroups.SourcePolicy, DatabaseFoundationSourcePolicyAuditTests.DualProviderFoundationIsControlledAsync),
         new("POS Network SQL Server setup and migration path is controlled", AuditGroups.SourcePolicy, SqlServerMigrationSourcePolicyAuditTests.DedicatedSqlServerBaselineIsControlledAsync),
+        new("SQL Server operational text collations are controlled", AuditGroups.SourcePolicy, SqlServerCollationSourcePolicyAuditTests.OperationalTextCollationsAreControlledAsync),
         new("Production deployment and recovery are controlled", AuditGroups.SourcePolicy, ProductionDeploymentSourcePolicyAuditTests.ProductionDeploymentIsControlledAsync),
         new("Store connection recovery and network resilience are controlled", AuditGroups.SourcePolicy, ConnectionResilienceSourcePolicyAuditTests.StoreConnectionRecoveryIsControlledAsync),
         new("Production setup upgrade repair and wizard layout are controlled", AuditGroups.SourcePolicy, SetupUpgradeRepairSourcePolicyAuditTests.SetupUpgradeRepairAndWizardLayoutAreControlledAsync),

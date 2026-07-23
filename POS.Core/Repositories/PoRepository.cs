@@ -7,6 +7,7 @@ using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Services.Tax;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -308,9 +309,8 @@ namespace POS.Core.Repositories
                     VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription)
                         ? "Standard"
                         : v.VariantDescription,
-                    Uom = string.IsNullOrWhiteSpace(v.ItemParent.BaseUom)
-                        ? v.ItemParent.UnitOfMeasure.UomCode
-                        : v.ItemParent.BaseUom,
+                    BaseUom = v.ItemParent.BaseUom,
+                    MasterUom = v.ItemParent.UnitOfMeasure.UomCode,
                     TaxCode = string.IsNullOrWhiteSpace(v.ItemParent.TaxCode)
                         ? "VAT"
                         : v.ItemParent.TaxCode,
@@ -353,7 +353,7 @@ namespace POS.Core.Repositories
                         Description = r.Description,
                         PrintName = r.PrintName,
                         VariantDescription = r.VariantDescription,
-                        Uom = r.Uom,
+                        Uom = UomValueResolver.Resolve(r.BaseUom, r.MasterUom),
                         TaxCode = profile.TaxCode,
                         VatRatePercent = profile.RatePercent,
                         IsVatIncluded = false,
@@ -418,9 +418,8 @@ namespace POS.Core.Repositories
                     VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription)
                         ? "Standard"
                         : v.VariantDescription,
-                    Uom = string.IsNullOrWhiteSpace(v.ItemParent.BaseUom)
-                        ? v.ItemParent.UnitOfMeasure.UomCode
-                        : v.ItemParent.BaseUom,
+                    BaseUom = v.ItemParent.BaseUom,
+                    MasterUom = v.ItemParent.UnitOfMeasure.UomCode,
                     TaxCode = string.IsNullOrWhiteSpace(v.ItemParent.TaxCode)
                         ? "VAT"
                         : v.ItemParent.TaxCode,
@@ -463,7 +462,7 @@ namespace POS.Core.Repositories
                 Description = row.Description,
                 PrintName = row.PrintName,
                 VariantDescription = row.VariantDescription,
-                Uom = row.Uom,
+                Uom = UomValueResolver.Resolve(row.BaseUom, row.MasterUom),
                 TaxCode = profile.TaxCode,
                 VatRatePercent = profile.RatePercent,
                 IsVatIncluded = false,

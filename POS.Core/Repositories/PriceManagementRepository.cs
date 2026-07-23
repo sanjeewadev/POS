@@ -7,6 +7,7 @@ using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
+using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
 {
@@ -121,7 +122,10 @@ namespace POS.Core.Repositories
                     ItemName = v.ItemParent.ItemName,
                     ItemType = v.ItemParent.ItemType,
                     CategoryName = v.ItemParent.Category != null ? v.ItemParent.Category.CategoryName : string.Empty,
-                    Uom = v.ItemParent.UnitOfMeasure != null ? v.ItemParent.UnitOfMeasure.UomCode : v.ItemParent.BaseUom,
+                    BaseUom = v.ItemParent.BaseUom,
+                    MasterUom = v.ItemParent.UnitOfMeasure != null
+                        ? v.ItemParent.UnitOfMeasure.UomCode
+                        : string.Empty,
 
                     HasBatchTracking = v.ItemParent.HasBatchTracking,
                     HasExpiryTracking = v.ItemParent.HasExpiryTracking || v.ItemParent.HasBatchExpiry
@@ -204,9 +208,9 @@ namespace POS.Core.Repositories
                         ? "Standard"
                         : variant.VariantDescription,
 
-                    Uom = string.IsNullOrWhiteSpace(variant.Uom)
-                        ? "PCS"
-                        : variant.Uom,
+                    Uom = UomValueResolver.Resolve(
+                        variant.BaseUom,
+                        variant.MasterUom),
 
                     CategoryName = variant.CategoryName,
                     ItemType = variant.ItemType,

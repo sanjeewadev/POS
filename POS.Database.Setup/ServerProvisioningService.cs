@@ -90,7 +90,8 @@ internal sealed class ServerProvisioningService
 
                 await ExecuteAsync(
                     master,
-                    $"CREATE DATABASE {SqlName.Quote(databaseName)};",
+                    $"CREATE DATABASE {SqlName.Quote(databaseName)} " +
+                    $"COLLATE {DatabaseProviderModelConventions.SqlServerCaseInsensitiveCollation};",
                     cancellationToken);
 
                 databaseCreatedByThisRun = true;

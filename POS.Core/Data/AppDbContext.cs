@@ -434,12 +434,14 @@ namespace POS.Core.Data
                     .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(i => i.PrintName)
-                    .HasMaxLength(50);
+                    .HasMaxLength(50)
+                    .UseCollation(CaseInsensitiveCollation);
 
                 // Temporary legacy field.
                 // Keep while older pages/repositories still read BaseUom.
                 entity.Property(i => i.BaseUom)
-                    .HasMaxLength(20);
+                    .HasMaxLength(20)
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(i => i.ItemType)
                     .IsRequired()
@@ -1060,7 +1062,8 @@ namespace POS.Core.Data
                     .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.Uom)
-                    .HasMaxLength(20);
+                    .HasMaxLength(20)
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.OrderedQty)
                     .HasColumnType("decimal(18,3)");
@@ -2417,7 +2420,8 @@ namespace POS.Core.Data
             modelBuilder.Entity<PoLine>(entity =>
             {
                 entity.Property(l => l.Uom)
-                    .HasMaxLength(20);
+                    .HasMaxLength(20)
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.SupplierItemCode)
                     .HasMaxLength(100)
@@ -3453,7 +3457,8 @@ namespace POS.Core.Data
                     .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.Uom)
-                    .HasMaxLength(20);
+                    .HasMaxLength(20)
+                    .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(l => l.ItemTypeSnapshot)
                     .HasMaxLength(20)

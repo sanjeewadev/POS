@@ -167,44 +167,40 @@ namespace POS.Core.Repositories
             if (!poExists)
                 return new List<GrnPoLineDto>();
 
-            return await context.PoLines
+            var rows = await context.PoLines
                 .AsNoTracking()
                 .Where(l =>
                     l.PoHeaderId == poId &&
                     l.ReceivedQty < l.OrderQty)
                 .OrderBy(l => l.ItemVariant.ItemParent.ItemCode)
                 .ThenBy(l => l.ItemVariant.VariantDescription)
-                .Select(l => new GrnPoLineDto
+                .Select(l => new
                 {
                     PoLineId = l.Id,
-                    ItemVariantId = l.ItemVariantId,
+                    l.ItemVariantId,
                     ItemCode = l.ItemVariant.ItemParent.ItemCode,
-                    SkuCode = l.ItemVariant.SkuCode,
+                    l.ItemVariant.SkuCode,
                     Barcode = l.ItemVariant.Barcode ?? string.Empty,
                     Description = l.ItemVariant.ItemParent.ItemName,
                     PrintName = l.ItemVariant.ItemParent.PrintName,
                     VariantDescription = string.IsNullOrWhiteSpace(l.ItemVariant.VariantDescription)
                         ? "Standard"
                         : l.ItemVariant.VariantDescription,
-                    Uom = string.IsNullOrWhiteSpace(l.Uom)
-                        ? l.ItemVariant.ItemParent.UnitOfMeasure.UomCode
-                        : l.Uom,
+                    LineUom = l.Uom,
+                    MasterUom = l.ItemVariant.ItemParent.UnitOfMeasure.UomCode,
                     OrderedQty = l.OrderQty,
                     AlreadyReceivedQty = l.ReceivedQty,
-                    ExpectedCost = l.ExpectedCost,
-
+                    l.ExpectedCost,
                     HasBatchTracking = l.ItemVariant.ItemParent.HasBatchTracking,
                     HasExpiryTracking = l.ItemVariant.ItemParent.HasExpiryTracking ||
                                         l.ItemVariant.ItemParent.HasBatchExpiry,
                     IsScaleItem = l.ItemVariant.ItemParent.IsScaleItem,
                     AllowDecimalQuantity = l.ItemVariant.ItemParent.UnitOfMeasure.AllowDecimals,
-
                     LineDiscountMode = string.IsNullOrWhiteSpace(l.LineDiscountMode)
                         ? "Amount"
                         : l.LineDiscountMode,
-                    LineDiscountValue = l.LineDiscountValue,
-                    LineDiscount = l.LineDiscount,
-
+                    l.LineDiscountValue,
+                    l.LineDiscount,
                     VatRatePercent = l.TaxSnapshotStatus == TaxSnapshotStatuses.Complete
                         ? l.TaxRatePercentSnapshot ?? l.VatRatePercent
                         : l.VatRatePercent,
@@ -216,13 +212,46 @@ namespace POS.Core.Repositories
                         : l.TaxAmount,
                     TaxCategoryCode = l.TaxCategoryCodeSnapshot ?? string.Empty,
                     TaxCategoryName = l.TaxNameSnapshot ?? l.TaxCategoryCodeSnapshot ?? string.Empty,
-
                     CurrentRetailPrice = l.ItemVariant.RetailPrice,
                     CurrentWholesalePrice = l.ItemVariant.WholesalePrice,
                     CurrentMinimumPrice = l.ItemVariant.MinimumPrice,
                     CurrentMaximumPrice = l.ItemVariant.MaximumPrice
                 })
                 .ToListAsync();
+
+            return rows
+                .Select(l => new GrnPoLineDto
+                {
+                    PoLineId = l.PoLineId,
+                    ItemVariantId = l.ItemVariantId,
+                    ItemCode = l.ItemCode,
+                    SkuCode = l.SkuCode,
+                    Barcode = l.Barcode,
+                    Description = l.Description,
+                    PrintName = l.PrintName,
+                    VariantDescription = l.VariantDescription,
+                    Uom = UomValueResolver.Resolve(l.LineUom, l.MasterUom),
+                    OrderedQty = l.OrderedQty,
+                    AlreadyReceivedQty = l.AlreadyReceivedQty,
+                    ExpectedCost = l.ExpectedCost,
+                    HasBatchTracking = l.HasBatchTracking,
+                    HasExpiryTracking = l.HasExpiryTracking,
+                    IsScaleItem = l.IsScaleItem,
+                    AllowDecimalQuantity = l.AllowDecimalQuantity,
+                    LineDiscountMode = l.LineDiscountMode,
+                    LineDiscountValue = l.LineDiscountValue,
+                    LineDiscount = l.LineDiscount,
+                    VatRatePercent = l.VatRatePercent,
+                    IsVatIncluded = l.IsVatIncluded,
+                    VatAmount = l.VatAmount,
+                    TaxCategoryCode = l.TaxCategoryCode,
+                    TaxCategoryName = l.TaxCategoryName,
+                    CurrentRetailPrice = l.CurrentRetailPrice,
+                    CurrentWholesalePrice = l.CurrentWholesalePrice,
+                    CurrentMinimumPrice = l.CurrentMinimumPrice,
+                    CurrentMaximumPrice = l.CurrentMaximumPrice
+                })
+                .ToList();
         }
 
         // =========================================================
@@ -325,9 +354,8 @@ namespace POS.Core.Repositories
                     VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription)
                         ? "Standard"
                         : v.VariantDescription,
-                    Uom = string.IsNullOrWhiteSpace(v.ItemParent.BaseUom)
-                        ? v.ItemParent.UnitOfMeasure.UomCode
-                        : v.ItemParent.BaseUom,
+                    BaseUom = v.ItemParent.BaseUom,
+                    MasterUom = v.ItemParent.UnitOfMeasure.UomCode,
                     LastSupplierCost = v.ItemSuppliers
                         .Where(s => s.SupplierId == supplierId)
                         .Select(s => s.LastCostPrice)
@@ -370,7 +398,7 @@ namespace POS.Core.Repositories
                         Description = r.Description,
                         PrintName = r.PrintName,
                         VariantDescription = r.VariantDescription,
-                        Uom = string.IsNullOrWhiteSpace(r.Uom) ? "PCS" : r.Uom,
+                        Uom = UomValueResolver.Resolve(r.BaseUom, r.MasterUom),
                         LastSupplierCost = r.LastSupplierCost,
                         CurrentCost = r.CurrentCost,
                         HasBatchTracking = r.HasBatchTracking,
@@ -432,9 +460,8 @@ namespace POS.Core.Repositories
                     VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription)
                         ? "Standard"
                         : v.VariantDescription,
-                    Uom = string.IsNullOrWhiteSpace(v.ItemParent.BaseUom)
-                        ? v.ItemParent.UnitOfMeasure.UomCode
-                        : v.ItemParent.BaseUom,
+                    BaseUom = v.ItemParent.BaseUom,
+                    MasterUom = v.ItemParent.UnitOfMeasure.UomCode,
                     LastSupplierCost = v.ItemSuppliers
                         .Where(s => s.SupplierId == supplierId)
                         .Select(s => s.LastCostPrice)
@@ -477,7 +504,7 @@ namespace POS.Core.Repositories
                 Description = row.Description,
                 PrintName = row.PrintName,
                 VariantDescription = row.VariantDescription,
-                Uom = string.IsNullOrWhiteSpace(row.Uom) ? "PCS" : row.Uom,
+                Uom = UomValueResolver.Resolve(row.BaseUom, row.MasterUom),
                 LastSupplierCost = row.LastSupplierCost,
                 CurrentCost = row.CurrentCost,
                 HasBatchTracking = row.HasBatchTracking,

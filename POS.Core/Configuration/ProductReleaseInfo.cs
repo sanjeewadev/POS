@@ -6,5 +6,5 @@ public static class ProductReleaseInfo
     public const string ProductVersion = "1.0.3";
 
     public const string RequiredSqlServerMigration =
-        "20260716215752_Phase11B1_InitialSqlServerBaseline";
+        "20260724043000_RepairOperationalTextCollations";
 }
