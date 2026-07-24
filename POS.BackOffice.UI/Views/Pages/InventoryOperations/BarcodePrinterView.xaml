@@ -89,8 +89,8 @@
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#005555"/>
-                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="Background" Value="{DynamicResource LightSelectionBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
