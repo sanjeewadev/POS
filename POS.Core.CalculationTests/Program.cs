@@ -39,6 +39,8 @@ namespace POS.Core.CalculationTests
                 ("GRN current-price percentage change", GrnCurrentPricePercentageChange),
                 ("GRN selling-price rounding", GrnSellingPriceRounding),
                 ("GRN keep-current pricing", GrnKeepCurrentPricing),
+                ("GRN four-level price changes are detected", GrnFourLevelPriceChangesAreDetected),
+                ("GRN price summary preserves unchanged levels", GrnPriceSummaryPreservesUnchangedLevels),
                 ("Non-VAT supplier profile preserves item category", NonVatSupplierProfilePreservesItemCategory),
                 ("VAT supplier profile retains effective purchasing rate", VatSupplierProfileRetainsEffectivePurchasingRate),
                 ("Non-VAT Purchase Order save forces zero VAT", NonVatPurchaseOrderSaveForcesZeroVat),
@@ -1645,6 +1647,58 @@ namespace POS.Core.CalculationTests
                 roundingMode: GrnSellingPriceRoundingModes.NearestTen);
 
             AssertMoney(987.65m, result, "keep-current selling price");
+        }
+
+        private static void GrnFourLevelPriceChangesAreDetected()
+        {
+            var line = new GrnLineEntryDto
+            {
+                UpdateSellingPrices = true,
+                CurrentRetailPrice = 100m,
+                NewRetailPrice = 110m,
+                CurrentWholesalePrice = 90m,
+                NewWholesalePrice = 95m,
+                CurrentMinimumPrice = 80m,
+                NewMinimumPrice = 82m,
+                CurrentMaximumPrice = 120m,
+                NewMaximumPrice = 125m
+            };
+
+            AssertTrue(line.HasRetailPriceChange, "retail change");
+            AssertTrue(line.HasWholesalePriceChange, "wholesale change");
+            AssertTrue(line.HasMinimumPriceChange, "minimum change");
+            AssertTrue(line.HasMaximumPriceChange, "maximum change");
+            AssertTrue(line.HasAnySellingPriceChange, "any selling-price change");
+            AssertTrue(line.PriceUpdateText.Contains("Retail 100.00", StringComparison.Ordinal), "retail summary");
+            AssertTrue(line.PriceUpdateText.Contains("W/S 90.00", StringComparison.Ordinal), "wholesale summary");
+            AssertTrue(line.PriceUpdateText.Contains("Min 80.00", StringComparison.Ordinal), "minimum summary");
+            AssertTrue(line.PriceUpdateText.Contains("Max 120.00", StringComparison.Ordinal), "maximum summary");
+        }
+
+        private static void GrnPriceSummaryPreservesUnchangedLevels()
+        {
+            var line = new GrnLineEntryDto
+            {
+                UpdateSellingPrices = true,
+                CurrentRetailPrice = 100m,
+                NewRetailPrice = 100m,
+                CurrentWholesalePrice = 90m,
+                NewWholesalePrice = 90m,
+                CurrentMinimumPrice = 80m,
+                NewMinimumPrice = 85m,
+                CurrentMaximumPrice = 120m,
+                NewMaximumPrice = 120m
+            };
+
+            AssertFalse(line.HasRetailPriceChange, "unchanged retail");
+            AssertFalse(line.HasWholesalePriceChange, "unchanged wholesale");
+            AssertTrue(line.HasMinimumPriceChange, "changed minimum");
+            AssertFalse(line.HasMaximumPriceChange, "unchanged maximum");
+            AssertTrue(line.HasAnySellingPriceChange, "minimum-only selling-price change");
+            AssertTrue(line.PriceUpdateText.Contains("Min 80.00", StringComparison.Ordinal), "minimum-only summary");
+            AssertFalse(line.PriceUpdateText.Contains("Retail", StringComparison.Ordinal), "unchanged retail omitted");
+            AssertFalse(line.PriceUpdateText.Contains("W/S", StringComparison.Ordinal), "unchanged wholesale omitted");
+            AssertFalse(line.PriceUpdateText.Contains("Max", StringComparison.Ordinal), "unchanged maximum omitted");
         }
 
         private static void NonVatSupplierProfilePreservesItemCategory()

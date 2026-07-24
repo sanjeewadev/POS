@@ -1,0 +1,254 @@
+﻿<Window x:Class="POS.BackOffice.UI.Views.Dialogs.PurchasingVariantEntryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Stock Item Variants"
+        Width="1120"
+        Height="690"
+        MinWidth="900"
+        MinHeight="560"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="#D4D0C8"
+        Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style x:Key="DialogButton" TargetType="Button">
+            <Setter Property="Height" Value="29"/>
+            <Setter Property="MinWidth" Value="86"/>
+            <Setter Property="Padding" Value="10,2"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="PrimaryDialogButton"
+               TargetType="Button"
+               BasedOn="{StaticResource DialogButton}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="DialogInput" TargetType="TextBox">
+            <Setter Property="Height" Value="27"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
+        <Style x:Key="DialogCombo" TargetType="ComboBox">
+            <Setter Property="Height" Value="27"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Padding="10"
+                Background="White"
+                BorderBrush="#808080"
+                BorderThickness="1">
+            <StackPanel>
+                <TextBlock Text="ADD STOCK ITEM VARIANTS"
+                           FontSize="15"
+                           FontWeight="Bold"
+                           Foreground="#003366"/>
+                <TextBlock Margin="0,4,0,0"
+                           Text="Select a Stock Item, enter quantity, unit cost and expiry where required. Only rows with quantity greater than zero are added."
+                           Foreground="#555555"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2"
+                Padding="8"
+                Background="#F0F0F0"
+                BorderBrush="#A0A0A0"
+                BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Stock Item" FontWeight="SemiBold"/>
+                    <ComboBox x:Name="ItemSelector"
+                              Margin="0,4,0,0"
+                              ItemsSource="{Binding AvailableItems}"
+                              SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                              DisplayMemberPath="DisplayText"
+                              IsEditable="True"
+                              IsTextSearchEnabled="True"
+                              TextSearch.TextPath="DisplayText"
+                              Style="{StaticResource DialogCombo}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Filter Variants" FontWeight="SemiBold"/>
+                    <TextBox Margin="0,4,0,0"
+                             Text="{Binding FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource DialogInput}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4"
+                Background="White"
+                BorderBrush="#808080"
+                BorderThickness="1">
+            <DataGrid x:Name="VariantGrid"
+                      ItemsSource="{Binding VisibleRows}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      RowHeaderWidth="0"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal"
+                      AlternatingRowBackground="#F7F7F7"
+                      Background="White"
+                      Foreground="Black"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Item / Variant"
+                                        Binding="{Binding DisplayName}"
+                                        IsReadOnly="True"
+                                        Width="220"/>
+                    <DataGridTextColumn Header="SKU"
+                                        Binding="{Binding SkuCode}"
+                                        IsReadOnly="True"
+                                        Width="120"/>
+                    <DataGridTextColumn Header="UOM"
+                                        Binding="{Binding Uom}"
+                                        IsReadOnly="True"
+                                        Width="65"/>
+                    <DataGridTextColumn Header="Tracking"
+                                        Binding="{Binding TrackingText}"
+                                        IsReadOnly="True"
+                                        Width="105"/>
+                    <DataGridTextColumn Header="Tax"
+                                        Binding="{Binding TaxCategoryDisplayText}"
+                                        IsReadOnly="True"
+                                        Width="135"/>
+                    <DataGridTextColumn Header="Qty"
+                                        Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}"
+                                        Width="75"/>
+                    <DataGridTextColumn Header="Unit Cost"
+                                        Binding="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                        Width="95"/>
+                    <DataGridTemplateColumn Header="Expiry" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <DatePicker SelectedDate="{Binding ExpiryDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                                            IsEnabled="{Binding RequiresExpiry}"
+                                            SelectedDateFormat="Short"
+                                            Height="23"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <Border Grid.Row="6"
+                Padding="8"
+                Background="#F0F0F0"
+                BorderBrush="#A0A0A0"
+                BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="7"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="70"/>
+                        <ColumnDefinition Width="85"/>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="72"/>
+                        <ColumnDefinition Width="95"/>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="125"/>
+                        <ColumnDefinition Width="85"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Bulk Qty" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding BulkQuantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             HorizontalContentAlignment="Right"
+                             Style="{StaticResource DialogInput}"/>
+                    <Button Grid.Column="2"
+                            Content="APPLY QTY"
+                            Command="{Binding ApplyBulkQuantityCommand}"
+                            Style="{StaticResource DialogButton}"/>
+                    <TextBlock Grid.Column="4" Text="Bulk Cost" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    <TextBox Grid.Column="5"
+                             Text="{Binding BulkUnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             HorizontalContentAlignment="Right"
+                             Style="{StaticResource DialogInput}"/>
+                    <Button Grid.Column="6"
+                            Content="APPLY COST"
+                            Command="{Binding ApplyBulkUnitCostCommand}"
+                            Style="{StaticResource DialogButton}"/>
+                    <TextBlock Grid.Column="8" Text="Bulk Expiry" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    <DatePicker Grid.Column="9"
+                                SelectedDate="{Binding BulkExpiryDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                IsEnabled="{Binding ExpiryEntryEnabled}"
+                                Height="27"/>
+                    <Button Grid.Column="10"
+                            Content="APPLY EXPIRY"
+                            Command="{Binding ApplyBulkExpiryCommand}"
+                            IsEnabled="{Binding ExpiryEntryEnabled}"
+                            Style="{StaticResource DialogButton}"/>
+                </Grid>
+
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding StatusMessage}"
+                               VerticalAlignment="Center"
+                               Foreground="#003366"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"/>
+                    <Button Grid.Column="1"
+                            Content="CANCEL"
+                            Click="Cancel_Click"
+                            IsCancel="True"
+                            Style="{StaticResource DialogButton}"/>
+                    <Button Grid.Column="3"
+                            Content="ADD ENTERED ROWS TO GRN"
+                            Click="Apply_Click"
+                            IsDefault="True"
+                            Style="{StaticResource PrimaryDialogButton}"/>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -9,6 +9,8 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Services;
+using POS.BackOffice.UI.Views.Dialogs;
+using POS.Core.Services;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
@@ -946,6 +948,187 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         // =========================================================
+        // REUSABLE VARIANT ENTRY DIALOG
+        // =========================================================
+
+        [RelayCommand(CanExecute = nameof(CanOpenPurchasingVariantEntryDialog))]
+        private void OpenPurchasingVariantEntryDialog()
+        {
+            if (SelectedSupplier == null)
+            {
+                _messageBoxService.ShowWarning(
+                    "Select and confirm a supplier before opening variant entry.",
+                    "Supplier Required");
+                return;
+            }
+
+            if (AvailableItems.Count == 0)
+            {
+                _messageBoxService.ShowInformation(
+                    "No supplier-approved purchasable Stock Items are available for this supplier.",
+                    "No Items");
+                return;
+            }
+
+            try
+            {
+                int supplierId = SelectedSupplier.Id;
+
+                IReadOnlyList<PurchasingItemOption> itemOptions = AvailableItems
+                    .Select(item => new PurchasingItemOption
+                    {
+                        ParentId = item.ParentId,
+                        ItemCode = item.ItemCode,
+                        ItemName = item.ItemName,
+                        TrackingText = item.TrackingText
+                    })
+                    .ToList();
+
+                async Task<IReadOnlyList<PurchasingVariantSource>> LoadVariantsAsync(int parentId)
+                {
+                    IReadOnlyList<GrnVariantLookupDto> variants =
+                        await _grnRepository.GetReceivableVariantsByParentForSupplierAsync(
+                            parentId,
+                            supplierId,
+                            InvoiceDate.Date);
+
+                    return variants
+                        .Select(variant => new PurchasingVariantSource
+                        {
+                            ItemVariantId = variant.ItemVariantId,
+                            ItemCode = variant.ItemCode,
+                            SkuCode = variant.SkuCode,
+                            Barcode = variant.Barcode,
+                            Description = variant.Description,
+                            PrintName = variant.PrintName,
+                            VariantDescription = variant.VariantDescription,
+                            Uom = variant.Uom,
+                            SuggestedUnitCost = variant.LastSupplierCost > 0m
+                                ? variant.LastSupplierCost
+                                : variant.CurrentCost,
+                            HasBatchTracking = variant.HasBatchTracking,
+                            RequiresExpiry = variant.RequiresExpiry,
+                            IsScaleItem = variant.IsScaleItem,
+                            AllowDecimalQuantity = variant.AllowDecimalQuantity,
+                            LineDiscountMode = variant.LineDiscountMode,
+                            LineDiscountValue = variant.LineDiscountValue,
+                            LineDiscount = variant.LineDiscount,
+                            VatRatePercent = variant.VatRatePercent,
+                            VatAmount = variant.VatAmount,
+                            TaxCategoryCode = variant.TaxCategoryCode,
+                            TaxCategoryName = variant.TaxCategoryName,
+                            CurrentRetailPrice = variant.CurrentRetailPrice,
+                            CurrentWholesalePrice = variant.CurrentWholesalePrice,
+                            CurrentMinimumPrice = variant.CurrentMinimumPrice,
+                            CurrentMaximumPrice = variant.CurrentMaximumPrice
+                        })
+                        .ToList();
+                }
+
+                var dialogViewModel = new PurchasingVariantEntryDialogViewModel(
+                    itemOptions,
+                    LoadVariantsAsync,
+                    ReceivedDate.Date,
+                    expiryEntryEnabled: true,
+                    quantityLabel: "Received Qty",
+                    unitCostLabel: "Unit Cost");
+
+                var dialog = new PurchasingVariantEntryDialog(dialogViewModel)
+                {
+                    Owner = GetDialogOwner()
+                };
+
+                if (dialog.ShowDialog() != true)
+                    return;
+
+                foreach (PurchasingVariantEntryRow acceptedRow in dialog.AcceptedRows)
+                {
+                    GrnLineEntryDto newLine = BuildLineFromPurchasingEntry(acceptedRow);
+                    newLine.IsVatIncluded = SupplierPricesIncludeVat;
+                    newLine.RecalculateLineAmounts();
+                    MergeOrAddLine(newLine);
+                }
+
+                RecalculateTotals();
+                QueueRecalculate();
+                StatusMessage = $"{dialog.AcceptedRows.Count} variant row(s) added to the GRN.";
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Open GRN purchasing variant-entry dialog",
+                    ex);
+
+                _messageBoxService.ShowError(
+                    "The variant-entry window could not be opened or completed. " +
+                    "The current GRN remains available and no partial dialog changes were applied. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "GRN Variant Entry Error");
+            }
+        }
+
+        private bool CanOpenPurchasingVariantEntryDialog()
+        {
+            return !IsBusy &&
+                   IsEntryEnabled &&
+                   SelectedSupplier != null &&
+                   AvailableItems.Count > 0;
+        }
+
+        private GrnLineEntryDto BuildLineFromPurchasingEntry(
+            PurchasingVariantEntryRow row)
+        {
+            PurchasingVariantSource source = row.Source;
+
+            return new GrnLineEntryDto
+            {
+                ItemVariantId = source.ItemVariantId,
+                ItemCode = source.ItemCode,
+                SkuCode = source.SkuCode,
+                Barcode = source.Barcode,
+                Description = source.Description,
+                PrintName = source.PrintName,
+                VariantDescription = string.IsNullOrWhiteSpace(source.VariantDescription)
+                    ? "Standard"
+                    : source.VariantDescription,
+                Uom = string.IsNullOrWhiteSpace(source.Uom)
+                    ? "PCS"
+                    : source.Uom,
+                UnitCost = row.UnitCost,
+                OrderedQty = 0m,
+                OutstandingPoQty = 0m,
+                ReceivedQty = row.Quantity,
+                LineDiscountMode = string.IsNullOrWhiteSpace(source.LineDiscountMode)
+                    ? "Amount"
+                    : source.LineDiscountMode,
+                LineDiscountValue = source.LineDiscountValue,
+                LineDiscount = source.LineDiscount,
+                TaxCategoryCode = source.TaxCategoryCode,
+                TaxCategoryName = source.TaxCategoryName,
+                VatRatePercent = source.VatRatePercent,
+                IsVatIncluded = SupplierPricesIncludeVat,
+                VatAmount = source.VatAmount,
+                BatchNo = string.Empty,
+                ExpiryDate = source.RequiresExpiry ? row.ExpiryDate?.Date : null,
+                HasBatchTracking = source.HasBatchTracking,
+                HasExpiryTracking = source.RequiresExpiry,
+                IsScaleItem = source.IsScaleItem,
+                AllowDecimalQuantity = source.AllowDecimalQuantity,
+                RequiresExpiry = source.RequiresExpiry,
+                CurrentRetailPrice = source.CurrentRetailPrice,
+                NewRetailPrice = source.CurrentRetailPrice,
+                CurrentWholesalePrice = source.CurrentWholesalePrice,
+                NewWholesalePrice = source.CurrentWholesalePrice,
+                CurrentMinimumPrice = source.CurrentMinimumPrice,
+                NewMinimumPrice = source.CurrentMinimumPrice,
+                CurrentMaximumPrice = source.CurrentMaximumPrice,
+                NewMaximumPrice = source.CurrentMaximumPrice,
+                UpdateSellingPrices = false
+            };
+        }
+
+        // =========================================================
         // BARCODE / SKU ADD
         // =========================================================
 
@@ -1435,10 +1618,14 @@ namespace POS.BackOffice.UI.ViewModels
 
             int retailChanges = GrnLines.Count(line => line.HasRetailPriceChange);
             int wholesaleChanges = GrnLines.Count(line => line.HasWholesalePriceChange);
+            int minimumChanges = GrnLines.Count(line => line.HasMinimumPriceChange);
+            int maximumChanges = GrnLines.Count(line => line.HasMaximumPriceChange);
 
-            string priceChangeText = retailChanges == 0 && wholesaleChanges == 0
+            string priceChangeText = GrnLines.All(line => !line.HasAnySellingPriceChange)
                 ? "No selling prices will change."
-                : $"{retailChanges} retail and {wholesaleChanges} wholesale price change(s) will be applied and audited.";
+                : $"{retailChanges} retail, {wholesaleChanges} wholesale, " +
+                  $"{minimumChanges} minimum and {maximumChanges} maximum price change(s) " +
+                  "will be applied and audited.";
 
             bool confirmed = _messageBoxService.ShowConfirmation(
                 $"Post GRN for Rs. {NetPayable:N2}?\n\n" +
@@ -1759,6 +1946,7 @@ namespace POS.BackOffice.UI.ViewModels
                 ExemptAmount = 0m;
                 OutOfScopeAmount = 0m;
                 TaxPreviewStatus = "Add GRN rows to calculate authoritative VAT.";
+                IsTaxPreviewRetryVisible = false;
 
                 DocumentStatus = "DRAFT";
                 StatusMessage = "Ready for new GRN.";
@@ -1840,8 +2028,12 @@ namespace POS.BackOffice.UI.ViewModels
             if (e.PropertyName == nameof(GrnLineEntryDto.UpdateSellingPrices) ||
                 e.PropertyName == nameof(GrnLineEntryDto.NewRetailPrice) ||
                 e.PropertyName == nameof(GrnLineEntryDto.NewWholesalePrice) ||
+                e.PropertyName == nameof(GrnLineEntryDto.NewMinimumPrice) ||
+                e.PropertyName == nameof(GrnLineEntryDto.NewMaximumPrice) ||
                 e.PropertyName == nameof(GrnLineEntryDto.CurrentRetailPrice) ||
-                e.PropertyName == nameof(GrnLineEntryDto.CurrentWholesalePrice))
+                e.PropertyName == nameof(GrnLineEntryDto.CurrentWholesalePrice) ||
+                e.PropertyName == nameof(GrnLineEntryDto.CurrentMinimumPrice) ||
+                e.PropertyName == nameof(GrnLineEntryDto.CurrentMaximumPrice))
             {
                 NotifyPriceUpdateSummary();
             }
@@ -1884,6 +2076,7 @@ namespace POS.BackOffice.UI.ViewModels
             ApplyBulkMatrixQuantityCommand.NotifyCanExecuteChanged();
             ApplyBulkMatrixUnitCostCommand.NotifyCanExecuteChanged();
             ApplyBulkMatrixSellingPriceCommand.NotifyCanExecuteChanged();
+            OpenPurchasingVariantEntryDialogCommand.NotifyCanExecuteChanged();
 
             ApplyBulkDiscountModeToLinesCommand.NotifyCanExecuteChanged();
             ApplyBulkDiscountValueToLinesCommand.NotifyCanExecuteChanged();

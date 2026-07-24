@@ -491,11 +491,23 @@ namespace POS.Core.Models.DTOs
         public bool HasWholesalePriceChange =>
             UpdateSellingPrices && Math.Round(CurrentWholesalePrice, 2) != Math.Round(NewWholesalePrice, 2);
 
+        public bool HasMinimumPriceChange =>
+            UpdateSellingPrices && Math.Round(CurrentMinimumPrice, 2) != Math.Round(NewMinimumPrice, 2);
+
+        public bool HasMaximumPriceChange =>
+            UpdateSellingPrices && Math.Round(CurrentMaximumPrice, 2) != Math.Round(NewMaximumPrice, 2);
+
+        public bool HasAnySellingPriceChange =>
+            HasRetailPriceChange ||
+            HasWholesalePriceChange ||
+            HasMinimumPriceChange ||
+            HasMaximumPriceChange;
+
         public string PriceUpdateText
         {
             get
             {
-                if (!UpdateSellingPrices || (!HasRetailPriceChange && !HasWholesalePriceChange))
+                if (!HasAnySellingPriceChange)
                     return "Keep current";
 
                 var parts = new List<string>();
@@ -505,6 +517,12 @@ namespace POS.Core.Models.DTOs
 
                 if (HasWholesalePriceChange)
                     parts.Add($"W/S {CurrentWholesalePrice:N2} → {NewWholesalePrice:N2}");
+
+                if (HasMinimumPriceChange)
+                    parts.Add($"Min {CurrentMinimumPrice:N2} → {NewMinimumPrice:N2}");
+
+                if (HasMaximumPriceChange)
+                    parts.Add($"Max {CurrentMaximumPrice:N2} → {NewMaximumPrice:N2}");
 
                 return string.Join(" | ", parts);
             }
@@ -767,6 +785,9 @@ namespace POS.Core.Models.DTOs
 
             OnPropertyChanged(nameof(HasRetailPriceChange));
             OnPropertyChanged(nameof(HasWholesalePriceChange));
+            OnPropertyChanged(nameof(HasMinimumPriceChange));
+            OnPropertyChanged(nameof(HasMaximumPriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
             OnPropertyChanged(nameof(PriceUpdateText));
         }
 
@@ -785,24 +806,56 @@ namespace POS.Core.Models.DTOs
         partial void OnNewRetailPriceChanged(decimal value)
         {
             OnPropertyChanged(nameof(HasRetailPriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
             OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         partial void OnNewWholesalePriceChanged(decimal value)
         {
             OnPropertyChanged(nameof(HasWholesalePriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
             OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         partial void OnCurrentRetailPriceChanged(decimal value)
         {
             OnPropertyChanged(nameof(HasRetailPriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
             OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         partial void OnCurrentWholesalePriceChanged(decimal value)
         {
             OnPropertyChanged(nameof(HasWholesalePriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
+
+        partial void OnNewMinimumPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasMinimumPriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
+
+        partial void OnNewMaximumPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasMaximumPriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
+
+        partial void OnCurrentMinimumPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasMinimumPriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
+        }
+
+        partial void OnCurrentMaximumPriceChanged(decimal value)
+        {
+            OnPropertyChanged(nameof(HasMaximumPriceChange));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
             OnPropertyChanged(nameof(PriceUpdateText));
         }
 

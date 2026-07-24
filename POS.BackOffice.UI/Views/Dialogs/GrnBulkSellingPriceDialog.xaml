@@ -1,177 +1,119 @@
-<Window x:Class="POS.BackOffice.UI.Views.Dialogs.GrnBulkSellingPriceDialog"
+﻿<Window x:Class="POS.BackOffice.UI.Views.Dialogs.GrnBulkSellingPriceDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="GRN Bulk Selling Price Update"
+        Title="Change Selling Prices"
+        Width="1320"
         Height="690"
-        Width="1120"
-        MinHeight="620"
         MinWidth="980"
+        MinHeight="560"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
-        Background="#D4D0C8"
-        FontFamily="Segoe UI"
-        FontSize="12"
-        ShowInTaskbar="False">
-
+        ShowInTaskbar="False"
+        Background="#D4D0C8">
     <Window.Resources>
-        <Style TargetType="{x:Type TextBlock}" x:Key="HeaderLabel">
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#003366"/>
-        </Style>
-
-        <Style TargetType="{x:Type TextBlock}" x:Key="InlineLabel">
+        <Style x:Key="DialogButton" TargetType="Button">
+            <Setter Property="Height" Value="29"/>
+            <Setter Property="MinWidth" Value="92"/>
+            <Setter Property="Padding" Value="10,2"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#333333"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
-
-        <Style TargetType="{x:Type TextBox}" x:Key="ClassicInput">
+        <Style x:Key="PrimaryDialogButton"
+               TargetType="Button"
+               BasedOn="{StaticResource DialogButton}">
+            <Setter Property="Background" Value="#005555"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="DialogInput" TargetType="TextBox">
             <Setter Property="Height" Value="27"/>
             <Setter Property="Padding" Value="5,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="White"/>
             <Setter Property="Foreground" Value="Black"/>
-        </Style>
-
-        <Style TargetType="{x:Type ComboBox}" x:Key="ClassicCombo">
-            <Setter Property="Height" Value="27"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="Black"/>
-        </Style>
-
-        <Style TargetType="{x:Type Button}" x:Key="ClassicBtn">
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Padding" Value="14,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderBrush" Value="#808080"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style TargetType="{x:Type Button}" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
-            <Setter Property="Background" Value="#005555"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#003333"/>
-        </Style>
-
-        <Style TargetType="{x:Type DataGridColumnHeader}">
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="Black"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="BorderThickness" Value="0,0,1,1"/>
-            <Setter Property="BorderBrush" Value="#A0A0A0"/>
-        </Style>
-
-        <Style TargetType="{x:Type DataGridCell}">
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="4,0"/>
-            <Setter Property="BorderThickness" Value="0"/>
         </Style>
     </Window.Resources>
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="10"/>
+            <RowDefinition Height="8"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="10"/>
+            <RowDefinition Height="8"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="10"/>
+            <RowDefinition Height="8"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="#F0F0F0"
-                BorderBrush="#A0A0A0"
-                BorderThickness="1"
-                Padding="12">
+                Padding="10"
+                Background="White"
+                BorderBrush="#808080"
+                BorderThickness="1">
             <StackPanel>
-                <TextBlock Text="BULK SELLING PRICE UPDATE"
-                           Style="{StaticResource HeaderLabel}"/>
-                <TextBlock Margin="0,5,0,0"
-                           Text="The preview uses the final tax-exclusive landed cost already calculated on the GRN. Retail and wholesale prices are final VAT-inclusive selling prices. Nothing changes until this dialog is applied and the GRN is posted."
+                <TextBlock Text="CHANGE SELLING PRICES"
+                           FontSize="15"
+                           FontWeight="Bold"
+                           Foreground="#003366"/>
+                <TextBlock Margin="0,4,0,0"
+                           Text="Select rows, enter direct VAT-inclusive selling prices, and apply. Blank bulk fields leave that price level unchanged. Prices are committed only when the GRN posts successfully."
                            Foreground="#555555"
                            TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 
         <Border Grid.Row="2"
+                Padding="8"
                 Background="#F0F0F0"
                 BorderBrush="#A0A0A0"
-                BorderThickness="1"
-                Padding="10">
+                BorderThickness="1">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="15"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="15"/>
-                    <ColumnDefinition Width="205"/>
-                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="6"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Retail Price"
-                               FontWeight="Bold"
-                               Foreground="#003366"
-                               Margin="0,0,0,5"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="165"/>
-                            <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="cmbRetailMethod"
-                                  Grid.Column="0"
-                                  Style="{StaticResource ClassicCombo}"
-                                  SelectionChanged="PricingSelectionChanged"/>
-                        <TextBox x:Name="txtRetailValue"
-                                 Grid.Column="2"
-                                 Style="{StaticResource ClassicInput}"
-                                 HorizontalContentAlignment="Right"
-                                 TextChanged="PricingTextChanged"/>
-                    </Grid>
-                </StackPanel>
+                <TextBlock Grid.Row="0"
+                           Text="Bulk values for selected rows"
+                           FontWeight="Bold"
+                           Foreground="#003366"/>
 
-                <StackPanel Grid.Column="2">
-                    <TextBlock Text="Wholesale Price"
-                               FontWeight="Bold"
-                               Foreground="#003366"
-                               Margin="0,0,0,5"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="165"/>
-                            <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="cmbWholesaleMethod"
-                                  Grid.Column="0"
-                                  Style="{StaticResource ClassicCombo}"
-                                  SelectionChanged="PricingSelectionChanged"/>
-                        <TextBox x:Name="txtWholesaleValue"
-                                 Grid.Column="2"
-                                 Style="{StaticResource ClassicInput}"
-                                 HorizontalContentAlignment="Right"
-                                 TextChanged="PricingTextChanged"/>
-                    </Grid>
-                </StackPanel>
-
-                <StackPanel Grid.Column="4">
-                    <TextBlock Text="Final Price Rounding"
-                               FontWeight="Bold"
-                               Foreground="#003366"
-                               Margin="0,0,0,5"/>
-                    <ComboBox x:Name="cmbRounding"
-                              Style="{StaticResource ClassicCombo}"
-                              SelectionChanged="PricingSelectionChanged"/>
-                </StackPanel>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="85"/>
+                        <ColumnDefinition Width="105"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="95"/>
+                        <ColumnDefinition Width="105"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="105"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="95"/>
+                        <ColumnDefinition Width="105"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Retail Price" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    <TextBox x:Name="txtBulkRetail" Grid.Column="1" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
+                    <TextBlock Grid.Column="3" Text="Wholesale" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    <TextBox x:Name="txtBulkWholesale" Grid.Column="4" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
+                    <TextBlock Grid.Column="6" Text="Minimum" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    <TextBox x:Name="txtBulkMinimum" Grid.Column="7" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
+                    <TextBlock Grid.Column="9" Text="Maximum" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    <TextBox x:Name="txtBulkMaximum" Grid.Column="10" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
+                    <Button Grid.Column="12"
+                            Content="APPLY ENTERED VALUES TO SELECTED"
+                            Click="ApplyBulkValues_Click"
+                            Style="{StaticResource PrimaryDialogButton}"/>
+                </Grid>
             </Grid>
         </Border>
 
@@ -179,129 +121,113 @@
                 Background="White"
                 BorderBrush="#808080"
                 BorderThickness="1">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <Grid Grid.Row="0"
-                      Background="#E6F2F2"
-                      Margin="7">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="8"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0"
-                            Content="SELECT ALL"
-                            Click="SelectAll_Click"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="25"/>
-                    <Button Grid.Column="2"
-                            Content="CLEAR ALL"
-                            Click="ClearAll_Click"
-                            Style="{StaticResource ClassicBtn}"
-                            Height="25"/>
-                    <TextBlock Grid.Column="4"
-                               x:Name="txtPreviewSummary"
-                               VerticalAlignment="Center"
-                               FontWeight="Bold"
-                               Foreground="#003366"/>
-                </Grid>
-
-                <DataGrid Grid.Row="1"
-                          ItemsSource="{Binding Rows}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          HeadersVisibility="Column"
-                          GridLinesVisibility="Horizontal"
-                          RowHeaderWidth="0"
-                          SelectionMode="Extended"
-                          SelectionUnit="FullRow"
-                          Background="White"
-                          Foreground="Black"
-                          AlternatingRowBackground="#F7F7F7"
-                          HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Auto">
-                    <DataGrid.Columns>
-                        <DataGridCheckBoxColumn Header="Apply"
-                                                Binding="{Binding Apply, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                Width="55"/>
-                        <DataGridTextColumn Header="Item / Variant"
-                                            Binding="{Binding DisplayName}"
-                                            IsReadOnly="True"
-                                            Width="220"/>
-                        <DataGridTextColumn Header="SKU"
-                                            Binding="{Binding SkuCode}"
-                                            IsReadOnly="True"
-                                            Width="105"/>
-                        <DataGridTextColumn Header="Landed Cost"
-                                            Binding="{Binding LandedCost, StringFormat=N2}"
-                                            IsReadOnly="True"
-                                            Width="90"/>
-                        <DataGridTextColumn Header="VAT %"
-                                            Binding="{Binding VatRatePercent, StringFormat=N2}"
-                                            IsReadOnly="True"
-                                            Width="65"/>
-                        <DataGridTextColumn Header="Current Retail"
-                                            Binding="{Binding CurrentRetailPrice, StringFormat=N2}"
-                                            IsReadOnly="True"
-                                            Width="95"/>
-                        <DataGridTextColumn Header="New Retail"
-                                            Binding="{Binding NewRetailPrice, StringFormat=N2}"
-                                            IsReadOnly="True"
-                                            Width="95"/>
-                        <DataGridTextColumn Header="Current W/S"
-                                            Binding="{Binding CurrentWholesalePrice, StringFormat=N2}"
-                                            IsReadOnly="True"
-                                            Width="95"/>
-                        <DataGridTextColumn Header="New W/S"
-                                            Binding="{Binding NewWholesalePrice, StringFormat=N2}"
-                                            IsReadOnly="True"
-                                            Width="95"/>
-                        <DataGridTextColumn Header="Validation"
-                                            Binding="{Binding ValidationMessage}"
-                                            IsReadOnly="True"
-                                            Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Grid>
+            <DataGrid x:Name="PriceGrid"
+                      ItemsSource="{Binding Rows}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      RowHeaderWidth="0"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal"
+                      AlternatingRowBackground="#F7F7F7"
+                      Background="White"
+                      Foreground="Black"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
+                      FrozenColumnCount="4"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="Use"
+                                            Binding="{Binding Apply, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="48"/>
+                    <DataGridTextColumn Header="Item / Variant"
+                                        Binding="{Binding DisplayName}"
+                                        IsReadOnly="True"
+                                        Width="210"/>
+                    <DataGridTextColumn Header="SKU"
+                                        Binding="{Binding SkuCode}"
+                                        IsReadOnly="True"
+                                        Width="110"/>
+                    <DataGridTextColumn Header="Landed Cost"
+                                        Binding="{Binding LandedCost, StringFormat=N2}"
+                                        IsReadOnly="True"
+                                        Width="90"/>
+                    <DataGridTextColumn Header="Current Retail"
+                                        Binding="{Binding CurrentRetailPrice, StringFormat=N2}"
+                                        IsReadOnly="True"
+                                        Width="95"/>
+                    <DataGridTextColumn Header="New Retail"
+                                        Binding="{Binding NewRetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                        Width="95"/>
+                    <DataGridTextColumn Header="Current W/S"
+                                        Binding="{Binding CurrentWholesalePrice, StringFormat=N2}"
+                                        IsReadOnly="True"
+                                        Width="95"/>
+                    <DataGridTextColumn Header="New W/S"
+                                        Binding="{Binding NewWholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                        Width="95"/>
+                    <DataGridTextColumn Header="Current Min"
+                                        Binding="{Binding CurrentMinimumPrice, StringFormat=N2}"
+                                        IsReadOnly="True"
+                                        Width="90"/>
+                    <DataGridTextColumn Header="New Min"
+                                        Binding="{Binding NewMinimumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                        Width="90"/>
+                    <DataGridTextColumn Header="Current Max"
+                                        Binding="{Binding CurrentMaximumPrice, StringFormat=N2}"
+                                        IsReadOnly="True"
+                                        Width="90"/>
+                    <DataGridTextColumn Header="New Max"
+                                        Binding="{Binding NewMaximumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                        Width="90"/>
+                    <DataGridTextColumn Header="Warning"
+                                        Binding="{Binding WarningText}"
+                                        IsReadOnly="True"
+                                        Width="180"/>
+                </DataGrid.Columns>
+            </DataGrid>
         </Border>
 
         <Border Grid.Row="6"
+                Padding="8"
                 Background="#F0F0F0"
                 BorderBrush="#A0A0A0"
-                BorderThickness="1"
-                Padding="10">
+                BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="110"/>
-                    <ColumnDefinition Width="8"/>
-                    <ColumnDefinition Width="170"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0"
-                           Text="A wholesale price above its retail price produces a final warning. Proposed prices remain editable only through this dialog until posting."
-                           Foreground="#555555"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Center"/>
-
-                <Button Grid.Column="1"
+                <Button Grid.Column="0"
+                        Content="SELECT ALL"
+                        Click="SelectAll_Click"
+                        Style="{StaticResource DialogButton}"/>
+                <Button Grid.Column="2"
+                        Content="CLEAR SELECTION"
+                        Click="ClearSelection_Click"
+                        Style="{StaticResource DialogButton}"/>
+                <TextBlock x:Name="txtSummary"
+                           Grid.Column="3"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           Foreground="#003366"
+                           FontWeight="SemiBold"/>
+                <Button Grid.Column="4"
                         Content="CANCEL"
                         Click="Cancel_Click"
-                        Style="{StaticResource ClassicBtn}"
-                        IsCancel="True"/>
-
-                <Button Grid.Column="3"
-                        Content="APPLY TO GRN"
+                        IsCancel="True"
+                        Style="{StaticResource DialogButton}"/>
+                <Button Grid.Column="6"
+                        Content="APPLY PRICES"
                         Click="Apply_Click"
-                        Style="{StaticResource ActionBtn}"
-                        IsDefault="True"/>
+                        IsDefault="True"
+                        Style="{StaticResource PrimaryDialogButton}"/>
             </Grid>
         </Border>
     </Grid>

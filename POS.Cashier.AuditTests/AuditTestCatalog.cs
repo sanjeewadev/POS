@@ -51,6 +51,7 @@ internal static class AuditTestCatalog
         new("BackOffice repeated navigation and page initialization are reliable", AuditGroups.SourcePolicy, BackOfficeNavigationSourcePolicyAuditTests.NavigationLifecycleIsControlledAsync),
         new("BackOffice navigation and selection styling are organized and readable", AuditGroups.SourcePolicy, BackOfficeNavigationSelectionSourcePolicyAuditTests.NavigationAndSelectionAreOrganizedAsync),
         new("BackOffice purchasing and stock operational controls are wired", AuditGroups.SourcePolicy, BackOfficeOperationalSourcePolicyAuditTests.PurchasingAndStockControlsAreWiredAsync),
+        new("GRN variant entry and selling-price workflows are simple and controlled", AuditGroups.SourcePolicy, BackOfficeOperationalSourcePolicyAuditTests.GrnVariantEntryAndSellingPriceWorkflowsAreControlledAsync),
         new("Recoverable BackOffice and Cashier UI failures are contained", AuditGroups.SourcePolicy, UiCrashResilienceSourcePolicyAuditTests.RecoverableUiFailuresAreContainedAsync),
         new("Store identity and licence requests are consistent", AuditGroups.SourcePolicy, StoreIdentitySourcePolicyAuditTests.StoreIdentityAndLicenceRequestsAreConsistentAsync),
         new("Licence and terminal responsibilities are separated", AuditGroups.SourcePolicy, LicenseTerminalWorkflowSourcePolicyAuditTests.LicenceAndTerminalResponsibilitiesAreSeparatedAsync),

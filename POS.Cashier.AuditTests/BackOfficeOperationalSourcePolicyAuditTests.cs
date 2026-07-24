@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace POS.Cashier.AuditTests;
 
@@ -10,7 +10,6 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
         VerifyStockAdjustmentRecalculationHook();
         VerifyPurchaseOrderBulkCostAction();
         VerifyPoLinkedGrnExpiryEditor();
-        VerifyGrnMatrixEditCommit();
         VerifyNonVatSupplierPurchasingPolicy();
 
         return Task.CompletedTask;
@@ -144,39 +143,83 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "GRN mandatory expiry validation");
     }
 
-    private static void VerifyGrnMatrixEditCommit()
+    public static Task GrnVariantEntryAndSellingPriceWorkflowsAreControlledAsync()
     {
-        string xaml = Read(
+        VerifyGrnVariantEntryDialog();
+        VerifyGrnSellingPriceWorkflow();
+        VerifyConditionalVatRetry();
+
+        return Task.CompletedTask;
+    }
+
+    private static void VerifyGrnVariantEntryDialog()
+    {
+        string grnXaml = Read(
             "POS.BackOffice.UI",
             "Views",
             "Pages",
             "InventoryOperations",
             "GrnView.xaml");
-        string codeBehind = Read(
+        string grnCodeBehind = Read(
             "POS.BackOffice.UI",
             "Views",
             "Pages",
             "InventoryOperations",
             "GrnView.xaml.cs");
+        string dialogXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "PurchasingVariantEntryDialog.xaml");
+        string dialogCodeBehind = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "PurchasingVariantEntryDialog.xaml.cs");
+        string dialogViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "PurchasingVariantEntryDialogViewModel.cs");
+        string grnViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "GrnViewModel.cs");
 
+        AuditAssert.False(
+            grnXaml.Contains("x:Name=\"MatrixVariantsGrid\"", StringComparison.Ordinal),
+            "The removed inline GRN matrix is still present.");
+        AuditAssert.False(
+            grnXaml.Contains("ADD MATRIX ROWS", StringComparison.OrdinalIgnoreCase),
+            "The removed inline matrix transfer action is still visible.");
+        AuditAssert.False(
+            grnCodeBehind.Contains("AddMatrixRows_Click", StringComparison.Ordinal),
+            "The removed inline matrix click handler is still present.");
+        AuditAssert.True(
+            grnCodeBehind.Contains("using System.Windows.Controls;", StringComparison.Ordinal) ||
+            grnCodeBehind.Contains("System.Windows.Controls.UserControl", StringComparison.Ordinal),
+            "GRN view code-behind must resolve the WPF UserControl type explicitly.");
         AuditAssert.Contains(
-            xaml,
-            "x:Name=\"MatrixVariantsGrid\"",
-            "GRN matrix DataGrid name");
+            grnXaml,
+            "Content=\"ADD STOCK ITEM VARIANTS...\"",
+            "GRN reusable variant-entry action");
         AuditAssert.Contains(
-            xaml,
-            "Click=\"AddMatrixRows_Click\"",
-            "GRN matrix add-row click handler");
+            grnXaml,
+            "Command=\"{Binding OpenPurchasingVariantEntryDialogCommand}\"",
+            "GRN reusable variant-entry command");
+        AuditAssert.Contains(
+            dialogXaml,
+            "x:Name=\"VariantGrid\"",
+            "Purchasing variant-entry DataGrid");
         AuditAssert.True(
             Regex.IsMatch(
-                xaml,
-                "SelectedDate=\\\"\\{Binding\\s+ExpiryDate,\\s*Mode=TwoWay,\\s*" +
-                "UpdateSourceTrigger=PropertyChanged(?:,\\s*ValidatesOnExceptions=True)?\\}\\\"",
+                dialogXaml,
+                "SelectedDate=\"\\{Binding\\s+ExpiryDate,\\s*Mode=TwoWay,\\s*" +
+                "UpdateSourceTrigger=PropertyChanged(?:,\\s*ValidatesOnExceptions=True)?\\}\"",
                 RegexOptions.CultureInvariant),
-            "GRN matrix expiry binding does not update the source immediately.");
+            "Variant-entry expiry binding does not update the source immediately.");
 
         string compact = Regex.Replace(
-            codeBehind,
+            dialogCodeBehind,
             "\\s+",
             string.Empty,
             RegexOptions.CultureInvariant);
@@ -185,25 +228,191 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "Keyboard.ClearFocus();",
             StringComparison.Ordinal);
         int cellCommitIndex = compact.IndexOf(
-            "MatrixVariantsGrid.CommitEdit(DataGridEditingUnit.Cell,true);",
+            "VariantGrid.CommitEdit(DataGridEditingUnit.Cell,true);",
             StringComparison.Ordinal);
         int rowCommitIndex = compact.IndexOf(
-            "MatrixVariantsGrid.CommitEdit(DataGridEditingUnit.Row,true);",
+            "VariantGrid.CommitEdit(DataGridEditingUnit.Row,true);",
             StringComparison.Ordinal);
-        int canExecuteIndex = compact.IndexOf(
-            "viewModel.AddMatrixCommand.CanExecute(null)",
+        int commitGuardIndex = compact.IndexOf(
+            "if(!cellCommitted||!rowCommitted)",
             StringComparison.Ordinal);
-        int executeIndex = compact.IndexOf(
-            "viewModel.AddMatrixCommand.Execute(null);",
+        int collectIndex = compact.IndexOf(
+            "_viewModel.TryCollectAcceptedRows(",
+            StringComparison.Ordinal);
+        int resultIndex = compact.IndexOf(
+            "DialogResult=true;",
             StringComparison.Ordinal);
 
         AuditAssert.True(
             clearFocusIndex >= 0 &&
             cellCommitIndex > clearFocusIndex &&
             rowCommitIndex > cellCommitIndex &&
-            canExecuteIndex > rowCommitIndex &&
-            executeIndex > canExecuteIndex,
-            "GRN matrix expiry editor must clear focus and commit cell and row edits before AddMatrixCommand executes.");
+            commitGuardIndex > rowCommitIndex &&
+            collectIndex > commitGuardIndex &&
+            resultIndex > collectIndex,
+            "Variant entry must commit the active cell and row, stop on failure, validate, and only then return accepted rows.");
+
+        AuditAssert.False(
+            dialogViewModel.Contains("GrnLineEntryDto", StringComparison.Ordinal),
+            "Reusable purchasing variant-entry state depends on the GRN line DTO.");
+        AuditAssert.False(
+            dialogViewModel.Contains("PoMatrixEntryDto", StringComparison.Ordinal),
+            "Reusable purchasing variant-entry state depends on the PO matrix DTO.");
+        AuditAssert.Contains(
+            dialogViewModel,
+            "Func<int, Task<IReadOnlyList<PurchasingVariantSource>>>",
+            "neutral asynchronous purchasing-variant loader");
+        AuditAssert.False(
+            Regex.IsMatch(
+                grnViewModel,
+                @"private\s+async\s+Task\s+OpenPurchasingVariantEntryDialogAsync\s*\(",
+                RegexOptions.CultureInvariant),
+            "The GRN variant-entry command must not be marked async when its outer body has no await.");
+        AuditAssert.False(
+            Regex.IsMatch(
+                dialogViewModel,
+                @"\b_selectedItem\s*=",
+                RegexOptions.CultureInvariant),
+            "The generated SelectedItem property backing field must not be assigned directly.");
+        AuditAssert.Contains(
+            dialogViewModel,
+            "SelectedItem = AvailableItems[0];",
+            "generated SelectedItem property initialization");
+        AuditAssert.Contains(
+            dialogViewModel,
+            "row.RequiresExpiry && !row.ExpiryDate.HasValue",
+            "variant-entry expiry requirement validation");
+        AuditAssert.Contains(
+            dialogViewModel,
+            "row.ExpiryDate.Value.Date < DocumentDate",
+            "variant-entry expiry date boundary validation");
+        AuditAssert.Contains(
+            grnViewModel,
+            "BuildLineFromPurchasingEntry",
+            "GRN adapter from neutral purchasing variant rows");
+    }
+
+    private static void VerifyGrnSellingPriceWorkflow()
+    {
+        string grnXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "GrnView.xaml");
+        string dialogXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "GrnBulkSellingPriceDialog.xaml");
+        string dialogCodeBehind = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "GrnBulkSellingPriceDialog.xaml.cs");
+        string dto = Read(
+            "POS.Core",
+            "Models",
+            "DTOs",
+            "GrnDtos.cs");
+
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(grnXaml, "Command=\"{Binding OpenBulkSellingPriceDialogCommand}\""),
+            "GRN selling-price dialog entry-point count");
+        AuditAssert.Contains(
+            grnXaml,
+            "Content=\"CHANGE SELLING PRICES...\"",
+            "single GRN selling-price action label");
+        AuditAssert.False(
+            grnXaml.Contains("BULK SELLING PRICES", StringComparison.OrdinalIgnoreCase),
+            "The duplicate matrix selling-price action remains visible.");
+        AuditAssert.Contains(
+            grnXaml,
+            "Content=\"CLEAR PROPOSED PRICES\"",
+            "clear proposed prices action");
+
+        AuditAssert.False(
+            dialogXaml.Contains("ComboBox", StringComparison.Ordinal),
+            "The selling-price dialog still contains method or rounding dropdowns.");
+        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkRetail\"", "bulk Retail field");
+        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkWholesale\"", "bulk Wholesale field");
+        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkMinimum\"", "bulk Minimum field");
+        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkMaximum\"", "bulk Maximum field");
+        AuditAssert.Contains(dialogXaml, "Header=\"Current Retail\"", "current Retail column");
+        AuditAssert.Contains(dialogXaml, "Header=\"New Retail\"", "new Retail column");
+        AuditAssert.Contains(dialogXaml, "Header=\"Current W/S\"", "current Wholesale column");
+        AuditAssert.Contains(dialogXaml, "Header=\"New W/S\"", "new Wholesale column");
+        AuditAssert.Contains(dialogXaml, "Header=\"Current Min\"", "current Minimum column");
+        AuditAssert.Contains(dialogXaml, "Header=\"New Min\"", "new Minimum column");
+        AuditAssert.Contains(dialogXaml, "Header=\"Current Max\"", "current Maximum column");
+        AuditAssert.Contains(dialogXaml, "Header=\"New Max\"", "new Maximum column");
+        AuditAssert.Contains(dialogXaml, "Content=\"SELECT ALL\"", "select-all action");
+        AuditAssert.Contains(dialogXaml, "Content=\"CLEAR SELECTION\"", "clear-selection action");
+        AuditAssert.Contains(dialogXaml, "Content=\"APPLY PRICES\"", "apply-prices action");
+        AuditAssert.Contains(dialogXaml, "Content=\"CANCEL\"", "cancel action");
+
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "line.NewMinimumPrice = RoundMoney(row.NewMinimumPrice);",
+            "Minimum Price proposal assignment");
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "line.NewMaximumPrice = RoundMoney(row.NewMaximumPrice);",
+            "Maximum Price proposal assignment");
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "line.UpdateSellingPrices = row.HasAnyChange;",
+            "four-level selling-price update flag");
+        AuditAssert.False(
+            dialogCodeBehind.Contains("SourceLine.NewRetailPrice =", StringComparison.Ordinal),
+            "Selling prices are mutated before the final Apply action.");
+        AuditAssert.Contains(dto, "public bool HasMinimumPriceChange", "Minimum Price change detection");
+        AuditAssert.Contains(dto, "public bool HasMaximumPriceChange", "Maximum Price change detection");
+        AuditAssert.Contains(dto, "public bool HasAnySellingPriceChange", "four-level price-change detection");
+        AuditAssert.Contains(dto, "parts.Add($\"Min ", "Minimum Price summary text");
+        AuditAssert.Contains(dto, "parts.Add($\"Max ", "Maximum Price summary text");
+    }
+
+    private static void VerifyConditionalVatRetry()
+    {
+        string grnXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "GrnView.xaml");
+        string phaseViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "GrnViewModel.Phase7D2.cs");
+        string grnViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "GrnViewModel.cs");
+
+        AuditAssert.False(
+            grnXaml.Contains("REFRESH VAT PREVIEW", StringComparison.OrdinalIgnoreCase),
+            "The normal GRN toolbar still exposes the manual VAT preview action.");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(grnXaml, "Content=\"RETRY VAT\""),
+            "conditional VAT retry action count");
+        AuditAssert.Contains(
+            grnXaml,
+            "Visibility=\"{Binding IsTaxPreviewRetryVisible, Converter={StaticResource BooleanToVisibilityConverter}}\"",
+            "conditional VAT retry visibility binding");
+        AuditAssert.Contains(
+            phaseViewModel,
+            "IsTaxPreviewRetryVisible = false;",
+            "successful authoritative preview clears VAT retry state");
+        AuditAssert.Contains(
+            phaseViewModel,
+            "IsTaxPreviewRetryVisible = true;",
+            "failed authoritative preview exposes VAT retry state");
+        AuditAssert.True(
+            CountOccurrences(grnViewModel, "RecalculateTotalsAuthoritativelyAsync(showErrors: true)") >= 2,
+            "GRN posting must retain authoritative tax preview checks before posting.");
     }
 
     private static void VerifyNonVatSupplierPurchasingPolicy()

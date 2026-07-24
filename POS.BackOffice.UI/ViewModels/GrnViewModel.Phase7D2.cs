@@ -36,6 +36,9 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _taxPreviewStatus = "Add GRN rows to calculate authoritative VAT.";
 
+        [ObservableProperty]
+        private bool _isTaxPreviewRetryVisible;
+
         public string SupplierVatStatusText
         {
             get
@@ -77,12 +80,17 @@ namespace POS.BackOffice.UI.ViewModels
 
         public int WholesalePriceChangeCount => GrnLines.Count(line => line.HasWholesalePriceChange);
 
-        public int AnyPriceChangeCount => GrnLines.Count(line =>
-            line.HasRetailPriceChange || line.HasWholesalePriceChange);
+        public int MinimumPriceChangeCount => GrnLines.Count(line => line.HasMinimumPriceChange);
+
+        public int MaximumPriceChangeCount => GrnLines.Count(line => line.HasMaximumPriceChange);
+
+        public int AnyPriceChangeCount => GrnLines.Count(line => line.HasAnySellingPriceChange);
 
         public string PriceUpdateSummaryText => AnyPriceChangeCount == 0
             ? "No selling-price changes are selected."
-            : $"{RetailPriceChangeCount} retail and {WholesalePriceChangeCount} wholesale price change(s) will be applied when the GRN is posted.";
+            : $"{RetailPriceChangeCount} retail, {WholesalePriceChangeCount} wholesale, " +
+              $"{MinimumPriceChangeCount} minimum and {MaximumPriceChangeCount} maximum " +
+              "price change(s) will be applied when the GRN is posted.";
 
         partial void OnSupplierPricesIncludeVatChanged(bool value)
         {
@@ -254,6 +262,7 @@ namespace POS.BackOffice.UI.ViewModels
                     ZeroRatedAmount = preview.ZeroRatedAmount;
                     ExemptAmount = preview.ExemptAmount;
                     OutOfScopeAmount = preview.OutOfScopeAmount;
+                    IsTaxPreviewRetryVisible = false;
                     TaxPreviewStatus = GrnLines.Any(line => line.ReceivedQty > 0m)
                         ? supplierIsVatRegistered
                             ? $"Authoritative tax preview calculated for {InvoiceDate:yyyy-MM-dd}."
@@ -274,6 +283,7 @@ namespace POS.BackOffice.UI.ViewModels
                     return false;
 
                 TaxPreviewStatus = $"Tax preview unavailable: {ex.Message}";
+                IsTaxPreviewRetryVisible = true;
 
                 if (showErrors)
                 {
@@ -290,6 +300,8 @@ namespace POS.BackOffice.UI.ViewModels
         {
             OnPropertyChanged(nameof(RetailPriceChangeCount));
             OnPropertyChanged(nameof(WholesalePriceChangeCount));
+            OnPropertyChanged(nameof(MinimumPriceChangeCount));
+            OnPropertyChanged(nameof(MaximumPriceChangeCount));
             OnPropertyChanged(nameof(AnyPriceChangeCount));
             OnPropertyChanged(nameof(PriceUpdateSummaryText));
 
