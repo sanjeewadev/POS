@@ -5,6 +5,7 @@ using POS.Core.Data.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Services.Tax;
+using POS.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -553,39 +554,68 @@ namespace POS.Core.Repositories
 
             ValidateSubmittedVariantDuplicates(variants);
 
+            if (parent.Id == 0)
+            {
+                string misalignmentMessage =
+                    ItemVariantIdentityPolicy.BuildMisalignmentMessage(
+                        parent.ItemCode,
+                        variants);
+
+                if (!string.IsNullOrWhiteSpace(misalignmentMessage))
+                    throw new InvalidOperationException(misalignmentMessage);
+            }
+
+            var identitySnapshot =
+                SubmittedIdentitySnapshot.Capture(parent, variants);
+
             await using var context = await _contextFactory.CreateDbContextAsync();
-
-            await ValidateParentReferencesAsync(context, parent);
-
-            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            await using var transaction = await context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
 
             try
             {
+                await ValidateParentReferencesAsync(context, parent);
+                await ValidateItemCodeAgainstDatabaseAsync(
+                    context,
+                    parent.ItemCode,
+                    parent.Id);
+
                 DateTime now = DateTime.Now;
 
                 if (parent.Id == 0)
                 {
+                    foreach (var variant in variants)
+                    {
+                        await ValidateSkuAndBarcodeAgainstDatabaseAsync(
+                            context,
+                            variant,
+                            currentVariantId: 0);
+                    }
+
                     ApplyParentActivationStateToSubmittedVariants(
                         parent,
                         variants,
                         parentIsBeingReactivated: false,
                         now);
 
-                    parent.CreatedAt = now;
-                    parent.UpdatedAt = now;
-                    parent.DeactivatedAt = parent.IsDeactivated ? now : null;
+                    ItemParent persistedParent =
+                        CreatePersistedParent(parent, now);
 
-                    parent.Category = null!;
-                    parent.SubCategory = null;
-                    parent.UnitOfMeasure = null!;
-                    parent.Variants = new List<ItemVariant>();
-
-                    await context.ItemParents.AddAsync(parent);
+                    await context.ItemParents.AddAsync(persistedParent);
                     await context.SaveChangesAsync();
+
+                    parent.Id = persistedParent.Id;
+                    parent.CreatedAt = persistedParent.CreatedAt;
+                    parent.UpdatedAt = persistedParent.UpdatedAt;
+                    parent.DeactivatedAt = persistedParent.DeactivatedAt;
 
                     foreach (var variant in variants)
                     {
-                        await AddVariantGraphAsync(context, parent.Id, variant, now);
+                        await AddVariantGraphAsync(
+                            context,
+                            persistedParent.Id,
+                            variant,
+                            now);
                     }
                 }
                 else
@@ -742,10 +772,23 @@ namespace POS.Core.Repositories
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                throw;
+                try
+                {
+                    await transaction.RollbackAsync();
+                }
+                finally
+                {
+                    identitySnapshot.Restore(parent, variants);
+                }
+
+                if (ex is InvalidOperationException)
+                    throw;
+
+                throw new InvalidOperationException(
+                    ItemMasterSaveFailureFormatter.GetUserMessage(ex),
+                    ex);
             }
         }
 
@@ -922,40 +965,87 @@ namespace POS.Core.Repositories
                 string.Equals(v.SkuCode, submittedVariant.SkuCode, StringComparison.OrdinalIgnoreCase));
         }
 
+        private static ItemParent CreatePersistedParent(
+            ItemParent submittedParent,
+            DateTime now)
+        {
+            return new ItemParent
+            {
+                ItemCode = submittedParent.ItemCode,
+                ItemName = submittedParent.ItemName,
+                PrintName = submittedParent.PrintName,
+                CategoryId = submittedParent.CategoryId,
+                SubCategoryId = submittedParent.SubCategoryId,
+                UnitOfMeasureId = submittedParent.UnitOfMeasureId,
+                BaseUom = submittedParent.BaseUom,
+                ItemType = submittedParent.ItemType,
+                TaxCategoryId = submittedParent.TaxCategoryId,
+                TaxCode = submittedParent.TaxCode,
+                IsTaxInclusive = true,
+                HasBatchTracking = submittedParent.HasBatchTracking,
+                HasExpiryTracking = submittedParent.HasExpiryTracking,
+                HasBatchExpiry = submittedParent.HasBatchExpiry,
+                IsScaleItem = submittedParent.IsScaleItem,
+                IsSerialized = submittedParent.IsSerialized,
+                AllowCashierDiscount = submittedParent.AllowCashierDiscount,
+                IsPurchaseLocked = submittedParent.IsPurchaseLocked,
+                IsSaleLocked = submittedParent.IsSaleLocked,
+                IsDeactivated = submittedParent.IsDeactivated,
+                CreatedAt = now,
+                UpdatedAt = now,
+                DeactivatedAt = submittedParent.IsDeactivated ? now : null,
+                Variants = new List<ItemVariant>()
+            };
+        }
+
         private static async Task AddVariantGraphAsync(
             AppDbContext context,
             int parentId,
-            ItemVariant variant,
+            ItemVariant submittedVariant,
             DateTime now)
         {
-            variant.Id = 0;
-            variant.ItemParentId = parentId;
-            variant.ItemParent = null!;
-
-            variant.CreatedAt = now;
-            variant.UpdatedAt = now;
-            variant.DeactivatedAt = variant.IsDeactivated ? now : null;
-
-            var mappings = variant.PropertyMappings?
+            var mappings = submittedVariant.PropertyMappings?
                 .ToList() ?? new List<ItemPropertyMapping>();
 
-            var suppliers = variant.ItemSuppliers?
+            var suppliers = submittedVariant.ItemSuppliers?
                 .ToList() ?? new List<ItemSupplier>();
-
-            variant.PropertyMappings = new List<ItemPropertyMapping>();
-            variant.ItemSuppliers = new List<ItemSupplier>();
 
             await ValidateMappingsAsync(context, mappings);
             await ValidateSuppliersAsync(context, suppliers);
 
-            await context.ItemVariants.AddAsync(variant);
+            var persistedVariant = new ItemVariant
+            {
+                ItemParentId = parentId,
+                ItemParent = null!,
+                SkuCode = submittedVariant.SkuCode,
+                VariantDescription = submittedVariant.VariantDescription,
+                Barcode = submittedVariant.Barcode,
+                AverageCost = submittedVariant.AverageCost,
+                CostPrice = submittedVariant.CostPrice,
+                RetailPrice = submittedVariant.RetailPrice,
+                WholesalePrice = submittedVariant.WholesalePrice,
+                MinimumPrice = submittedVariant.MinimumPrice,
+                MaximumPrice = submittedVariant.MaximumPrice,
+                ReorderLevel = submittedVariant.ReorderLevel,
+                IsDeactivated = submittedVariant.IsDeactivated,
+                CreatedAt = now,
+                UpdatedAt = now,
+                DeactivatedAt = submittedVariant.IsDeactivated ? now : null,
+                PropertyMappings = new List<ItemPropertyMapping>(),
+                ItemSuppliers = new List<ItemSupplier>()
+            };
+
+            await context.ItemVariants.AddAsync(persistedVariant);
             await context.SaveChangesAsync();
+
+            submittedVariant.Id = persistedVariant.Id;
+            submittedVariant.ItemParentId = parentId;
 
             foreach (var map in mappings)
             {
                 context.ItemPropertyMappings.Add(new ItemPropertyMapping
                 {
-                    ItemVariantId = variant.Id,
+                    ItemVariantId = persistedVariant.Id,
                     AttributeGroupId = map.AttributeGroupId,
                     AttributeValueId = map.AttributeValueId
                 });
@@ -965,7 +1055,7 @@ namespace POS.Core.Repositories
             {
                 context.ItemSuppliers.Add(new ItemSupplier
                 {
-                    ItemVariantId = variant.Id,
+                    ItemVariantId = persistedVariant.Id,
                     SupplierId = supplier.SupplierId,
                     SupplierItemCode = string.Empty,
                     LastCostPrice = supplier.LastCostPrice,
@@ -1137,6 +1227,26 @@ namespace POS.Core.Repositories
 
                 if (supplier.MinimumOrderQuantity <= 0)
                     throw new InvalidOperationException("Minimum order quantity must be greater than zero.");
+            }
+        }
+
+        private static async Task ValidateItemCodeAgainstDatabaseAsync(
+            AppDbContext context,
+            string itemCode,
+            int currentParentId)
+        {
+            string normalizedCode = NormalizeCode(itemCode);
+            string caseInsensitiveCollation =
+                DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
+
+            bool itemCodeExists = await context.ItemParents.AnyAsync(parent =>
+                EF.Functions.Collate(parent.ItemCode, caseInsensitiveCollation) == normalizedCode &&
+                parent.Id != currentParentId);
+
+            if (itemCodeExists)
+            {
+                throw new InvalidOperationException(
+                    $"Item code '{itemCode}' already exists.");
             }
         }
 
@@ -2117,6 +2227,93 @@ namespace POS.Core.Repositories
                         variant.ItemParent?.HasBatchExpiry == true
                     )
             };
+        }
+
+        private sealed class SubmittedIdentitySnapshot
+        {
+            private readonly int _parentId;
+            private readonly List<VariantIdentity> _variants;
+            private readonly List<SupplierIdentity> _suppliers;
+            private readonly List<MappingIdentity> _mappings;
+
+            private SubmittedIdentitySnapshot(
+                int parentId,
+                List<VariantIdentity> variants,
+                List<SupplierIdentity> suppliers,
+                List<MappingIdentity> mappings)
+            {
+                _parentId = parentId;
+                _variants = variants;
+                _suppliers = suppliers;
+                _mappings = mappings;
+            }
+
+            public static SubmittedIdentitySnapshot Capture(
+                ItemParent parent,
+                IEnumerable<ItemVariant> variants)
+            {
+                List<ItemVariant> variantList = variants.ToList();
+
+                return new SubmittedIdentitySnapshot(
+                    parent.Id,
+                    variantList
+                        .Select(variant => new VariantIdentity(
+                            variant,
+                            variant.Id,
+                            variant.ItemParentId))
+                        .ToList(),
+                    variantList
+                        .SelectMany(variant =>
+                            variant.ItemSuppliers ?? Array.Empty<ItemSupplier>())
+                        .Select(supplier => new SupplierIdentity(
+                            supplier,
+                            supplier.Id,
+                            supplier.ItemVariantId))
+                        .ToList(),
+                    variantList
+                        .SelectMany(variant =>
+                            variant.PropertyMappings ?? Array.Empty<ItemPropertyMapping>())
+                        .Select(mapping => new MappingIdentity(
+                            mapping,
+                            mapping.ItemVariantId))
+                        .ToList());
+            }
+
+            public void Restore(
+                ItemParent parent,
+                IEnumerable<ItemVariant> variants)
+            {
+                parent.Id = _parentId;
+
+                foreach (VariantIdentity identity in _variants)
+                {
+                    identity.Variant.Id = identity.Id;
+                    identity.Variant.ItemParentId = identity.ItemParentId;
+                }
+
+                foreach (SupplierIdentity identity in _suppliers)
+                {
+                    identity.Supplier.Id = identity.Id;
+                    identity.Supplier.ItemVariantId = identity.ItemVariantId;
+                }
+
+                foreach (MappingIdentity identity in _mappings)
+                    identity.Mapping.ItemVariantId = identity.ItemVariantId;
+            }
+
+            private sealed record VariantIdentity(
+                ItemVariant Variant,
+                int Id,
+                int ItemParentId);
+
+            private sealed record SupplierIdentity(
+                ItemSupplier Supplier,
+                int Id,
+                int ItemVariantId);
+
+            private sealed record MappingIdentity(
+                ItemPropertyMapping Mapping,
+                int ItemVariantId);
         }
 
         // =========================================================

@@ -13,6 +13,7 @@ using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Repositories;
 using POS.Core.Services;
+using POS.Core.Utilities;
 
 namespace POS.BackOffice.UI.ViewModels
 {
@@ -70,6 +71,7 @@ namespace POS.BackOffice.UI.ViewModels
         private bool _loadedItemHasHistory;
         private bool _isApplyingItemType;
         private bool _isCalculatingPricing; // Safety flag for bi-directional math
+        private string _generatedVariantItemCode = string.Empty;
 
         private static readonly Random _random = new();
 
@@ -509,6 +511,7 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedSubCategory = null;
                 ClearVariantBuilder();
                 GeneratedVariants.Clear();
+                _generatedVariantItemCode = string.Empty;
                 SelectedVariantSuppliers.Clear();
                 SelectedVariantForSupplierEdit = null;
                 UpdateSupplierAssignmentSelectionCount();
@@ -701,6 +704,7 @@ namespace POS.BackOffice.UI.ViewModels
                     GeneratedVariants.Add(variant);
                 }
 
+                _generatedVariantItemCode = NormalizeCode(fullItem.ItemCode);
                 ApplyServiceSafetyDefaults();
                 RebuildBuilderSelectionFromVariants();
                 UpdateSupplierAssignmentSelectionCount();
@@ -763,9 +767,11 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            InvalidateGeneratedVariants(
+                "Matrix properties changed. Generate variants again before saving.");
             AddSelectionToCollections(new MatrixPropertySelection { Group = SelectedPropertyKey, Value = PropertyValueInput });
             PropertyValueInput = null;
-            StatusMessage = "Property value added.";
+            StatusMessage = "Property value added. Generate variants before saving.";
         }
 
         private void AddSelectionToCollections(MatrixPropertySelection selection)
@@ -787,6 +793,8 @@ namespace POS.BackOffice.UI.ViewModels
             if (selection == null) return;
             if (!IsSetupEditable) return;
 
+            InvalidateGeneratedVariants(
+                "Matrix properties changed. Generate variants again before saving.");
             DynamicProperties.Remove(selection);
             var groupSelection = SelectedPropertyGroups.FirstOrDefault(g => g.Group.Id == selection.Group.Id);
 
@@ -796,7 +804,7 @@ namespace POS.BackOffice.UI.ViewModels
                 if (valueToRemove != null) groupSelection.Values.Remove(valueToRemove);
                 if (!groupSelection.Values.Any()) SelectedPropertyGroups.Remove(groupSelection);
             }
-            StatusMessage = "Property value removed.";
+            StatusMessage = "Property value removed. Generate variants before saving.";
         }
 
         private void ClearVariantBuilder()
@@ -900,6 +908,7 @@ namespace POS.BackOffice.UI.ViewModels
                 foreach (ItemVariant variant in generatedVariants)
                     GeneratedVariants.Add(variant);
 
+                _generatedVariantItemCode = NormalizeCode(itemCode);
                 SelectedVariantSuppliers.Clear();
                 SelectedVariantForSupplierEdit = null;
                 UpdateSupplierAssignmentSelectionCount();
@@ -1475,6 +1484,7 @@ namespace POS.BackOffice.UI.ViewModels
             ApplyParentActivationStateToGeneratedVariants();
             if (!ValidateBeforeSave(itemCode)) return;
 
+            bool saveStartedAsNewItem = CurrentItem.Id == 0;
             IsBusy = true;
             try
             {
@@ -1530,21 +1540,6 @@ namespace POS.BackOffice.UI.ViewModels
                         variant.ReorderLevel = 0;
                         variant.ItemSuppliers.Clear();
                     }
-
-                    variant.ItemParent = null!;
-                    foreach (var mapping in variant.PropertyMappings)
-                    {
-                        mapping.ItemVariant = null!;
-                        mapping.AttributeGroup = null!;
-                        mapping.AttributeValue = null!;
-                    }
-                    foreach (var supplier in variant.ItemSuppliers)
-                    {
-                        supplier.ItemVariant = null!;
-                        supplier.Supplier = null!;
-                        supplier.SupplierItemCode = string.Empty;
-                        supplier.IsPrimary = false;
-                    }
                 }
 
                 var mappingsList = GeneratedVariants.SelectMany(v => v.PropertyMappings).ToList();
@@ -1555,7 +1550,25 @@ namespace POS.BackOffice.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _messageBoxService.ShowError($"Failed to save item:\n\n{ex.Message}", "Database Error");
+                if (saveStartedAsNewItem)
+                    ResetTransientNewItemIdentities();
+
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Save Item Master item",
+                    ex);
+
+                StatusMessage =
+                    "Item save failed. No item data was committed; correct the form and try again.";
+
+                string userMessage =
+                    ItemMasterSaveFailureFormatter.GetUserMessage(ex);
+
+                _messageBoxService.ShowError(
+                    $"Failed to save item:\n\n{userMessage}\n\n" +
+                    "No item data was committed. The form has been kept for correction. " +
+                    "Technical details were saved in the local POS Logs folder.",
+                    "Database Error");
             }
             finally
             {
@@ -1695,6 +1708,7 @@ namespace POS.BackOffice.UI.ViewModels
             ClearVariantBuilder();
             PropertyKeys.Clear();
             GeneratedVariants.Clear();
+            _generatedVariantItemCode = string.Empty;
             SelectedVariantSuppliers.Clear();
             SelectedVariantForSupplierEdit = null;
             UpdateSupplierAssignmentSelectionCount();
@@ -1879,7 +1893,13 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnMasterSearchTextChanged(string value) { if (_isInitialized) StatusMessage = "Type search text and click SEARCH."; }
         partial void OnIncludeDeactivatedItemsChanged(bool value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
         partial void OnSelectedItemTypeFilterChanged(string value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
-        partial void OnItemSuffixChanged(string value) { GenerateVariantsCommand.NotifyCanExecuteChanged(); SaveCommand.NotifyCanExecuteChanged(); }
+
+        partial void OnItemPrefixChanged(string value) =>
+            HandleItemCodeInputChanged();
+
+        partial void OnItemSuffixChanged(string value) =>
+            HandleItemCodeInputChanged();
+
         partial void OnSelectedUomChanged(UnitOfMeasure? value) =>
             SaveCommand.NotifyCanExecuteChanged();
 
@@ -2191,7 +2211,84 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
+            if (!IsExistingItem)
+            {
+                string misalignmentMessage =
+                    ItemVariantIdentityPolicy.BuildMisalignmentMessage(
+                        itemCode,
+                        GeneratedVariants);
+
+                if (!string.IsNullOrWhiteSpace(misalignmentMessage))
+                {
+                    _messageBoxService.ShowWarning(
+                        misalignmentMessage,
+                        "Generate Variants Again");
+                    return false;
+                }
+            }
+
             return true;
+        }
+
+        private void HandleItemCodeInputChanged()
+        {
+            GenerateVariantsCommand.NotifyCanExecuteChanged();
+            SaveCommand.NotifyCanExecuteChanged();
+
+            if (_isLoadingItem || _isClearing || IsExistingItem)
+                return;
+
+            string currentItemCode = BuildItemCode();
+
+            if (string.Equals(
+                    NormalizeCode(currentItemCode),
+                    _generatedVariantItemCode,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            InvalidateGeneratedVariants(
+                "Item code changed. Generated variants were cleared. Generate variants again before saving.");
+        }
+
+        private void InvalidateGeneratedVariants(string reason)
+        {
+            if (!GeneratedVariants.Any())
+                return;
+
+            GeneratedVariants.Clear();
+            _generatedVariantItemCode = string.Empty;
+            SelectedVariantSuppliers.Clear();
+            SelectedVariantForSupplierEdit = null;
+            SelectedSupplierLinkForEdit = null;
+            SelectAllVariantsForSupplierAssignment = false;
+            UpdateSupplierAssignmentSelectionCount();
+            StatusMessage = reason;
+            NotifyCommandStates();
+        }
+
+        private void ResetTransientNewItemIdentities()
+        {
+            CurrentItem.Id = 0;
+
+            foreach (ItemVariant variant in GeneratedVariants)
+            {
+                variant.Id = 0;
+                variant.ItemParentId = 0;
+
+                foreach (ItemPropertyMapping mapping in variant.PropertyMappings)
+                    mapping.ItemVariantId = 0;
+
+                foreach (ItemSupplier supplier in variant.ItemSuppliers)
+                {
+                    supplier.Id = 0;
+                    supplier.ItemVariantId = 0;
+                }
+            }
+
+            RaiseItemStateProperties();
+            NotifyCommandStates();
         }
 
         private void ApplyParentDisplayNamesToAllVariants()
