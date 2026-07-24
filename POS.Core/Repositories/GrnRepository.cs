@@ -378,10 +378,15 @@ namespace POS.Core.Repositories
                 })
                 .ToListAsync();
 
-            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                supplierId);
+
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 rows.Select(r => r.ItemVariantId).ToList(),
-                transactionDate.Date);
+                transactionDate.Date,
+                supplierIsVatRegistered);
 
             return rows
                 .Select(r =>
@@ -487,10 +492,15 @@ namespace POS.Core.Repositories
             if (row == null)
                 return null;
 
-            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                supplierId);
+
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 new[] { row.ItemVariantId },
-                transactionDate.Date);
+                transactionDate.Date,
+                supplierIsVatRegistered);
 
             var profile = taxProfiles[row.ItemVariantId];
 
@@ -528,6 +538,7 @@ namespace POS.Core.Repositories
 
         public async Task<GrnTaxPreviewDto> CalculateGrnPreviewAsync(
             DateTime invoiceDate,
+            int supplierId,
             bool supplierPricesIncludeVat,
             decimal globalBillDiscount,
             decimal freightAmount,
@@ -567,13 +578,20 @@ namespace POS.Core.Repositories
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var profiles = await _purchasingTaxService.ResolveProfilesAsync(
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                supplierId);
+            bool documentIsTaxInclusive =
+                supplierIsVatRegistered && supplierPricesIncludeVat;
+
+            var profiles = await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 indexedLines
                     .Select(row => row.Line.ItemVariantId)
                     .Distinct()
                     .ToList(),
-                invoiceDate.Date);
+                invoiceDate.Date,
+                supplierIsVatRegistered);
 
             var calculation = _purchasingTaxService.CalculateDocument(
                 indexedLines
@@ -588,7 +606,7 @@ namespace POS.Core.Repositories
                     })
                     .ToList(),
                 globalBillDiscount,
-                supplierPricesIncludeVat);
+                documentIsTaxInclusive);
 
             decimal totalTaxExclusiveBase = calculation.Lines.Sum(line => line.TaxableAmount);
             decimal allocatedFreightTotal = 0m;
@@ -836,6 +854,24 @@ namespace POS.Core.Repositories
         // =========================================================
         // VALIDATION
         // =========================================================
+
+        private static async Task<bool> GetSupplierVatRegistrationAsync(
+            AppDbContext context,
+            int supplierId)
+        {
+            bool? supplierIsVatRegistered = await context.Suppliers
+                .Where(supplier => supplier.Id == supplierId)
+                .Select(supplier => (bool?)supplier.HasVat)
+                .SingleOrDefaultAsync();
+
+            if (!supplierIsVatRegistered.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "The selected GRN supplier was not found.");
+            }
+
+            return supplierIsVatRegistered.Value;
+        }
 
         private static async Task ValidateHeaderAsync(
             AppDbContext context,
@@ -1148,22 +1184,29 @@ namespace POS.Core.Repositories
             GrnHeader header,
             List<GrnLine> lines)
         {
-            bool documentIsTaxInclusive = header.IsTaxInclusive ?? ResolveDocumentTaxMode(lines);
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                header.SupplierId);
 
-            foreach (var line in lines)
+            bool documentIsTaxInclusive =
+                supplierIsVatRegistered &&
+                (header.IsTaxInclusive ?? ResolveDocumentTaxMode(lines));
+
+            foreach (GrnLine line in lines)
                 line.IsVatIncluded = documentIsTaxInclusive;
 
             header.IsTaxInclusive = documentIsTaxInclusive;
 
             var variantIds = lines
-                .Select(l => l.ItemVariantId)
+                .Select(line => line.ItemVariantId)
                 .Distinct()
                 .ToList();
 
-            var profiles = await _purchasingTaxService.ResolveProfilesAsync(
+            var profiles = await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 variantIds,
-                header.InvoiceDate);
+                header.InvoiceDate,
+                supplierIsVatRegistered);
 
             var calculation = _purchasingTaxService.CalculateDocument(
                 lines.Select(line => new PurchasingTaxLineInput

@@ -44,13 +44,34 @@ namespace POS.BackOffice.UI.ViewModels
                     return "Supplier VAT status: select a supplier.";
 
                 string status = SelectedSupplier.VatDisplayText;
-                return $"Supplier VAT status: {status}. Document price mode is selected separately below.";
+
+                if (!SelectedSupplier.HasVat)
+                {
+                    return $"Supplier VAT status: {status}. Supplier input VAT is zero and the VAT price-mode option is disabled.";
+                }
+
+                return $"Supplier VAT status: {status}. Match the price mode to the supplier document.";
             }
         }
 
-        public string SupplierPriceModeText => SupplierPricesIncludeVat
-            ? "Supplier prices include VAT"
-            : "Supplier prices exclude VAT";
+        public bool CanUseSupplierVatPriceMode =>
+            IsHeaderInputEnabled && SelectedSupplier?.HasVat == true;
+
+        public string SupplierPriceModeText
+        {
+            get
+            {
+                if (SelectedSupplier == null)
+                    return "Select a supplier to set the VAT price mode.";
+
+                if (!SelectedSupplier.HasVat)
+                    return "No supplier input VAT applies.";
+
+                return SupplierPricesIncludeVat
+                    ? "Supplier prices include VAT"
+                    : "Supplier prices exclude VAT";
+            }
+        }
 
         public int RetailPriceChangeCount => GrnLines.Count(line => line.HasRetailPriceChange);
 
@@ -65,6 +86,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         partial void OnSupplierPricesIncludeVatChanged(bool value)
         {
+            if (value && SelectedSupplier?.HasVat != true)
+            {
+                SupplierPricesIncludeVat = false;
+                return;
+            }
+
             OnPropertyChanged(nameof(SupplierPriceModeText));
 
             if (_isClearing)
@@ -170,9 +197,15 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
+                bool supplierIsVatRegistered =
+                    SelectedSupplier?.HasVat == true;
+                bool documentIsTaxInclusive =
+                    supplierIsVatRegistered && SupplierPricesIncludeVat;
+
                 var preview = await _grnRepository.CalculateGrnPreviewAsync(
                     InvoiceDate.Date,
-                    SupplierPricesIncludeVat,
+                    SelectedSupplier?.Id ?? 0,
+                    documentIsTaxInclusive,
                     GlobalBillDiscount,
                     FreightAmount,
                     GrnLines.ToList());
@@ -186,7 +219,7 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     foreach (var line in GrnLines)
                     {
-                        line.IsVatIncluded = SupplierPricesIncludeVat;
+                        line.IsVatIncluded = documentIsTaxInclusive;
                         line.GlobalDiscountAllocation = 0m;
                         line.TaxableAmount = 0m;
                         line.VatAmount = 0m;
@@ -203,7 +236,7 @@ namespace POS.BackOffice.UI.ViewModels
                         line.TaxCategoryCode = result.TaxCategoryCode;
                         line.TaxCategoryName = result.TaxCategoryName;
                         line.VatRatePercent = result.VatRatePercent;
-                        line.IsVatIncluded = SupplierPricesIncludeVat;
+                        line.IsVatIncluded = documentIsTaxInclusive;
                         line.LineDiscount = result.LineDiscountAmount;
                         line.GlobalDiscountAllocation = result.GlobalDiscountAllocation;
                         line.TaxableAmount = result.TaxableAmount;
@@ -222,7 +255,9 @@ namespace POS.BackOffice.UI.ViewModels
                     ExemptAmount = preview.ExemptAmount;
                     OutOfScopeAmount = preview.OutOfScopeAmount;
                     TaxPreviewStatus = GrnLines.Any(line => line.ReceivedQty > 0m)
-                        ? $"Authoritative tax preview calculated for {InvoiceDate:yyyy-MM-dd}."
+                        ? supplierIsVatRegistered
+                            ? $"Authoritative tax preview calculated for {InvoiceDate:yyyy-MM-dd}."
+                            : "No supplier input VAT: selected supplier is not VAT registered."
                         : "Add GRN rows to calculate authoritative VAT.";
                 }
                 finally

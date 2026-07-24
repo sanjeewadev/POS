@@ -10,6 +10,8 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
         VerifyStockAdjustmentRecalculationHook();
         VerifyPurchaseOrderBulkCostAction();
         VerifyPoLinkedGrnExpiryEditor();
+        VerifyGrnMatrixEditCommit();
+        VerifyNonVatSupplierPurchasingPolicy();
 
         return Task.CompletedTask;
     }
@@ -140,6 +142,175 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             dto,
             "if (RequiresExpiry && !ExpiryDate.HasValue)",
             "GRN mandatory expiry validation");
+    }
+
+    private static void VerifyGrnMatrixEditCommit()
+    {
+        string xaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "GrnView.xaml");
+        string codeBehind = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "GrnView.xaml.cs");
+
+        AuditAssert.Contains(
+            xaml,
+            "x:Name=\"MatrixVariantsGrid\"",
+            "GRN matrix DataGrid name");
+        AuditAssert.Contains(
+            xaml,
+            "Click=\"AddMatrixRows_Click\"",
+            "GRN matrix add-row click handler");
+        AuditAssert.True(
+            Regex.IsMatch(
+                xaml,
+                "SelectedDate=\\\"\\{Binding\\s+ExpiryDate,\\s*Mode=TwoWay,\\s*" +
+                "UpdateSourceTrigger=PropertyChanged(?:,\\s*ValidatesOnExceptions=True)?\\}\\\"",
+                RegexOptions.CultureInvariant),
+            "GRN matrix expiry binding does not update the source immediately.");
+
+        string compact = Regex.Replace(
+            codeBehind,
+            "\\s+",
+            string.Empty,
+            RegexOptions.CultureInvariant);
+
+        int clearFocusIndex = compact.IndexOf(
+            "Keyboard.ClearFocus();",
+            StringComparison.Ordinal);
+        int cellCommitIndex = compact.IndexOf(
+            "MatrixVariantsGrid.CommitEdit(DataGridEditingUnit.Cell,true);",
+            StringComparison.Ordinal);
+        int rowCommitIndex = compact.IndexOf(
+            "MatrixVariantsGrid.CommitEdit(DataGridEditingUnit.Row,true);",
+            StringComparison.Ordinal);
+        int canExecuteIndex = compact.IndexOf(
+            "viewModel.AddMatrixCommand.CanExecute(null)",
+            StringComparison.Ordinal);
+        int executeIndex = compact.IndexOf(
+            "viewModel.AddMatrixCommand.Execute(null);",
+            StringComparison.Ordinal);
+
+        AuditAssert.True(
+            clearFocusIndex >= 0 &&
+            cellCommitIndex > clearFocusIndex &&
+            rowCommitIndex > cellCommitIndex &&
+            canExecuteIndex > rowCommitIndex &&
+            executeIndex > canExecuteIndex,
+            "GRN matrix expiry editor must clear focus and commit cell and row edits before AddMatrixCommand executes.");
+    }
+
+    private static void VerifyNonVatSupplierPurchasingPolicy()
+    {
+        string service = Read(
+            "POS.Core",
+            "Services",
+            "Tax",
+            "PurchasingTaxService.cs");
+        string poRepository = Read(
+            "POS.Core",
+            "Repositories",
+            "PoRepository.cs");
+        string grnRepository = Read(
+            "POS.Core",
+            "Repositories",
+            "GrnRepository.cs");
+        string poViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "PurchaseOrderViewModel.Phase7D3.cs");
+        string grnViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "GrnViewModel.Phase7D2.cs");
+        string poXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "Purchasing",
+            "PurchaseOrderView.xaml");
+        string grnXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "GrnView.xaml");
+
+        int supplierMethodStart = service.IndexOf(
+            "ResolveProfilesForSupplierAsync",
+            StringComparison.Ordinal);
+        int calculateMethodStart = service.IndexOf(
+            "public PurchasingTaxDocumentResult CalculateDocument",
+            StringComparison.Ordinal);
+
+        AuditAssert.True(
+            supplierMethodStart >= 0 && calculateMethodStart > supplierMethodStart,
+            "Supplier-aware purchasing-tax resolver is missing.");
+
+        string supplierMethod = service.Substring(
+            supplierMethodStart,
+            calculateMethodStart - supplierMethodStart);
+
+        AuditAssert.Contains(
+            supplierMethod,
+            "TaxCategoryId = pair.Value.TaxCategoryId",
+            "non-VAT purchasing preserves item Tax Category ID");
+        AuditAssert.Contains(
+            supplierMethod,
+            "TaxCategoryCode = pair.Value.TaxCategoryCode",
+            "non-VAT purchasing preserves item Tax Category code");
+        AuditAssert.Contains(
+            supplierMethod,
+            "TaxRateId = null",
+            "non-VAT purchasing removes the applied Tax Rate reference");
+        AuditAssert.Contains(
+            supplierMethod,
+            "RatePercent = 0m",
+            "non-VAT purchasing forces zero input VAT");
+        AuditAssert.False(
+            supplierMethod.Contains(
+                "TaxCategoryCodes.OutOfScope",
+                StringComparison.Ordinal),
+            "non-VAT purchasing must not remap the item Tax Category to Out of Scope.");
+
+        AuditAssert.Contains(
+            poRepository,
+            "ResolveProfilesForSupplierAsync",
+            "Purchase Order authoritative supplier-aware tax path");
+        AuditAssert.Contains(
+            poRepository,
+            "supplier.HasVat",
+            "Purchase Order supplier VAT status query");
+        AuditAssert.Contains(
+            grnRepository,
+            "ResolveProfilesForSupplierAsync",
+            "GRN authoritative supplier-aware tax path");
+        AuditAssert.Contains(
+            grnRepository,
+            "supplier.HasVat",
+            "GRN supplier VAT status query");
+        AuditAssert.Contains(
+            poViewModel,
+            "CanUseSupplierVatPriceMode",
+            "Purchase Order non-VAT price-mode gate");
+        AuditAssert.Contains(
+            grnViewModel,
+            "CanUseSupplierVatPriceMode",
+            "GRN non-VAT price-mode gate");
+        AuditAssert.Contains(
+            poXaml,
+            "IsEnabled=\"{Binding CanUseSupplierVatPriceMode}\"",
+            "Purchase Order VAT-inclusive checkbox gate");
+        AuditAssert.Contains(
+            grnXaml,
+            "IsEnabled=\"{Binding CanUseSupplierVatPriceMode}\"",
+            "GRN VAT-inclusive checkbox gate");
     }
 
     private static int CountOccurrences(string source, string value)

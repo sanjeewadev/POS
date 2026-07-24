@@ -32,13 +32,33 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private decimal _outOfScopeAmount;
 
-        public string SupplierPriceModeText =>
-            IsTaxInclusive
-                ? "Supplier prices include VAT"
-                : "Supplier prices exclude VAT";
+        public bool CanUseSupplierVatPriceMode =>
+            SelectedSupplier?.HasVat == true;
+
+        public string SupplierPriceModeText
+        {
+            get
+            {
+                if (SelectedSupplier == null)
+                    return "Select a supplier to set the VAT price mode.";
+
+                if (!SelectedSupplier.HasVat)
+                    return "No supplier input VAT applies.";
+
+                return IsTaxInclusive
+                    ? "Supplier prices include VAT"
+                    : "Supplier prices exclude VAT";
+            }
+        }
 
         partial void OnIsTaxInclusiveChanged(bool value)
         {
+            if (value && SelectedSupplier?.HasVat != true)
+            {
+                IsTaxInclusive = false;
+                return;
+            }
+
             _bulkMatrixVatIncluded = value;
             OnPropertyChanged(nameof(BulkMatrixVatIncluded));
             OnPropertyChanged(nameof(SupplierPriceModeText));
@@ -81,9 +101,13 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
+                if (SelectedSupplier == null)
+                    return;
+
                 var profiles = await _poRepository.GetTaxProfilesAsync(
                     variantIds,
-                    OrderDate);
+                    OrderDate,
+                    SelectedSupplier.Id);
 
                 foreach (var line in PoLines)
                 {

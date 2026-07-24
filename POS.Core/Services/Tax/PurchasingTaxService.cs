@@ -233,6 +233,38 @@ namespace POS.Core.Services.Tax
             return result;
         }
 
+        public async Task<IReadOnlyDictionary<int, PurchasingTaxProfile>>
+            ResolveProfilesForSupplierAsync(
+                AppDbContext context,
+                IReadOnlyCollection<int> itemVariantIds,
+                DateTime transactionDate,
+                bool supplierIsVatRegistered)
+        {
+            IReadOnlyDictionary<int, PurchasingTaxProfile> itemProfiles =
+                await ResolveProfilesAsync(
+                    context,
+                    itemVariantIds,
+                    transactionDate);
+
+            if (supplierIsVatRegistered || itemProfiles.Count == 0)
+                return itemProfiles;
+
+            return itemProfiles.ToDictionary(
+                pair => pair.Key,
+                pair => new PurchasingTaxProfile
+                {
+                    ItemVariantId = pair.Value.ItemVariantId,
+                    TaxCategoryId = pair.Value.TaxCategoryId,
+                    TaxCategoryCode = pair.Value.TaxCategoryCode,
+                    TaxCategoryName = pair.Value.TaxCategoryName,
+                    TaxTreatmentType = pair.Value.TaxTreatmentType,
+                    TaxRateId = null,
+                    TaxCode = pair.Value.TaxCategoryCode,
+                    TaxName = pair.Value.TaxCategoryName,
+                    RatePercent = 0m
+                });
+        }
+
         public PurchasingTaxDocumentResult CalculateDocument(
             IReadOnlyList<PurchasingTaxLineInput> lines,
             decimal globalDiscount,

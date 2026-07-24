@@ -314,7 +314,7 @@
                         <CheckBox Margin="0,7,0,0"
                                   Content="Prices include VAT"
                                   IsChecked="{Binding SupplierPricesIncludeVat, Mode=TwoWay}"
-                                  IsEnabled="{Binding IsHeaderInputEnabled}"
+                                  IsEnabled="{Binding CanUseSupplierVatPriceMode}"
                                   FontWeight="Bold"
                                   Foreground="#003366"/>
                         <TextBlock Text="{Binding SupplierPriceModeText}"
@@ -428,7 +428,8 @@
                         </StackPanel>
                     </Grid>
 
-                    <DataGrid Grid.Row="3"
+                    <DataGrid x:Name="MatrixVariantsGrid"
+                              Grid.Row="3"
                               ItemsSource="{Binding ActiveMatrixVariants}"
                               SelectedItem="{Binding SelectedMatrixVariant, Mode=TwoWay}"
                               AutoGenerateColumns="False"
@@ -461,7 +462,7 @@
                             <DataGridTemplateColumn Header="Expiry" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <DatePicker SelectedDate="{Binding ExpiryDate, Mode=TwoWay}"
+                                        <DatePicker SelectedDate="{Binding ExpiryDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
                                                     IsEnabled="{Binding RequiresExpiry}"
                                                     Height="23"/>
                                     </DataTemplate>
@@ -522,7 +523,7 @@
                                        TextWrapping="Wrap"/>
                             <Button Grid.Column="1"
                                     Content="ADD MATRIX ROWS"
-                                    Command="{Binding AddMatrixCommand}"
+                                    Click="AddMatrixRows_Click"
                                     Style="{StaticResource ActionBtn}"/>
                             <Button Grid.Column="3"
                                     Content="BULK SELLING PRICES..."

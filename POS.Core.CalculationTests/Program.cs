@@ -39,6 +39,10 @@ namespace POS.Core.CalculationTests
                 ("GRN current-price percentage change", GrnCurrentPricePercentageChange),
                 ("GRN selling-price rounding", GrnSellingPriceRounding),
                 ("GRN keep-current pricing", GrnKeepCurrentPricing),
+                ("Non-VAT supplier profile preserves item category", NonVatSupplierProfilePreservesItemCategory),
+                ("VAT supplier profile retains effective purchasing rate", VatSupplierProfileRetainsEffectivePurchasingRate),
+                ("Non-VAT Purchase Order save forces zero VAT", NonVatPurchaseOrderSaveForcesZeroVat),
+                ("Non-VAT GRN preview and post force zero VAT", NonVatGrnPreviewAndPostForceZeroVat),
                 ("Sales inclusive standard VAT", SalesInclusiveStandardVat),
                 ("Sales inclusive line discount", SalesInclusiveLineDiscount),
                 ("Sales mixed categories with invoice discount", SalesMixedCategoriesWithInvoiceDiscount),
@@ -1641,6 +1645,264 @@ namespace POS.Core.CalculationTests
                 roundingMode: GrnSellingPriceRoundingModes.NearestTen);
 
             AssertMoney(987.65m, result, "keep-current selling price");
+        }
+
+        private static void NonVatSupplierProfilePreservesItemCategory()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+
+            using AppDbContext context = factory.CreateDbContext();
+
+            PurchasingTaxProfile profile = Service.ResolveProfilesForSupplierAsync(
+                    context,
+                    new[] { scenario.StockVariantId },
+                    DateTime.Today,
+                    supplierIsVatRegistered: false)
+                .GetAwaiter()
+                .GetResult()[scenario.StockVariantId];
+
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                profile.TaxCategoryCode,
+                "non-VAT supplier item category");
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                profile.TaxCode,
+                "non-VAT supplier applied tax code");
+            AssertMoney(0m, profile.RatePercent, "non-VAT supplier applied rate");
+            AssertFalse(profile.TaxRateId.HasValue, "non-VAT supplier applied Tax Rate ID");
+
+            PurchasingTaxDocumentResult result = Service.CalculateDocument(
+                new[]
+                {
+                    Line(
+                        scenario.StockVariantId,
+                        quantity: 2m,
+                        unitPrice: 100m,
+                        profile: profile)
+                },
+                globalDiscount: 0m,
+                isTaxInclusive: false);
+
+            AssertMoney(0m, result.TotalVat, "non-VAT supplier input VAT");
+            AssertMoney(200m, result.StandardRatedAmount, "non-VAT supplier preserved Standard category base");
+            AssertMoney(0m, result.OutOfScopeAmount, "non-VAT supplier out-of-scope base");
+            AssertMoney(200m, result.NetPayable, "non-VAT supplier payable");
+        }
+
+        private static void VatSupplierProfileRetainsEffectivePurchasingRate()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+
+            using AppDbContext context = factory.CreateDbContext();
+
+            PurchasingTaxProfile profile = Service.ResolveProfilesForSupplierAsync(
+                    context,
+                    new[] { scenario.StockVariantId },
+                    DateTime.Today,
+                    supplierIsVatRegistered: true)
+                .GetAwaiter()
+                .GetResult()[scenario.StockVariantId];
+
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                profile.TaxCategoryCode,
+                "VAT supplier item category");
+            AssertEqual("VAT-STD", profile.TaxCode, "VAT supplier effective tax code");
+            AssertMoney(18m, profile.RatePercent, "VAT supplier effective rate");
+            AssertTrue(profile.TaxRateId.HasValue, "VAT supplier effective Tax Rate ID");
+
+            PurchasingTaxDocumentResult result = Service.CalculateDocument(
+                new[]
+                {
+                    Line(
+                        scenario.StockVariantId,
+                        quantity: 1m,
+                        unitPrice: 118m,
+                        profile: profile)
+                },
+                globalDiscount: 0m,
+                isTaxInclusive: true);
+
+            AssertMoney(100m, result.TaxableAmountTotal, "VAT supplier taxable amount");
+            AssertMoney(18m, result.TotalVat, "VAT supplier input VAT");
+            AssertMoney(118m, result.NetPayable, "VAT supplier payable");
+        }
+
+        private static void NonVatPurchaseOrderSaveForcesZeroVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetSupplierVatRegistration(factory, scenario.SupplierId, hasVat: false);
+
+            var repository = new PoRepository(factory);
+            var header = new PoHeader
+            {
+                SupplierId = scenario.SupplierId,
+                OrderDate = DateTime.Today,
+                ExpectedDate = DateTime.Today.AddDays(7),
+                Terms = "Credit",
+                CreditDays = 30,
+                Remarks = "Non-VAT supplier PO test",
+                IsTaxInclusive = true,
+                CreatedBy = "Test",
+                ApprovedBy = "Test"
+            };
+            var line = new PoLine
+            {
+                ItemVariantId = scenario.StockVariantId,
+                Uom = "PCS",
+                SupplierItemCode = "SUP-STOCK",
+                OrderQty = 2m,
+                ExpectedCost = 100m,
+                LineDiscountMode = "Amount",
+                LineDiscountValue = 0m,
+                IsVatIncluded = true
+            };
+
+            repository.SavePurchaseOrderAsync(header, new List<PoLine> { line })
+                .GetAwaiter()
+                .GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            PoHeader saved = context.PoHeaders
+                .Include(row => row.PoLines)
+                .Single(row => row.Id == header.Id);
+            PoLine savedLine = saved.PoLines.Single();
+
+            AssertFalse(saved.IsTaxInclusive, "non-VAT PO document price mode");
+            AssertMoney(0m, saved.TotalTaxAmount, "non-VAT PO VAT total");
+            AssertMoney(200m, saved.NetPayable, "non-VAT PO payable");
+            AssertMoney(200m, saved.StandardRatedAmount ?? -1m, "non-VAT PO Standard category base");
+            AssertMoney(0m, saved.OutOfScopeAmount ?? -1m, "non-VAT PO Out of Scope base");
+            AssertFalse(savedLine.IsVatIncluded, "non-VAT PO line price mode");
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                savedLine.TaxCategoryCodeSnapshot ?? string.Empty,
+                "non-VAT PO line category snapshot");
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                savedLine.TaxCodeSnapshot ?? string.Empty,
+                "non-VAT PO line applied tax-code snapshot");
+            AssertFalse(savedLine.TaxRateId.HasValue, "non-VAT PO line Tax Rate ID");
+            AssertMoney(0m, savedLine.TaxRatePercentSnapshot ?? -1m, "non-VAT PO line rate snapshot");
+            AssertMoney(0m, savedLine.TaxAmount, "non-VAT PO line VAT");
+            AssertEqual(
+                TaxSnapshotStatuses.Complete,
+                savedLine.TaxSnapshotStatus,
+                "non-VAT PO line snapshot status");
+        }
+
+        private static void NonVatGrnPreviewAndPostForceZeroVat()
+        {
+            using var factory = new RepositoryTestDbContextFactory();
+            RepositoryTestScenario scenario = SeedRepositoryTestScenario(factory);
+            SetSupplierVatRegistration(factory, scenario.SupplierId, hasVat: false);
+
+            var repository = new GrnRepository(factory);
+            var previewLine = new GrnLineEntryDto
+            {
+                ItemVariantId = scenario.StockVariantId,
+                Uom = "PCS",
+                ReceivedQty = 2m,
+                UnitCost = 100m,
+                LineDiscountMode = "Amount",
+                LineDiscountValue = 0m,
+                IsVatIncluded = true
+            };
+
+            GrnTaxPreviewDto preview = repository.CalculateGrnPreviewAsync(
+                    DateTime.Today,
+                    scenario.SupplierId,
+                    supplierPricesIncludeVat: true,
+                    globalBillDiscount: 0m,
+                    freightAmount: 0m,
+                    sourceLines: new[] { previewLine })
+                .GetAwaiter()
+                .GetResult();
+
+            GrnTaxPreviewLineDto previewResult = preview.Lines.Single();
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                previewResult.TaxCategoryCode,
+                "non-VAT GRN preview category");
+            AssertMoney(0m, previewResult.VatRatePercent, "non-VAT GRN preview rate");
+            AssertMoney(0m, preview.TotalVat, "non-VAT GRN preview VAT");
+            AssertMoney(200m, preview.StandardRatedAmount, "non-VAT GRN preview Standard base");
+            AssertMoney(0m, preview.OutOfScopeAmount, "non-VAT GRN preview Out of Scope base");
+            AssertMoney(200m, preview.NetPayable, "non-VAT GRN preview payable");
+
+            var header = new GrnHeader
+            {
+                SupplierId = scenario.SupplierId,
+                SupplierInvoiceNo = $"NONVAT-{Guid.NewGuid():N}"[..20],
+                InvoiceDate = DateTime.Today,
+                ReceivedDate = DateTime.Today,
+                DueDate = DateTime.Today.AddDays(30),
+                CreditDays = 30,
+                Remarks = "Non-VAT supplier GRN test",
+                IsTaxInclusive = true,
+                CreatedBy = "Test",
+                PostedBy = "Test"
+            };
+            var line = new GrnLine
+            {
+                ItemVariantId = scenario.StockVariantId,
+                BatchNo = $"NV-{Guid.NewGuid():N}"[..20],
+                Uom = "PCS",
+                ReceivedQty = 2m,
+                UnitCost = 100m,
+                LineDiscountMode = "Amount",
+                LineDiscountValue = 0m,
+                IsVatIncluded = true,
+                UpdateSellingPrices = false
+            };
+
+            repository.PostGrnAsync(header, new List<GrnLine> { line })
+                .GetAwaiter()
+                .GetResult();
+
+            using AppDbContext context = factory.CreateDbContext();
+            GrnHeader saved = context.GrnHeaders
+                .Include(row => row.GrnLines)
+                .Single(row => row.Id == header.Id);
+            GrnLine savedLine = saved.GrnLines.Single();
+
+            AssertEqual(false, saved.IsTaxInclusive ?? true, "non-VAT GRN document price mode");
+            AssertMoney(0m, saved.TotalVatAmount, "non-VAT GRN VAT total");
+            AssertMoney(200m, saved.NetPayable, "non-VAT GRN payable");
+            AssertMoney(200m, saved.StandardRatedAmount ?? -1m, "non-VAT GRN Standard category base");
+            AssertMoney(0m, saved.OutOfScopeAmount ?? -1m, "non-VAT GRN Out of Scope base");
+            AssertFalse(savedLine.IsVatIncluded, "non-VAT GRN line price mode");
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                savedLine.TaxCategoryCodeSnapshot ?? string.Empty,
+                "non-VAT GRN line category snapshot");
+            AssertEqual(
+                TaxCategoryCodes.Standard,
+                savedLine.TaxCodeSnapshot ?? string.Empty,
+                "non-VAT GRN line applied tax-code snapshot");
+            AssertFalse(savedLine.TaxRateId.HasValue, "non-VAT GRN line Tax Rate ID");
+            AssertMoney(0m, savedLine.TaxRatePercentSnapshot ?? -1m, "non-VAT GRN line rate snapshot");
+            AssertMoney(0m, savedLine.VatAmount, "non-VAT GRN line VAT");
+            AssertEqual(
+                TaxSnapshotStatuses.Complete,
+                savedLine.TaxSnapshotStatus,
+                "non-VAT GRN line snapshot status");
+        }
+
+        private static void SetSupplierVatRegistration(
+            RepositoryTestDbContextFactory factory,
+            int supplierId,
+            bool hasVat)
+        {
+            using AppDbContext context = factory.CreateDbContext();
+            Supplier supplier = context.Suppliers.Single(row => row.Id == supplierId);
+            supplier.HasVat = hasVat;
+            supplier.VatNumber = hasVat ? "SUP-VAT" : string.Empty;
+            context.SaveChanges();
         }
 
         private static void SalesInclusiveStandardVat()

@@ -2,7 +2,7 @@
 param(
     [string]$RepositoryPath = (Get-Location).Path,
     [string]$ExpectedBranch = "sanjeewadev",
-    [string]$ExpectedBaseline = "9ee44e78aa5a7c4b79f74dca582abc7ba55d070b",
+    [string]$ExpectedBaseline = "112a2df3976440dd982b073cc7439e287df43de1",
     [string]$UpgradeBaselineDb = "",
     [string]$ReportRoot = (Join-Path $HOME "Desktop\POS_Cashier_Audit_Reports")
 )
@@ -103,6 +103,7 @@ $allowedChangedFiles = @(
     "POS.BackOffice.UI/ViewModels/GiftVoucherAdminViewModel.cs",
     "POS.BackOffice.UI/ViewModels/GrnDashboardViewModel.cs",
     "POS.BackOffice.UI/ViewModels/GrnViewModel.Phase7D2.cs",
+    "POS.BackOffice.UI/ViewModels/PurchaseOrderViewModel.Phase7D3.cs",
     "POS.BackOffice.UI/ViewModels/ItemMasterViewModel.cs",
     "POS.BackOffice.UI/ViewModels/PriceManagementViewModel.cs",
     "POS.BackOffice.UI/ViewModels/StockBalanceViewModel.cs",
@@ -122,6 +123,7 @@ $allowedChangedFiles = @(
     "POS.BackOffice.UI/Views/Pages/Finance/SupplierClaimsView.xaml.cs",
     "POS.BackOffice.UI/Views/Pages/InventoryOperations/StockAdjustmentView.xaml",
     "POS.BackOffice.UI/Views/Pages/InventoryOperations/GrnView.xaml",
+    "POS.BackOffice.UI/Views/Pages/InventoryOperations/GrnView.xaml.cs",
     "POS.BackOffice.UI/Views/Pages/Purchasing/PurchaseOrderView.xaml",
     "POS.Cashier.UI/ViewModels/CashMovementViewModel.cs",
     "POS.Cashier.UI/ViewModels/SalesViewModel.cs",
@@ -171,6 +173,7 @@ $allowedChangedFiles = @(
     "POS.Core/Repositories/ExpressItemRepository.cs",
     "POS.Core/Repositories/GiftVoucherRepository.cs",
     "POS.Core/Repositories/GrnRepository.cs",
+    "POS.Core/Services/Tax/PurchasingTaxService.cs",
     "POS.Core/Repositories/ItemMasterRepository.cs",
     "POS.Core/Repositories/LicenseRepository.cs",
     "POS.Core/Repositories/PoRepository.cs",

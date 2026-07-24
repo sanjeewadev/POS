@@ -178,6 +178,7 @@
                     <CheckBox Grid.Column="8"
                               Content="Supplier prices include VAT"
                               IsChecked="{Binding IsTaxInclusive, Mode=TwoWay}"
+                              IsEnabled="{Binding CanUseSupplierVatPriceMode}"
                               VerticalAlignment="Center"
                               FontWeight="SemiBold"
                               Margin="16,0,0,0"/>

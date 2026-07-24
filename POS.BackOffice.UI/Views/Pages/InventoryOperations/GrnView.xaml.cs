@@ -3,6 +3,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using POS.BackOffice.UI.ViewModels;
 
 namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
 {
@@ -30,6 +32,29 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        private void AddMatrixRows_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            Keyboard.ClearFocus();
+
+            bool cellCommitted = MatrixVariantsGrid.CommitEdit(
+                DataGridEditingUnit.Cell,
+                true);
+            bool rowCommitted = MatrixVariantsGrid.CommitEdit(
+                DataGridEditingUnit.Row,
+                true);
+
+            if (!cellCommitted || !rowCommitted)
+                return;
+
+            if (DataContext is not GrnViewModel viewModel)
+                return;
+
+            if (viewModel.AddMatrixCommand.CanExecute(null))
+                viewModel.AddMatrixCommand.Execute(null);
         }
 
         private static async Task TryExecuteInitializeCommandAsync(object viewModel)

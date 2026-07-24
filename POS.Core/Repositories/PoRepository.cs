@@ -183,14 +183,20 @@ namespace POS.Core.Repositories
 
         public async Task<IReadOnlyDictionary<int, PurchasingTaxProfile>> GetTaxProfilesAsync(
             IReadOnlyCollection<int> itemVariantIds,
-            DateTime transactionDate)
+            DateTime transactionDate,
+            int supplierId)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            return await _purchasingTaxService.ResolveProfilesAsync(
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                supplierId);
+
+            return await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 itemVariantIds,
-                transactionDate.Date);
+                transactionDate.Date,
+                supplierIsVatRegistered);
         }
 
         public async Task<IEnumerable<PoHeader>> GetOpenPurchaseOrdersAsync()
@@ -333,10 +339,15 @@ namespace POS.Core.Repositories
                 })
                 .ToListAsync();
 
-            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                supplierId);
+
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 rows.Select(r => r.ItemVariantId).ToList(),
-                (transactionDate ?? DateTime.Today).Date);
+                (transactionDate ?? DateTime.Today).Date,
+                supplierIsVatRegistered);
 
             return rows
                 .Select(r =>
@@ -445,10 +456,15 @@ namespace POS.Core.Repositories
             if (row == null)
                 return null;
 
-            var taxProfiles = await _purchasingTaxService.ResolveProfilesAsync(
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                supplierId);
+
+            var taxProfiles = await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 new[] { row.ItemVariantId },
-                (transactionDate ?? DateTime.Today).Date);
+                (transactionDate ?? DateTime.Today).Date,
+                supplierIsVatRegistered);
 
             var profile = taxProfiles[row.ItemVariantId];
 
@@ -978,6 +994,24 @@ namespace POS.Core.Repositories
         // VALIDATION
         // =========================================================
 
+        private static async Task<bool> GetSupplierVatRegistrationAsync(
+            AppDbContext context,
+            int supplierId)
+        {
+            bool? supplierIsVatRegistered = await context.Suppliers
+                .Where(supplier => supplier.Id == supplierId)
+                .Select(supplier => (bool?)supplier.HasVat)
+                .SingleOrDefaultAsync();
+
+            if (!supplierIsVatRegistered.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "The selected Purchase Order supplier was not found.");
+            }
+
+            return supplierIsVatRegistered.Value;
+        }
+
         private static async Task ValidateHeaderAsync(AppDbContext context, PoHeader header)
         {
             if (header.SupplierId <= 0)
@@ -1127,18 +1161,28 @@ namespace POS.Core.Repositories
             PoHeader header,
             List<PoLine> lines)
         {
-            bool documentIsTaxInclusive = ResolveDocumentTaxMode(lines);
+            bool supplierIsVatRegistered = await GetSupplierVatRegistrationAsync(
+                context,
+                header.SupplierId);
+
+            bool documentIsTaxInclusive =
+                supplierIsVatRegistered && ResolveDocumentTaxMode(lines);
+
             header.IsTaxInclusive = documentIsTaxInclusive;
 
+            foreach (PoLine line in lines)
+                line.IsVatIncluded = documentIsTaxInclusive;
+
             var variantIds = lines
-                .Select(l => l.ItemVariantId)
+                .Select(line => line.ItemVariantId)
                 .Distinct()
                 .ToList();
 
-            var profiles = await _purchasingTaxService.ResolveProfilesAsync(
+            var profiles = await _purchasingTaxService.ResolveProfilesForSupplierAsync(
                 context,
                 variantIds,
-                header.OrderDate);
+                header.OrderDate,
+                supplierIsVatRegistered);
 
             var calculation = _purchasingTaxService.CalculateDocument(
                 lines.Select(line => new PurchasingTaxLineInput

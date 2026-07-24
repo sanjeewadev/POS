@@ -393,6 +393,8 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnSelectedSupplierChanged(Supplier? value)
         {
             OnPropertyChanged(nameof(SupplierVatStatusText));
+            OnPropertyChanged(nameof(CanUseSupplierVatPriceMode));
+            OnPropertyChanged(nameof(SupplierPriceModeText));
 
             if (_isClearing)
                 return;
@@ -404,7 +406,13 @@ namespace POS.BackOffice.UI.ViewModels
                     : 30;
 
                 DueDate = InvoiceDate.Date.AddDays(creditDays);
-                StatusMessage = $"Selected supplier: {value.SupplierName}";
+
+                if (!value.HasVat)
+                    SupplierPricesIncludeVat = false;
+
+                StatusMessage = value.HasVat
+                    ? $"Selected supplier: {value.SupplierName}"
+                    : $"Selected non-VAT supplier: {value.SupplierName}. Supplier input VAT will be zero.";
             }
             else
             {
@@ -1471,7 +1479,9 @@ namespace POS.BackOffice.UI.ViewModels
                     DueDate = DueDate.Date,
                     CreditDays = Math.Max(0, (DueDate.Date - InvoiceDate.Date).Days),
                     Remarks = Remarks.Trim(),
-                    IsTaxInclusive = SupplierPricesIncludeVat,
+                    IsTaxInclusive =
+                        SelectedSupplier?.HasVat == true &&
+                        SupplierPricesIncludeVat,
                     Subtotal = Subtotal,
                     GlobalBillDiscount = GlobalBillDiscount,
                     FreightAmount = FreightAmount,
@@ -1846,6 +1856,7 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnIsBusyChanged(bool value)
         {
             OnPropertyChanged(nameof(IsHeaderInputEnabled));
+            OnPropertyChanged(nameof(CanUseSupplierVatPriceMode));
             OnPropertyChanged(nameof(IsEntryEnabled));
             OnPropertyChanged(nameof(IsDirectEntryEnabled));
             OnPropertyChanged(nameof(IsMatrixExpiryEnabled));
@@ -1856,6 +1867,7 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnIsHeaderConfirmedChanged(bool value)
         {
             OnPropertyChanged(nameof(IsHeaderInputEnabled));
+            OnPropertyChanged(nameof(CanUseSupplierVatPriceMode));
             OnPropertyChanged(nameof(IsEntryEnabled));
             OnPropertyChanged(nameof(IsDirectEntryEnabled));
             OnPropertyChanged(nameof(IsMatrixExpiryEnabled));

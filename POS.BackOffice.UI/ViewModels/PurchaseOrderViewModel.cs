@@ -460,6 +460,11 @@ namespace POS.BackOffice.UI.ViewModels
         {
             OnPropertyChanged(nameof(IsSupplierSelected));
             OnPropertyChanged(nameof(IsEntryEnabled));
+            OnPropertyChanged(nameof(CanUseSupplierVatPriceMode));
+            OnPropertyChanged(nameof(SupplierPriceModeText));
+
+            if (value?.HasVat != true)
+                IsTaxInclusive = false;
 
             SupplierCode = value?.SupplierCode ?? string.Empty;
 
@@ -1412,7 +1417,9 @@ namespace POS.BackOffice.UI.ViewModels
                     NetPayable = NetPayable,
                     CreatedBy = string.IsNullOrWhiteSpace(CurrentUser) ? "Admin" : CurrentUser.Trim(),
                     ApprovedBy = string.IsNullOrWhiteSpace(CurrentUser) ? "Admin" : CurrentUser.Trim(),
-                    IsTaxInclusive = IsTaxInclusive,
+                    IsTaxInclusive =
+                        SelectedSupplier?.HasVat == true &&
+                        IsTaxInclusive,
                     TaxableAmountTotal = TaxableAmountTotal,
                     StandardRatedAmount = StandardRatedAmount,
                     ZeroRatedAmount = ZeroRatedAmount,
