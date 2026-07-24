@@ -33,6 +33,12 @@ namespace POS.BackOffice.UI.ViewModels
         public bool RequiresExpiry { get; init; }
         public bool IsScaleItem { get; init; }
         public bool AllowDecimalQuantity { get; init; }
+        public int MinimumQuantity { get; init; } = 1;
+        public string SupplierItemCode { get; init; } = string.Empty;
+        public int TaxCategoryId { get; init; }
+        public int? TaxRateId { get; init; }
+        public string TaxCode { get; init; } = string.Empty;
+        public string TaxName { get; init; } = string.Empty;
         public string LineDiscountMode { get; init; } = "Amount";
         public decimal LineDiscountValue { get; init; }
         public decimal LineDiscount { get; init; }
@@ -59,6 +65,9 @@ namespace POS.BackOffice.UI.ViewModels
             : Source.Uom;
         public bool RequiresExpiry => Source.RequiresExpiry;
         public bool AllowDecimalQuantity => Source.AllowDecimalQuantity;
+        public int MinimumQuantity => Source.MinimumQuantity <= 0 ? 1 : Source.MinimumQuantity;
+        public string MinimumQuantityDisplay =>
+            QuantityDisplayFormatter.Format(MinimumQuantity);
         public string TrackingText
         {
             get
@@ -130,19 +139,34 @@ namespace POS.BackOffice.UI.ViewModels
             DateTime documentDate,
             bool expiryEntryEnabled,
             string quantityLabel,
-            string unitCostLabel)
+            string unitCostLabel,
+            bool minimumQuantityEnabled = false,
+            string dialogTitle = "Add Stock Item Variants",
+            string primaryActionText = "ADD ENTERED ROWS TO GRN")
         {
             if (availableItems == null)
                 throw new ArgumentNullException(nameof(availableItems));
             _variantLoader = variantLoader ?? throw new ArgumentNullException(nameof(variantLoader));
             DocumentDate = documentDate.Date;
             ExpiryEntryEnabled = expiryEntryEnabled;
+            MinimumQuantityEnabled = minimumQuantityEnabled;
             QuantityLabel = string.IsNullOrWhiteSpace(quantityLabel)
                 ? "Quantity"
                 : quantityLabel.Trim();
             UnitCostLabel = string.IsNullOrWhiteSpace(unitCostLabel)
                 ? "Unit Cost"
                 : unitCostLabel.Trim();
+            DialogTitle = string.IsNullOrWhiteSpace(dialogTitle)
+                ? "Add Stock Item Variants"
+                : dialogTitle.Trim();
+            PrimaryActionText = string.IsNullOrWhiteSpace(primaryActionText)
+                ? "ADD ENTERED ROWS"
+                : primaryActionText.Trim();
+            InstructionText = ExpiryEntryEnabled
+                ? "Select a Stock Item, enter quantity, unit cost and expiry where required. Only rows with quantity greater than zero are added."
+                : MinimumQuantityEnabled
+                    ? "Select a Stock Item, enter order quantity and expected cost. Minimum order quantity is enforced before rows are added."
+                    : "Select a Stock Item, enter quantity and unit cost. Only rows with quantity greater than zero are added.";
             foreach (PurchasingItemOption item in availableItems.OrderBy(item => item.ItemName))
                 AvailableItems.Add(item);
         }
@@ -150,8 +174,12 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<PurchasingVariantEntryRow> VisibleRows { get; } = new();
         public DateTime DocumentDate { get; }
         public bool ExpiryEntryEnabled { get; }
+        public bool MinimumQuantityEnabled { get; }
         public string QuantityLabel { get; }
         public string UnitCostLabel { get; }
+        public string DialogTitle { get; }
+        public string InstructionText { get; }
+        public string PrimaryActionText { get; }
         [ObservableProperty]
         private PurchasingItemOption? _selectedItem;
         [ObservableProperty]
@@ -214,6 +242,18 @@ namespace POS.BackOffice.UI.ViewModels
                     $"Decimal quantity is not allowed for {decimalBlocked.DisplayName} ({decimalBlocked.Uom}).";
                 return;
             }
+            if (MinimumQuantityEnabled && BulkQuantity > 0m)
+            {
+                PurchasingVariantEntryRow? belowMinimum = VisibleRows.FirstOrDefault(row =>
+                    BulkQuantity < row.MinimumQuantity);
+
+                if (belowMinimum != null)
+                {
+                    StatusMessage =
+                        $"{belowMinimum.DisplayName} requires minimum quantity {belowMinimum.MinimumQuantityDisplay}.";
+                    return;
+                }
+            }
             foreach (PurchasingVariantEntryRow row in VisibleRows)
                 row.Quantity = BulkQuantity;
             StatusMessage =
@@ -274,7 +314,7 @@ namespace POS.BackOffice.UI.ViewModels
             if (selectedRows.Count == 0)
             {
                 acceptedRows = Array.Empty<PurchasingVariantEntryRow>();
-                validationMessage = "Enter a received quantity for at least one variant.";
+                validationMessage = $"Enter {QuantityLabel.ToLowerInvariant()} for at least one variant.";
                 return false;
             }
             var errors = new List<string>();
@@ -285,11 +325,16 @@ namespace POS.BackOffice.UI.ViewModels
                     errors.Add(
                         $"{row.DisplayName}: decimal quantity is not allowed for UOM '{row.Uom}'.");
                 }
+                if (MinimumQuantityEnabled && row.Quantity < row.MinimumQuantity)
+                {
+                    errors.Add(
+                        $"{row.DisplayName}: minimum quantity is {row.MinimumQuantityDisplay}.");
+                }
                 if (row.UnitCost <= 0m)
                     errors.Add($"{row.DisplayName}: unit cost must be greater than zero.");
-                if (row.RequiresExpiry && !row.ExpiryDate.HasValue)
+                if (ExpiryEntryEnabled && row.RequiresExpiry && !row.ExpiryDate.HasValue)
                     errors.Add($"{row.DisplayName}: expiry date is required.");
-                if (row.ExpiryDate.HasValue && row.ExpiryDate.Value.Date < DocumentDate)
+                if (ExpiryEntryEnabled && row.ExpiryDate.HasValue && row.ExpiryDate.Value.Date < DocumentDate)
                 {
                     errors.Add(
                         $"{row.DisplayName}: expiry date cannot be before {DocumentDate:yyyy-MM-dd}.");

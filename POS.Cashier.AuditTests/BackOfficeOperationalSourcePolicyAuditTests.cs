@@ -8,7 +8,7 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
     {
         VerifyStockAdjustmentReadOnlyBindings();
         VerifyStockAdjustmentRecalculationHook();
-        VerifyPurchaseOrderBulkCostAction();
+        VerifyPurchaseOrderEntryAndPdfWorkflow();
         VerifyPoLinkedGrnExpiryEditor();
         VerifyNonVatSupplierPurchasingPolicy();
 
@@ -66,7 +66,7 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "Stock Adjustment queued-line recalculation call");
     }
 
-    private static void VerifyPurchaseOrderBulkCostAction()
+    private static void VerifyPurchaseOrderEntryAndPdfWorkflow()
     {
         string xaml = Read(
             "POS.BackOffice.UI",
@@ -78,22 +78,135 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "POS.BackOffice.UI",
             "ViewModels",
             "PurchaseOrderViewModel.cs");
+        string phaseViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "PurchaseOrderViewModel.Phase7D3.cs");
+        string dialogXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "PurchasingVariantEntryDialog.xaml");
+        string dialogViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "PurchasingVariantEntryDialogViewModel.cs");
 
-        const string applyCostButtonPattern =
-            "<Button\\s+Grid.Column=\"5\"\\s+Content=\"APPLY COST\"\\s+" +
-            "Command=\"\\{Binding ApplyBulkMatrixExpectedCostCommand\\}\"";
+        AuditAssert.False(
+            xaml.Contains("ActiveMatrixVariants", StringComparison.Ordinal),
+            "The removed inline PO matrix is still bound on the page.");
+        AuditAssert.False(
+            xaml.Contains("ADD MATRIX ITEMS", StringComparison.OrdinalIgnoreCase),
+            "The removed PO matrix-transfer action is still visible.");
+        AuditAssert.False(
+            xaml.Contains("Item Parent", StringComparison.Ordinal),
+            "The removed inline PO item-parent selector is still visible.");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(xaml, "Content=\"ADD STOCK ITEM VARIANTS...\""),
+            "PO reusable variant-entry action count");
+        AuditAssert.Contains(
+            xaml,
+            "Command=\"{Binding OpenPurchasingVariantEntryDialogCommand}\"",
+            "PO reusable variant-entry command");
+        AuditAssert.Contains(
+            xaml,
+            "Key=\"Enter\" Command=\"{Binding AddItemCommand}\"",
+            "PO fast SKU Enter-key action");
+        AuditAssert.Contains(
+            xaml,
+            "Content=\"SAVE &amp; APPROVE PO\"",
+            "PO save-and-approve action");
+
+        foreach (string removedToken in new[]
+        {
+            "PoMatrixEntryDto",
+            "ActiveMatrixVariants",
+            "MatrixFilterText",
+            "AddMatrixCommand",
+            "ApplyBulkMatrix"
+        })
+        {
+            AuditAssert.False(
+                viewModel.Contains(removedToken, StringComparison.Ordinal),
+                $"Removed PO matrix token remains in the view model: {removedToken}");
+        }
+
+        AuditAssert.False(
+            phaseViewModel.Contains("_allMatrixVariants", StringComparison.Ordinal),
+            "PO tax refresh still depends on the removed inline matrix.");
+        AuditAssert.Contains(
+            viewModel,
+            "using POS.Core.Services;",
+            "PO LocalLogService namespace import");
+        AuditAssert.Contains(
+            viewModel,
+            "private void OpenPurchasingVariantEntryDialog()",
+            "PO shared purchasing variant-entry command implementation");
+        AuditAssert.Contains(
+            viewModel,
+            "expiryEntryEnabled: false",
+            "PO disables expiry entry in the shared dialog");
+        AuditAssert.Contains(
+            viewModel,
+            "minimumQuantityEnabled: true",
+            "PO enables MOQ validation in the shared dialog");
+        AuditAssert.Contains(
+            viewModel,
+            "primaryActionText: \"ADD ENTERED ROWS TO PO\"",
+            "PO-specific shared-dialog apply label");
+        AuditAssert.Contains(
+            dialogXaml,
+            "Header=\"MOQ\"",
+            "shared dialog MOQ column");
+        AuditAssert.Contains(
+            dialogXaml,
+            "DataContext.MinimumQuantityEnabled",
+            "shared dialog MOQ conditional visibility");
+        AuditAssert.Contains(
+            dialogXaml,
+            "DataContext.ExpiryEntryEnabled",
+            "shared dialog expiry-column conditional visibility");
+        AuditAssert.Contains(
+            dialogViewModel,
+            "MinimumQuantityEnabled && row.Quantity < row.MinimumQuantity",
+            "shared dialog MOQ validation");
+
+        int saveIndex = CompactSource(viewModel).IndexOf(
+            "await_poRepository.SavePurchaseOrderAsync(header,linesToSave);",
+            StringComparison.Ordinal);
+        int promptIndex = CompactSource(viewModel).IndexOf(
+            "ExportitasPDFnow?",
+            StringComparison.Ordinal);
+        int exportIndex = CompactSource(viewModel).IndexOf(
+            "saveStatus=awaitExportSavedPurchaseOrderPdfAsync(header);",
+            StringComparison.Ordinal);
+        int clearIndex = CompactSource(viewModel).IndexOf(
+            "Clear();StatusMessage=saveStatus;",
+            StringComparison.Ordinal);
 
         AuditAssert.True(
-            Regex.IsMatch(xaml, applyCostButtonPattern, RegexOptions.CultureInvariant),
-            "Purchase Order Bulk Cost input is not connected to APPLY COST.");
+            saveIndex >= 0 &&
+            promptIndex > saveIndex &&
+            exportIndex > promptIndex &&
+            clearIndex > exportIndex,
+            "PO must save first, then offer PDF export, then clear the completed form.");
         AuditAssert.Contains(
             viewModel,
-            "private void ApplyBulkMatrixExpectedCost()",
-            "Purchase Order bulk expected-cost implementation");
+            "_exportBuilder.BuildPurchaseOrder(",
+            "saved PO PDF document builder");
         AuditAssert.Contains(
             viewModel,
-            "item.ExpectedCost = BulkMatrixExpectedCost;",
-            "Purchase Order bulk expected-cost row assignment");
+            "_exportDialogService.SaveTablePdf(",
+            "saved PO PDF save dialog");
+        AuditAssert.Contains(
+            viewModel,
+            "was saved successfully,",
+            "saved-PO export failure preserves successful PO-save status");
+        AuditAssert.Contains(
+            viewModel,
+            "but the PDF could not be exported.",
+            "saved-PO export failure reports only the PDF failure");
     }
 
     private static void VerifyPoLinkedGrnExpiryEditor()
@@ -280,7 +393,7 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "generated SelectedItem property initialization");
         AuditAssert.Contains(
             dialogViewModel,
-            "row.RequiresExpiry && !row.ExpiryDate.HasValue",
+            "ExpiryEntryEnabled && row.RequiresExpiry && !row.ExpiryDate.HasValue",
             "variant-entry expiry requirement validation");
         AuditAssert.Contains(
             dialogViewModel,
@@ -520,6 +633,11 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             grnXaml,
             "IsEnabled=\"{Binding CanUseSupplierVatPriceMode}\"",
             "GRN VAT-inclusive checkbox gate");
+    }
+
+    private static string CompactSource(string source)
+    {
+        return Regex.Replace(source, @"\s+", string.Empty);
     }
 
     private static int CountOccurrences(string source, string value)

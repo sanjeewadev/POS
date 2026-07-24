@@ -59,15 +59,7 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
-            _bulkMatrixVatIncluded = value;
-            OnPropertyChanged(nameof(BulkMatrixVatIncluded));
             OnPropertyChanged(nameof(SupplierPriceModeText));
-
-            foreach (var item in _allMatrixVariants)
-            {
-                item.IsVatIncluded = value;
-                item.RecalculateLineAmounts();
-            }
 
             foreach (var line in PoLines)
                 line.IsVatIncluded = value;
@@ -91,7 +83,6 @@ namespace POS.BackOffice.UI.ViewModels
         {
             var variantIds = PoLines
                 .Select(line => line.ItemVariantId)
-                .Concat(_allMatrixVariants.Select(item => item.ItemVariantId))
                 .Where(id => id > 0)
                 .Distinct()
                 .ToList();
@@ -115,11 +106,6 @@ namespace POS.BackOffice.UI.ViewModels
                         ApplyProfileToLine(line, profile);
                 }
 
-                foreach (var item in _allMatrixVariants)
-                {
-                    if (profiles.TryGetValue(item.ItemVariantId, out var profile))
-                        ApplyProfileToMatrix(item, profile);
-                }
 
                 RecalculateTotals();
                 StatusMessage = $"Tax profiles refreshed for PO date {OrderDate:yyyy-MM-dd}.";
@@ -147,22 +133,6 @@ namespace POS.BackOffice.UI.ViewModels
             line.TaxCode = profile.TaxCode;
             line.VatRatePercent = profile.RatePercent;
             line.IsVatIncluded = IsTaxInclusive;
-        }
-
-        private void ApplyProfileToMatrix(
-            PoMatrixEntryDto item,
-            PurchasingTaxProfile profile)
-        {
-            item.TaxCategoryId = profile.TaxCategoryId;
-            item.TaxCategoryCode = profile.TaxCategoryCode;
-            item.TaxCategoryName = profile.TaxCategoryName;
-            item.TaxTreatmentType = profile.TaxTreatmentType;
-            item.TaxRateId = profile.TaxRateId;
-            item.TaxCode = profile.TaxCode;
-            item.TaxName = profile.TaxName;
-            item.VatRatePercent = profile.RatePercent;
-            item.IsVatIncluded = IsTaxInclusive;
-            item.RecalculateLineAmounts();
         }
 
         private void RecalculateAuthoritativeTotals()

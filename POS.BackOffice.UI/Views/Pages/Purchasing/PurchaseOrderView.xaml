@@ -85,26 +85,18 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Padding" Value="3,0"/>
         </Style>
-
-        <Style x:Key="CenterText" TargetType="TextBlock">
-            <Setter Property="TextAlignment" Value="Center"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
     </UserControl.Resources>
 
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="34"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="225"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="34"/>
             <RowDefinition Height="24"/>
         </Grid.RowDefinitions>
 
-        <!-- PAGE TITLE -->
         <Border Grid.Row="0"
                 Background="#003366"
                 BorderBrush="#001F3F"
@@ -117,15 +109,13 @@
                            FontSize="15"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
-
-                <TextBlock Text="Stock Items only • No stock movement until GRN"
+                <TextBlock Text="Planned ordering only • No stock movement until GRN"
                            Foreground="#DCEBFA"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
 
-        <!-- 1. DOCUMENT SETUP -->
         <Border Grid.Row="1" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.RowDefinitions>
@@ -217,58 +207,46 @@
             </Grid>
         </Border>
 
-        <!-- 2. STOCK ITEM / VARIANT ENTRY -->
         <Border Grid.Row="2" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="22"/>
-                    <RowDefinition Height="32"/>
+                    <RowDefinition Height="33"/>
+                    <RowDefinition Height="33"/>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="30"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0"
-                           Text="2. STOCK ITEM / VARIANT ENTRY"
+                           Text="2. PURCHASE ORDER LINES"
                            Style="{StaticResource SectionTitle}"/>
 
-                <Grid Grid.Row="1" Margin="0,4,0,4">
+                <Grid Grid.Row="1" Margin="0,4,0,3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="75"/>
-                        <ColumnDefinition Width="180"/>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="220"/>
                         <ColumnDefinition Width="65"/>
-                        <ColumnDefinition Width="160"/>
+                        <ColumnDefinition Width="210"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0" Text="Scan / SKU" Style="{StaticResource FieldLabel}"/>
                     <TextBox Grid.Column="1"
                              Text="{Binding ScanBarcode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"/>
+                             Style="{StaticResource ClassicInput}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding AddItemCommand}"/>
+                        </TextBox.InputBindings>
+                    </TextBox>
                     <Button Grid.Column="2"
                             Content="ADD"
                             Command="{Binding AddItemCommand}"
                             Style="{StaticResource ClassicButton}"/>
-
-                    <TextBlock Grid.Column="3"
-                               Text="Item Parent"
-                               Style="{StaticResource FieldLabel}"
-                               HorizontalAlignment="Left"
-                               Margin="8,0,0,0"/>
-                    <ComboBox Grid.Column="3"
-                              Margin="82,0,0,0"
-                              ItemsSource="{Binding AvailableItems}"
-                              SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                              DisplayMemberPath="ItemName"
-                              Style="{StaticResource ClassicCombo}"/>
-
-                    <TextBlock Grid.Column="4" Text="Filter" Style="{StaticResource FieldLabel}" Margin="8,0,5,0"/>
-                    <TextBox Grid.Column="5"
-                             Text="{Binding MatrixFilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"/>
-
-                    <TextBlock Grid.Column="6"
+                    <Button Grid.Column="3"
+                            Content="ADD STOCK ITEM VARIANTS..."
+                            Command="{Binding OpenPurchasingVariantEntryDialogCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="8,0,3,0"/>
+                    <TextBlock Grid.Column="4"
                                Text="{Binding SupplierPriceModeText}"
                                Foreground="#555555"
                                FontStyle="Italic"
@@ -276,29 +254,58 @@
                                HorizontalAlignment="Right"/>
                 </Grid>
 
-                <DataGrid Grid.Row="2"
-                          ItemsSource="{Binding ActiveMatrixVariants}"
-                          SelectedItem="{Binding SelectedMatrixVariant, Mode=TwoWay}"
+                <Grid Grid.Row="2" Margin="0,2,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="95"/>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="Disc Type" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding DiscountModes}"
+                              SelectedItem="{Binding BulkDiscountMode, Mode=TwoWay}"
+                              Style="{StaticResource ClassicCombo}"/>
+                    <TextBlock Grid.Column="2" Text="Disc Value" Style="{StaticResource FieldLabel}" Margin="10,0,5,0"/>
+                    <TextBox Grid.Column="3"
+                             Text="{Binding BulkDiscountValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource ClassicInput}"
+                             HorizontalContentAlignment="Right"/>
+                    <Button Grid.Column="4"
+                            Content="APPLY TO LINES"
+                            Command="{Binding ApplyBulkDiscountValueToLinesCommand}"
+                            Style="{StaticResource ClassicButton}"/>
+                    <TextBlock Grid.Column="5"
+                               Text="VAT category and rate come from Item Master and Tax Rate Management."
+                               Foreground="#555555"
+                               FontStyle="Italic"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+
+                <DataGrid x:Name="DgPoLines"
+                          Grid.Row="3"
+                          ItemsSource="{Binding PoLines}"
+                          SelectedItem="{Binding SelectedLine, Mode=TwoWay}"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           HeadersVisibility="Column"
                           GridLinesVisibility="All"
                           RowHeaderWidth="0"
                           SelectionMode="Single"
-                          SelectionUnit="FullRow">
+                          SelectionUnit="FullRow"
+                          AlternatingRowBackground="#F7F7F7"
+                          CellEditEnding="DgPoLines_CellEditEnding">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Item" Binding="{Binding ItemCode}" Width="85" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Variant" Binding="{Binding VariantDisplayName}" Width="*" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" Width="105" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Item / Variant" Binding="{Binding DisplayName}" Width="*" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" Width="100" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="55" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Tracking" Binding="{Binding TrackingText}" Width="95" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Tax Category" Binding="{Binding TaxCategoryName}" Width="120" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="VAT %" Binding="{Binding VatRatePercent, StringFormat=N2}" Width="65" IsReadOnly="True">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource RightText}"/>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
 
-                        <DataGridTemplateColumn Header="Qty" Width="75">
+                        <DataGridTemplateColumn Header="Qty" Width="72">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBox Text="{Binding OrderQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -315,159 +322,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Header="Expected Cost" Width="100">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBox Text="{Binding ExpectedCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource GridMoneyBox}"
-                                             Background="#FFF7ED"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-
-                        <DataGridTemplateColumn Header="Disc Type" Width="85">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ComboBox ItemsSource="{Binding DataContext.DiscountModes, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                              SelectedItem="{Binding LineDiscountMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              Height="24"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-
-                        <DataGridTemplateColumn Header="Disc Value" Width="80">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBox Text="{Binding LineDiscountValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource GridMoneyBox}"
-                                             Background="#FFFFE0"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-
-                        <DataGridTextColumn Header="Line Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="95" IsReadOnly="True">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource RightText}"/>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-
-                <Grid Grid.Row="3" Margin="0,4,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="75"/>
-                        <ColumnDefinition Width="85"/>
-                        <ColumnDefinition Width="85"/>
-                        <ColumnDefinition Width="105"/>
-                        <ColumnDefinition Width="95"/>
-                        <ColumnDefinition Width="90"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="145"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="Bulk Qty" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Grid.Column="1"
-                             Text="{Binding BulkMatrixQuantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"
-                             HorizontalContentAlignment="Right"/>
-                    <Button Grid.Column="2"
-                            Content="APPLY QTY"
-                            Command="{Binding ApplyBulkMatrixQuantityCommand}"
-                            Style="{StaticResource ClassicButton}"/>
-
-                    <TextBlock Grid.Column="3" Text="Bulk Cost" Style="{StaticResource FieldLabel}" Margin="10,0,5,0"/>
-                    <TextBox Grid.Column="4"
-                             Text="{Binding BulkMatrixExpectedCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"
-                             HorizontalContentAlignment="Right"/>
-                    <Button Grid.Column="5"
-                            Content="APPLY COST"
-                            Command="{Binding ApplyBulkMatrixExpectedCostCommand}"
-                            Style="{StaticResource ClassicButton}"/>
-                    <Button Grid.Column="7"
-                            Content="ADD MATRIX ITEMS"
-                            Command="{Binding AddMatrixCommand}"
-                            Style="{StaticResource PrimaryButton}"/>
-                </Grid>
-            </Grid>
-        </Border>
-
-        <!-- 3. PURCHASE ORDER LINES -->
-        <Border Grid.Row="3" Style="{StaticResource SectionBorder}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="22"/>
-                    <RowDefinition Height="31"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0"
-                           Text="3. PURCHASE ORDER LINES"
-                           Style="{StaticResource SectionTitle}"/>
-
-                <Grid Grid.Row="1" Margin="0,4,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="95"/>
-                        <ColumnDefinition Width="105"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="Disc Type" Style="{StaticResource FieldLabel}"/>
-                    <ComboBox Grid.Column="1"
-                              ItemsSource="{Binding DiscountModes}"
-                              SelectedItem="{Binding BulkDiscountMode, Mode=TwoWay}"
-                              Style="{StaticResource ClassicCombo}"/>
-
-                    <TextBlock Grid.Column="2" Text="Disc Value" Style="{StaticResource FieldLabel}" Margin="10,0,5,0"/>
-                    <TextBox Grid.Column="3"
-                             Text="{Binding BulkDiscountValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             Style="{StaticResource ClassicInput}"
-                             HorizontalContentAlignment="Right"/>
-
-                    <Button Grid.Column="4"
-                            Content="APPLY TO LINES"
-                            Command="{Binding ApplyBulkDiscountValueToLinesCommand}"
-                            Style="{StaticResource ClassicButton}"/>
-
-                    <TextBlock Grid.Column="5"
-                               Text="VAT category and rate are read-only and come from Item Master + Tax Rate Management."
-                               Foreground="#555555"
-                               FontStyle="Italic"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Right"/>
-                </Grid>
-
-                <DataGrid x:Name="DgPoLines"
-                          Grid.Row="2"
-                          ItemsSource="{Binding PoLines}"
-                          SelectedItem="{Binding SelectedLine, Mode=TwoWay}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          HeadersVisibility="Column"
-                          GridLinesVisibility="All"
-                          RowHeaderWidth="0"
-                          SelectionMode="Single"
-                          CellEditEnding="DgPoLines_CellEditEnding">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Item / Variant" Binding="{Binding DisplayName}" Width="*" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" Width="100" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="55" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Tracking" Binding="{Binding TrackingText}" Width="95" IsReadOnly="True"/>
-
-                        <DataGridTemplateColumn Header="Qty" Width="72">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBox Text="{Binding OrderQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             TextAlignment="Right"
-                                             BorderThickness="0"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-
-                        <DataGridTemplateColumn Header="Cost" Width="90">
+                        <DataGridTemplateColumn Header="Expected Cost" Width="98">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBox Text="{Binding ExpectedCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -521,8 +376,7 @@
             </Grid>
         </Border>
 
-        <!-- 4. VAT SUMMARY / TOTALS -->
-        <Border Grid.Row="4" Style="{StaticResource SectionBorder}">
+        <Border Grid.Row="3" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="215"/>
@@ -533,29 +387,25 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="4. DOCUMENT ADJUSTMENT"
+                    <TextBlock Text="3. DOCUMENT ADJUSTMENT"
                                Style="{StaticResource SectionTitle}"
                                Margin="0,0,0,6"/>
-
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="95"/>
                             <ColumnDefinition Width="110"/>
                         </Grid.ColumnDefinitions>
-
                         <TextBlock Grid.Column="0"
                                    Text="Bill Discount"
                                    Style="{StaticResource FieldLabel}"
                                    Foreground="DarkRed"/>
-
                         <TextBox Grid.Column="1"
                                  Text="{Binding GlobalBillDiscount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClassicInput}"
                                  HorizontalContentAlignment="Right"
                                  Background="#FEF2F2"/>
                     </Grid>
-
-                    <TextBlock Text="The discount is allocated proportionally across PO lines before final VAT."
+                    <TextBlock Text="Allocated proportionally across PO lines before final VAT."
                                Margin="0,6,0,0"
                                FontSize="10"
                                Foreground="#666666"
@@ -573,11 +423,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0"
-                                   Text="VAT SUMMARY"
-                                   Style="{StaticResource SectionTitle}"/>
-
+                        <TextBlock Grid.Row="0" Text="VAT SUMMARY" Style="{StaticResource SectionTitle}"/>
                         <Grid Grid.Row="1" Margin="0,3,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="105"/>
@@ -585,13 +431,11 @@
                                 <ColumnDefinition Width="105"/>
                                 <ColumnDefinition Width="100"/>
                             </Grid.ColumnDefinitions>
-
                             <TextBlock Grid.Column="0" Text="Standard VAT" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding StandardRatedAmount, StringFormat=N2}" Style="{StaticResource RightText}"/>
                             <TextBlock Grid.Column="2" Text="Zero Rated" Style="{StaticResource FieldLabel}" Margin="12,0,0,0"/>
                             <TextBlock Grid.Column="3" Text="{Binding ZeroRatedAmount, StringFormat=N2}" Style="{StaticResource RightText}"/>
                         </Grid>
-
                         <Grid Grid.Row="2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="105"/>
@@ -599,7 +443,6 @@
                                 <ColumnDefinition Width="105"/>
                                 <ColumnDefinition Width="100"/>
                             </Grid.ColumnDefinitions>
-
                             <TextBlock Grid.Column="0" Text="Exempt" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding ExemptAmount, StringFormat=N2}" Style="{StaticResource RightText}"/>
                             <TextBlock Grid.Column="2" Text="Out of Scope" Style="{StaticResource FieldLabel}" Margin="12,0,0,0"/>
@@ -618,30 +461,25 @@
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="145"/>
                         </Grid.ColumnDefinitions>
-
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="SUBTOTAL" Foreground="#666666" FontWeight="Bold" HorizontalAlignment="Right"/>
                             <TextBlock Text="{Binding Subtotal, StringFormat=N2}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
                         </StackPanel>
-
                         <StackPanel Grid.Column="1">
                             <TextBlock Text="DISCOUNT" Foreground="DarkRed" FontWeight="Bold" HorizontalAlignment="Right"/>
                             <TextBlock Text="{Binding TotalDiscountAmount, StringFormat=N2}" FontSize="14" FontWeight="Bold" Foreground="DarkRed" HorizontalAlignment="Right"/>
                         </StackPanel>
-
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="TAXABLE" Foreground="#666666" FontWeight="Bold" HorizontalAlignment="Right"/>
                             <TextBlock Text="{Binding TaxableAmountTotal, StringFormat=N2}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
                         </StackPanel>
-
                         <StackPanel Grid.Column="3">
                             <TextBlock Text="VAT" Foreground="#666666" FontWeight="Bold" HorizontalAlignment="Right"/>
                             <TextBlock Text="{Binding TotalTaxAmount, StringFormat=N2}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Right"/>
                         </StackPanel>
-
                         <StackPanel Grid.Column="4">
                             <TextBlock Text="ESTIMATED TOTAL" Foreground="#003366" FontWeight="Bold" HorizontalAlignment="Right"/>
                             <TextBlock Text="{Binding NetPayable, StringFormat=Rs. {0:N2}}" FontSize="20" FontWeight="Bold" Foreground="#003366" HorizontalAlignment="Right"/>
@@ -651,20 +489,17 @@
             </Grid>
         </Border>
 
-        <!-- ACTIONS -->
-        <DockPanel Grid.Row="5" LastChildFill="False" Margin="0,0,0,4">
-            <TextBlock Text="PO saves as Approved. It does not change stock, costs, prices, or supplier ledger."
+        <DockPanel Grid.Row="4" LastChildFill="False" Margin="0,0,0,4">
+            <TextBlock Text="After save, you can export the approved PO directly as PDF. No stock or ledger movement is created."
                        Foreground="#555555"
                        FontStyle="Italic"
                        VerticalAlignment="Center"
                        DockPanel.Dock="Left"/>
-
             <Button Content="CLEAR"
                     Command="{Binding ClearCommand}"
                     Style="{StaticResource ClassicButton}"
                     Width="90"
                     DockPanel.Dock="Right"/>
-
             <Button Content="SAVE &amp; APPROVE PO"
                     Command="{Binding SaveOrderCommand}"
                     Style="{StaticResource PrimaryButton}"
@@ -672,8 +507,7 @@
                     DockPanel.Dock="Right"/>
         </DockPanel>
 
-        <!-- STATUS -->
-        <Border Grid.Row="6"
+        <Border Grid.Row="5"
                 Background="#E5E5E5"
                 BorderBrush="#A0A0A0"
                 BorderThickness="1"
