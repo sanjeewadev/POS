@@ -1,12 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Interfaces;
 using POS.Core.Models;
 using POS.Core.Models.Licensing;
+using POS.Core.Models.Terminals;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Licensing;
@@ -16,20 +19,19 @@ namespace POS.BackOffice.UI.ViewModels
     public partial class TerminalSettingsViewModel :
         ObservableObject
     {
-        private readonly
-            TerminalSettingsRepository
+        private readonly TerminalSettingsRepository
             _terminalSettingsRepository;
 
-        private readonly
-            ITerminalHardwareService
+        private readonly TerminalManagementRepository
+            _terminalManagementRepository;
+
+        private readonly ITerminalHardwareService
             _terminalHardwareService;
 
-        private readonly
-            MachineFingerprintService
+        private readonly MachineFingerprintService
             _machineFingerprintService;
 
-        private readonly
-            LicenseManagerService
+        private readonly LicenseManagerService
             _licenseManagerService;
 
         private readonly AuthService
@@ -38,19 +40,22 @@ namespace POS.BackOffice.UI.ViewModels
         private TerminalSettings?
             _loadedSettings;
 
+        private List<RegisteredTerminalSummary>
+            _knownTerminals = new();
+
         public TerminalSettingsViewModel(
-            TerminalSettingsRepository
-                terminalSettingsRepository,
-            ITerminalHardwareService
-                terminalHardwareService,
-            MachineFingerprintService
-                machineFingerprintService,
-            LicenseManagerService
-                licenseManagerService,
+            TerminalSettingsRepository terminalSettingsRepository,
+            TerminalManagementRepository terminalManagementRepository,
+            ITerminalHardwareService terminalHardwareService,
+            MachineFingerprintService machineFingerprintService,
+            LicenseManagerService licenseManagerService,
             AuthService authService)
         {
             _terminalSettingsRepository =
                 terminalSettingsRepository;
+
+            _terminalManagementRepository =
+                terminalManagementRepository;
 
             _terminalHardwareService =
                 terminalHardwareService;
@@ -64,6 +69,9 @@ namespace POS.BackOffice.UI.ViewModels
             _authService = authService;
 
             AvailablePrinters =
+                new ObservableCollection<string>();
+
+            AvailableTerminalNumbers =
                 new ObservableCollection<string>();
 
             ReceiptPaperWidths =
@@ -85,11 +93,49 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<string>
             AvailablePrinters { get; }
 
+        public ObservableCollection<string>
+            AvailableTerminalNumbers { get; }
+
         public ObservableCollection<int>
             ReceiptPaperWidths { get; }
 
         public ObservableCollection<int>
             ReceiptCopyOptions { get; }
+
+        // =====================================================
+        // CURRENT COMPUTER ROLE
+        // =====================================================
+
+        [ObservableProperty]
+        private bool _isCashierConfigured;
+
+        [ObservableProperty]
+        private bool _isAdministrator;
+
+        [ObservableProperty]
+        private string _computerRoleText =
+            "BackOffice only";
+
+        [ObservableProperty]
+        private string _terminalLicenseRequirementText =
+            "A terminal licence is not required on this computer.";
+
+        [ObservableProperty]
+        private string _requestedTerminalNo =
+            string.Empty;
+
+        [ObservableProperty]
+        private string _requestedTerminalName =
+            string.Empty;
+
+        public bool CanEnableCashier =>
+            IsAdministrator &&
+            !IsCashierConfigured &&
+            !IsBusy;
+
+        public bool CanEditHardware =>
+            IsCashierConfigured &&
+            !IsBusy;
 
         // =====================================================
         // CURRENT TERMINAL
@@ -176,6 +222,43 @@ namespace POS.BackOffice.UI.ViewModels
         private string _statusColor =
             "#666666";
 
+        partial void OnIsCashierConfiguredChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanEnableCashier));
+            OnPropertyChanged(nameof(CanEditHardware));
+        }
+
+        partial void OnIsAdministratorChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanEnableCashier));
+        }
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanEnableCashier));
+            OnPropertyChanged(nameof(CanEditHardware));
+        }
+
+        partial void OnRequestedTerminalNoChanged(string value)
+        {
+            string safeNo = (value ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(safeNo))
+                return;
+
+            RegisteredTerminalSummary? released =
+                _knownTerminals.FirstOrDefault(item =>
+                    string.Equals(
+                        item.TerminalNo,
+                        safeNo,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    !item.HasMachineAssignment);
+
+            RequestedTerminalName =
+                released?.TerminalName ??
+                $"Cashier Terminal {safeNo}";
+        }
+
         [RelayCommand]
         private async Task LoadAsync()
         {
@@ -185,31 +268,33 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 IsBusy = true;
+                IsAdministrator = _authService.IsAdmin;
 
                 SetStatus(
-                    "Loading current terminal settings...",
+                    "Loading current computer settings...",
                     "#003366");
 
                 string machineName =
-                    _machineFingerprintService
-                        .GetMachineName();
+                    _machineFingerprintService.GetMachineName();
+
+                _knownTerminals =
+                    await _terminalManagementRepository.GetAllAsync();
 
                 TerminalSettings? settings =
                     await _terminalSettingsRepository
-                        .GetByMachineNameAsync(
-                            machineName);
+                        .GetByMachineNameAsync(machineName);
 
                 if (settings == null)
                 {
                     _loadedSettings = null;
-                    ApplyUnassignedState(
-                        machineName);
+                    ApplyUnassignedState(machineName);
+                    PopulateAvailableTerminalNumbers();
                     RefreshPrinterListCore();
 
                     SetStatus(
-                        "This computer is not assigned as a Cashier terminal. " +
-                        "Use the Cashier installer or BackOffice Terminal " +
-                        "Management before configuring terminal hardware.",
+                        IsAdministrator
+                            ? "This computer is not assigned as a Cashier terminal and is BackOffice-only. Enable Cashier here only when this computer will also be used for sales."
+                            : "This computer is not assigned as a Cashier terminal and is BackOffice-only. Only an Administrator can enable Cashier on this computer.",
                         "#B45309");
 
                     return;
@@ -220,15 +305,12 @@ namespace POS.BackOffice.UI.ViewModels
                         .GetCurrentLicenseSummaryAsync();
 
                 _loadedSettings = settings;
-
-                ApplySettings(
-                    settings,
-                    licenseSummary);
-
+                ApplySettings(settings, licenseSummary);
+                PopulateAvailableTerminalNumbers();
                 RefreshPrinterListCore();
 
                 SetStatus(
-                    "Terminal settings loaded.",
+                    "Cashier terminal settings loaded for this computer.",
                     "#008000");
             }
             catch (Exception ex)
@@ -239,8 +321,93 @@ namespace POS.BackOffice.UI.ViewModels
                     ex);
 
                 SetStatus(
-                    "Terminal settings could not be loaded. " +
-                    "Technical details were saved in the local POS Logs folder.",
+                    "Terminal settings could not be loaded. Technical details were saved in the local POS Logs folder.",
+                    "#B91C1C");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task EnableCashierOnThisComputerAsync()
+        {
+            if (IsBusy || IsCashierConfigured)
+                return;
+
+            if (!_authService.IsAdmin)
+            {
+                SetStatus(
+                    "Only an Administrator can enable Cashier on this computer.",
+                    "#B91C1C");
+                return;
+            }
+
+            string terminalNo =
+                (RequestedTerminalNo ?? string.Empty).Trim();
+
+            string terminalName =
+                (RequestedTerminalName ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(terminalNo))
+            {
+                SetStatus(
+                    "Choose or enter a terminal number first.",
+                    "#B91C1C");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(terminalName))
+            {
+                SetStatus(
+                    "Enter a terminal name first.",
+                    "#B91C1C");
+                return;
+            }
+
+            MessageBoxResult confirmation =
+                MessageBox.Show(
+                    $"Enable Cashier on this computer as Terminal {terminalNo}?\n\n" +
+                    $"Name: {terminalName}\n" +
+                    $"Computer: {_machineFingerprintService.GetMachineName()}\n\n" +
+                    "A matching machine-bound terminal licence will be required before Cashier can operate.",
+                    "Enable Cashier on This Computer",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                IsBusy = true;
+                SetStatus(
+                    "Assigning this computer as a Cashier terminal...",
+                    "#003366");
+
+                await _terminalManagementRepository
+                    .AssignCurrentMachineAsync(
+                        terminalNo,
+                        terminalName,
+                        GetCurrentUserName());
+
+                IsBusy = false;
+                await LoadAsync();
+
+                SetStatus(
+                    "Cashier is enabled on this computer. Copy and import its terminal licence from License Management before starting Cashier.",
+                    "#008000");
+            }
+            catch (Exception ex)
+            {
+                LocalLogService.WriteException(
+                    "BackOffice",
+                    "Enable Cashier on current computer",
+                    ex);
+
+                SetStatus(
+                    $"Cashier could not be enabled: {GetFriendlyMessage(ex)}",
                     "#B91C1C");
             }
             finally
@@ -258,44 +425,35 @@ namespace POS.BackOffice.UI.ViewModels
             if (_loadedSettings == null)
             {
                 SetStatus(
-                    "Load the terminal settings before saving.",
+                    "Enable Cashier on this computer before saving Cashier hardware settings.",
                     "#B91C1C");
-
                 return;
             }
 
             try
             {
                 IsBusy = true;
-
                 SetStatus(
-                    "Saving terminal settings...",
+                    "Saving Cashier terminal settings...",
                     "#003366");
 
-                ApplyEditableValuesToModel(
-                    _loadedSettings);
+                ApplyEditableValuesToModel(_loadedSettings);
 
                 TerminalSettings saved =
-                    await _terminalSettingsRepository
-                        .SaveAsync(
-                            _loadedSettings,
-                            GetCurrentUserName());
+                    await _terminalSettingsRepository.SaveAsync(
+                        _loadedSettings,
+                        GetCurrentUserName());
 
                 LicenseSummary licenseSummary =
                     await _licenseManagerService
                         .GetCurrentLicenseSummaryAsync();
 
                 _loadedSettings = saved;
-
-                ApplySettings(
-                    saved,
-                    licenseSummary);
-
+                ApplySettings(saved, licenseSummary);
                 RefreshPrinterListCore();
 
                 SetStatus(
-                    "Terminal settings saved. " +
-                    "Restart Cashier to apply the new settings.",
+                    "Cashier terminal settings saved. Restart Cashier to apply the new settings.",
                     "#008000");
             }
             catch (Exception ex)
@@ -306,8 +464,7 @@ namespace POS.BackOffice.UI.ViewModels
                     ex);
 
                 SetStatus(
-                    $"Settings were not saved: " +
-                    $"{GetFriendlyMessage(ex)}",
+                    $"Settings were not saved: {GetFriendlyMessage(ex)}",
                     "#B91C1C");
             }
             finally
@@ -341,8 +498,7 @@ namespace POS.BackOffice.UI.ViewModels
                     ex);
 
                 SetStatus(
-                    "Windows printers could not be listed. " +
-                    "Check the Windows Print Spooler service.",
+                    "Windows printers could not be listed. Check the Windows Print Spooler service.",
                     "#B91C1C");
             }
         }
@@ -350,31 +506,27 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task TestPrintAsync()
         {
-            if (IsBusy)
+            if (IsBusy || !IsCashierConfigured)
                 return;
 
-            if (string.IsNullOrWhiteSpace(
-                    ReceiptPrinterName))
+            if (string.IsNullOrWhiteSpace(ReceiptPrinterName))
             {
                 SetStatus(
                     "Select a Windows receipt printer first.",
                     "#B91C1C");
-
                 return;
             }
 
             try
             {
                 IsBusy = true;
-
                 SetStatus(
                     "Sending a test receipt...",
                     "#003366");
 
-                await _terminalHardwareService
-                    .PrintTestReceiptAsync(
-                        ReceiptPrinterName,
-                        ReceiptPaperWidth);
+                await _terminalHardwareService.PrintTestReceiptAsync(
+                    ReceiptPrinterName,
+                    ReceiptPaperWidth);
 
                 SetStatus(
                     "Test receipt sent to the selected printer.",
@@ -388,8 +540,7 @@ namespace POS.BackOffice.UI.ViewModels
                     ex);
 
                 SetStatus(
-                    $"Test print failed: " +
-                    $"{GetFriendlyMessage(ex)}",
+                    $"Test print failed: {GetFriendlyMessage(ex)}",
                     "#B91C1C");
             }
             finally
@@ -401,7 +552,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task TestDrawerAsync()
         {
-            if (IsBusy)
+            if (IsBusy || !IsCashierConfigured)
                 return;
 
             if (!EnableCashDrawer)
@@ -409,31 +560,26 @@ namespace POS.BackOffice.UI.ViewModels
                 SetStatus(
                     "Enable the cash drawer before testing it.",
                     "#B45309");
-
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(
-                    ReceiptPrinterName))
+            if (string.IsNullOrWhiteSpace(ReceiptPrinterName))
             {
                 SetStatus(
                     "Select the receipt printer connected to the drawer.",
                     "#B91C1C");
-
                 return;
             }
 
             try
             {
                 IsBusy = true;
-
                 SetStatus(
                     "Sending the drawer-open test...",
                     "#003366");
 
-                await _terminalHardwareService
-                    .OpenCashDrawerAsync(
-                        ReceiptPrinterName);
+                await _terminalHardwareService.OpenCashDrawerAsync(
+                    ReceiptPrinterName);
 
                 SetStatus(
                     "Drawer-open command sent.",
@@ -447,8 +593,7 @@ namespace POS.BackOffice.UI.ViewModels
                     ex);
 
                 SetStatus(
-                    $"Drawer test failed: " +
-                    $"{GetFriendlyMessage(ex)}",
+                    $"Drawer test failed: {GetFriendlyMessage(ex)}",
                     "#B91C1C");
             }
             finally
@@ -457,26 +602,27 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        partial void OnEnableCashDrawerChanged(
-            bool value)
+        partial void OnEnableCashDrawerChanged(bool value)
         {
             if (!value)
                 OpenDrawerAfterCashSale = false;
         }
 
-        private void ApplyUnassignedState(
-            string machineName)
+        private void ApplyUnassignedState(string machineName)
         {
+            IsCashierConfigured = false;
+            ComputerRoleText = "BackOffice only";
+            TerminalLicenseRequirementText =
+                "A terminal licence is not required on this computer.";
+
             TerminalNo = "-";
             TerminalName = string.Empty;
-            MachineName = DisplayOrDash(
-                machineName);
+            MachineName = DisplayOrDash(machineName);
             MachineCode = DisplayOrDash(
-                _machineFingerprintService
-                    .GetMachineCode());
-            TerminalStatusText = "Not assigned";
+                _machineFingerprintService.GetMachineCode());
+            TerminalStatusText = "Not configured";
             TerminalStatusColor = "#B45309";
-            TerminalLicenseStatusText = "Not applicable";
+            TerminalLicenseStatusText = "Not required";
             TerminalLicenseExpiryText = "-";
             ReceiptPrinterName = string.Empty;
             ReceiptPaperWidth = 80;
@@ -491,26 +637,22 @@ namespace POS.BackOffice.UI.ViewModels
             TerminalSettings settings,
             LicenseSummary licenseSummary)
         {
-            TerminalNo =
-                DisplayOrDash(
-                    settings.TerminalNo);
+            IsCashierConfigured = true;
+            ComputerRoleText =
+                $"BackOffice + Cashier (Terminal {settings.TerminalNo})";
+            TerminalLicenseRequirementText =
+                "This computer runs Cashier and requires its own active machine-bound terminal licence.";
 
-            TerminalName =
-                settings.TerminalName;
-
-            MachineName =
-                DisplayOrDash(
-                    _machineFingerprintService
-                        .GetMachineName());
-
-            MachineCode =
-                DisplayOrDash(
-                    _machineFingerprintService
-                        .GetMachineCode());
+            TerminalNo = DisplayOrDash(settings.TerminalNo);
+            TerminalName = settings.TerminalName;
+            MachineName = DisplayOrDash(
+                _machineFingerprintService.GetMachineName());
+            MachineCode = DisplayOrDash(
+                _machineFingerprintService.GetMachineCode());
 
             TerminalStatusText =
                 settings.IsActive
-                    ? "Active"
+                    ? "Enabled"
                     : "Disabled";
 
             TerminalStatusColor =
@@ -519,77 +661,82 @@ namespace POS.BackOffice.UI.ViewModels
                     : "#B91C1C";
 
             TerminalLicenseStatusText =
-                licenseSummary
-                    .TerminalLicenseStatusText;
+                licenseSummary.TerminalLicenseStatusText;
 
             TerminalLicenseExpiryText =
                 FormatLicenseExpiry(
-                    licenseSummary
-                        .TerminalExpiryDate,
-                    licenseSummary
-                        .TerminalDaysRemaining);
+                    licenseSummary.TerminalExpiryDate,
+                    licenseSummary.TerminalDaysRemaining);
 
-            ReceiptPrinterName =
-                settings.ReceiptPrinterName;
-
+            ReceiptPrinterName = settings.ReceiptPrinterName;
             ReceiptPaperWidth =
-                settings.ReceiptPaperWidth == 58
-                    ? 58
-                    : 80;
-
-            AutoPrintReceipt =
-                settings.AutoPrintReceipt;
-
-            ReceiptCopies =
-                Math.Clamp(
-                    settings.ReceiptCopies,
-                    1,
-                    3);
-
-            EnableCashDrawer =
-                settings.EnableCashDrawer;
-
+                settings.ReceiptPaperWidth == 58 ? 58 : 80;
+            AutoPrintReceipt = settings.AutoPrintReceipt;
+            ReceiptCopies = Math.Clamp(settings.ReceiptCopies, 1, 3);
+            EnableCashDrawer = settings.EnableCashDrawer;
             OpenDrawerAfterCashSale =
                 settings.EnableCashDrawer &&
                 settings.OpenDrawerAfterCashSale;
-
             AutoLockTimeoutMinutes =
-                Math.Clamp(
-                    settings.AutoLockTimeoutMinutes,
-                    0,
-                    120);
+                Math.Clamp(settings.AutoLockTimeoutMinutes, 0, 120);
+        }
+
+        private void PopulateAvailableTerminalNumbers()
+        {
+            AvailableTerminalNumbers.Clear();
+
+            foreach (RegisteredTerminalSummary released in
+                     _knownTerminals
+                         .Where(item =>
+                             item.IsCashierTerminal &&
+                             !item.HasMachineAssignment)
+                         .OrderBy(item => item.TerminalNo))
+            {
+                AvailableTerminalNumbers.Add(released.TerminalNo);
+            }
+
+            string nextNumber = FindNextUnusedTerminalNumber();
+            if (!AvailableTerminalNumbers.Contains(nextNumber))
+                AvailableTerminalNumbers.Add(nextNumber);
+
+            if (!IsCashierConfigured)
+            {
+                RequestedTerminalNo =
+                    AvailableTerminalNumbers.FirstOrDefault() ?? "01";
+            }
+        }
+
+        private string FindNextUnusedTerminalNumber()
+        {
+            var used = new HashSet<string>(
+                _knownTerminals.Select(item => item.TerminalNo),
+                StringComparer.OrdinalIgnoreCase);
+
+            for (int number = 1; number <= 99; number++)
+            {
+                string candidate = number.ToString("00");
+                if (!used.Contains(candidate))
+                    return candidate;
+            }
+
+            return (_knownTerminals.Count + 1).ToString("00");
         }
 
         private void ApplyEditableValuesToModel(
             TerminalSettings settings)
         {
             settings.TerminalName =
-                (TerminalName ??
-                 string.Empty).Trim();
-
-            settings.PrinterMode =
-                "WindowsSpooler";
-
+                (TerminalName ?? string.Empty).Trim();
+            settings.PrinterMode = "WindowsSpooler";
             settings.ReceiptPrinterName =
-                (ReceiptPrinterName ??
-                 string.Empty).Trim();
-
-            settings.ReceiptPaperWidth =
-                ReceiptPaperWidth;
-
-            settings.AutoPrintReceipt =
-                AutoPrintReceipt;
-
-            settings.ReceiptCopies =
-                ReceiptCopies;
-
-            settings.EnableCashDrawer =
-                EnableCashDrawer;
-
+                (ReceiptPrinterName ?? string.Empty).Trim();
+            settings.ReceiptPaperWidth = ReceiptPaperWidth;
+            settings.AutoPrintReceipt = AutoPrintReceipt;
+            settings.ReceiptCopies = ReceiptCopies;
+            settings.EnableCashDrawer = EnableCashDrawer;
             settings.OpenDrawerAfterCashSale =
                 EnableCashDrawer &&
                 OpenDrawerAfterCashSale;
-
             settings.AutoLockTimeoutMinutes =
                 AutoLockTimeoutMinutes;
         }
@@ -597,52 +744,38 @@ namespace POS.BackOffice.UI.ViewModels
         private void RefreshPrinterListCore()
         {
             string selectedPrinter =
-                (ReceiptPrinterName ??
-                 string.Empty).Trim();
+                (ReceiptPrinterName ?? string.Empty).Trim();
 
             var printerNames =
-                _terminalHardwareService
-                    .GetInstalledPrinterNames();
+                _terminalHardwareService.GetInstalledPrinterNames();
 
             AvailablePrinters.Clear();
 
-            foreach (string printerName in
-                     printerNames)
-            {
-                AvailablePrinters.Add(
-                    printerName);
-            }
+            foreach (string printerName in printerNames)
+                AvailablePrinters.Add(printerName);
 
-            if (!string.IsNullOrWhiteSpace(
-                    selectedPrinter) &&
-                !AvailablePrinters.Any(
-                    printer =>
-                        string.Equals(
-                            printer,
-                            selectedPrinter,
-                            StringComparison
-                                .OrdinalIgnoreCase)))
+            if (!string.IsNullOrWhiteSpace(selectedPrinter) &&
+                !AvailablePrinters.Any(printer =>
+                    string.Equals(
+                        printer,
+                        selectedPrinter,
+                        StringComparison.OrdinalIgnoreCase)))
             {
-                AvailablePrinters.Insert(
-                    0,
-                    selectedPrinter);
+                AvailablePrinters.Insert(0, selectedPrinter);
             }
 
             PrinterListStatus =
                 printerNames.Count == 0
                     ? "No Windows printers were found."
-                    : $"{printerNames.Count} Windows " +
-                      $"printer(s) found.";
+                    : $"{printerNames.Count} Windows printer(s) found.";
         }
 
         private string GetCurrentUserName()
         {
             string? username =
-                _authService.CurrentUser
-                    ?.Username;
+                _authService.CurrentUser?.Username;
 
-            return string.IsNullOrWhiteSpace(
-                username)
+            return string.IsNullOrWhiteSpace(username)
                 ? "Administrator"
                 : username.Trim();
         }
@@ -659,44 +792,31 @@ namespace POS.BackOffice.UI.ViewModels
                 $"({daysRemaining} day(s) remaining)";
         }
 
-        private static string DisplayOrDash(
-            string? value)
+        private static string DisplayOrDash(string? value)
         {
-            return string.IsNullOrWhiteSpace(
-                value)
+            return string.IsNullOrWhiteSpace(value)
                 ? "-"
                 : value.Trim();
         }
 
-        private static string GetFriendlyMessage(
-            Exception exception)
+        private static string GetFriendlyMessage(Exception exception)
         {
-            if (exception is
-                InvalidOperationException)
-            {
+            if (exception is InvalidOperationException)
                 return exception.Message;
-            }
 
             return
-                "The operation could not be completed. " +
-                "Technical details were saved in the local POS Logs folder.";
+                "The operation could not be completed. Technical details were saved in the local POS Logs folder.";
         }
 
-        private void SetStatus(
-            string message,
-            string color)
+        private void SetStatus(string message, string color)
         {
-            StatusMessage =
-                string.IsNullOrWhiteSpace(
-                    message)
-                    ? "Ready."
-                    : message.Trim();
+            StatusMessage = string.IsNullOrWhiteSpace(message)
+                ? "Ready."
+                : message.Trim();
 
-            StatusColor =
-                string.IsNullOrWhiteSpace(
-                    color)
-                    ? "#666666"
-                    : color;
+            StatusColor = string.IsNullOrWhiteSpace(color)
+                ? "#666666"
+                : color;
         }
     }
 }

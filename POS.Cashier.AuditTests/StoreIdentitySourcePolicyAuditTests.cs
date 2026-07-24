@@ -1,4 +1,4 @@
-using POS.Core.Models.Licensing;
+﻿using POS.Core.Models.Licensing;
 using POS.Core.Services.Licensing;
 using POS.Core.Utilities;
 
@@ -154,16 +154,16 @@ internal static class StoreIdentitySourcePolicyAuditTests
             "Store licence request action");
         AuditAssert.Contains(
             xaml,
-            "Command=\"{Binding CopyTerminalLicenseRequestCommand}\"",
-            "Terminal licence request action");
+            "Command=\"{Binding CopySelectedTerminalLicenseRequestCommand}\"",
+            "Selected terminal licence request action");
         AuditAssert.Contains(
             viewModel,
             "GetCurrentStoreLicenseRequestAsync",
             "Store request service call");
         AuditAssert.Contains(
             viewModel,
-            "GetCurrentTerminalLicenseRequestAsync",
-            "Terminal request service call");
+            "CreateTerminalRequest",
+            "Selected terminal request service call");
     }
 
 

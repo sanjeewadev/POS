@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -243,6 +243,12 @@ namespace POS.Core.CalculationTests
                 ("Item Master failed new save can be corrected and retried", ItemMasterSaveSafetyTests.FailedNewItemSaveCanBeCorrectedAndRetried),
                 ("Item Master stale matrix SKU is rejected", ItemMasterSaveSafetyTests.NewItemRejectsStaleMatrixSku),
                 ("Item Master existing update preserves identity", ItemMasterSaveSafetyTests.ExistingItemUpdatePreservesIdentity),
+                ("BackOffice-only licensing uses store status", LicenseTerminalWorkflowTests.BackOfficeOnlyUsesStoreStatus),
+                ("Cashier requires store and terminal licences", LicenseTerminalWorkflowTests.CashierRequiresStoreAndTerminalLicences),
+                ("Legacy licence grace state does not become active", LicenseTerminalWorkflowTests.LegacyGraceStatusDoesNotBecomeActive),
+                ("Disabled terminal cannot run Cashier", LicenseTerminalWorkflowTests.DisabledTerminalCannotRunCashier),
+                ("Current computer role is explicit", LicenseTerminalWorkflowTests.CurrentComputerRoleIsExplicit),
+                ("Cashier fleet summary is compact", LicenseTerminalWorkflowTests.FleetSummaryIsCompact),
                 ("Phase 11A missing database profile defaults to standalone SQLite", DatabaseProviderFoundationTests.MissingProfileDefaultsToStandaloneSqlite),
                 ("Phase 11A SQL Server profile is encrypted and round-trips", DatabaseProviderFoundationTests.SqlServerProfileIsEncryptedAndRoundTrips),
                 ("Phase 11A provider options and collations are portable", DatabaseProviderFoundationTests.ProviderOptionsAndCollationsArePortable),

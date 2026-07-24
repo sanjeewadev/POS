@@ -49,6 +49,12 @@ namespace POS.Core.Models.Licensing
 
         public string CurrentTerminalName { get; set; } = string.Empty;
 
+        public bool TerminalLicenseRequired { get; set; }
+
+        public bool CurrentTerminalEnabled { get; set; }
+
+        public string CurrentComputerRole { get; set; } = string.Empty;
+
         // =========================================================
         // TERMINAL LICENSE
         // =========================================================

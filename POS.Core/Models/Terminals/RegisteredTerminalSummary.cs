@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using POS.Core.Models.Licensing;
 
 namespace POS.Core.Models.Terminals
@@ -37,6 +37,10 @@ namespace POS.Core.Models.Terminals
 
         public DateTime? UpdatedAt { get; set; }
 
+        public DateTime? LastLoginAt { get; set; }
+
+        public DateTime? LastSaleAt { get; set; }
+
         public string UpdatedBy { get; set; } =
             string.Empty;
 
@@ -44,7 +48,7 @@ namespace POS.Core.Models.Terminals
             IsActive ? "Active" : "Disabled";
 
         public string CurrentMachineText =>
-            IsCurrentMachine ? "This PC" : "-";
+            IsCurrentMachine ? "Yes" : "No";
 
         public string TerminalTypeText =>
             IsCashierTerminal
@@ -86,6 +90,41 @@ namespace POS.Core.Models.Terminals
                 ? LicenseExpiryDate.Value
                     .ToString("yyyy-MM-dd")
                 : "-";
+
+
+        public DateTime? LastSeenAt =>
+            LastSaleAt.HasValue && LastLoginAt.HasValue
+                ? (LastSaleAt.Value >= LastLoginAt.Value
+                    ? LastSaleAt
+                    : LastLoginAt)
+                : LastSaleAt ?? LastLoginAt;
+
+        public string LastSeenText =>
+            LastSeenAt.HasValue
+                ? LastSeenAt.Value.ToString("yyyy-MM-dd HH:mm")
+                : "-";
+
+        public bool IsReady =>
+            IsCashierTerminal &&
+            IsActive &&
+            HasMachineAssignment &&
+            (this.LicenseStatus ==
+                 POS.Core.Models.Licensing.LicenseStatus.Active ||
+             this.LicenseStatus ==
+                 POS.Core.Models.Licensing.LicenseStatus.ExpiringSoon);
+
+        public bool RequiresAttention =>
+            IsCashierTerminal &&
+            IsActive &&
+            !IsReady;
+
+        public string SelectionText =>
+            $"{TerminalNo} — {TerminalName} — {MachineNameDisplay}";
+
+        public string AssignmentStatusText =>
+            HasMachineAssignment
+                ? "Assigned"
+                : "Released";
 
         public string RegisteredAtText =>
             CreatedAt == default

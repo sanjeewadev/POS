@@ -1,4 +1,4 @@
-namespace POS.Cashier.AuditTests;
+﻿namespace POS.Cashier.AuditTests;
 
 internal static class AuditTestCatalog
 {
@@ -52,6 +52,7 @@ internal static class AuditTestCatalog
         new("BackOffice purchasing and stock operational controls are wired", AuditGroups.SourcePolicy, BackOfficeOperationalSourcePolicyAuditTests.PurchasingAndStockControlsAreWiredAsync),
         new("Recoverable BackOffice and Cashier UI failures are contained", AuditGroups.SourcePolicy, UiCrashResilienceSourcePolicyAuditTests.RecoverableUiFailuresAreContainedAsync),
         new("Store identity and licence requests are consistent", AuditGroups.SourcePolicy, StoreIdentitySourcePolicyAuditTests.StoreIdentityAndLicenceRequestsAreConsistentAsync),
+        new("Licence and terminal responsibilities are separated", AuditGroups.SourcePolicy, LicenseTerminalWorkflowSourcePolicyAuditTests.LicenceAndTerminalResponsibilitiesAreSeparatedAsync),
         new("Item, service, pricing and expiry workflows are explicit", AuditGroups.SourcePolicy, InventoryServiceExpirySourcePolicyAuditTests.InventoryServicePricingAndExpiryWorkflowsAreExplicitAsync),
         new("User-facing quantities are compact and consistent", AuditGroups.SourcePolicy, QuantityDisplaySourcePolicyAuditTests.QuantityDisplayIsCompactAndConsistentAsync),
         new("Item Master matrix and save failures are controlled", AuditGroups.SourcePolicy, ItemMasterSaveSafetySourcePolicyAuditTests.ItemMasterMatrixAndSaveFailuresAreControlledAsync),

@@ -106,13 +106,22 @@ namespace POS.Core.Services.Licensing
                     LicenseType.StoreLicense,
                     out _);
 
-            LicenseStatus terminalStatus =
-                ValidateInstalledLicense(
-                    terminalLicense,
-                    LicenseType.TerminalLicense,
-                    out _);
+            bool terminalLicenseRequired =
+                currentTerminalSettings != null;
 
-            if (storeLicense != null &&
+            bool currentTerminalEnabled =
+                currentTerminalSettings?.IsActive == true;
+
+            LicenseStatus terminalStatus =
+                terminalLicenseRequired
+                    ? ValidateInstalledLicense(
+                        terminalLicense,
+                        LicenseType.TerminalLicense,
+                        out _)
+                    : LicenseStatus.Missing;
+
+            if (terminalLicenseRequired &&
+                storeLicense != null &&
                 terminalLicense != null &&
                 !string.Equals(
                     storeLicense.StoreId,
@@ -124,14 +133,19 @@ namespace POS.Core.Services.Licensing
             }
 
             LicenseStatus overallStatus =
-                CalculateOverallStatus(
-                    storeStatus,
-                    terminalStatus);
+                LicenseTerminalWorkflowPolicy
+                    .CalculateOverallStatus(
+                        storeStatus,
+                        terminalStatus,
+                        terminalLicenseRequired);
 
             bool canRunCashier =
-                CanRunCashier(
-                    storeStatus,
-                    terminalStatus);
+                LicenseTerminalWorkflowPolicy
+                    .CanRunCashier(
+                        storeStatus,
+                        terminalStatus,
+                        terminalLicenseRequired,
+                        currentTerminalEnabled);
 
             var summary =
                 new LicenseSummary
@@ -185,6 +199,19 @@ namespace POS.Core.Services.Licensing
                             ?.Trim() ??
                         string.Empty,
 
+                    TerminalLicenseRequired =
+                        terminalLicenseRequired,
+
+                    CurrentTerminalEnabled =
+                        currentTerminalEnabled,
+
+                    CurrentComputerRole =
+                        LicenseTerminalWorkflowPolicy
+                            .BuildCurrentComputerRole(
+                                terminalLicenseRequired,
+                                terminalNo,
+                                currentTerminalSettings?.TerminalName),
+
                     TerminalLicenseId =
                         terminalLicense?.LicenseId ??
                         string.Empty,
@@ -211,9 +238,10 @@ namespace POS.Core.Services.Licensing
                     CanRunCashier =
                         canRunCashier,
 
-                    // Legacy property used by the
-                    // current License Management UI.
+                    // Legacy property used by existing UI code.
+                    // A BackOffice-only computer is not a locked Cashier.
                     IsReadOnlyMode =
+                        terminalLicenseRequired &&
                         !canRunCashier
                 };
 
@@ -266,10 +294,53 @@ namespace POS.Core.Services.Licensing
                 importedBy);
         }
 
+        public Task<InstalledLicense>
+            ImportStoreLicenseFileAsync(
+                string filePath,
+                string importedBy)
+        {
+            return ImportLicenseFileAsync(
+                filePath,
+                importedBy,
+                requiredType: LicenseType.StoreLicense);
+        }
+
+        public Task<InstalledLicense>
+            ImportTerminalLicenseForRegisteredTerminalAsync(
+                string filePath,
+                string terminalNo,
+                string machineCode,
+                string importedBy)
+        {
+            string safeTerminalNo =
+                NormalizeText(terminalNo);
+
+            string safeMachineCode =
+                NormalizeText(machineCode)
+                    .ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(safeTerminalNo) ||
+                string.IsNullOrWhiteSpace(safeMachineCode))
+            {
+                throw new InvalidOperationException(
+                    "Select a registered terminal with a machine assignment first.");
+            }
+
+            return ImportLicenseFileAsync(
+                filePath,
+                importedBy,
+                expectedTerminalNo: safeTerminalNo,
+                expectedMachineCode: safeMachineCode,
+                requiredType: LicenseType.TerminalLicense);
+        }
+
         public async Task<InstalledLicense>
             ImportLicenseFileAsync(
                 string filePath,
-                string importedBy)
+                string importedBy,
+                string? expectedTerminalNo = null,
+                string? expectedMachineCode = null,
+                LicenseType? requiredType = null)
         {
             var result =
                 await _licenseFileService
@@ -281,6 +352,18 @@ namespace POS.Core.Services.Licensing
 
             ValidateLicenseDocumentForImport(
                 document);
+
+            if (requiredType.HasValue &&
+                document.LicenseType != requiredType.Value)
+            {
+                string expectedText =
+                    requiredType == LicenseType.StoreLicense
+                        ? "store"
+                        : "terminal";
+
+                throw new InvalidOperationException(
+                    $"The selected file is not a {expectedText} licence.");
+            }
 
             if (!_licenseSignatureService
                     .IsPublicKeyConfigured())
@@ -313,11 +396,16 @@ namespace POS.Core.Services.Licensing
             }
 
             string currentMachineCode =
-                _machineFingerprintService
-                    .GetMachineCode();
+                string.IsNullOrWhiteSpace(expectedMachineCode)
+                    ? _machineFingerprintService
+                        .GetMachineCode()
+                    : expectedMachineCode.Trim()
+                        .ToUpperInvariant();
 
             string currentTerminalNo =
-                await GetCurrentTerminalNoAsync();
+                string.IsNullOrWhiteSpace(expectedTerminalNo)
+                    ? await GetCurrentTerminalNoAsync()
+                    : expectedTerminalNo.Trim();
 
             if (document.IsStoreLicense)
             {
@@ -365,10 +453,15 @@ namespace POS.Core.Services.Licensing
                         StringComparison
                             .OrdinalIgnoreCase))
                 {
+                    string targetText =
+                        string.IsNullOrWhiteSpace(expectedTerminalNo)
+                            ? "this computer"
+                            : $"selected terminal '{currentTerminalNo}'";
+
                     throw new InvalidOperationException(
                         "The selected terminal licence was created for " +
-                        $"machine '{document.MachineCode}', but this " +
-                        $"computer requires '{currentMachineCode}'.");
+                        $"machine '{document.MachineCode}', but {targetText} " +
+                        $"requires '{currentMachineCode}'.");
                 }
 
                 if (!string.Equals(
@@ -377,11 +470,15 @@ namespace POS.Core.Services.Licensing
                         StringComparison
                             .OrdinalIgnoreCase))
                 {
+                    string targetText =
+                        string.IsNullOrWhiteSpace(expectedTerminalNo)
+                            ? "this computer"
+                            : "the selected terminal";
+
                     throw new InvalidOperationException(
-                        $"This license is for terminal " +
+                        $"This licence is for terminal " +
                         $"'{document.TerminalNo}', but " +
-                        $"this computer is configured as " +
-                        $"terminal '{currentTerminalNo}'.");
+                        $"{targetText} is terminal '{currentTerminalNo}'.");
                 }
 
                 InstalledLicense? storeLicense =
@@ -541,7 +638,7 @@ namespace POS.Core.Services.Licensing
             LicenseSummary summary =
                 await GetCurrentLicenseSummaryAsync();
 
-            return !summary.CanRunCashier;
+            return summary.IsReadOnlyMode;
         }
 
         public async Task<bool>
@@ -836,165 +933,102 @@ namespace POS.Core.Services.Licensing
                 document.Signature;
         }
 
-        private static LicenseStatus
-            CalculateOverallStatus(
-                LicenseStatus storeStatus,
-                LicenseStatus terminalStatus)
-        {
-            if (storeStatus ==
-                    LicenseStatus.Invalid ||
-                storeStatus ==
-                    LicenseStatus.Revoked)
-            {
-                return storeStatus;
-            }
-
-            if (storeStatus ==
-                LicenseStatus.Missing)
-            {
-                return LicenseStatus.Missing;
-            }
-
-            if (storeStatus ==
-                LicenseStatus.ExpiredReadOnly)
-            {
-                return LicenseStatus
-                    .ExpiredReadOnly;
-            }
-
-            if (terminalStatus ==
-                    LicenseStatus.Invalid ||
-                terminalStatus ==
-                    LicenseStatus.Revoked)
-            {
-                return terminalStatus;
-            }
-
-            if (terminalStatus ==
-                LicenseStatus.Missing)
-            {
-                return LicenseStatus.Missing;
-            }
-
-            if (terminalStatus ==
-                LicenseStatus.ExpiredReadOnly)
-            {
-                return LicenseStatus
-                    .ExpiredReadOnly;
-            }
-
-            if (storeStatus ==
-                    LicenseStatus.ExpiringSoon ||
-                terminalStatus ==
-                    LicenseStatus.ExpiringSoon)
-            {
-                return LicenseStatus
-                    .ExpiringSoon;
-            }
-
-            return LicenseStatus.Active;
-        }
-
-        private static bool CanRunCashier(
-            LicenseStatus storeStatus,
-            LicenseStatus terminalStatus)
-        {
-            return LicenseRepository
-                       .IsOperationalStatus(
-                           storeStatus) &&
-                   LicenseRepository
-                       .IsOperationalStatus(
-                           terminalStatus);
-        }
-
         private static void ApplyStatusMessage(
             LicenseSummary summary)
         {
+            if (!summary.TerminalLicenseRequired)
+            {
+                summary.StatusMessage =
+                    summary.StoreLicenseStatus switch
+                    {
+                        LicenseStatus.Active =>
+                            "Store licence is active. This computer is BackOffice-only; a terminal licence is not required here.",
+                        LicenseStatus.ExpiringSoon =>
+                            $"Store licence expires in {Math.Max(summary.StoreDaysRemaining, 0)} day(s). BackOffice remains available; this computer does not require a terminal licence.",
+                        LicenseStatus.GracePeriod =>
+                            "A legacy store-licence grace state is installed. BackOffice remains available for recovery and renewal. This computer does not require a terminal licence.",
+                        LicenseStatus.ExpiredReadOnly =>
+                            "The store licence has expired. BackOffice remains available for administration, backup, reports, and renewal. This computer does not require a terminal licence.",
+                        LicenseStatus.Missing =>
+                            "The store licence is missing. BackOffice remains available for licence import and administration. This computer does not require a terminal licence.",
+                        LicenseStatus.Invalid =>
+                            "The installed store licence is invalid. BackOffice remains available for recovery and renewal.",
+                        LicenseStatus.Revoked =>
+                            "The installed store licence was replaced or deactivated. BackOffice remains available for recovery and renewal.",
+                        _ =>
+                            "Store licence status could not be determined. BackOffice remains available."
+                    };
+
+                summary.StatusColor =
+                    summary.StoreLicenseStatus switch
+                    {
+                        LicenseStatus.Active => "#10B981",
+                        LicenseStatus.ExpiringSoon => "#F59E0B",
+                        _ => "#EF4444"
+                    };
+
+                return;
+            }
+
+            if (!summary.CurrentTerminalEnabled)
+            {
+                summary.StatusMessage =
+                    "This Cashier terminal is disabled. BackOffice remains available; enable the terminal from Terminal Management before using Cashier.";
+                summary.StatusColor = "#EF4444";
+                return;
+            }
+
             switch (summary.OverallStatus)
             {
                 case LicenseStatus.Active:
                     summary.StatusMessage =
-                        "License is active. " +
-                        "BackOffice and Cashier " +
-                        "are available.";
-
-                    summary.StatusColor =
-                        "#10B981";
+                        "Store and current terminal licences are active. BackOffice and Cashier are available.";
+                    summary.StatusColor = "#10B981";
                     break;
 
                 case LicenseStatus.ExpiringSoon:
                     int days = Math.Min(
-                        Math.Max(
-                            summary.StoreDaysRemaining,
-                            0),
-                        Math.Max(
-                            summary
-                                .TerminalDaysRemaining,
-                            0));
-
+                        Math.Max(summary.StoreDaysRemaining, 0),
+                        Math.Max(summary.TerminalDaysRemaining, 0));
                     summary.StatusMessage =
-                        $"License expires in " +
-                        $"{days} day(s). Renew " +
-                        $"before expiry. BackOffice " +
-                        $"and Cashier remain available.";
+                        $"A required licence expires in {days} day(s). Renew before expiry. BackOffice and Cashier remain available.";
+                    summary.StatusColor = "#F59E0B";
+                    break;
 
-                    summary.StatusColor =
-                        "#F59E0B";
+                case LicenseStatus.GracePeriod:
+                    summary.StatusMessage =
+                        "A legacy licence grace state is installed. Cashier is locked until a current annual licence is imported. BackOffice remains available.";
+                    summary.StatusColor = "#EF4444";
                     break;
 
                 case LicenseStatus.ExpiredReadOnly:
                     summary.StatusMessage =
-                        "The annual license has " +
-                        "expired. Cashier is locked. " +
-                        "BackOffice remains fully " +
-                        "available for administration, " +
-                        "backup, reports, and renewal.";
-
-                    summary.StatusColor =
-                        "#EF4444";
+                        "A required annual licence has expired. Cashier is locked. BackOffice remains available for administration, backup, reports, and renewal.";
+                    summary.StatusColor = "#EF4444";
                     break;
 
                 case LicenseStatus.Missing:
                     summary.StatusMessage =
-                        "Required store or terminal " +
-                        "license is missing. Cashier " +
-                        "is locked. BackOffice remains " +
-                        "available.";
-
-                    summary.StatusColor =
-                        "#EF4444";
+                        "The store licence or this terminal's licence is missing. Cashier is locked. BackOffice remains available.";
+                    summary.StatusColor = "#EF4444";
                     break;
 
                 case LicenseStatus.Invalid:
                     summary.StatusMessage =
-                        "The installed license is " +
-                        "invalid or belongs to another " +
-                        "store. Cashier is locked. " +
-                        "BackOffice remains available.";
-
-                    summary.StatusColor =
-                        "#EF4444";
+                        "A required licence is invalid or belongs to another store or terminal. Cashier is locked. BackOffice remains available.";
+                    summary.StatusColor = "#EF4444";
                     break;
 
                 case LicenseStatus.Revoked:
                     summary.StatusMessage =
-                        "The installed license was " +
-                        "replaced or deactivated. " +
-                        "Cashier is locked. BackOffice " +
-                        "remains available.";
-
-                    summary.StatusColor =
-                        "#EF4444";
+                        "A required licence was replaced or deactivated. Cashier is locked. BackOffice remains available.";
+                    summary.StatusColor = "#EF4444";
                     break;
 
                 default:
                     summary.StatusMessage =
-                        "License status could not be " +
-                        "determined. Cashier is locked. " +
-                        "BackOffice remains available.";
-
-                    summary.StatusColor =
-                        "#EF4444";
+                        "Licence status could not be determined. Cashier is locked. BackOffice remains available.";
+                    summary.StatusColor = "#EF4444";
                     break;
             }
         }

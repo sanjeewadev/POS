@@ -4,55 +4,71 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="760"
+             d:DesignHeight="780"
              d:DesignWidth="1280"
              Background="{DynamicResource WindowBackgroundBrush}"
              FontFamily="Segoe UI"
              FontSize="12">
 
     <UserControl.Resources>
+        <Style x:Key="SectionBorder" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
 
-        <Style TargetType="TextBlock" x:Key="HeaderLabel">
+        <Style x:Key="SectionHeading" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Margin" Value="0,0,0,7"/>
         </Style>
 
-        <Style TargetType="TextBlock" x:Key="InlineLabel">
-            <Setter Property="FontSize" Value="11"/>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
         </Style>
 
-        <Style TargetType="TextBox" x:Key="ClassicInput">
-            <Setter Property="Height" Value="25"/>
-            <Setter Property="Padding" Value="5,0"/>
+        <Style x:Key="HelpText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <Style x:Key="ReadOnlyBox" TargetType="TextBox">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="6,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-            <Style.Triggers>
-                <Trigger Property="IsReadOnly" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="Button" x:Key="ClassicBtn">
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="MinWidth" Value="105"/>
+            <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="ClassicCombo" TargetType="ComboBox">
+            <Setter Property="Height" Value="27"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="ClassicButton" TargetType="Button">
+            <Setter Property="Height" Value="29"/>
+            <Setter Property="MinWidth" Value="115"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
@@ -63,50 +79,26 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="Button" x:Key="ActionBtn" BasedOn="{StaticResource ClassicBtn}">
+        <Style x:Key="PrimaryButton"
+               TargetType="Button"
+               BasedOn="{StaticResource ClassicButton}">
             <Setter Property="Background" Value="{DynamicResource ActionBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource WhiteBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
-            <Setter Property="MinWidth" Value="135"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource ActionHoverBrush}"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ActionBackgroundBrush}"/>
         </Style>
 
-        <Style TargetType="Border" x:Key="ClassicGroupBox">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
-            <Setter Property="Padding" Value="10"/>
-        </Style>
-
-        <Style TargetType="Border" x:Key="ReadOnlyValueBox">
+        <Style x:Key="StatusBox" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource LightBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="MinHeight" Value="25"/>
+            <Setter Property="Padding" Value="8"/>
         </Style>
-
-        <Style TargetType="TextBlock" x:Key="ValueText">
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-        </Style>
-
-        <Style TargetType="TextBlock" x:Key="HelpText">
-            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-        </Style>
-
     </UserControl.Resources>
 
     <Grid Margin="5">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="5"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="5"/>
             <RowDefinition Height="*"/>
@@ -114,435 +106,248 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- HEADER -->
-        <Border Grid.Row="0"
-                Style="{StaticResource ClassicGroupBox}">
+        <Border Grid.Row="0" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Margin="0,0,20,0">
-                    <TextBlock Text="1. LICENSE MANAGEMENT"
-                               Style="{StaticResource HeaderLabel}"/>
-                    <TextBlock Text="Offline annual store and terminal licensing"
+                <StackPanel>
+                    <TextBlock Text="1. LICENCE MANAGEMENT"
+                               Style="{StaticResource SectionHeading}"
+                               Margin="0,0,0,3"/>
+                    <TextBlock Text="One store licence protects the store. Each computer that runs Cashier uses one registered, machine-bound terminal licence."
                                Style="{StaticResource HelpText}"/>
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="{Binding StatusColor}"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Margin="0,5,0,0"/>
                 </StackPanel>
-
-                <TextBlock Grid.Column="1"
-                           Text="{Binding StatusMessage}"
-                           Foreground="{Binding StatusColor}"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap"
-                           Margin="10,0,15,0"/>
-
-                <Border Grid.Column="2"
-                        Background="{DynamicResource WhiteBackgroundBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1"
-                        Padding="12,5"
-                        MinWidth="175">
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Center">
-                        <TextBlock Text="OVERALL: "
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
-                        <TextBlock Text="{Binding OverallStatus}"
-                                   Foreground="{Binding OverallStatusColor}"
-                                   FontWeight="Bold"/>
-                    </StackPanel>
-                </Border>
+                <Button Grid.Column="1"
+                        Content="REFRESH"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource ClassicButton}"
+                        VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <!-- BODY -->
-        <ScrollViewer Grid.Row="2"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Auto">
+        <Border Grid.Row="2" Style="{StaticResource SectionBorder}">
             <StackPanel>
-
-                <!-- OPERATING STATUS -->
-                <Border Style="{StaticResource ClassicGroupBox}"
-                        Margin="0,0,0,5">
-                    <StackPanel>
-                        <TextBlock Text="2. OPERATING STATUS"
-                                   Style="{StaticResource HeaderLabel}"/>
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="5"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="5"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="5"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Border Grid.Column="0" Style="{StaticResource ReadOnlyValueBox}">
-                                <StackPanel>
-                                    <TextBlock Text="Overall License" Style="{StaticResource InlineLabel}"/>
-                                    <TextBlock Text="{Binding OverallStatus}"
-                                               Foreground="{Binding OverallStatusColor}"
-                                               FontSize="14"
-                                               FontWeight="Bold"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="2" Style="{StaticResource ReadOnlyValueBox}">
-                                <StackPanel>
-                                    <TextBlock Text="Operating Mode" Style="{StaticResource InlineLabel}"/>
-                                    <TextBlock FontSize="14" FontWeight="Bold">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Operational"/>
-                                                <Setter Property="Foreground" Value="#008000"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsReadOnlyMode}" Value="True">
-                                                        <Setter Property="Text" Value="Cashier Locked"/>
-                                                        <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="4" Style="{StaticResource ReadOnlyValueBox}">
-                                <StackPanel>
-                                    <TextBlock Text="BackOffice" Style="{StaticResource InlineLabel}"/>
-                                    <TextBlock FontSize="14" FontWeight="Bold">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Blocked"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding CanRunBackOffice}" Value="True">
-                                                        <Setter Property="Text" Value="Allowed"/>
-                                                        <Setter Property="Foreground" Value="#008000"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="6" Style="{StaticResource ReadOnlyValueBox}">
-                                <StackPanel>
-                                    <TextBlock Text="Cashier Terminal" Style="{StaticResource InlineLabel}"/>
-                                    <TextBlock FontSize="14" FontWeight="Bold">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Blocked"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding CanRunCashier}" Value="True">
-                                                        <Setter Property="Text" Value="Allowed"/>
-                                                        <Setter Property="Foreground" Value="#008000"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- STORE AND TERMINAL LICENSES -->
-                <Grid Margin="0,0,0,5">
+                <TextBlock Text="2. OPERATING STATUS" Style="{StaticResource SectionHeading}"/>
+                <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="5"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="5"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Grid.Column="0" Style="{StaticResource ClassicGroupBox}">
+                    <Border Grid.Column="0" Style="{StaticResource StatusBox}">
                         <StackPanel>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="3. STORE LICENSE"
-                                           Style="{StaticResource HeaderLabel}"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding LicenseStatus}"
-                                           Foreground="{Binding StoreLicenseStatusColor}"
-                                           FontWeight="Bold"
-                                           VerticalAlignment="Top"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Store ID" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding StoreId}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Current Store Name" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding CurrentStoreName}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Licensed Store Name" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding LicensedStoreName}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Border Background="{DynamicResource HighlightBackgroundBrush}"
-                                    BorderBrush="{DynamicResource LightBorderBrush}"
-                                    BorderThickness="1"
-                                    Padding="7"
-                                    Margin="0,0,0,5">
-                                <TextBlock Text="{Binding StoreNameIdentityMessage}"
-                                           Foreground="{Binding StoreNameIdentityColor}"
-                                           TextWrapping="Wrap"/>
-                            </Border>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="License ID" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding LicenseId}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Expiry Date" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding ExpiryDate}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Days Remaining" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding DaysRemaining}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
+                            <TextBlock Text="Store Licence" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding StoreLicenseStatus}"
+                                       Foreground="{Binding StoreLicenseStatusColor}"
+                                       FontSize="14"
+                                       FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Column="2" Style="{StaticResource ClassicGroupBox}">
+                    <Border Grid.Column="2" Style="{StaticResource StatusBox}">
                         <StackPanel>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="4. TERMINAL LICENSE"
-                                           Style="{StaticResource HeaderLabel}"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding TerminalLicenseStatus}"
-                                           Foreground="{Binding TerminalLicenseStatusColor}"
-                                           FontWeight="Bold"
-                                           VerticalAlignment="Top"/>
-                            </Grid>
+                            <TextBlock Text="Cashier Terminals" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding FleetStatus}"
+                                       Foreground="{Binding FleetStatusColor}"
+                                       FontSize="14"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
 
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Terminal No" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding CurrentTerminalNo}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="License ID" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding TerminalLicenseId}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Expiry Date" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding TerminalExpiryDate}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Grid Margin="0,0,0,7">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="125"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Days Remaining" Style="{StaticResource InlineLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding TerminalDaysRemaining}"
-                                         IsReadOnly="True"
-                                         Style="{StaticResource ClassicInput}"/>
-                            </Grid>
-
-                            <Border Background="{DynamicResource HighlightBackgroundBrush}"
-                                    BorderBrush="{DynamicResource LightBorderBrush}"
-                                    BorderThickness="1"
-                                    Padding="7">
-                                <TextBlock Text="Only cashier or selling computers require an active terminal license. BackOffice remains available for administration and renewal."
-                                           Style="{StaticResource HelpText}"/>
-                            </Border>
+                    <Border Grid.Column="4" Style="{StaticResource StatusBox}">
+                        <StackPanel>
+                            <TextBlock Text="This Computer" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding CurrentComputerRole}"
+                                       Foreground="{DynamicResource HeaderTextBrush}"
+                                       FontSize="14"
+                                       FontWeight="Bold"/>
+                            <TextBlock Text="{Binding CurrentComputerRequirement}"
+                                       Style="{StaticResource HelpText}"
+                                       Margin="0,3,0,0"/>
+                            <TextBlock Text="BackOffice: Available"
+                                       Foreground="#15803D"
+                                       FontWeight="SemiBold"
+                                       Margin="0,3,0,0"/>
                         </StackPanel>
                     </Border>
                 </Grid>
-
-                <!-- CURRENT MACHINE AND REQUEST -->
-                <Border Style="{StaticResource ClassicGroupBox}">
-                    <StackPanel>
-                        <TextBlock Text="5. CURRENT MACHINE AND LICENSE REQUEST"
-                                   Style="{StaticResource HeaderLabel}"/>
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="5"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0">
-                                <Grid Margin="0,0,0,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="125"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Machine Name" Style="{StaticResource InlineLabel}"/>
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding CurrentMachineName}"
-                                             IsReadOnly="True"
-                                             Style="{StaticResource ClassicInput}"/>
-                                </Grid>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="125"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Machine Code" Style="{StaticResource InlineLabel}"/>
-                                    <TextBox Grid.Column="1"
-                                             Text="{Binding CurrentMachineCode}"
-                                             IsReadOnly="True"
-                                             FontWeight="Bold"
-                                             Style="{StaticResource ClassicInput}"/>
-                                </Grid>
-                            </StackPanel>
-
-                            <Border Grid.Column="2"
-                                    Background="{DynamicResource WhiteBackgroundBrush}"
-                                    BorderBrush="{DynamicResource LightBorderBrush}"
-                                    BorderThickness="1"
-                                    Padding="8">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Text="Create licence requests here. Store Settings supplies the operational store name automatically; do not type it again in the License Generator."
-                                               Style="{StaticResource HelpText}"
-                                               Margin="0,0,0,8"/>
-                                    <WrapPanel Grid.Row="1">
-                                        <Button Content="COPY STORE LICENCE REQUEST"
-                                                Command="{Binding CopyStoreLicenseRequestCommand}"
-                                                Style="{StaticResource ClassicBtn}"
-                                                Margin="0,0,8,6"/>
-                                        <Button Content="COPY TERMINAL LICENCE REQUEST"
-                                                Command="{Binding CopyTerminalLicenseRequestCommand}"
-                                                Style="{StaticResource ClassicBtn}"
-                                                Margin="0,0,8,6"/>
-                                        <Button Content="COPY MACHINE CODE"
-                                                Command="{Binding CopyMachineCodeCommand}"
-                                                Style="{StaticResource ClassicBtn}"
-                                                Margin="0,0,0,6"/>
-                                    </WrapPanel>
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
             </StackPanel>
-        </ScrollViewer>
+        </Border>
 
-        <!-- ACTION BAR -->
-        <Border Grid.Row="4"
-                Style="{StaticResource ClassicGroupBox}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.9*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="1.1*"/>
+            </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="LICENSE ACTIONS"
-                               Style="{StaticResource HeaderLabel}"
-                               Margin="0,0,0,2"/>
-                    <TextBlock Text="Import a signed .poslic store or terminal license. Import the store license first, then the matching terminal license."
-                               Style="{StaticResource HelpText}"/>
-                </StackPanel>
+            <Border Grid.Column="0" Style="{StaticResource SectionBorder}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <Button Content="REFRESH"
-                            Command="{Binding RefreshCommand}"
-                            Style="{StaticResource ClassicBtn}"
-                            Margin="0,0,8,0"/>
-                    <Button Content="IMPORT LICENSE"
-                            Command="{Binding ImportLicenseCommand}"
-                            Style="{StaticResource ActionBtn}"/>
-                </StackPanel>
-            </Grid>
+                    <TextBlock Text="3. STORE LICENCE" Style="{StaticResource SectionHeading}"/>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Store ID" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Column="1" Text="{Binding StoreId}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Row="1" Text="Current Store Name" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CurrentStoreName}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Row="2" Text="Licensed Store Name" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding LicensedStoreName}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Row="3" Text="Licence ID" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding StoreLicenseId}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Row="4" Text="Expiry Date" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding StoreExpiryDate}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Row="5" Text="Days Remaining" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding StoreDaysRemaining}" Style="{StaticResource ReadOnlyBox}"/>
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Margin="0,8,0,0">
+                        <Border Background="{DynamicResource HighlightBackgroundBrush}"
+                                BorderBrush="{DynamicResource LightBorderBrush}"
+                                BorderThickness="1"
+                                Padding="7"
+                                Margin="0,0,0,8">
+                            <TextBlock Text="{Binding StoreNameIdentityMessage}"
+                                       Foreground="{Binding StoreNameIdentityColor}"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+                        <WrapPanel>
+                            <Button Content="COPY STORE LICENCE REQUEST"
+                                    Command="{Binding CopyStoreLicenseRequestCommand}"
+                                    Style="{StaticResource ClassicButton}"
+                                    Margin="0,0,8,0"/>
+                            <Button Content="IMPORT STORE LICENCE"
+                                    Command="{Binding ImportStoreLicenseCommand}"
+                                    Style="{StaticResource PrimaryButton}"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource SectionBorder}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="4. CASHIER TERMINAL LICENCE" Style="{StaticResource SectionHeading}"/>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Select Terminal" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding CashierTerminals}"
+                                  SelectedItem="{Binding SelectedTerminal, Mode=TwoWay}"
+                                  DisplayMemberPath="SelectionText"
+                                  Style="{StaticResource ClassicCombo}"/>
+                    </Grid>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="18"/>
+                            <ColumnDefinition Width="115"/>
+                            <ColumnDefinition Width="180"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                            <RowDefinition Height="31"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Terminal" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Column="1" Text="{Binding SelectedTerminalNo}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Column="3" Text="Name" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Column="4" Text="{Binding SelectedTerminalName}" Style="{StaticResource ReadOnlyBox}"/>
+
+                        <TextBlock Grid.Row="1" Text="Machine" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SelectedMachineName}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="3" Text="Registration" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="1" Grid.Column="4" Text="{Binding SelectedRegistrationStatus}" Style="{StaticResource ReadOnlyBox}"/>
+
+                        <TextBlock Grid.Row="2" Text="Machine Code" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding SelectedMachineCode}" FontWeight="Bold" Style="{StaticResource ReadOnlyBox}"/>
+
+                        <TextBlock Grid.Row="3" Text="Licence Status" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SelectedLicenseStatus}" Style="{StaticResource ReadOnlyBox}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="3" Text="Expiry" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="3" Grid.Column="4" Text="{Binding SelectedLicenseExpiry}" Style="{StaticResource ReadOnlyBox}"/>
+
+                        <TextBlock Grid.Row="4" Text="Licence ID" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding SelectedLicenseId}" Style="{StaticResource ReadOnlyBox}"/>
+
+                        <TextBlock Grid.Row="5" Text="Last Seen" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding SelectedLastSeen}" Style="{StaticResource ReadOnlyBox}"/>
+                    </Grid>
+
+                    <StackPanel Grid.Row="3" Margin="0,8,0,0">
+                        <TextBlock Text="The selected .poslic file must match the Store ID, terminal number, and machine code shown above."
+                                   Style="{StaticResource HelpText}"
+                                   Margin="0,0,0,8"/>
+                        <WrapPanel>
+                            <Button Content="COPY TERMINAL LICENCE REQUEST"
+                                    Command="{Binding CopySelectedTerminalLicenseRequestCommand}"
+                                    IsEnabled="{Binding CanUseSelectedTerminalActions}"
+                                    Style="{StaticResource ClassicButton}"
+                                    Margin="0,0,8,6"/>
+                            <Button Content="COPY MACHINE CODE"
+                                    Command="{Binding CopySelectedMachineCodeCommand}"
+                                    IsEnabled="{Binding CanUseSelectedTerminalActions}"
+                                    Style="{StaticResource ClassicButton}"
+                                    Margin="0,0,8,6"/>
+                            <Button Content="IMPORT TERMINAL LICENCE"
+                                    Command="{Binding ImportSelectedTerminalLicenseCommand}"
+                                    IsEnabled="{Binding CanUseSelectedTerminalActions}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Margin="0,0,0,6"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="6" Style="{StaticResource SectionBorder}">
+            <TextBlock Text="Terminal registration, naming, enable/disable, and computer replacement are managed on Terminal Management. Printer, drawer, and auto-lock settings remain local to each Cashier computer."
+                       Style="{StaticResource HelpText}"/>
         </Border>
     </Grid>
 </UserControl>

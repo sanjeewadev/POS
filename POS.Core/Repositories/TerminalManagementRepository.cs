@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -325,6 +325,161 @@ namespace POS.Core.Repositories
                         terminal =>
                             terminal.Id ==
                                 entity.Id);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<RegisteredTerminal>
+            AssignCurrentMachineAsync(
+                string terminalNo,
+                string terminalName,
+                string updatedBy)
+        {
+            string safeTerminalNo = NormalizeText(terminalNo);
+            string safeTerminalName = NormalizeTerminalName(
+                terminalName,
+                safeTerminalNo);
+            string machineCode = NormalizeMachineCode(
+                _machineFingerprintService.GetMachineCode());
+            string machineName = NormalizeText(
+                _machineFingerprintService.GetMachineName());
+
+            if (string.IsNullOrWhiteSpace(safeTerminalNo))
+            {
+                throw new InvalidOperationException(
+                    "Terminal number is required.");
+            }
+
+            if (safeTerminalNo.Length > 20)
+            {
+                throw new InvalidOperationException(
+                    "Terminal number cannot exceed 20 characters.");
+            }
+
+            if (string.IsNullOrWhiteSpace(machineCode) ||
+                string.IsNullOrWhiteSpace(machineName))
+            {
+                throw new InvalidOperationException(
+                    "The current computer identity is unavailable.");
+            }
+
+            await using AppDbContext context =
+                await _contextFactory.CreateDbContextAsync();
+
+            await using var transaction =
+                await context.Database.BeginTransactionAsync(
+                    System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                RegisteredTerminal? target =
+                    await context.RegisteredTerminals
+                        .FirstOrDefaultAsync(item =>
+                            item.TerminalNo == safeTerminalNo);
+
+                RegisteredTerminal? currentMachineTerminal =
+                    await context.RegisteredTerminals
+                        .FirstOrDefaultAsync(item =>
+                            item.MachineCode == machineCode);
+
+                if (currentMachineTerminal != null &&
+                    (target == null ||
+                     currentMachineTerminal.Id != target.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"This computer is already assigned to terminal " +
+                        $"'{currentMachineTerminal.TerminalNo}'. Release that " +
+                        "assignment before selecting another terminal number.");
+                }
+
+                if (target != null &&
+                    !string.IsNullOrWhiteSpace(target.MachineCode) &&
+                    !string.Equals(
+                        NormalizeMachineCode(target.MachineCode),
+                        machineCode,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Terminal '{safeTerminalNo}' is assigned to " +
+                        $"'{target.MachineName}'. Use RELEASE COMPUTER from " +
+                        "Terminal Management before assigning it here.");
+                }
+
+                DateTime now = DateTime.Now;
+                string safeUpdatedBy = NormalizeText(updatedBy);
+
+                if (target == null)
+                {
+                    target = new RegisteredTerminal
+                    {
+                        TerminalNo = safeTerminalNo,
+                        CreatedAt = now
+                    };
+                    await context.RegisteredTerminals.AddAsync(target);
+                }
+
+                target.TerminalName = safeTerminalName;
+                target.MachineName = machineName;
+                target.MachineCode = machineCode;
+                target.IsCashierTerminal = true;
+                target.IsBackOfficeAllowed = true;
+                target.IsActive = true;
+                target.UpdatedAt = now;
+                target.UpdatedBy = safeUpdatedBy;
+                target.Remarks = AppendRemark(
+                    target.Remarks,
+                    "Cashier enabled on the current computer.");
+
+                TerminalSettings? settings =
+                    await context.TerminalSettings
+                        .FirstOrDefaultAsync(item =>
+                            item.MachineName == machineName);
+
+                settings ??=
+                    await context.TerminalSettings
+                        .FirstOrDefaultAsync(item =>
+                            item.TerminalNo == safeTerminalNo);
+
+                if (settings != null &&
+                    !string.IsNullOrWhiteSpace(settings.MachineName) &&
+                    !string.Equals(
+                        settings.MachineName,
+                        machineName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Terminal settings for '{safeTerminalNo}' are still " +
+                        $"assigned to '{settings.MachineName}'. Release the " +
+                        "old computer before continuing.");
+                }
+
+                if (settings == null)
+                {
+                    settings = TerminalSettingsRepository
+                        .CreateDefaultSettings(
+                            safeTerminalNo,
+                            machineName);
+                    settings.CreatedAt = now;
+                    await context.TerminalSettings.AddAsync(settings);
+                }
+
+                settings.TerminalNo = safeTerminalNo;
+                settings.TerminalName = safeTerminalName;
+                settings.MachineName = machineName;
+                settings.IsActive = true;
+                settings.UpdatedAt = now;
+                settings.UpdatedBy = safeUpdatedBy;
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return await context.RegisteredTerminals
+                    .AsNoTracking()
+                    .FirstAsync(item => item.Id == target.Id);
             }
             catch
             {
@@ -780,6 +935,12 @@ namespace POS.Core.Repositories
 
                 UpdatedAt =
                     terminal.UpdatedAt,
+
+                LastLoginAt =
+                    terminal.LastLoginAt,
+
+                LastSaleAt =
+                    terminal.LastSaleAt,
 
                 UpdatedBy =
                     terminal.UpdatedBy

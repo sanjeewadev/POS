@@ -97,6 +97,21 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusColor = "#666666";
 
+        [ObservableProperty]
+        private string _registeredSummary = "0";
+
+        [ObservableProperty]
+        private string _enabledSummary = "0";
+
+        [ObservableProperty]
+        private string _readySummary = "0";
+
+        [ObservableProperty]
+        private string _attentionSummary = "0";
+
+        [ObservableProperty]
+        private string _lastSeenText = "-";
+
         public bool HasSelectedTerminal =>
             SelectedTerminal != null;
 
@@ -107,6 +122,14 @@ namespace POS.BackOffice.UI.ViewModels
         public bool CanManageSelected =>
             CanManage &&
             HasSelectedTerminal;
+
+        public bool CanEnableSelected =>
+            CanManageSelected &&
+            SelectedTerminal?.IsActive == false;
+
+        public bool CanDisableSelected =>
+            CanManageSelected &&
+            SelectedTerminal?.IsActive == true;
 
         public bool CanReleaseSelected =>
             CanManageSelected &&
@@ -128,11 +151,10 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(
                 nameof(CanManageSelected));
 
-            OnPropertyChanged(
-                nameof(CanReleaseSelected));
-
-            OnPropertyChanged(
-                nameof(CanCopyLicenseRequest));
+            OnPropertyChanged(nameof(CanEnableSelected));
+            OnPropertyChanged(nameof(CanDisableSelected));
+            OnPropertyChanged(nameof(CanReleaseSelected));
+            OnPropertyChanged(nameof(CanCopyLicenseRequest));
         }
 
         partial void OnIsAdministratorChanged(
@@ -144,8 +166,9 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(
                 nameof(CanManageSelected));
 
-            OnPropertyChanged(
-                nameof(CanReleaseSelected));
+            OnPropertyChanged(nameof(CanEnableSelected));
+            OnPropertyChanged(nameof(CanDisableSelected));
+            OnPropertyChanged(nameof(CanReleaseSelected));
         }
 
         partial void OnIsBusyChanged(
@@ -157,11 +180,10 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(
                 nameof(CanManageSelected));
 
-            OnPropertyChanged(
-                nameof(CanReleaseSelected));
-
-            OnPropertyChanged(
-                nameof(CanCopyLicenseRequest));
+            OnPropertyChanged(nameof(CanEnableSelected));
+            OnPropertyChanged(nameof(CanDisableSelected));
+            OnPropertyChanged(nameof(CanReleaseSelected));
+            OnPropertyChanged(nameof(CanCopyLicenseRequest));
         }
 
         [RelayCommand]
@@ -198,13 +220,12 @@ namespace POS.BackOffice.UI.ViewModels
 
                 SelectedTerminal =
                     Terminals.FirstOrDefault(
-                        terminal =>
-                            terminal.Id ==
-                                selectedId)
+                        terminal => terminal.Id == selectedId)
                     ?? Terminals.FirstOrDefault(
-                        terminal =>
-                            terminal.IsCurrentMachine)
+                        terminal => terminal.IsCurrentMachine)
                     ?? Terminals.FirstOrDefault();
+
+                ApplyFleetSummary();
 
                 if (!IsAdministrator)
                 {
@@ -215,13 +236,13 @@ namespace POS.BackOffice.UI.ViewModels
                 else if (Terminals.Count == 0)
                 {
                     SetStatus(
-                        "No terminals are registered. Register this machine to begin.",
+                        "No Cashier terminals are registered. Open Terminal Settings on the computer that will run Cashier.",
                         "#C05A00");
                 }
                 else
                 {
                     SetStatus(
-                        $"{Terminals.Count} terminal record(s) loaded.",
+                        $"{Terminals.Count} Cashier terminal record(s) loaded.",
                         "#008000");
                 }
             }
@@ -247,56 +268,6 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task RefreshAsync()
         {
             await LoadAsync();
-        }
-
-        [RelayCommand]
-        private async Task RegisterCurrentMachineAsync()
-        {
-            if (!EnsureAdministrator() ||
-                IsBusy)
-            {
-                return;
-            }
-
-            try
-            {
-                IsBusy = true;
-
-                SetStatus(
-                    "Registering the current machine...",
-                    "#2B5B84");
-
-                string userName =
-                    GetCurrentUserName();
-
-                var saved =
-                    await _repository
-                        .RegisterOrUpdateCurrentMachineAsync(
-                            userName);
-
-                await ReloadAndSelectAsync(
-                    saved.Id);
-
-                SetStatus(
-                    "Current machine registered successfully.",
-                    "#008000");
-            }
-            catch (Exception ex)
-            {
-                LocalLogService.WriteException(
-                    "BackOffice",
-                    "Register current terminal",
-                    ex);
-
-                SetStatus(
-                    $"Current machine registration failed: " +
-                    $"{ex.Message}",
-                    "#B91C1C");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
         }
 
         [RelayCommand]
@@ -360,7 +331,7 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task ActivateTerminalAsync()
+        private async Task EnableTerminalAsync()
         {
             if (!EnsureSelectedTerminal() ||
                 !EnsureAdministrator())
@@ -609,7 +580,7 @@ namespace POS.BackOffice.UI.ViewModels
 
                 SetStatus(
                     isActive
-                        ? "Terminal activated."
+                        ? "Terminal enabled."
                         : "Terminal disabled.",
                     isActive
                         ? "#008000"
@@ -650,10 +621,10 @@ namespace POS.BackOffice.UI.ViewModels
 
             SelectedTerminal =
                 Terminals.FirstOrDefault(
-                    terminal =>
-                        terminal.Id ==
-                            terminalId)
+                    terminal => terminal.Id == terminalId)
                 ?? Terminals.FirstOrDefault();
+
+            ApplyFleetSummary();
         }
 
         private void ApplySelectedTerminal(
@@ -673,6 +644,7 @@ namespace POS.BackOffice.UI.ViewModels
                 RegisteredAtText = "-";
                 UpdatedAtText = "-";
                 UpdatedByText = "-";
+                LastSeenText = "-";
                 return;
             }
 
@@ -707,10 +679,24 @@ namespace POS.BackOffice.UI.ViewModels
                 terminal.UpdatedAtText;
 
             UpdatedByText =
-                string.IsNullOrWhiteSpace(
-                    terminal.UpdatedBy)
+                string.IsNullOrWhiteSpace(terminal.UpdatedBy)
                     ? "-"
                     : terminal.UpdatedBy;
+
+            LastSeenText = terminal.LastSeenText;
+        }
+
+        private void ApplyFleetSummary()
+        {
+            int registered = Terminals.Count;
+            int enabled = Terminals.Count(item => item.IsActive);
+            int ready = Terminals.Count(item => item.IsReady);
+            int attention = Terminals.Count(item => item.RequiresAttention);
+
+            RegisteredSummary = registered.ToString();
+            EnabledSummary = enabled.ToString();
+            ReadySummary = ready.ToString();
+            AttentionSummary = attention.ToString();
         }
 
         private bool EnsureAdministrator()

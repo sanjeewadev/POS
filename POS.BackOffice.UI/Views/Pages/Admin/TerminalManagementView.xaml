@@ -11,183 +11,101 @@
              FontSize="12">
 
     <UserControl.Resources>
-
-        <Style x:Key="SectionBorder"
-               TargetType="Border">
-            <Setter Property="Background"
-                    Value="{DynamicResource PanelBackgroundBrush}"/>
-            <Setter Property="BorderBrush"
-                    Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness"
-                    Value="1"/>
-            <Setter Property="Padding"
-                    Value="10"/>
+        <Style x:Key="SectionBorder" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10"/>
         </Style>
-
-        <Style x:Key="SectionHeading"
-               TargetType="TextBlock">
-            <Setter Property="Foreground"
-                    Value="{DynamicResource HeaderTextBrush}"/>
-            <Setter Property="FontSize"
-                    Value="13"/>
-            <Setter Property="FontWeight"
-                    Value="Bold"/>
-            <Setter Property="Margin"
-                    Value="0,0,0,8"/>
+        <Style x:Key="SectionHeading" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
-
-        <Style x:Key="FieldLabel"
-               TargetType="TextBlock">
-            <Setter Property="Foreground"
-                    Value="{DynamicResource PrimaryTextBrush}"/>
-            <Setter Property="FontWeight"
-                    Value="SemiBold"/>
-            <Setter Property="VerticalAlignment"
-                    Value="Center"/>
-            <Setter Property="Margin"
-                    Value="0,0,8,0"/>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
         </Style>
-
-        <Style x:Key="HelpText"
-               TargetType="TextBlock">
-            <Setter Property="Foreground"
-                    Value="{DynamicResource SecondaryTextBrush}"/>
-            <Setter Property="FontSize"
-                    Value="11"/>
-            <Setter Property="TextWrapping"
-                    Value="Wrap"/>
+        <Style x:Key="HelpText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
-
-        <Style x:Key="ClassicTextBox"
-               TargetType="TextBox">
-            <Setter Property="Height"
-                    Value="27"/>
-            <Setter Property="Padding"
-                    Value="6,0"/>
-            <Setter Property="VerticalContentAlignment"
-                    Value="Center"/>
-            <Setter Property="Background"
-                    Value="{DynamicResource WhiteBackgroundBrush}"/>
-            <Setter Property="Foreground"
-                    Value="{DynamicResource PrimaryTextBrush}"/>
-            <Setter Property="BorderBrush"
-                    Value="{DynamicResource InputBoxBorderBrush}"/>
-            <Setter Property="BorderThickness"
-                    Value="1"/>
+        <Style x:Key="ClassicTextBox" TargetType="TextBox">
+            <Setter Property="Height" Value="27"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
-
-        <Style x:Key="ReadOnlyTextBox"
-               TargetType="TextBox"
-               BasedOn="{StaticResource ClassicTextBox}">
-            <Setter Property="IsReadOnly"
-                    Value="True"/>
-            <Setter Property="Background"
-                    Value="{DynamicResource ButtonDefaultBrush}"/>
+        <Style x:Key="ReadOnlyTextBox" TargetType="TextBox" BasedOn="{StaticResource ClassicTextBox}">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
         </Style>
-
-        <Style x:Key="ClassicButton"
-               TargetType="Button">
-            <Setter Property="Height"
-                    Value="29"/>
-            <Setter Property="MinWidth"
-                    Value="105"/>
-            <Setter Property="Padding"
-                    Value="12,0"/>
-            <Setter Property="Background"
-                    Value="{DynamicResource ButtonDefaultBrush}"/>
-            <Setter Property="Foreground"
-                    Value="{DynamicResource PrimaryTextBrush}"/>
-            <Setter Property="BorderBrush"
-                    Value="{DynamicResource InputBoxBorderBrush}"/>
-            <Setter Property="BorderThickness"
-                    Value="1"/>
-            <Setter Property="FontWeight"
-                    Value="Bold"/>
-            <Setter Property="Cursor"
-                    Value="Hand"/>
+        <Style x:Key="ClassicButton" TargetType="Button">
+            <Setter Property="Height" Value="29"/>
+            <Setter Property="MinWidth" Value="105"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Background" Value="{DynamicResource ButtonDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBoxBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
-                <Trigger Property="IsMouseOver"
-                         Value="True">
-                    <Setter Property="Background"
-                            Value="{DynamicResource ButtonHoverBrush}"/>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ButtonHoverBrush}"/>
                 </Trigger>
-                <Trigger Property="IsEnabled"
-                         Value="False">
-                    <Setter Property="Opacity"
-                            Value="0.55"/>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.55"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
-
-        <Style x:Key="PrimaryButton"
-               TargetType="Button"
-               BasedOn="{StaticResource ClassicButton}">
-            <Setter Property="Background"
-                    Value="{DynamicResource ActionBackgroundBrush}"/>
-            <Setter Property="Foreground"
-                    Value="White"/>
-            <Setter Property="BorderBrush"
-                    Value="{DynamicResource ActionBackgroundBrush}"/>
-            <Setter Property="MinWidth"
-                    Value="145"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver"
-                         Value="True">
-                    <Setter Property="Background"
-                            Value="{DynamicResource ActionHoverBrush}"/>
-                </Trigger>
-            </Style.Triggers>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ClassicButton}">
+            <Setter Property="Background" Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ActionBackgroundBrush}"/>
+            <Setter Property="MinWidth" Value="130"/>
         </Style>
-
-        <Style x:Key="WarningButton"
-               TargetType="Button"
-               BasedOn="{StaticResource ClassicButton}">
-            <Setter Property="Background"
-                    Value="#B91C1C"/>
-            <Setter Property="Foreground"
-                    Value="White"/>
-            <Setter Property="BorderBrush"
-                    Value="#7F1D1D"/>
-            <Setter Property="MinWidth"
-                    Value="120"/>
+        <Style x:Key="WarningButton" TargetType="Button" BasedOn="{StaticResource ClassicButton}">
+            <Setter Property="Background" Value="#B91C1C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#7F1D1D"/>
+            <Setter Property="MinWidth" Value="120"/>
         </Style>
-
-        <Style x:Key="ClassicGrid"
-               TargetType="DataGrid">
-            <Setter Property="Background"
-                    Value="{DynamicResource WhiteBackgroundBrush}"/>
-            <Setter Property="BorderBrush"
-                    Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness"
-                    Value="1"/>
-            <Setter Property="GridLinesVisibility"
-                    Value="All"/>
-            <Setter Property="HorizontalGridLinesBrush"
-                    Value="#D0D0D0"/>
-            <Setter Property="VerticalGridLinesBrush"
-                    Value="#D0D0D0"/>
-            <Setter Property="RowHeight"
-                    Value="27"/>
-            <Setter Property="ColumnHeaderHeight"
-                    Value="28"/>
-            <Setter Property="CanUserAddRows"
-                    Value="False"/>
-            <Setter Property="CanUserDeleteRows"
-                    Value="False"/>
-            <Setter Property="AutoGenerateColumns"
-                    Value="False"/>
-            <Setter Property="SelectionMode"
-                    Value="Single"/>
-            <Setter Property="SelectionUnit"
-                    Value="FullRow"/>
-            <Setter Property="IsReadOnly"
-                    Value="True"/>
+        <Style x:Key="ClassicGrid" TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="GridLinesVisibility" Value="All"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#D0D0D0"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#D0D0D0"/>
+            <Setter Property="RowHeight" Value="27"/>
+            <Setter Property="ColumnHeaderHeight" Value="28"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="SelectionUnit" Value="FullRow"/>
+            <Setter Property="IsReadOnly" Value="True"/>
         </Style>
-
+        <Style x:Key="SummaryBox" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource LightBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,5"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="5">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="5"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="5"/>
             <RowDefinition Height="*"/>
@@ -197,100 +115,93 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 1. HEADER -->
-        <Border Grid.Row="0"
-                Style="{StaticResource SectionBorder}">
+        <Border Grid.Row="0" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
                 <StackPanel>
                     <TextBlock Text="1. TERMINAL MANAGEMENT"
                                Style="{StaticResource SectionHeading}"
                                Margin="0,0,0,3"/>
-
-                    <TextBlock Text="Administrator overview of terminal records stored in this local POS database."
+                    <TextBlock Text="Administrator overview of Cashier terminals registered to this store. Configure the current computer from Terminal Settings."
                                Style="{StaticResource HelpText}"/>
                 </StackPanel>
-
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <Button Content="REGISTER / UPDATE THIS PC"
-                            Command="{Binding RegisterCurrentMachineCommand}"
-                            IsEnabled="{Binding CanManage}"
-                            Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,8,0"/>
-
-                    <Button Content="REFRESH"
-                            Command="{Binding RefreshCommand}"
-                            Style="{StaticResource ClassicButton}"/>
-                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="REFRESH"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource ClassicButton}"
+                        VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <!-- 2. LIST -->
-        <Border Grid.Row="2"
-                Style="{StaticResource SectionBorder}">
+        <Border Grid.Row="2" Style="{StaticResource SectionBorder}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Style="{StaticResource SummaryBox}">
+                    <StackPanel>
+                        <TextBlock Text="Registered" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding RegisteredSummary}" FontSize="16" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource SummaryBox}">
+                    <StackPanel>
+                        <TextBlock Text="Enabled" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding EnabledSummary}" FontSize="16" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="4" Style="{StaticResource SummaryBox}">
+                    <StackPanel>
+                        <TextBlock Text="Ready" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding ReadySummary}" FontSize="16" FontWeight="Bold" Foreground="#15803D"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="6" Style="{StaticResource SummaryBox}">
+                    <StackPanel>
+                        <TextBlock Text="Requires Attention" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding AttentionSummary}" FontSize="16" FontWeight="Bold" Foreground="#B45309"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="4" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-
-                <TextBlock Text="2. REGISTERED TERMINALS"
-                           Style="{StaticResource SectionHeading}"/>
-
+                <TextBlock Text="2. REGISTERED CASHIER TERMINALS" Style="{StaticResource SectionHeading}"/>
                 <DataGrid Grid.Row="1"
                           ItemsSource="{Binding Terminals}"
                           SelectedItem="{Binding SelectedTerminal, Mode=TwoWay}"
                           Style="{StaticResource ClassicGrid}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Terminal"
-                                            Binding="{Binding TerminalNo}"
-                                            Width="75"/>
-
-                        <DataGridTextColumn Header="Name"
-                                            Binding="{Binding TerminalName}"
-                                            Width="180"/>
-
-                        <DataGridTextColumn Header="Machine"
-                                            Binding="{Binding MachineNameDisplay}"
-                                            Width="180"/>
-
-                        <DataGridTextColumn Header="Current PC"
-                                            Binding="{Binding CurrentMachineText}"
-                                            Width="85"/>
-
-                        <DataGridTextColumn Header="Status"
-                                            Binding="{Binding ActiveStatusText}"
-                                            Width="85"/>
-
-                        <DataGridTextColumn Header="License"
-                                            Binding="{Binding LicenseStatusText}"
-                                            Width="110"/>
-
-                        <DataGridTextColumn Header="Expiry"
-                                            Binding="{Binding LicenseExpiryDateText}"
-                                            Width="95"/>
-
-                        <DataGridTextColumn Header="Registered"
-                                            Binding="{Binding RegisteredAtText}"
-                                            Width="140"/>
-
-                        <DataGridTextColumn Header="Machine Code"
-                                            Binding="{Binding MachineCodeDisplay}"
-                                            Width="*"/>
+                        <DataGridTextColumn Header="Terminal" Binding="{Binding TerminalNo}" Width="70"/>
+                        <DataGridTextColumn Header="Name" Binding="{Binding TerminalName}" Width="180"/>
+                        <DataGridTextColumn Header="Machine" Binding="{Binding MachineNameDisplay}" Width="180"/>
+                        <DataGridTextColumn Header="Assignment" Binding="{Binding AssignmentStatusText}" Width="90"/>
+                        <DataGridTextColumn Header="Current PC" Binding="{Binding CurrentMachineText}" Width="80"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding ActiveStatusText}" Width="85"/>
+                        <DataGridTextColumn Header="Licence" Binding="{Binding LicenseStatusText}" Width="105"/>
+                        <DataGridTextColumn Header="Expiry" Binding="{Binding LicenseExpiryDateText}" Width="95"/>
+                        <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeenText}" Width="135"/>
+                        <DataGridTextColumn Header="Machine Code" Binding="{Binding MachineCodeDisplay}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
         </Border>
 
-        <!-- 3. SELECTED TERMINAL -->
-        <Border Grid.Row="4"
-                Style="{StaticResource SectionBorder}">
+        <Border Grid.Row="6" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -310,156 +221,72 @@
                     <ColumnDefinition Width="190"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0"
-                           Grid.ColumnSpan="8"
-                           Text="3. SELECTED TERMINAL"
-                           Style="{StaticResource SectionHeading}"/>
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="8" Text="3. SELECTED TERMINAL" Style="{StaticResource SectionHeading}"/>
+                <TextBlock Grid.Row="1" Text="Terminal No" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding TerminalNo}" Style="{StaticResource ReadOnlyTextBox}"/>
+                <TextBlock Grid.Row="1" Grid.Column="3" Text="Terminal Name" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="1" Grid.Column="4" Text="{Binding TerminalName, UpdateSourceTrigger=PropertyChanged}" MaxLength="120" Style="{StaticResource ClassicTextBox}"/>
+                <TextBlock Grid.Row="1" Grid.Column="6" Text="Status" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="1" Grid.Column="7" Text="{Binding TerminalStatusText}" Style="{StaticResource ReadOnlyTextBox}"/>
 
-                <TextBlock Grid.Row="1"
-                           Text="Terminal No"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="1"
-                         Grid.Column="1"
-                         Text="{Binding TerminalNo}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
+                <TextBlock Grid.Row="2" Text="Machine Name" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding MachineName}" Style="{StaticResource ReadOnlyTextBox}"/>
+                <TextBlock Grid.Row="2" Grid.Column="6" Text="Current PC" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="2" Grid.Column="7" Text="{Binding CurrentMachineText}" Style="{StaticResource ReadOnlyTextBox}"/>
 
-                <TextBlock Grid.Row="1"
-                           Grid.Column="3"
-                           Text="Terminal Name"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="1"
-                         Grid.Column="4"
-                         Text="{Binding TerminalName, UpdateSourceTrigger=PropertyChanged}"
-                         MaxLength="120"
-                         Style="{StaticResource ClassicTextBox}"/>
+                <TextBlock Grid.Row="3" Text="Machine Code" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding MachineCode}" Style="{StaticResource ReadOnlyTextBox}"/>
+                <TextBlock Grid.Row="3" Grid.Column="6" Text="Last Seen" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="3" Grid.Column="7" Text="{Binding LastSeenText}" Style="{StaticResource ReadOnlyTextBox}"/>
 
-                <TextBlock Grid.Row="1"
-                           Grid.Column="6"
-                           Text="Status"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="1"
-                         Grid.Column="7"
-                         Text="{Binding TerminalStatusText}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
-
-                <TextBlock Grid.Row="2"
-                           Text="Machine Name"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="2"
-                         Grid.Column="1"
-                         Grid.ColumnSpan="4"
-                         Text="{Binding MachineName}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
-
-                <TextBlock Grid.Row="2"
-                           Grid.Column="6"
-                           Text="Current PC"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="2"
-                         Grid.Column="7"
-                         Text="{Binding CurrentMachineText}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
-
-                <TextBlock Grid.Row="3"
-                           Text="Machine Code"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="3"
-                         Grid.Column="1"
-                         Grid.ColumnSpan="4"
-                         Text="{Binding MachineCode}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
-
-                <Button Grid.Row="3"
-                        Grid.Column="6"
-                        Grid.ColumnSpan="2"
-                        Content="COPY MACHINE CODE"
-                        Command="{Binding CopyMachineCodeCommand}"
-                        Style="{StaticResource ClassicButton}"/>
-
-                <TextBlock Grid.Row="4"
-                           Text="License"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="4"
-                         Grid.Column="1"
-                         Text="{Binding LicenseStatusText}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
-
-                <TextBlock Grid.Row="4"
-                           Grid.Column="3"
-                           Text="License Expiry"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="4"
-                         Grid.Column="4"
-                         Text="{Binding LicenseExpiryText}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
-
-                <TextBlock Grid.Row="4"
-                           Grid.Column="6"
-                           Text="Registered"
-                           Style="{StaticResource FieldLabel}"/>
-                <TextBox Grid.Row="4"
-                         Grid.Column="7"
-                         Text="{Binding RegisteredAtText}"
-                         Style="{StaticResource ReadOnlyTextBox}"/>
+                <TextBlock Grid.Row="4" Text="Licence" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding LicenseStatusText}" Style="{StaticResource ReadOnlyTextBox}"/>
+                <TextBlock Grid.Row="4" Grid.Column="3" Text="Licence Expiry" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="4" Grid.Column="4" Text="{Binding LicenseExpiryText}" Style="{StaticResource ReadOnlyTextBox}"/>
+                <TextBlock Grid.Row="4" Grid.Column="6" Text="Registered" Style="{StaticResource FieldLabel}"/>
+                <TextBox Grid.Row="4" Grid.Column="7" Text="{Binding RegisteredAtText}" Style="{StaticResource ReadOnlyTextBox}"/>
             </Grid>
         </Border>
 
-        <!-- 4. ACTIONS -->
-        <Border Grid.Row="6"
-                Style="{StaticResource SectionBorder}">
+        <Border Grid.Row="8" Style="{StaticResource SectionBorder}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
                 <StackPanel>
-                    <TextBlock Text="4. ACTIONS &amp; STATUS"
-                               Style="{StaticResource SectionHeading}"
-                               Margin="0,0,0,3"/>
-
-                    <TextBlock Text="{Binding StatusMessage}"
-                               Foreground="{Binding StatusColor}"
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"/>
-
-                    <TextBlock Text="Use RELEASE MACHINE before replacing a Cashier computer. Historical transactions remain unchanged; open shifts and active or held carts block release. Printer, drawer, and auto-lock options remain local to each Cashier computer."
+                    <TextBlock Text="4. ACTIONS &amp; STATUS" Style="{StaticResource SectionHeading}" Margin="0,0,0,3"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusColor}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="ENABLE or DISABLE controls Cashier access. RELEASE COMPUTER preserves historical transactions but removes the machine binding for replacement; open shifts and active or held carts block release."
                                Style="{StaticResource HelpText}"
                                Margin="0,5,0,0"/>
                 </StackPanel>
-
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Bottom">
+                <WrapPanel Grid.Column="1" VerticalAlignment="Bottom">
                     <Button Content="COPY LICENCE REQUEST"
                             Command="{Binding CopyLicenseRequestCommand}"
                             IsEnabled="{Binding CanCopyLicenseRequest}"
                             Style="{StaticResource ClassicButton}"
                             Margin="0,0,8,0"/>
-
                     <Button Content="SAVE NAME"
                             Command="{Binding SaveTerminalNameCommand}"
                             IsEnabled="{Binding CanManageSelected}"
                             Style="{StaticResource PrimaryButton}"
                             Margin="0,0,8,0"/>
-
-                    <Button Content="ACTIVATE"
-                            Command="{Binding ActivateTerminalCommand}"
-                            IsEnabled="{Binding CanManageSelected}"
+                    <Button Content="ENABLE"
+                            Command="{Binding EnableTerminalCommand}"
+                            IsEnabled="{Binding CanEnableSelected}"
                             Style="{StaticResource ClassicButton}"
                             Margin="0,0,8,0"/>
-
-                    <Button Content="RELEASE MACHINE"
-                            Command="{Binding ReleaseMachineAssignmentCommand}"
-                            IsEnabled="{Binding CanReleaseSelected}"
-                            Style="{StaticResource WarningButton}"
-                            Margin="0,0,8,0"/>
-
                     <Button Content="DISABLE"
                             Command="{Binding DisableTerminalCommand}"
-                            IsEnabled="{Binding CanManageSelected}"
+                            IsEnabled="{Binding CanDisableSelected}"
+                            Style="{StaticResource WarningButton}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="RELEASE COMPUTER"
+                            Command="{Binding ReleaseMachineAssignmentCommand}"
+                            IsEnabled="{Binding CanReleaseSelected}"
                             Style="{StaticResource WarningButton}"/>
-                </StackPanel>
+                </WrapPanel>
             </Grid>
         </Border>
     </Grid>
