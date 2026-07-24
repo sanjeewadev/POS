@@ -215,6 +215,11 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "Views",
             "Dialogs",
             "PurchasingVariantEntryDialog.xaml");
+        string dialogCodeBehind = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "PurchasingVariantEntryDialog.xaml.cs");
         string dialogViewModel = Read(
             "POS.BackOffice.UI",
             "ViewModels",
@@ -285,16 +290,43 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "PO-specific shared-dialog apply label");
         AuditAssert.Contains(
             dialogXaml,
-            "Header=\"MOQ\"",
-            "shared dialog MOQ column");
+            "x:Name=\"MinimumQuantityColumn\"",
+            "shared dialog named MOQ column");
         AuditAssert.Contains(
             dialogXaml,
-            "DataContext.MinimumQuantityEnabled",
-            "shared dialog MOQ conditional visibility");
+            "x:Name=\"QuantityColumn\"",
+            "shared dialog named quantity column");
         AuditAssert.Contains(
             dialogXaml,
-            "DataContext.ExpiryEntryEnabled",
-            "shared dialog expiry-column conditional visibility");
+            "x:Name=\"UnitCostColumn\"",
+            "shared dialog named unit-cost column");
+        AuditAssert.Contains(
+            dialogXaml,
+            "x:Name=\"ExpiryColumn\"",
+            "shared dialog named expiry column");
+        AuditAssert.False(
+            dialogXaml.Contains("x:Reference DialogWindow", StringComparison.Ordinal),
+            "shared dialog still contains the cyclical root-window reference.");
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "ConfigureDocumentColumns();",
+            "shared dialog constructor column configuration");
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "MinimumQuantityColumn.Visibility = _viewModel.MinimumQuantityEnabled",
+            "shared dialog MOQ visibility configuration");
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "QuantityColumn.Header = _viewModel.QuantityLabel;",
+            "shared dialog quantity header configuration");
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "UnitCostColumn.Header = _viewModel.UnitCostLabel;",
+            "shared dialog cost header configuration");
+        AuditAssert.Contains(
+            dialogCodeBehind,
+            "ExpiryColumn.Visibility = _viewModel.ExpiryEntryEnabled",
+            "shared dialog expiry visibility configuration");
         AuditAssert.Contains(
             dialogViewModel,
             "MinimumQuantityEnabled && row.Quantity < row.MinimumQuantity",
@@ -582,6 +614,25 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             dialogXaml,
             "x:Name=\"VariantGrid\"",
             "Purchasing variant-entry DataGrid");
+        AuditAssert.False(
+            dialogXaml.Contains("x:Reference DialogWindow", StringComparison.Ordinal),
+            "Purchasing variant-entry dialog still contains a root-window x:Reference cycle.");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(dialogXaml, "x:Name=\"MinimumQuantityColumn\""),
+            "Purchasing variant-entry MOQ column name count");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(dialogXaml, "x:Name=\"QuantityColumn\""),
+            "Purchasing variant-entry quantity column name count");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(dialogXaml, "x:Name=\"UnitCostColumn\""),
+            "Purchasing variant-entry cost column name count");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(dialogXaml, "x:Name=\"ExpiryColumn\""),
+            "Purchasing variant-entry expiry column name count");
         AuditAssert.True(
             Regex.IsMatch(
                 dialogXaml,

@@ -1,5 +1,4 @@
 <Window x:Class="POS.BackOffice.UI.Views.Dialogs.PurchasingVariantEntryDialog"
-        x:Name="DialogWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{Binding DialogTitle}"
@@ -150,26 +149,20 @@
                                         Binding="{Binding TaxCategoryDisplayText}"
                                         IsReadOnly="True"
                                         Width="135"/>
-                    <DataGridTextColumn Header="MOQ"
+                    <DataGridTextColumn x:Name="MinimumQuantityColumn"
+                                        Header="MOQ"
                                         Binding="{Binding MinimumQuantityDisplay}"
                                         IsReadOnly="True"
-                                        Width="65"
-                                        Visibility="{Binding DataContext.MinimumQuantityEnabled, Source={x:Reference DialogWindow}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <DataGridTextColumn Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}"
-                                        Width="82">
-                        <DataGridTextColumn.Header>
-                            <TextBlock Text="{Binding DataContext.QuantityLabel, Source={x:Reference DialogWindow}}"/>
-                        </DataGridTextColumn.Header>
-                    </DataGridTextColumn>
-                    <DataGridTextColumn Binding="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
-                                        Width="105">
-                        <DataGridTextColumn.Header>
-                            <TextBlock Text="{Binding DataContext.UnitCostLabel, Source={x:Reference DialogWindow}}"/>
-                        </DataGridTextColumn.Header>
-                    </DataGridTextColumn>
-                    <DataGridTemplateColumn Header="Expiry"
-                                            Width="120"
-                                            Visibility="{Binding DataContext.ExpiryEntryEnabled, Source={x:Reference DialogWindow}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        Width="65"/>
+                    <DataGridTextColumn x:Name="QuantityColumn"
+                                        Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}"
+                                        Width="82"/>
+                    <DataGridTextColumn x:Name="UnitCostColumn"
+                                        Binding="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                        Width="105"/>
+                    <DataGridTemplateColumn x:Name="ExpiryColumn"
+                                            Header="Expiry"
+                                            Width="120">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <DatePicker SelectedDate="{Binding ExpiryDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"

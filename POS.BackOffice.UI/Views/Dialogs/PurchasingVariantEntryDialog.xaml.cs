@@ -19,6 +19,19 @@ namespace POS.BackOffice.UI.Views.Dialogs
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             InitializeComponent();
             DataContext = _viewModel;
+            ConfigureDocumentColumns();
+        }
+
+        private void ConfigureDocumentColumns()
+        {
+            MinimumQuantityColumn.Visibility = _viewModel.MinimumQuantityEnabled
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            QuantityColumn.Header = _viewModel.QuantityLabel;
+            UnitCostColumn.Header = _viewModel.UnitCostLabel;
+            ExpiryColumn.Visibility = _viewModel.ExpiryEntryEnabled
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         public IReadOnlyList<PurchasingVariantEntryRow> AcceptedRows { get; private set; } =
