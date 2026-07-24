@@ -237,13 +237,197 @@ internal static class Phase9BExportDashboardTests
             new StockBalanceDto
             {
                 ItemCode = "IT-1", SkuCode = "SKU,1", Description = "Quoted \"Item\"",
-                TotalQtyOnHand = 2m, UnitCost = 100m, UnitRetail = 150m,
+                TotalQtyOnHand = 2m, ReorderLevel = 5, UnitCost = 100m, UnitRetail = 150m,
                 TotalCostValue = 200m, TotalRetailValue = 300m
             }
         };
-        string csv = new OperationalExportBuilder(new CsvExportService()).BuildStockBalanceCsv(rows);
+        var builder = new OperationalExportBuilder(new CsvExportService());
+        string csv = builder.BuildStockBalanceCsv(rows);
         AssertContains(csv, "\"SKU,1\"");
         AssertContains(csv, "\"Quoted \"\"Item\"\"\"");
+
+        string alertCsv = builder.BuildStockAlertsCsv(rows);
+        AssertContains(alertCsv, "AlertType");
+        AssertContains(alertCsv, StockAlertFilters.LowStock);
+        AssertContains(alertCsv, "ReorderLevel");
+
+        AssertEqual(4, ExpiryMonitorFilters.Values.Count, "simple expiry filter count");
+        AssertFalse(ExpiryMonitorFilters.Values.Contains(ExpiryMonitorFilters.Within60Days), "sixty-day filter hidden");
+        AssertFalse(ExpiryMonitorFilters.Values.Contains(ExpiryMonitorFilters.Within90Days), "ninety-day filter hidden");
+        AssertFalse(ExpiryMonitorFilters.Values.Contains(ExpiryMonitorFilters.MissingExpiry), "missing-expiry filter hidden");
+
+        using var factory = new TestDbContextFactory();
+        using (AppDbContext context = factory.CreateDbContext())
+        {
+            var category = new Category
+            {
+                CategoryCode = "STK",
+                CategoryName = "Stock",
+                CreatedBy = "Tests",
+                UpdatedBy = "Tests"
+            };
+            var uom = new UnitOfMeasure
+            {
+                UomCode = "EA",
+                UomDescription = "Each",
+                IsActive = true
+            };
+            context.Categories.Add(category);
+            context.UnitsOfMeasure.Add(uom);
+            context.SaveChanges();
+
+            var normalParent = new ItemParent
+            {
+                ItemCode = "NORMAL",
+                ItemName = "Normal Stock",
+                CategoryId = category.Id,
+                UnitOfMeasureId = uom.Id,
+                ItemType = ItemTypeCodes.StockItem,
+                HasBatchTracking = false
+            };
+            var lowParent = new ItemParent
+            {
+                ItemCode = "LOW",
+                ItemName = "Low Stock",
+                CategoryId = category.Id,
+                UnitOfMeasureId = uom.Id,
+                ItemType = ItemTypeCodes.StockItem,
+                HasBatchTracking = false
+            };
+            var zeroParent = new ItemParent
+            {
+                ItemCode = "ZERO",
+                ItemName = "Out of Stock",
+                CategoryId = category.Id,
+                UnitOfMeasureId = uom.Id,
+                ItemType = ItemTypeCodes.StockItem,
+                HasBatchTracking = false
+            };
+            var negativeParent = new ItemParent
+            {
+                ItemCode = "NEG",
+                ItemName = "Negative Stock",
+                CategoryId = category.Id,
+                UnitOfMeasureId = uom.Id,
+                ItemType = ItemTypeCodes.StockItem,
+                HasBatchTracking = false
+            };
+            var serviceParent = new ItemParent
+            {
+                ItemCode = "SERVICE",
+                ItemName = "Service",
+                CategoryId = category.Id,
+                UnitOfMeasureId = uom.Id,
+                ItemType = ItemTypeCodes.Service,
+                HasBatchTracking = false
+            };
+            context.ItemParents.AddRange(
+                normalParent,
+                lowParent,
+                zeroParent,
+                negativeParent,
+                serviceParent);
+            context.SaveChanges();
+
+            var normal = new ItemVariant
+            {
+                ItemParentId = normalParent.Id,
+                SkuCode = "NORMAL-1",
+                ReorderLevel = 5
+            };
+            var low = new ItemVariant
+            {
+                ItemParentId = lowParent.Id,
+                SkuCode = "LOW-1",
+                ReorderLevel = 5
+            };
+            var zero = new ItemVariant
+            {
+                ItemParentId = zeroParent.Id,
+                SkuCode = "ZERO-1",
+                ReorderLevel = 5
+            };
+            var negative = new ItemVariant
+            {
+                ItemParentId = negativeParent.Id,
+                SkuCode = "NEG-1",
+                ReorderLevel = 5
+            };
+            var service = new ItemVariant
+            {
+                ItemParentId = serviceParent.Id,
+                SkuCode = "SERVICE-1",
+                ReorderLevel = 5
+            };
+            context.ItemVariants.AddRange(normal, low, zero, negative, service);
+            context.SaveChanges();
+
+            context.ItemBatches.AddRange(
+                new ItemBatch
+                {
+                    ItemVariantId = normal.Id,
+                    BatchNo = "GENERAL",
+                    CurrentStock = 10m,
+                    ReceivedDate = DateTime.Today
+                },
+                new ItemBatch
+                {
+                    ItemVariantId = low.Id,
+                    BatchNo = "GENERAL",
+                    CurrentStock = 2m,
+                    ReceivedDate = DateTime.Today
+                },
+                new ItemBatch
+                {
+                    ItemVariantId = negative.Id,
+                    BatchNo = "GENERAL",
+                    CurrentStock = -1m,
+                    ReceivedDate = DateTime.Today
+                },
+                new ItemBatch
+                {
+                    ItemVariantId = service.Id,
+                    BatchNo = "GENERAL",
+                    CurrentStock = 1m,
+                    ReceivedDate = DateTime.Today
+                });
+            context.SaveChanges();
+        }
+
+        var repository = new StockBalanceRepository(factory);
+        List<StockBalanceDto> valuationRows = repository
+            .GetStockBalancesAsync()
+            .GetAwaiter()
+            .GetResult();
+        List<StockBalanceDto> allAlerts = repository
+            .GetStockAlertsAsync()
+            .GetAwaiter()
+            .GetResult();
+        List<StockBalanceDto> lowAlerts = repository
+            .GetStockAlertsAsync(alertFilter: StockAlertFilters.LowStock)
+            .GetAwaiter()
+            .GetResult();
+        List<StockBalanceDto> zeroAlerts = repository
+            .GetStockAlertsAsync(alertFilter: StockAlertFilters.OutOfStock)
+            .GetAwaiter()
+            .GetResult();
+        List<StockBalanceDto> negativeAlerts = repository
+            .GetStockAlertsAsync(alertFilter: StockAlertFilters.Negative)
+            .GetAwaiter()
+            .GetResult();
+
+        AssertEqual(2, valuationRows.Count, "positive valuation row count");
+        AssertTrue(valuationRows.All(row => row.TotalQtyOnHand > 0m), "valuation rows are positive");
+        AssertFalse(valuationRows.Any(row => row.ItemCode == "SERVICE"), "services excluded from valuation");
+        AssertEqual(3, allAlerts.Count, "all stock alert row count");
+        AssertEqual(1, lowAlerts.Count, "low-stock row count");
+        AssertEqual("LOW", lowAlerts[0].ItemCode, "low-stock row");
+        AssertEqual(1, zeroAlerts.Count, "out-of-stock row count");
+        AssertEqual("ZERO", zeroAlerts[0].ItemCode, "out-of-stock row");
+        AssertEqual(1, negativeAlerts.Count, "negative-stock row count");
+        AssertEqual("NEG", negativeAlerts[0].ItemCode, "negative-stock row");
+        AssertFalse(allAlerts.Any(row => row.ItemCode == "NORMAL"), "normal stock excluded from alerts");
+        AssertFalse(allAlerts.Any(row => row.ItemCode == "SERVICE"), "services excluded from alerts");
     }
 
     public static void PdfTextExportCreatesValidPdf()
@@ -347,6 +531,7 @@ internal static class Phase9BExportDashboardTests
         var builder = new OperationalExportBuilder(new CsvExportService());
         AssertThrows<InvalidOperationException>(() => builder.BuildItemSalesCsv(Array.Empty<ItemPerformanceDto>()));
         AssertThrows<InvalidOperationException>(() => builder.BuildStockBalanceCsv(Array.Empty<StockBalanceDto>()));
+        AssertThrows<InvalidOperationException>(() => builder.BuildStockAlertsCsv(Array.Empty<StockBalanceDto>()));
         string path = TempFile("phase9b_empty", ".pdf");
         Delete(path);
         AssertThrows<InvalidOperationException>(() => new PdfExportService().WriteTextPdf(path, "EMPTY", string.Empty, string.Empty, "Tests"));

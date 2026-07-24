@@ -86,6 +86,7 @@ namespace POS.Core.Models.DTOs
         // =========================================================
 
         public decimal TotalQtyOnHand { get; set; }
+        public decimal ReorderLevel { get; set; }
 
         // Backward-compatible alias if old code still uses QtyOnHand.
         public decimal QtyOnHand => TotalQtyOnHand;
@@ -132,6 +133,32 @@ namespace POS.Core.Models.DTOs
         public bool HasNegativeStock => TotalQtyOnHand < 0m;
         public bool HasZeroStock => TotalQtyOnHand == 0m;
         public bool HasPositiveStock => TotalQtyOnHand > 0m;
+        public bool IsLowStock =>
+            TotalQtyOnHand > 0m &&
+            ReorderLevel > 0m &&
+            TotalQtyOnHand <= ReorderLevel;
+
+        public bool IsStockAlert =>
+            HasNegativeStock ||
+            HasZeroStock ||
+            IsLowStock;
+
+        public string StockAlertText
+        {
+            get
+            {
+                if (HasNegativeStock)
+                    return StockAlertFilters.Negative;
+
+                if (HasZeroStock)
+                    return StockAlertFilters.OutOfStock;
+
+                if (IsLowStock)
+                    return StockAlertFilters.LowStock;
+
+                return string.Empty;
+            }
+        }
 
         public bool HasExpiredBatch { get; set; }
         public bool HasExpiringSoonBatch { get; set; }
@@ -317,15 +344,31 @@ namespace POS.Core.Models.DTOs
         public const string Within90Days = "Expiring Within 90 Days";
         public const string MissingExpiry = "No Expiry Date";
 
+        // Sixty-day, ninety-day, and missing-expiry constants remain available
+        // for internal diagnostics and compatibility. The store-facing filter
+        // intentionally exposes only the four simple operational choices below.
         public static IReadOnlyList<string> Values { get; } = new[]
         {
             All,
             Expired,
             Within7Days,
-            Within30Days,
-            Within60Days,
-            Within90Days,
-            MissingExpiry
+            Within30Days
+        };
+    }
+
+    public static class StockAlertFilters
+    {
+        public const string All = "All Stock Alerts";
+        public const string LowStock = "Low Stock";
+        public const string OutOfStock = "Out of Stock";
+        public const string Negative = "Negative Stock — Data Issue";
+
+        public static IReadOnlyList<string> Values { get; } = new[]
+        {
+            All,
+            LowStock,
+            OutOfStock,
+            Negative
         };
     }
 
@@ -390,12 +433,6 @@ namespace POS.Core.Models.DTOs
 
                 if (days <= 30)
                     return "Within 30 Days";
-
-                if (days <= 60)
-                    return "Within 60 Days";
-
-                if (days <= 90)
-                    return "Within 90 Days";
 
                 return "Later";
             }

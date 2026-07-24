@@ -37,16 +37,11 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private Supplier? _selectedSupplier;
 
-        [ObservableProperty]
-        private bool _hideZeroStock = false;
-
-        [ObservableProperty]
-        private bool _showNegativeOnly = false;
-
         public ObservableCollection<string> InventoryViews { get; } = new()
         {
             "Stock Balance & Valuation",
-            "Expiry Monitor"
+            "Expiry Monitor",
+            "Stock Alerts"
         };
 
         [ObservableProperty]
@@ -58,8 +53,12 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _selectedExpiryFilter = ExpiryMonitorFilters.All;
 
+        public ObservableCollection<string> StockAlertFilters { get; } =
+            new(POS.Core.Models.DTOs.StockAlertFilters.Values);
+
         [ObservableProperty]
-        private bool _positiveExpiryStockOnly = true;
+        private string _selectedStockAlertFilter =
+            POS.Core.Models.DTOs.StockAlertFilters.All;
 
         // =========================================================
         // DATA COLLECTIONS
@@ -80,6 +79,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private ExpiryMonitorRowDto? _selectedExpiryRow;
+
+        [ObservableProperty]
+        private ObservableCollection<StockBalanceDto> _stockAlertRows = new();
+
+        [ObservableProperty]
+        private StockBalanceDto? _selectedStockAlertRow;
 
         // =========================================================
         // FOOTER TOTALS
@@ -102,18 +107,6 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private int _totalStockBucketCount;
-
-        [ObservableProperty]
-        private int _negativeLineCount;
-
-        [ObservableProperty]
-        private int _zeroStockLineCount;
-
-        [ObservableProperty]
-        private int _expiredBatchCount;
-
-        [ObservableProperty]
-        private int _expiringSoonBatchCount;
 
         [ObservableProperty]
         private decimal _totalPhysicalQty;
@@ -143,16 +136,22 @@ namespace POS.BackOffice.UI.ViewModels
         private int _expiresWithin30DaysCount;
 
         [ObservableProperty]
-        private int _expiresWithin90DaysCount;
-
-        [ObservableProperty]
-        private int _missingExpiryCount;
-
-        [ObservableProperty]
         private decimal _expiryQuantityTotal;
 
         [ObservableProperty]
         private decimal _expiryCostValueTotal;
+
+        [ObservableProperty]
+        private int _stockAlertRowCount;
+
+        [ObservableProperty]
+        private int _lowStockCount;
+
+        [ObservableProperty]
+        private int _outOfStockCount;
+
+        [ObservableProperty]
+        private int _negativeStockCount;
 
         // =========================================================
         // UI STATE
@@ -271,40 +270,10 @@ namespace POS.BackOffice.UI.ViewModels
                 _ = LoadDataAsync();
         }
 
-        partial void OnPositiveExpiryStockOnlyChanged(bool value)
+        partial void OnSelectedStockAlertFilterChanged(string value)
         {
             if (!_suppressAutoRefresh)
                 _ = LoadDataAsync();
-        }
-
-        partial void OnHideZeroStockChanged(bool value)
-        {
-            if (_suppressAutoRefresh)
-                return;
-
-            if (value && ShowNegativeOnly)
-            {
-                _suppressAutoRefresh = true;
-                ShowNegativeOnly = false;
-                _suppressAutoRefresh = false;
-            }
-
-            _ = LoadDataAsync();
-        }
-
-        partial void OnShowNegativeOnlyChanged(bool value)
-        {
-            if (_suppressAutoRefresh)
-                return;
-
-            if (value && HideZeroStock)
-            {
-                _suppressAutoRefresh = true;
-                HideZeroStock = false;
-                _suppressAutoRefresh = false;
-            }
-
-            _ = LoadDataAsync();
         }
 
         partial void OnIsBusyChanged(bool value)
@@ -313,6 +282,7 @@ namespace POS.BackOffice.UI.ViewModels
             ClearFiltersCommand.NotifyCanExecuteChanged();
             ExportCsvCommand.NotifyCanExecuteChanged();
             ExportExpiryCsvCommand.NotifyCanExecuteChanged();
+            ExportStockAlertsCsvCommand.NotifyCanExecuteChanged();
         }
 
         // =========================================================
@@ -345,18 +315,21 @@ namespace POS.BackOffice.UI.ViewModels
                 var stockTask = _stockRepository.GetStockBalancesAsync(
                     SearchText,
                     categoryId,
-                    supplierId,
-                    HideZeroStock,
-                    ShowNegativeOnly);
+                    supplierId);
 
                 var expiryTask = _stockRepository.GetExpiryMonitorAsync(
                     SearchText,
                     categoryId,
                     supplierId,
-                    SelectedExpiryFilter,
-                    PositiveExpiryStockOnly);
+                    SelectedExpiryFilter);
 
-                await Task.WhenAll(stockTask, expiryTask);
+                var alertTask = _stockRepository.GetStockAlertsAsync(
+                    SearchText,
+                    categoryId,
+                    supplierId,
+                    SelectedStockAlertFilter);
+
+                await Task.WhenAll(stockTask, expiryTask, alertTask);
 
                 StockBalances = new ObservableCollection<StockBalanceDto>(
                     await stockTask);
@@ -364,13 +337,17 @@ namespace POS.BackOffice.UI.ViewModels
                 ExpiryRows = new ObservableCollection<ExpiryMonitorRowDto>(
                     await expiryTask);
 
+                StockAlertRows = new ObservableCollection<StockBalanceDto>(
+                    await alertTask);
+
                 CalculateGlobalTotals();
                 CalculateExpiryTotals();
+                CalculateStockAlertTotals();
 
                 StatusMessage =
-                    $"Loaded {TotalLineItems} stock variant(s) and {ExpiryRowCount} expiry-monitor row(s). " +
-                    $"Average-cost: {AverageCostLineCount}, Batch-tracked: {BatchTrackedLineCount}, " +
-                    $"Expired rows: {ExpiredRowCount}.";
+                    $"Loaded {TotalLineItems} positive-stock variant(s), " +
+                    $"{ExpiryRowCount} expiry row(s), and " +
+                    $"{StockAlertRowCount} stock alert(s).";
             }
             catch (Exception ex)
             {
@@ -398,10 +375,6 @@ namespace POS.BackOffice.UI.ViewModels
                 BatchExpiryLineCount = 0;
                 TotalBatchCount = 0;
                 TotalStockBucketCount = 0;
-                NegativeLineCount = 0;
-                ZeroStockLineCount = 0;
-                ExpiredBatchCount = 0;
-                ExpiringSoonBatchCount = 0;
 
                 TotalPhysicalQty = 0m;
                 TotalAssetValue = 0m;
@@ -419,11 +392,6 @@ namespace POS.BackOffice.UI.ViewModels
             TotalBatchCount = StockBalances.Sum(x => x.BatchCount);
             TotalStockBucketCount = StockBalances.Sum(x => x.StockBucketCount);
 
-            NegativeLineCount = StockBalances.Count(x => x.TotalQtyOnHand < 0m);
-            ZeroStockLineCount = StockBalances.Count(x => x.TotalQtyOnHand == 0m);
-            ExpiredBatchCount = StockBalances.Count(x => x.HasExpiredBatch);
-            ExpiringSoonBatchCount = StockBalances.Count(x => x.HasExpiringSoonBatch);
-
             TotalPhysicalQty = StockBalances.Sum(x => x.TotalQtyOnHand);
             TotalAssetValue = StockBalances.Sum(x => x.TotalCostValue);
             ProjectedRevenue = StockBalances.Sum(x => x.TotalRetailValue);
@@ -437,10 +405,16 @@ namespace POS.BackOffice.UI.ViewModels
             ExpiredRowCount = ExpiryRows.Count(row => row.IsExpired);
             ExpiresWithin7DaysCount = ExpiryRows.Count(row => row.IsExpiringWithin(7));
             ExpiresWithin30DaysCount = ExpiryRows.Count(row => row.IsExpiringWithin(30));
-            ExpiresWithin90DaysCount = ExpiryRows.Count(row => row.IsExpiringWithin(90));
-            MissingExpiryCount = ExpiryRows.Count(row => row.IsMissingExpiry);
             ExpiryQuantityTotal = ExpiryRows.Sum(row => row.AvailableQty);
             ExpiryCostValueTotal = ExpiryRows.Sum(row => row.CostValue);
+        }
+
+        private void CalculateStockAlertTotals()
+        {
+            StockAlertRowCount = StockAlertRows.Count;
+            LowStockCount = StockAlertRows.Count(row => row.IsLowStock);
+            OutOfStockCount = StockAlertRows.Count(row => row.HasZeroStock);
+            NegativeStockCount = StockAlertRows.Count(row => row.HasNegativeStock);
         }
 
         // =========================================================
@@ -455,10 +429,9 @@ namespace POS.BackOffice.UI.ViewModels
             SearchText = string.Empty;
             SelectedCategory = Categories.FirstOrDefault(c => c.Id == 0);
             SelectedSupplier = Suppliers.FirstOrDefault(s => s.Id == 0);
-            HideZeroStock = false;
-            ShowNegativeOnly = false;
             SelectedExpiryFilter = ExpiryMonitorFilters.All;
-            PositiveExpiryStockOnly = true;
+            SelectedStockAlertFilter =
+                POS.Core.Models.DTOs.StockAlertFilters.All;
 
             _suppressAutoRefresh = false;
 
@@ -508,6 +481,32 @@ namespace POS.BackOffice.UI.ViewModels
                 MessageBox.Show(
                     ex.Message,
                     "Expiry Monitor CSV",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private async Task ExportStockAlertsCsvAsync()
+        {
+            try
+            {
+                _authorization.EnsureBulkFinancialExportAllowed();
+                string csv = _exportBuilder.BuildStockAlertsCsv(
+                    StockAlertRows.ToList());
+
+                await _exportDialog.SaveCsvAsync(
+                    "Save Stock Alerts CSV",
+                    ExportFileNameHelper.Build(
+                        $"Stock_Alerts_{DateTime.Now:yyyyMMdd_HHmm}",
+                        ".csv"),
+                    csv);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Stock Alerts CSV",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }

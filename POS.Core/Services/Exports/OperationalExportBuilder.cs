@@ -429,6 +429,36 @@ namespace POS.Core.Services.Exports
                 }));
         }
 
+        public string BuildStockAlertsCsv(
+            IReadOnlyCollection<StockBalanceDto> rows)
+        {
+            EnsureRows(rows, "stock alerts");
+
+            return _csv.Format(
+                new[]
+                {
+                    "AlertType", "ItemCode", "SkuCode", "Barcode",
+                    "Description", "Variant", "Category", "Supplier", "Uom",
+                    "QtyOnHand", "ReorderLevel", "LastReceived"
+                },
+                rows.Select(row => (IReadOnlyList<string?>)new string?[]
+                {
+                    row.StockAlertText,
+                    row.ItemCode,
+                    row.SkuCode,
+                    row.Barcode,
+                    row.Description,
+                    row.VariantDescription,
+                    row.CategoryName,
+                    row.PrimarySupplierName,
+                    row.Uom,
+                    Quantity(row.TotalQtyOnHand),
+                    Quantity(row.ReorderLevel),
+                    row.LastReceivedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                        ?? string.Empty
+                }));
+        }
+
         private static PdfTableColumnDto Column(string header, double width, bool numeric = false) =>
             new() { Header = header, WidthCentimeters = width, IsNumeric = numeric };
 

@@ -24,8 +24,7 @@ namespace POS.Core.Repositories
             string searchText = "",
             int? categoryId = null,
             int? supplierId = null,
-            bool hideZeroStock = false,
-            bool showNegativeOnly = false)
+            bool positiveStockOnly = true)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -90,10 +89,7 @@ namespace POS.Core.Repositories
 
                 decimal totalQty = stockRows.Sum(b => b.CurrentStock);
 
-                if (showNegativeOnly && totalQty >= 0m)
-                    continue;
-
-                if (hideZeroStock && totalQty == 0m)
+                if (positiveStockOnly && totalQty <= 0m)
                     continue;
 
                 decimal totalCostValue = CalculateTotalCostValue(
@@ -173,6 +169,7 @@ namespace POS.Core.Repositories
                     HasExpiryTracking = hasBatchTracking && hasExpiryTracking,
 
                     TotalQtyOnHand = totalQty,
+                    ReorderLevel = variant.ReorderLevel,
 
                     UnitCost = Math.Round(unitCost, 2),
                     UnitRetail = Math.Round(unitRetail, 2),
@@ -208,7 +205,6 @@ namespace POS.Core.Repositories
                         : null,
 
                     LastReceivedDate = stockRows
-                        .Where(b => b.CurrentStock != 0m)
                         .Select(b => (DateTime?)b.ReceivedDate)
                         .OrderByDescending(d => d)
                         .FirstOrDefault(),
@@ -255,12 +251,49 @@ namespace POS.Core.Repositories
             return result;
         }
 
+        public async Task<List<StockBalanceDto>> GetStockAlertsAsync(
+            string searchText = "",
+            int? categoryId = null,
+            int? supplierId = null,
+            string alertFilter = StockAlertFilters.All)
+        {
+            var rows = await GetStockBalancesAsync(
+                searchText,
+                categoryId,
+                supplierId,
+                positiveStockOnly: false);
+
+            IEnumerable<StockBalanceDto> alerts = rows
+                .Where(row => row.IsStockAlert);
+
+            alerts = alertFilter switch
+            {
+                StockAlertFilters.LowStock =>
+                    alerts.Where(row => row.IsLowStock),
+
+                StockAlertFilters.OutOfStock =>
+                    alerts.Where(row => row.HasZeroStock),
+
+                StockAlertFilters.Negative =>
+                    alerts.Where(row => row.HasNegativeStock),
+
+                _ => alerts
+            };
+
+            return alerts
+                .OrderBy(row => AlertSortOrder(row.StockAlertText))
+                .ThenBy(row => row.TotalQtyOnHand)
+                .ThenBy(row => row.ItemCode)
+                .ThenBy(row => row.VariantDescription)
+                .ThenBy(row => row.SkuCode)
+                .ToList();
+        }
+
         public async Task<List<ExpiryMonitorRowDto>> GetExpiryMonitorAsync(
             string searchText = "",
             int? categoryId = null,
             int? supplierId = null,
-            string expiryFilter = ExpiryMonitorFilters.All,
-            bool positiveStockOnly = true)
+            string expiryFilter = ExpiryMonitorFilters.All)
         {
             await using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -286,13 +319,10 @@ namespace POS.Core.Repositories
                     b.ItemVariant.ItemParent.HasBatchTracking &&
                     (b.ItemVariant.ItemParent.HasExpiryTracking ||
                      b.ItemVariant.ItemParent.HasBatchExpiry) &&
-                    b.BatchNo != GeneralBatchNo)
+                    b.BatchNo != GeneralBatchNo &&
+                    b.CurrentStock > 0m &&
+                    b.ExpiryDate.HasValue)
                 .AsQueryable();
-
-            if (positiveStockOnly)
-            {
-                query = query.Where(b => b.CurrentStock > 0m);
-            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -528,6 +558,17 @@ namespace POS.Core.Repositories
                 return "Expiring Soon";
 
             return "In Stock";
+        }
+
+        private static int AlertSortOrder(string alertText)
+        {
+            return alertText switch
+            {
+                StockAlertFilters.Negative => 0,
+                StockAlertFilters.OutOfStock => 1,
+                StockAlertFilters.LowStock => 2,
+                _ => 3
+            };
         }
 
         private static bool IsGeneralBatch(string? batchNo)

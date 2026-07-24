@@ -8,6 +8,7 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
     {
         VerifyStockAdjustmentReadOnlyBindings();
         VerifyStockAdjustmentRecalculationHook();
+        VerifyStockBalanceOperationalViews();
         VerifyPurchaseOrderEntryAndPdfWorkflow();
         VerifyPurchaseOrderAndGrnHistoryReadability();
         VerifyPoLinkedGrnExpiryEditor();
@@ -65,6 +66,132 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             codeBehind,
             "viewModel.RecalculateImpact();",
             "Stock Adjustment queued-line recalculation call");
+    }
+
+    private static void VerifyStockBalanceOperationalViews()
+    {
+        string view = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "StockBalanceView.xaml");
+        string viewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "StockBalanceViewModel.cs");
+        string repository = Read(
+            "POS.Core",
+            "Repositories",
+            "StockBalanceRepository.cs");
+        string dto = Read(
+            "POS.Core",
+            "Models",
+            "DTOs",
+            "StockBalanceDtos.cs");
+        string exportBuilder = Read(
+            "POS.Core",
+            "Services",
+            "Exports",
+            "OperationalExportBuilder.cs");
+
+        foreach (string viewName in new[]
+        {
+            "Stock Balance &amp; Valuation",
+            "Expiry Monitor",
+            "Stock Alerts"
+        })
+        {
+            AuditAssert.Contains(
+                view,
+                $"Value=\"{viewName}\"",
+                $"Stock Balance view trigger: {viewName}");
+        }
+
+        AuditAssert.Contains(
+            viewModel,
+            "\"Stock Alerts\"",
+            "Stock Alerts view option");
+        AuditAssert.Contains(
+            viewModel,
+            "GetStockAlertsAsync",
+            "Stock Alerts repository call");
+        AuditAssert.Contains(
+            viewModel,
+            "BuildStockAlertsCsv",
+            "Stock Alerts CSV call");
+        AuditAssert.False(
+            viewModel.Contains("HideZeroStock", StringComparison.Ordinal),
+            "Obsolete zero-stock checkbox state remains in the view model.");
+        AuditAssert.False(
+            viewModel.Contains("ShowNegativeOnly", StringComparison.Ordinal),
+            "Obsolete negative-only checkbox state remains in the view model.");
+        AuditAssert.False(
+            viewModel.Contains("PositiveExpiryStockOnly", StringComparison.Ordinal),
+            "Obsolete positive-expiry checkbox state remains in the view model.");
+
+        AuditAssert.False(
+            view.Contains("Hide Zero Stock Items", StringComparison.Ordinal),
+            "Obsolete Hide Zero Stock Items checkbox remains visible.");
+        AuditAssert.False(
+            view.Contains("Show Negative Stock Only", StringComparison.Ordinal),
+            "Obsolete Show Negative Stock Only checkbox remains visible.");
+        AuditAssert.False(
+            view.Contains("<CheckBox Content=\"Positive stock only\"", StringComparison.Ordinal),
+            "Obsolete Expiry Monitor positive-stock checkbox remains visible.");
+        AuditAssert.False(
+            view.Contains("Missing Expiry", StringComparison.Ordinal),
+            "Missing-expiry store-facing summary remains visible.");
+        AuditAssert.Contains(
+            view,
+            "ItemsSource=\"{Binding StockAlertRows}\"",
+            "Stock Alerts grid rows");
+        AuditAssert.Contains(
+            view,
+            "ItemsSource=\"{Binding StockAlertFilters}\"",
+            "Stock Alerts filter");
+        AuditAssert.Contains(
+            view,
+            "Command=\"{Binding ExportStockAlertsCsvCommand}\"",
+            "Stock Alerts CSV action");
+
+        AuditAssert.Contains(
+            repository,
+            "positiveStockOnly && totalQty <= 0m",
+            "Valuation view positive-stock rule");
+        AuditAssert.Contains(
+            repository,
+            "GetStockAlertsAsync",
+            "Stock Alerts repository method");
+        AuditAssert.Contains(
+            repository,
+            "b.CurrentStock > 0m",
+            "Expiry Monitor positive-stock rule");
+        AuditAssert.Contains(
+            repository,
+            "b.ExpiryDate.HasValue",
+            "Expiry Monitor requires an expiry date");
+
+        AuditAssert.Contains(
+            dto,
+            "public static class StockAlertFilters",
+            "Stock Alert filter definitions");
+        AuditAssert.Contains(
+            dto,
+            "ReorderLevel > 0m",
+            "Low-stock configured reorder-level rule");
+        AuditAssert.Contains(
+            dto,
+            "TotalQtyOnHand <= ReorderLevel",
+            "Low-stock threshold rule");
+        AuditAssert.Contains(
+            dto,
+            "Negative Stock — Data Issue",
+            "Negative-stock data-issue label");
+        AuditAssert.Contains(
+            exportBuilder,
+            "BuildStockAlertsCsv",
+            "Stock Alerts CSV builder");
     }
 
     private static void VerifyPurchaseOrderEntryAndPdfWorkflow()
