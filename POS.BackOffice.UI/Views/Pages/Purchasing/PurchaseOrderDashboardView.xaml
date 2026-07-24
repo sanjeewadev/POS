@@ -329,10 +329,6 @@
                                         Binding="{Binding SupplierName}"
                                         Width="*"/>
 
-                    <DataGridTextColumn Header="Tracking"
-                                        Binding="{Binding TrackingSummary}"
-                                        Width="150"/>
-
                     <DataGridTextColumn Header="Order Date"
                                         Binding="{Binding OrderDate, StringFormat=d}"
                                         Width="105"/>
@@ -621,6 +617,8 @@
                       BorderThickness="1"
                       SelectionMode="Single"
                       AlternatingRowBackground="#F9F9F9"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                       Margin="0,8,0,0">
 
                 <DataGrid.Resources>
@@ -639,13 +637,9 @@
 
                     <DataGridTextColumn Header="Product"
                                         Binding="{Binding DisplayName}"
-                                        Width="*"
+                                        Width="260"
                                         FontWeight="SemiBold"
                                         CellStyle="{StaticResource FrozenCell}"/>
-
-                    <DataGridTextColumn Header="Tracking"
-                                        Binding="{Binding TrackingText}"
-                                        Width="120"/>
 
                     <DataGridTextColumn Header="Barcode"
                                         Binding="{Binding Barcode}"
@@ -760,7 +754,7 @@
                         <TextBlock Text="PO TOTALS"
                                    Style="{StaticResource SectionLabel}"/>
 
-                        <TextBlock Text="POs are read-only after GRN receiving. Tracking shown here flows to GRN; batch barcode is created only in GRN."
+                        <TextBlock Text="This Purchase Order is read-only on this history page."
                                    Foreground="#666666"
                                    FontStyle="Italic"/>
                     </StackPanel>

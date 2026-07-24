@@ -252,16 +252,6 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
-                            <TextBlock Text="Status:"
-                                       Style="{StaticResource InlineLabel}"/>
-
-                            <ComboBox ItemsSource="{Binding FilterStatuses}"
-                                      SelectedItem="{Binding SelectedStatusFilter, Mode=TwoWay}"
-                                      Width="120"
-                                      Style="{StaticResource ClassicCombo}"/>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
                             <TextBlock Text="From:"
                                        Style="{StaticResource InlineLabel}"/>
 
@@ -279,10 +269,6 @@
                                         Style="{StaticResource ClassicDate}"/>
                         </StackPanel>
 
-                        <CheckBox Content="Show Cancelled GRNs"
-                                  IsChecked="{Binding ShowCancelledGrns, Mode=TwoWay}"
-                                  Style="{StaticResource ClassicCheck}"
-                                  Margin="0,0,15,5"/>
                     </WrapPanel>
                 </StackPanel>
             </Border>
@@ -388,16 +374,6 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="Status"
-                                        Binding="{Binding Status}"
-                                        Width="100">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenterText}">
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-
                     <DataGridTextColumn Header="Posted By"
                                         Binding="{Binding PostedBy}"
                                         Width="105"/>
@@ -452,17 +428,6 @@
                                    FontSize="18"
                                    FontWeight="Bold"
                                    Margin="8,0,20,0"/>
-
-                        <Border Background="#005555"
-                                BorderBrush="#003333"
-                                BorderThickness="1"
-                                Padding="8,2">
-
-                            <TextBlock Text="{Binding ViewingGrnDetails.Status}"
-                                       Foreground="White"
-                                       FontWeight="Bold"
-                                       FontSize="12"/>
-                        </Border>
                     </StackPanel>
 
                 </Grid>
@@ -544,7 +509,7 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                            <TextBlock Text="Due: "
+                            <TextBlock Text="Payment Due: "
                                        FontSize="11"
                                        Foreground="#555555"/>
                             <TextBlock Text="{Binding ViewingGrnDetails.DueDate, StringFormat={}{0:dd MMM yyyy}}"
@@ -608,6 +573,8 @@
                       BorderThickness="1"
                       SelectionMode="Single"
                       AlternatingRowBackground="#F9F9F9"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                       Margin="0,8,0,0">
 
                 <DataGrid.Resources>
@@ -626,7 +593,7 @@
 
                     <DataGridTextColumn Header="Product"
                                         Binding="{Binding DisplayName}"
-                                        Width="*"
+                                        Width="260"
                                         FontWeight="SemiBold"
                                         CellStyle="{StaticResource FrozenCell}"/>
 
@@ -713,11 +680,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridCheckBoxColumn Header="Price Updated"
-                                            Binding="{Binding UpdateSellingPrices}"
-                                            Width="105"/>
-
-                    <DataGridTextColumn Header="New Retail"
+                    <DataGridTextColumn Header="Retail Price"
                                         Binding="{Binding NewRetailPrice, StringFormat=N2}"
                                         Width="95">
                         <DataGridTextColumn.ElementStyle>
@@ -725,7 +688,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="New W/S"
+                    <DataGridTextColumn Header="Wholesale Price"
                                         Binding="{Binding NewWholesalePrice, StringFormat=N2}"
                                         Width="95">
                         <DataGridTextColumn.ElementStyle>
@@ -756,7 +719,7 @@
                         <TextBlock Text="GRN TOTALS"
                                    Style="{StaticResource SectionLabel}"/>
 
-                        <TextBlock Text="This page is read-only. Corrections should be handled later through controlled GRN cancellation/reversal, not direct editing."
+                        <TextBlock Text="This GRN is read-only and cannot be edited after posting."
                                    Foreground="#666666"
                                    FontStyle="Italic"/>
                     </StackPanel>

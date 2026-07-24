@@ -30,16 +30,10 @@ namespace POS.BackOffice.UI.ViewModels
         private Supplier? _selectedSupplierFilter;
 
         [ObservableProperty]
-        private string _selectedStatusFilter = "All";
-
-        [ObservableProperty]
         private DateTime? _filterStartDate;
 
         [ObservableProperty]
         private DateTime? _filterEndDate;
-
-        [ObservableProperty]
-        private bool _showCancelledGrns = false;
 
         // =========================================================
         // SELECTION / DETAILS
@@ -58,8 +52,6 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<GrnSummaryDto> GrnDocuments { get; } = new();
 
         public ObservableCollection<Supplier> FilterSuppliers { get; } = new();
-
-        public ObservableCollection<string> FilterStatuses { get; } = new();
 
         // =========================================================
         // UI STATE
@@ -84,8 +76,6 @@ namespace POS.BackOffice.UI.ViewModels
 
             FilterStartDate = DateTime.Now.AddDays(-30);
             FilterEndDate = DateTime.Now;
-
-            RefreshStatusFilters();
         }
 
         // =========================================================
@@ -102,8 +92,6 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                RefreshStatusFilters();
-
                 await LoadFilterSuppliersAsync();
                 await LoadDataInternalAsync();
 
@@ -144,22 +132,6 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        private void RefreshStatusFilters()
-        {
-            string current = SelectedStatusFilter;
-
-            FilterStatuses.Clear();
-
-            FilterStatuses.Add("All");
-            FilterStatuses.Add("Posted");
-
-            if (ShowCancelledGrns)
-                FilterStatuses.Add("Cancelled");
-
-            if (!FilterStatuses.Contains(current))
-                SelectedStatusFilter = "All";
-        }
-
         // =========================================================
         // FILTER CHANGE EVENTS
         // =========================================================
@@ -174,11 +146,6 @@ namespace POS.BackOffice.UI.ViewModels
             StatusMessage = "Supplier filter changed. Click SEARCH.";
         }
 
-        partial void OnSelectedStatusFilterChanged(string value)
-        {
-            StatusMessage = "Status filter changed. Click SEARCH.";
-        }
-
         partial void OnFilterStartDateChanged(DateTime? value)
         {
             StatusMessage = "Date filter changed. Click SEARCH.";
@@ -187,15 +154,6 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnFilterEndDateChanged(DateTime? value)
         {
             StatusMessage = "Date filter changed. Click SEARCH.";
-        }
-
-        partial void OnShowCancelledGrnsChanged(bool value)
-        {
-            RefreshStatusFilters();
-
-            StatusMessage = value
-                ? "Cancelled GRNs will be included after SEARCH."
-                : "Cancelled GRNs are hidden. Click SEARCH to refresh.";
         }
 
         partial void OnViewingGrnDetailsChanged(GrnDetailDto? value)
@@ -283,10 +241,10 @@ namespace POS.BackOffice.UI.ViewModels
             var data = await _grnHistoryRepository.GetGrnSummariesAsync(
                 SearchText,
                 SelectedSupplierFilter?.Id,
-                SelectedStatusFilter,
-                FilterStartDate,
-                FilterEndDate,
-                ShowCancelledGrns);
+                statusFilter: "Posted",
+                startDate: FilterStartDate,
+                endDate: FilterEndDate,
+                showCancelled: false);
 
             GrnDocuments.Clear();
             foreach (var grn in data)
@@ -298,12 +256,8 @@ namespace POS.BackOffice.UI.ViewModels
         {
             SearchText = string.Empty;
             SelectedSupplierFilter = null;
-            ShowCancelledGrns = false;
-            SelectedStatusFilter = "All";
             FilterStartDate = DateTime.Now.AddDays(-30);
             FilterEndDate = DateTime.Now;
-
-            RefreshStatusFilters();
 
             await LoadDataAsync();
         }

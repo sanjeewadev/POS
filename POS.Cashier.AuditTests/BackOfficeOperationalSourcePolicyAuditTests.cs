@@ -9,6 +9,7 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
         VerifyStockAdjustmentReadOnlyBindings();
         VerifyStockAdjustmentRecalculationHook();
         VerifyPurchaseOrderEntryAndPdfWorkflow();
+        VerifyPurchaseOrderAndGrnHistoryReadability();
         VerifyPoLinkedGrnExpiryEditor();
         VerifyNonVatSupplierPurchasingPolicy();
 
@@ -207,6 +208,137 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             viewModel,
             "but the PDF could not be exported.",
             "saved-PO export failure reports only the PDF failure");
+    }
+
+    private static void VerifyPurchaseOrderAndGrnHistoryReadability()
+    {
+        string grnXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "GrnDashboardView.xaml");
+        string grnViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "GrnDashboardViewModel.cs");
+        string poXaml = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "Purchasing",
+            "PurchaseOrderDashboardView.xaml");
+
+        foreach (string removedGrnToken in new[]
+        {
+            "Show Cancelled GRNs",
+            "FilterStatuses",
+            "SelectedStatusFilter",
+            "ShowCancelledGrns",
+            "Header=\"Status\"",
+            "ViewingGrnDetails.Status",
+            "Header=\"Price Updated\"",
+            "Text=\"Due: \""
+        })
+        {
+            AuditAssert.False(
+                grnXaml.Contains(removedGrnToken, StringComparison.Ordinal),
+                $"Removed GRN history token remains visible: {removedGrnToken}");
+        }
+
+        foreach (string removedGrnViewModelToken in new[]
+        {
+            "_selectedStatusFilter",
+            "_showCancelledGrns",
+            "FilterStatuses",
+            "RefreshStatusFilters",
+            "OnSelectedStatusFilterChanged",
+            "OnShowCancelledGrnsChanged"
+        })
+        {
+            AuditAssert.False(
+                grnViewModel.Contains(removedGrnViewModelToken, StringComparison.Ordinal),
+                $"Removed GRN history filter state remains: {removedGrnViewModelToken}");
+        }
+
+        AuditAssert.Contains(
+            grnViewModel,
+            "statusFilter: \"Posted\"",
+            "GRN history fixed posted-document query");
+        AuditAssert.Contains(
+            grnViewModel,
+            "showCancelled: false",
+            "GRN history excludes unsupported cancelled documents");
+        AuditAssert.Contains(
+            grnXaml,
+            "Text=\"Payment Due: \"",
+            "GRN payment-due label");
+        AuditAssert.Contains(
+            grnXaml,
+            "Header=\"Disc Mode\"",
+            "GRN discount mode history column");
+        AuditAssert.Contains(
+            grnXaml,
+            "Header=\"Disc Value\"",
+            "GRN discount value history column");
+        AuditAssert.Contains(
+            grnXaml,
+            "Header=\"Disc Amt\"",
+            "GRN calculated discount history column");
+        AuditAssert.Contains(
+            grnXaml,
+            "Header=\"Retail Price\"",
+            "GRN Retail Price history column");
+        AuditAssert.Contains(
+            grnXaml,
+            "Header=\"Wholesale Price\"",
+            "GRN Wholesale Price history column");
+        AuditAssert.Contains(
+            grnXaml,
+            "This GRN is read-only",
+            "GRN history read-only message");
+        AuditAssert.Contains(
+            grnXaml,
+            "cannot be edited after posting.",
+            "GRN posted-document edit restriction");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(
+                grnXaml,
+                "ScrollViewer.HorizontalScrollBarVisibility=\"Auto\""),
+            "GRN detail horizontal scrollbar count");
+
+        AuditAssert.False(
+            poXaml.Contains("Binding=\"{Binding TrackingSummary}\"", StringComparison.Ordinal),
+            "PO dashboard tracking summary remains visible.");
+        AuditAssert.False(
+            poXaml.Contains("Binding=\"{Binding TrackingText}\"", StringComparison.Ordinal),
+            "PO detail tracking column remains visible.");
+        AuditAssert.False(
+            poXaml.Contains("Header=\"Tracking\"", StringComparison.Ordinal),
+            "PO history still exposes an unclear Tracking column.");
+        AuditAssert.Contains(
+            poXaml,
+            "ItemsSource=\"{Binding FilterStatuses}\"",
+            "PO status filter remains available");
+        AuditAssert.Contains(
+            poXaml,
+            "Content=\"Show Cancelled POs\"",
+            "PO cancelled-document filter remains available");
+        AuditAssert.Contains(
+            poXaml,
+            "This Purchase Order is read-only",
+            "PO history read-only message");
+        AuditAssert.Contains(
+            poXaml,
+            "on this history page.",
+            "PO history-page read-only scope");
+        AuditAssert.Equal(
+            1,
+            CountOccurrences(
+                poXaml,
+                "ScrollViewer.HorizontalScrollBarVisibility=\"Auto\""),
+            "PO detail horizontal scrollbar count");
     }
 
     private static void VerifyPoLinkedGrnExpiryEditor()
