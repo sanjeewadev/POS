@@ -86,3 +86,16 @@
 - [ ] Missing restricted application login is recreated safely for a valid Advanced POS database.
 - [ ] Unknown, empty, inaccessible, or newer databases are refused without modification.
 - [ ] Re-running Upgrade/Repair is idempotent and succeeds without duplicating data.
+## Version 1.0.5 acceptance
+
+- [ ] BackOffice title shows `Advanced POS BackOffice — <Store Name>`.
+- [ ] Backup page shows `Central SQL Server`, the correct server endpoint, and `POS_Production`; local SQLite controls are disabled.
+- [ ] Server backup tool creates and verifies a `.bak` file.
+- [ ] GRN item/variant loading works without a collation error.
+- [ ] Purchase Order and Price Management UOM loading works.
+- [ ] Changing an unsaved Item Code or matrix property clears generated matrix rows.
+- [ ] Duplicate SKU, item barcode, and batch-barcode conflicts show useful messages.
+- [ ] Correcting a failed new-item save succeeds without `Item record was not found`.
+- [ ] Existing historical mismatched SKUs remain unchanged unless separately approved.
+- [ ] Server setup records migration `20260724043000_RepairOperationalTextCollations`.
+- [ ] All Cashier terminals run the matching Version 1.0.5 application.

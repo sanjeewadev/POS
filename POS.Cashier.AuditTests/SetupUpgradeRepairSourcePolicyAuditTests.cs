@@ -188,11 +188,11 @@ internal static class SetupUpgradeRepairSourcePolicyAuditTests
             "permanent Cashier installer identity");
         AuditAssert.Contains(
             serverInstaller,
-            "#define AppVersion \"1.0.3\"",
+            "#error AppVersion must be supplied",
             "Server setup hardening version");
         AuditAssert.Contains(
             cashierInstaller,
-            "#define AppVersion \"1.0.3\"",
+            "#error AppVersion must be supplied",
             "Cashier setup hardening version");
         AuditAssert.Contains(
             serverInstaller,
@@ -206,7 +206,7 @@ internal static class SetupUpgradeRepairSourcePolicyAuditTests
 
         AuditAssert.Contains(
             releaseInfo,
-            "ProductVersion = \"1.0.3\"",
+            "AssemblyInformationalVersionAttribute",
             "setup and upgrade hardening release version");
 
         return Task.CompletedTask;

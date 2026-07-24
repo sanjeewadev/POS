@@ -78,3 +78,16 @@ Version 1.0.3 hardens production setup, upgrade, repair, and the deployment-wiza
 7. Run `Advanced_POS_Cashier_Setup_1.0.3.exe` on each Cashier after the Server passes acceptance.
 
 Do not select New Store for an existing customer. New Store refuses existing database or login resources and never replaces them.
+## Upgrade to Version 1.0.5
+
+Version 1.0.5 repairs SQL Server operational-text collations, removes unsafe UOM fallback queries, hardens Item Master matrix/save recovery, aligns release versioning from one central source, and clarifies the provider-aware backup page.
+
+1. Close BackOffice and every Cashier application.
+2. Run `Advanced_POS_Server_Setup_1.0.5.exe` on the BackOffice/SQL Server computer first.
+3. Keep the current configuration for a normal in-place upgrade.
+4. The Server upgrade creates a verified pre-upgrade backup and applies `20260724043000_RepairOperationalTextCollations`.
+5. Confirm GRN, Purchase Order, Price Management, Item Master save/retry, and SQL Server backup tools.
+6. Run `Advanced_POS_Cashier_Setup_1.0.5.exe` on every Cashier computer.
+7. Keep the current configuration and complete the customer acceptance checklist.
+
+Do not uninstall the previous version and do not run the Cashier installer before the Server upgrade passes.

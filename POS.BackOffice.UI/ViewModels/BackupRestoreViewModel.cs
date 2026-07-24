@@ -8,7 +8,9 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
+using POS.Core.Configuration;
 using POS.Core.Data;
+using POS.Core.Data.Configuration;
 using POS.Core.Models.Backup;
 using POS.Core.Repositories;
 using POS.Core.Services;
@@ -22,8 +24,12 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly BackupService _backupService;
         private readonly BackupRepository _backupRepository;
+        private readonly StoreSettingsRepository
+            _storeSettingsRepository;
         private readonly TerminalSettingsRepository
             _terminalSettingsRepository;
+        private readonly DatabaseConnectionSettings
+            _databaseSettings;
         private readonly MachineFingerprintService
             _machineFingerprintService;
         private readonly AuthService _authService;
@@ -31,16 +37,22 @@ namespace POS.BackOffice.UI.ViewModels
         public BackupRestoreViewModel(
             BackupService backupService,
             BackupRepository backupRepository,
+            StoreSettingsRepository storeSettingsRepository,
             TerminalSettingsRepository
                 terminalSettingsRepository,
             MachineFingerprintService
                 machineFingerprintService,
-            AuthService authService)
+            AuthService authService,
+            DatabaseConnectionSettings databaseSettings)
         {
             _backupService = backupService;
             _backupRepository = backupRepository;
+            _storeSettingsRepository = storeSettingsRepository;
             _terminalSettingsRepository =
                 terminalSettingsRepository;
+            _databaseSettings = databaseSettings ??
+                throw new ArgumentNullException(
+                    nameof(databaseSettings));
             _machineFingerprintService =
                 machineFingerprintService;
             _authService = authService;
@@ -48,14 +60,10 @@ namespace POS.BackOffice.UI.ViewModels
             RecentHistory =
                 new ObservableCollection<BackupHistory>();
 
-            BackupFolder =
-                _backupService.GetDefaultBackupFolder();
-
-            CurrentDatabasePath =
-                DatabasePathProvider.DatabaseFilePath;
-
             IsAdministrator =
                 _authService.IsAdmin;
+
+            ConfigureDatabaseMode();
         }
 
         public ObservableCollection<BackupHistory>
@@ -66,6 +74,31 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private bool _isAdministrator;
+
+        [ObservableProperty]
+        private bool _isStandaloneSqlite;
+
+        [ObservableProperty]
+        private bool _isCentralSqlServer;
+
+        [ObservableProperty]
+        private string _backupModeDescription = string.Empty;
+
+        [ObservableProperty]
+        private string _currentDatabaseModeText = "-";
+
+        [ObservableProperty]
+        private string _currentDatabaseLocationLabel =
+            "Database File";
+
+        [ObservableProperty]
+        private string _currentDatabaseDetailLabel =
+            "Database Size";
+
+        public bool CanUseLocalBackup =>
+            IsAdministrator &&
+            IsStandaloneSqlite &&
+            !IsBusy;
 
         [ObservableProperty]
         private string _backupFolder = string.Empty;
@@ -139,7 +172,15 @@ namespace POS.BackOffice.UI.ViewModels
 
                 await LoadDataCoreAsync();
 
-                if (!IsAdministrator)
+                if (IsCentralSqlServer)
+                {
+                    SetStatus(
+                        "Central SQL Server is active. Use the installed " +
+                        "Backup POS Database utility on the BackOffice " +
+                        "server computer.",
+                        "#C05A00");
+                }
+                else if (!IsAdministrator)
                 {
                     SetStatus(
                         "Only an Administrator can create or restore backups.",
@@ -148,7 +189,7 @@ namespace POS.BackOffice.UI.ViewModels
                 else
                 {
                     SetStatus(
-                        "Manual backup and restore are ready.",
+                        "Standalone SQLite manual backup and restore are ready.",
                         "#008000");
                 }
             }
@@ -175,7 +216,8 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task CreateBackupAsync()
         {
             if (IsBusy ||
-                !EnsureAdministrator())
+                !EnsureAdministrator() ||
+                !EnsureLocalBackupAvailable())
             {
                 return;
             }
@@ -338,6 +380,9 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task SelectBackupFileAsync()
         {
+            if (!EnsureLocalBackupAvailable())
+                return;
+
             try
             {
                 string filePath =
@@ -373,8 +418,11 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private async Task VerifyBackupAsync()
         {
-            if (IsBusy)
+            if (IsBusy ||
+                !EnsureLocalBackupAvailable())
+            {
                 return;
+            }
 
             if (!EnsureSelectedBackupFile())
                 return;
@@ -388,6 +436,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             if (IsBusy ||
                 !EnsureAdministrator() ||
+                !EnsureLocalBackupAvailable() ||
                 !EnsureSelectedBackupFile())
             {
                 return;
@@ -554,6 +603,9 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void OpenBackupFolder()
         {
+            if (!EnsureLocalBackupAvailable())
+                return;
+
             try
             {
                 _backupService.OpenBackupFolder();
@@ -666,26 +718,67 @@ namespace POS.BackOffice.UI.ViewModels
 
         private async Task LoadDataCoreAsync()
         {
-            BackupFolder =
-                _backupService
-                    .GetDefaultBackupFolder();
+            ConfigureDatabaseMode();
 
-            CurrentDatabasePath =
-                DatabasePathProvider.DatabaseFilePath;
+            if (IsCentralSqlServer)
+            {
+                var storeSettings =
+                    await _storeSettingsRepository
+                        .GetOrCreateDefaultAsync();
 
-            BackupMetadata currentInfo =
-                await _backupService
-                    .GetCurrentDatabaseInfoAsync();
+                CurrentStoreText =
+                    string.IsNullOrWhiteSpace(
+                        storeSettings.StoreName)
+                        ? "-"
+                        : storeSettings.StoreName.Trim();
 
-            CurrentStoreText =
-                $"{currentInfo.StoreDisplayName} " +
-                $"({DisplayOrDash(currentInfo.StoreId)})";
+                CurrentDatabasePath =
+                    $"{_databaseSettings.ServerHost}," +
+                    $"{_databaseSettings.ServerPort}";
 
-            CurrentDatabaseSizeText =
-                currentInfo.DisplayDatabaseSize;
+                CurrentDatabaseSizeText =
+                    _databaseSettings.DatabaseName;
 
-            CurrentMigrationText =
-                currentInfo.MigrationDisplay;
+                CurrentMigrationText =
+                    "Advanced POS Server Setup verifies migration: " +
+                    ProductReleaseInfo.RequiredSqlServerMigration;
+
+                BackupFolder =
+                    "BackOffice server Start menu > Advanced POS > " +
+                    "Backup POS Database";
+
+                LastBackupText =
+                    "See the server backup report and verified .bak files.";
+
+                LastRestoreText =
+                    "See the server restore report.";
+
+                RecentHistory.Clear();
+                return;
+            }
+            else
+            {
+                BackupFolder =
+                    _backupService
+                        .GetDefaultBackupFolder();
+
+                CurrentDatabasePath =
+                    DatabasePathProvider.DatabaseFilePath;
+
+                BackupMetadata currentInfo =
+                    await _backupService
+                        .GetCurrentDatabaseInfoAsync();
+
+                CurrentStoreText =
+                    $"{currentInfo.StoreDisplayName} " +
+                    $"({DisplayOrDash(currentInfo.StoreId)})";
+
+                CurrentDatabaseSizeText =
+                    currentInfo.DisplayDatabaseSize;
+
+                CurrentMigrationText =
+                    currentInfo.MigrationDisplay;
+            }
 
             BackupHistory? latestBackup =
                 await _backupRepository
@@ -708,6 +801,55 @@ namespace POS.BackOffice.UI.ViewModels
                       $"{latestRestore.BackupFileNameDisplay}";
 
             await LoadHistoryAsync();
+        }
+
+        private void ConfigureDatabaseMode()
+        {
+            IsStandaloneSqlite =
+                _databaseSettings.IsStandaloneSqlite;
+
+            IsCentralSqlServer =
+                _databaseSettings.IsCentralSqlServer;
+
+            CurrentDatabaseModeText =
+                IsCentralSqlServer
+                    ? "Central SQL Server"
+                    : "Standalone SQLite";
+
+            CurrentDatabaseLocationLabel =
+                IsCentralSqlServer
+                    ? "Database Server"
+                    : "Database File";
+
+            CurrentDatabaseDetailLabel =
+                IsCentralSqlServer
+                    ? "Database Name"
+                    : "Database Size";
+
+            BackupModeDescription =
+                IsCentralSqlServer
+                    ? "Server database backups are created on the " +
+                      "BackOffice server computer. Local SQLite backup " +
+                      "controls are disabled on this page."
+                    : "Manual standalone backup only. No scheduled or " +
+                      "automatic backups.";
+
+            OnPropertyChanged(nameof(CanUseLocalBackup));
+        }
+
+        partial void OnIsAdministratorChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanUseLocalBackup));
+        }
+
+        partial void OnIsStandaloneSqliteChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanUseLocalBackup));
+        }
+
+        partial void OnIsBusyChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanUseLocalBackup));
         }
 
         private async Task LoadHistoryAsync()
@@ -818,6 +960,27 @@ namespace POS.BackOffice.UI.ViewModels
             VerifyResultText = message;
 
             SetStatus(message, "#B91C1C");
+        }
+
+        private bool EnsureLocalBackupAvailable()
+        {
+            if (IsStandaloneSqlite)
+                return true;
+
+            const string message =
+                "This installation uses the central SQL Server database. " +
+                "Use the installed Backup POS Database utility on the " +
+                "BackOffice server computer.";
+
+            SetStatus(message, "#C05A00");
+
+            MessageBox.Show(
+                message,
+                "Central SQL Server Backup",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            return false;
         }
 
         private bool EnsureAdministrator()

@@ -5,7 +5,7 @@
   #error OutputDir must be supplied by Build-POS-Production-Installers.ps1
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.3"
+  #error AppVersion must be supplied by Build-POS-Production-Installers.ps1
 #endif
 
 #define AppName "Advanced POS Server"

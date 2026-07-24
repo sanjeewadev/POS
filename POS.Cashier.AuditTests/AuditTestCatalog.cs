@@ -69,6 +69,7 @@ internal static class AuditTestCatalog
         new("Store connection recovery and network resilience are controlled", AuditGroups.SourcePolicy, ConnectionResilienceSourcePolicyAuditTests.StoreConnectionRecoveryIsControlledAsync),
         new("Production setup upgrade repair and wizard layout are controlled", AuditGroups.SourcePolicy, SetupUpgradeRepairSourcePolicyAuditTests.SetupUpgradeRepairAndWizardLayoutAreControlledAsync),
         new("Cashier licence recovery and installed upgrades are controlled", AuditGroups.SourcePolicy, LicenseRecoverySourcePolicyAuditTests.CashierLicenceRecoveryAndUpgradeAreControlledAsync),
+        new("Release version and database backup modes are controlled", AuditGroups.SourcePolicy, ReleaseReadinessSourcePolicyAuditTests.ReleaseVersionAndBackupModesAreControlledAsync),
         new("Live POS database path is never an audit database", AuditGroups.SourcePolicy, SourcePolicyAuditTests.LiveDatabasePathIsExcludedAsync)
     };
 }

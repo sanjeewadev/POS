@@ -17,7 +17,7 @@ The server computer hosts SQL Server Express, the production POS database, BackO
 ## Installation
 
 1. Sign in using the Windows account that will normally run BackOffice.
-2. Run `Advanced_POS_Server_Setup_1.0.3.exe` as Administrator.
+2. Run the `Advanced_POS_Server_Setup_<version>.exe` file supplied in the release package as Administrator.
 3. Choose whether Cashier should also be installed on the server computer.
 4. The production wizard opens automatically.
 5. Select one mode:
@@ -92,3 +92,10 @@ The wizard inspects the selected SQL database and login before making changes. W
 The fixed footer keeps **Start Setup** and **Close** visible while the form scrolls, including on displays using Windows scaling.
 
 New Store never overwrites an existing database or login. Upgrade/Repair refuses unknown databases, empty or partial states requiring technician review, inaccessible databases, and databases created by a newer application version.
+## Version 1.0.5 database and Item Master upgrade rules
+
+Version 1.0.5 includes the SQL Server operational-text collation repair and Item Master matrix/save safety corrections. Run the Server installer first on the BackOffice/SQL Server computer. For an existing store, choose the normal upgrade path that keeps the current configuration.
+
+The Server upgrade creates a verified pre-upgrade SQL backup, applies pending migrations including `20260724043000_RepairOperationalTextCollations`, verifies database integrity, and preserves all store data, licences, terminal assignments, and encrypted connection profiles.
+
+After the Server passes acceptance, upgrade every Cashier computer with the matching Version 1.0.5 Cashier installer.

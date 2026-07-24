@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$')]
-    [string]$Version = "1.0.3",
+    [string]$Version = "",
 
     [string]$OutputDirectory = "",
     [string]$InnoCompilerPath = "",
@@ -15,6 +15,79 @@ $ErrorActionPreference = "Stop"
 
 $repository = [IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot "..\.."))
+
+$centralVersionFile = Join-Path `
+    $repository `
+    "Directory.Build.props"
+
+if (-not (Test-Path -LiteralPath $centralVersionFile -PathType Leaf)) {
+    throw "Central version file was not found: $centralVersionFile"
+}
+
+[xml]$centralVersionXml = Get-Content `
+    -LiteralPath $centralVersionFile `
+    -Raw
+
+$centralVersionNode = $centralVersionXml.SelectSingleNode(
+    "/Project/PropertyGroup/Version")
+
+if ($null -eq $centralVersionNode -or
+    [string]::IsNullOrWhiteSpace($centralVersionNode.InnerText)) {
+    throw "Directory.Build.props does not define the central Version value."
+}
+
+$centralVersion = $centralVersionNode.InnerText.Trim()
+
+$productReleaseInfoFile = Join-Path `
+    $repository `
+    "POS.Core\Configuration\ProductReleaseInfo.cs"
+
+if (-not (Test-Path -LiteralPath $productReleaseInfoFile -PathType Leaf)) {
+    throw "Product release information file was not found: $productReleaseInfoFile"
+}
+
+$productReleaseInfoSource = Get-Content `
+    -LiteralPath $productReleaseInfoFile `
+    -Raw
+
+$requiredMigrationMatch = [regex]::Match(
+    $productReleaseInfoSource,
+    'RequiredSqlServerMigration\s*=\s*\r?\n?\s*"(?<id>\d+_[A-Za-z0-9_]+)"',
+    [Text.RegularExpressions.RegexOptions]::CultureInvariant)
+
+if (-not $requiredMigrationMatch.Success) {
+    throw "ProductReleaseInfo does not define RequiredSqlServerMigration."
+}
+
+$requiredMigrationId =
+    $requiredMigrationMatch.Groups["id"].Value
+
+$requiredMigrationFile = Join-Path `
+    $repository `
+    "POS.Database.Setup\Migrations\$requiredMigrationId.cs"
+
+if (-not (Test-Path -LiteralPath $requiredMigrationFile -PathType Leaf)) {
+    throw @"
+The required SQL Server migration is not present in the release source.
+
+Migration: $requiredMigrationId
+Expected:  $requiredMigrationFile
+"@
+}
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = $centralVersion
+}
+elseif ($Version -ne $centralVersion) {
+    throw @"
+The requested installer version does not match the committed source version.
+
+Requested: $Version
+Source:    $centralVersion
+
+Use Build-AdvancedPOS-Release.ps1 to prepare a new release version first.
+"@
+}
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path `
@@ -260,7 +333,7 @@ try {
 
     if ($status.Count -gt 0) {
         git status --short
-        throw "Commit the approved Phase 11D source before building customer installers."
+        throw "Commit the approved release source before building customer installers."
     }
 
     $dotnet = Get-Command dotnet -ErrorAction Stop

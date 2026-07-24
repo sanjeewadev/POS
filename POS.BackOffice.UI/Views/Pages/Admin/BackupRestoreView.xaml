@@ -152,7 +152,7 @@
                             Margin="0,0,20,0">
                     <TextBlock Text="1. DATABASE BACKUP &amp; RESTORE"
                                Style="{StaticResource HeaderLabel}"/>
-                    <TextBlock Text="Manual backup only. No scheduled or automatic backups."
+                    <TextBlock Text="{Binding BackupModeDescription}"
                                Style="{StaticResource HelpText}"/>
                 </StackPanel>
 
@@ -222,6 +222,7 @@
                             <RowDefinition Height="29"/>
                             <RowDefinition Height="29"/>
                             <RowDefinition Height="29"/>
+                            <RowDefinition Height="29"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0"
@@ -233,35 +234,43 @@
                                  Style="{StaticResource ClassicInput}"/>
 
                         <TextBlock Grid.Row="1"
-                                   Text="Database File"
+                                   Text="Database Mode"
                                    Style="{StaticResource InlineLabel}"/>
                         <TextBox Grid.Row="1"
+                                 Grid.Column="1"
+                                 Text="{Binding CurrentDatabaseModeText}"
+                                 Style="{StaticResource ClassicInput}"/>
+
+                        <TextBlock Grid.Row="2"
+                                   Text="{Binding CurrentDatabaseLocationLabel}"
+                                   Style="{StaticResource InlineLabel}"/>
+                        <TextBox Grid.Row="2"
                                  Grid.Column="1"
                                  Text="{Binding CurrentDatabasePath}"
                                  ToolTip="{Binding CurrentDatabasePath}"
                                  Style="{StaticResource ClassicInput}"/>
 
-                        <TextBlock Grid.Row="2"
-                                   Text="Database Size"
+                        <TextBlock Grid.Row="3"
+                                   Text="{Binding CurrentDatabaseDetailLabel}"
                                    Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Row="2"
+                        <TextBox Grid.Row="3"
                                  Grid.Column="1"
                                  Text="{Binding CurrentDatabaseSizeText}"
                                  Style="{StaticResource ClassicInput}"/>
 
-                        <TextBlock Grid.Row="3"
+                        <TextBlock Grid.Row="4"
                                    Text="Schema / Migration"
                                    Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Row="3"
+                        <TextBox Grid.Row="4"
                                  Grid.Column="1"
                                  Text="{Binding CurrentMigrationText}"
                                  ToolTip="{Binding CurrentMigrationText}"
                                  Style="{StaticResource ClassicInput}"/>
 
-                        <TextBlock Grid.Row="4"
+                        <TextBlock Grid.Row="5"
                                    Text="Last Backup"
                                    Style="{StaticResource InlineLabel}"/>
-                        <TextBox Grid.Row="4"
+                        <TextBox Grid.Row="5"
                                  Grid.Column="1"
                                  Text="{Binding LastBackupText}"
                                  ToolTip="{Binding LastBackupText}"
@@ -276,6 +285,18 @@
                 <StackPanel>
                     <TextBlock Text="3. CREATE MANUAL BACKUP"
                                Style="{StaticResource HeaderLabel}"/>
+
+                    <Border Background="#FFF7E6"
+                            BorderBrush="#D97706"
+                            BorderThickness="1"
+                            Padding="8"
+                            Margin="0,0,0,8"
+                            Visibility="{Binding IsCentralSqlServer, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="Central SQL Server is active. Create and verify .bak backups on the BackOffice server computer by using Start menu > Advanced POS > Backup POS Database."
+                                   Foreground="#9A3412"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+                    </Border>
 
                     <TextBlock Text="Choose a USB drive or another secure folder. The backup is created as one verified .posbackup file."
                                Style="{StaticResource HelpText}"
@@ -298,12 +319,13 @@
                     <StackPanel Orientation="Horizontal">
                         <Button Content="CREATE BACKUP"
                                 Command="{Binding CreateBackupCommand}"
-                                IsEnabled="{Binding IsAdministrator}"
+                                IsEnabled="{Binding CanUseLocalBackup}"
                                 Style="{StaticResource ActionBtn}"
                                 Margin="0,0,8,0"/>
 
                         <Button Content="OPEN BACKUP FOLDER"
                                 Command="{Binding OpenBackupFolderCommand}"
+                                IsEnabled="{Binding CanUseLocalBackup}"
                                 Style="{StaticResource ClassicBtn}"/>
                     </StackPanel>
                 </StackPanel>
@@ -323,6 +345,18 @@
                 <StackPanel>
                     <TextBlock Text="4. VERIFY AND RESTORE BACKUP"
                                Style="{StaticResource HeaderLabel}"/>
+
+                    <Border Background="#FFF7E6"
+                            BorderBrush="#D97706"
+                            BorderThickness="1"
+                            Padding="8"
+                            Margin="0,0,0,8"
+                            Visibility="{Binding IsCentralSqlServer, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="SQLite .posbackup files do not apply to the active central SQL Server database. Use the approved SQL Server backup and restore tools on the BackOffice server computer."
+                                   Foreground="#9A3412"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+                    </Border>
 
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -355,6 +389,7 @@
                                 Grid.Column="3"
                                 Content="SELECT FILE"
                                 Command="{Binding SelectBackupFileCommand}"
+                                IsEnabled="{Binding CanUseLocalBackup}"
                                 Style="{StaticResource ClassicBtn}"/>
 
                         <Button Grid.Row="0"
@@ -436,17 +471,18 @@
                                     HorizontalAlignment="Right">
                             <Button Content="VERIFY"
                                     Command="{Binding VerifyBackupCommand}"
+                                    IsEnabled="{Binding CanUseLocalBackup}"
                                     Style="{StaticResource ClassicBtn}"
                                     Margin="0,0,8,0"/>
 
                             <Button Content="RESTORE BACKUP"
                                     Command="{Binding RestoreBackupCommand}"
-                                    IsEnabled="{Binding IsAdministrator}"
+                                    IsEnabled="{Binding CanUseLocalBackup}"
                                     Style="{StaticResource DangerBtn}"/>
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="Restore replaces the current database only after checksum, SQLite integrity, required-table, and migration checks pass. A restore-safety copy is created first."
+                    <TextBlock Text="Standalone SQLite restore replaces the current local database only after checksum, integrity, required-table, and migration checks pass. A restore-safety copy is created first."
                                Foreground="#C05A00"
                                FontWeight="SemiBold"
                                TextWrapping="Wrap"

@@ -238,7 +238,7 @@ internal static class ConnectionResilienceSourcePolicyAuditTests
             "stale Server-hosted Cashier shortcut cleanup");
         AuditAssert.Contains(
             serverInstaller,
-            "#define AppVersion \"1.0.3\"",
+            "#error AppVersion must be supplied",
             "Server resilience installer version");
 
         string cashierInstaller = Read(
@@ -255,7 +255,7 @@ internal static class ConnectionResilienceSourcePolicyAuditTests
             "stale Cashier shortcut cleanup");
         AuditAssert.Contains(
             cashierInstaller,
-            "#define AppVersion \"1.0.3\"",
+            "#error AppVersion must be supplied",
             "Cashier resilience installer version");
 
         string databaseSetup = Read(
@@ -274,7 +274,7 @@ internal static class ConnectionResilienceSourcePolicyAuditTests
 
         AuditAssert.Contains(
             releaseInfo,
-            "ProductVersion = \"1.0.3\"",
+            "AssemblyInformationalVersionAttribute",
             "connection resilience release version");
 
         return Task.CompletedTask;
