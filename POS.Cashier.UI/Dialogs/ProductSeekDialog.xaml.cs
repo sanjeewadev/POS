@@ -223,12 +223,16 @@ namespace POS.Cashier.UI.Dialogs
                 return;
             }
 
+            PluSearchViewModel? viewModel = _viewModel;
+            if (viewModel == null)
+                return;
+
             DataGridRow? row = FindParent<DataGridRow>(e.OriginalSource as DependencyObject);
 
             if (row?.DataContext is not VariantSeekDto variant)
                 return;
 
-            _viewModel.SelectedVariant = variant;
+            viewModel.SelectedVariant = variant;
             VariantDataGrid.SelectedItem = variant;
             VariantDataGrid.ScrollIntoView(variant);
 
@@ -243,12 +247,16 @@ namespace POS.Cashier.UI.Dialogs
                 return;
             }
 
+            PluSearchViewModel? viewModel = _viewModel;
+            if (viewModel == null)
+                return;
+
             DataGridRow? row = FindParent<DataGridRow>(e.OriginalSource as DependencyObject);
 
             if (row?.DataContext is not VariantSeekDto variant)
                 return;
 
-            _viewModel.SelectedVariant = variant;
+            viewModel.SelectedVariant = variant;
             VariantDataGrid.SelectedItem = variant;
             VariantDataGrid.ScrollIntoView(variant);
 
@@ -263,12 +271,16 @@ namespace POS.Cashier.UI.Dialogs
                 return;
             }
 
+            PluSearchViewModel? viewModel = _viewModel;
+            if (viewModel == null)
+                return;
+
             DataGridRow? row = FindParent<DataGridRow>(e.OriginalSource as DependencyObject);
 
             if (row?.DataContext is not BatchSeekDto batch)
                 return;
 
-            _viewModel.SelectedBatch = batch;
+            viewModel.SelectedBatch = batch;
             BatchDataGrid.SelectedItem = batch;
             BatchDataGrid.ScrollIntoView(batch);
 
@@ -283,12 +295,16 @@ namespace POS.Cashier.UI.Dialogs
                 return;
             }
 
+            PluSearchViewModel? viewModel = _viewModel;
+            if (viewModel == null)
+                return;
+
             DataGridRow? row = FindParent<DataGridRow>(e.OriginalSource as DependencyObject);
 
             if (row?.DataContext is not BatchSeekDto batch)
                 return;
 
-            _viewModel.SelectedBatch = batch;
+            viewModel.SelectedBatch = batch;
             BatchDataGrid.SelectedItem = batch;
             BatchDataGrid.ScrollIntoView(batch);
 
