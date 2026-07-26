@@ -33,6 +33,11 @@ internal static class BatchPricingBackOfficeSourcePolicyAuditTests
         AuditAssert.Contains(view, "SELECTED ITEM — BATCH PRICES", "selected exact-batch panel");
         AuditAssert.Contains(view, "Binding=\"{Binding BatchPriceStatus}\"", "batch-price status column");
         AuditAssert.Contains(view, "Binding=\"{Binding PriceSourceText}\"", "batch price-source column");
+        AuditAssert.Contains(view, "MinHeight=\"255\"", "Pricing editor minimum height");
+        AuditAssert.Contains(view, "LastChildFill=\"False\"", "Pricing compact header docking");
+        AuditAssert.Contains(view, "ShowBatchEmptyState", "Pricing batch empty-state visibility");
+        AuditAssert.Contains(viewModel, "IsPricingListEmpty", "Pricing item empty-state property");
+        AuditAssert.Contains(viewModel, "No active physical batches with available stock", "Pricing batch empty-state guidance");
         AuditAssert.False(view.Contains("Change Reason", StringComparison.OrdinalIgnoreCase), "Pricing still requires a reason.");
         AuditAssert.False(view.Contains("Projected", StringComparison.OrdinalIgnoreCase), "Pricing still shows projected-value cards.");
         AuditAssert.False(view.Contains("Good Margin", StringComparison.OrdinalIgnoreCase), "Pricing still shows margin classifications.");
@@ -78,6 +83,9 @@ internal static class BatchPricingBackOfficeSourcePolicyAuditTests
         AuditAssert.Contains(view, "Header=\"Batch Overrides\"", "grouped batch summary column");
         AuditAssert.Contains(view, "Header=\"Old Source\"", "history old source column");
         AuditAssert.Contains(view, "Header=\"New Source\"", "history new source column");
+        AuditAssert.Contains(view, "Visibility=\"{Binding HasSelectedOperation, Converter={StaticResource BooleanToVisibilityConverter}}\"", "history detail visibility");
+        AuditAssert.Contains(view, "No saved price-change operations match the selected filters.", "history empty-state guidance");
+        AuditAssert.Contains(viewModel, "IsHistoryEmpty", "history empty-state property");
 
         AuditAssert.Contains(viewModel, "ObservableCollection<PriceChangeOperationSummaryDto>", "operation summary collection");
         AuditAssert.Contains(viewModel, "ObservableCollection<PriceChangeDetailDto>", "operation detail collection");

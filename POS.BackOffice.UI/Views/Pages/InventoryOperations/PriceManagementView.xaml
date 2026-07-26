@@ -82,9 +82,9 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="6"/>
-            <RowDefinition Height="3*"/>
+            <RowDefinition Height="*" MinHeight="180"/>
             <RowDefinition Height="6"/>
-            <RowDefinition Height="2*"/>
+            <RowDefinition Height="Auto" MinHeight="255"/>
             <RowDefinition Height="6"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -95,12 +95,18 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <DockPanel Grid.Row="0" Margin="0,0,0,7">
-                    <TextBlock Text="PRICE MANAGEMENT" FontSize="14" FontWeight="Bold" Foreground="#003366"/>
-                    <TextBlock Text="Master prices and exact batch overrides" Margin="14,1,0,0" Foreground="#666666"/>
-                    <Button DockPanel.Dock="Right" Content="REFRESH" Command="{Binding LoadDataCommand}" Style="{StaticResource Button}"/>
+                <DockPanel Grid.Row="0" Margin="0,0,0,7" LastChildFill="False">
+                    <Button DockPanel.Dock="Right" Width="95" Content="REFRESH" Command="{Binding LoadDataCommand}" Style="{StaticResource Button}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="PRICE MANAGEMENT" FontSize="14" FontWeight="Bold" Foreground="#003366"/>
+                        <TextBlock Text="Master prices and exact batch overrides" Margin="14,1,0,0" Foreground="#666666"/>
+                    </StackPanel>
                 </DockPanel>
                 <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="260"/>
                         <ColumnDefinition Width="8"/>
@@ -112,17 +118,22 @@
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Input}" ToolTip="Item, SKU, barcode, batch number or internal batch barcode"/>
-                    <ComboBox Grid.Column="2" ItemsSource="{Binding ItemTypeFilters}" SelectedItem="{Binding SelectedItemTypeFilter}" Style="{StaticResource Combo}"/>
-                    <ComboBox Grid.Column="4" ItemsSource="{Binding TrackingFilters}" SelectedItem="{Binding SelectedTrackingFilter}" Style="{StaticResource Combo}"/>
-                    <ComboBox Grid.Column="6" ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding SelectedCategoryFilter}" Style="{StaticResource Combo}"/>
-                    <Button Grid.Column="8" Content="CLEAR FILTERS" Command="{Binding ClearFiltersCommand}" Style="{StaticResource Button}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Search" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Item Type" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="4" Text="Tracking" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="6" Text="Category" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Input}" ToolTip="Item, SKU, barcode, batch number or internal batch barcode"/>
+                    <ComboBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding ItemTypeFilters}" SelectedItem="{Binding SelectedItemTypeFilter}" Style="{StaticResource Combo}"/>
+                    <ComboBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding TrackingFilters}" SelectedItem="{Binding SelectedTrackingFilter}" Style="{StaticResource Combo}"/>
+                    <ComboBox Grid.Row="1" Grid.Column="6" ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding SelectedCategoryFilter}" Style="{StaticResource Combo}"/>
+                    <Button Grid.Row="1" Grid.Column="8" Content="CLEAR FILTERS" Command="{Binding ClearFiltersCommand}" Style="{StaticResource Button}"/>
                 </Grid>
             </Grid>
         </Border>
 
         <Border Grid.Row="2" Style="{StaticResource GroupBox}" Padding="0">
-            <DataGrid ItemsSource="{Binding PricingItems}"
+            <Grid>
+                <DataGrid ItemsSource="{Binding PricingItems}"
                       SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
@@ -152,18 +163,25 @@
                     <DataGridTextColumn Header="Wholesale" Binding="{Binding WholesalePrice, StringFormat=N2}" Width="90" ElementStyle="{StaticResource RightText}"/>
                     <DataGridTextColumn Header="Maximum" Binding="{Binding MaximumPrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
                     <DataGridTextColumn Header="Batch Price Status" Binding="{Binding BatchPriceStatus}" Width="135"/>
-                </DataGrid.Columns>
-            </DataGrid>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Text="No pricing items match the selected filters."
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="#666666"
+                           FontStyle="Italic"
+                           Visibility="{Binding IsPricingListEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </Grid>
         </Border>
 
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="4" MinHeight="255">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="360"/>
                 <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource GroupBox}">
+            <Border Grid.Column="0" Style="{StaticResource GroupBox}" MinHeight="255">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -207,16 +225,16 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Column="2" Style="{StaticResource GroupBox}">
+            <Border Grid.Column="2" Style="{StaticResource GroupBox}" MinHeight="255">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                    <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="False">
                         <TextBlock Text="SELECTED ITEM — BATCH PRICES" FontWeight="Bold" Foreground="#005555"/>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding BatchPanelMessage}" Foreground="#666666" FontStyle="Italic"/>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding BatchPanelMessage}" Foreground="#666666" FontStyle="Italic" Margin="12,0,0,0"/>
                     </DockPanel>
                     <Grid Grid.Row="1" IsEnabled="{Binding CanShowBatchEditor}">
                         <Grid.ColumnDefinitions>
@@ -224,8 +242,9 @@
                             <ColumnDefinition Width="8"/>
                             <ColumnDefinition Width="235"/>
                         </Grid.ColumnDefinitions>
-                        <DataGrid Grid.Column="0" ItemsSource="{Binding ActiveBatches}" SelectedItem="{Binding SelectedBatch, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" RowHeight="27" HeadersVisibility="Column" AlternatingRowBackground="#F8F8F8" SelectionMode="Single" SelectionUnit="FullRow" ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                            <DataGrid.Columns>
+                        <Grid Grid.Column="0">
+                            <DataGrid ItemsSource="{Binding ActiveBatches}" SelectedItem="{Binding SelectedBatch, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" RowHeight="27" HeadersVisibility="Column" AlternatingRowBackground="#F8F8F8" SelectionMode="Single" SelectionUnit="FullRow" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
                                 <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo}" Width="105"/>
                                 <DataGridTextColumn Header="Internal Barcode" Binding="{Binding InternalBatchBarcode}" Width="120"/>
                                 <DataGridTextColumn Header="Expiry" Binding="{Binding ExpiryDisplayText}" Width="88"/>
@@ -234,8 +253,16 @@
                                 <DataGridTextColumn Header="Eff. Retail" Binding="{Binding EffectiveRetailPrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
                                 <DataGridTextColumn Header="Eff. W/S" Binding="{Binding EffectiveWholesalePrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
                                 <DataGridTextColumn Header="Source" Binding="{Binding PriceSourceText}" Width="105"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <Border Background="#F7F7F7" Opacity="0.96"
+                                    Visibility="{Binding ShowBatchEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="{Binding BatchEmptyMessage}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextAlignment="Center" TextWrapping="Wrap"
+                                           MaxWidth="420" Margin="18" Foreground="#555555" FontStyle="Italic"/>
+                            </Border>
+                        </Grid>
                         <Border Grid.Column="2" Background="#E8E8E8" BorderBrush="#AAAAAA" BorderThickness="1" Padding="8" IsEnabled="{Binding HasSelectedBatch}">
                             <Grid>
                                 <Grid.RowDefinitions>

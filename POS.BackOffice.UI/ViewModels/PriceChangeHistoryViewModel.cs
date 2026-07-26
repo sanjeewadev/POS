@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -38,6 +38,7 @@ namespace POS.BackOffice.UI.ViewModels
         public ObservableCollection<PriceChangeDetailDto> OperationDetails { get; } = new();
 
         public bool HasSelectedOperation => SelectedOperation != null;
+        public bool IsHistoryEmpty => !IsBusy && Operations.Count == 0;
         public int TotalRows => TotalOperations;
         public int MasterChangeCount => MasterOperationCount;
         public int BatchChangeCount => BatchOperationCount;
@@ -46,6 +47,8 @@ namespace POS.BackOffice.UI.ViewModels
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         }
+
+        partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsHistoryEmpty));
 
         partial void OnSelectedOperationChanged(PriceChangeOperationSummaryDto? value)
         {
@@ -157,6 +160,7 @@ namespace POS.BackOffice.UI.ViewModels
                 SelectedOperation = null;
                 OperationDetails.Clear();
                 RefreshSummaryCounters();
+                OnPropertyChanged(nameof(IsHistoryEmpty));
                 StatusMessage = $"Loaded {TotalOperations} price change operation(s).";
                 return true;
             }

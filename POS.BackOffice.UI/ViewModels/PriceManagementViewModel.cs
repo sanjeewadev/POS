@@ -44,7 +44,20 @@ namespace POS.BackOffice.UI.ViewModels
         public bool HasSelectedItem => SelectedItem != null;
         public bool HasSelectedBatch => SelectedBatch != null;
         public bool CanRemoveSelectedOverride => SelectedBatch?.HasSellingPriceOverride == true;
+        public bool IsPricingListEmpty => !IsBusy && PricingItems.Count == 0;
+        public bool ShowBatchEmptyState => !IsBatchLoading && ActiveBatches.Count == 0;
         public string BatchPanelMessage => SelectedItem?.BatchEditorMessage ?? "Select an item to view pricing details.";
+        public string BatchEmptyMessage
+        {
+            get
+            {
+                if (SelectedItem == null)
+                    return "Select a batch-tracked stock item to view physical batches.";
+                if (!CanShowBatchEditor)
+                    return "Batch overrides are available only for batch-tracked stock items.";
+                return "No active physical batches with available stock. Post a GRN and refresh.";
+            }
+        }
 
         public PriceManagementViewModel(
             PriceManagementRepository repository,
@@ -90,11 +103,16 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(nameof(HasSelectedItem));
             OnPropertyChanged(nameof(CanShowBatchEditor));
             OnPropertyChanged(nameof(BatchPanelMessage));
+            OnPropertyChanged(nameof(BatchEmptyMessage));
             OnPropertyChanged(nameof(HasUnsavedChanges));
             SelectedBatch = null;
             ActiveBatches.Clear();
+            NotifyEmptyStateProperties();
             _ = LoadBatchesForSelectedItemAsync();
         }
+
+        partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsPricingListEmpty));
+        partial void OnIsBatchLoadingChanged(bool value) => NotifyEmptyStateProperties();
 
         partial void OnSelectedBatchChanged(PriceManagementBatchDto? value)
         {
@@ -102,6 +120,13 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(nameof(HasSelectedBatch));
             OnPropertyChanged(nameof(CanRemoveSelectedOverride));
             OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void NotifyEmptyStateProperties()
+        {
+            OnPropertyChanged(nameof(IsPricingListEmpty));
+            OnPropertyChanged(nameof(ShowBatchEmptyState));
+            OnPropertyChanged(nameof(BatchEmptyMessage));
         }
 
         private void QueueReload()
@@ -155,6 +180,7 @@ namespace POS.BackOffice.UI.ViewModels
                     : null;
                 StatusMessage = $"Loaded {TotalItems} pricing item(s).";
                 NotifySummaryProperties();
+                NotifyEmptyStateProperties();
             }
             catch (Exception ex)
             {
@@ -187,6 +213,7 @@ namespace POS.BackOffice.UI.ViewModels
                 foreach (PriceManagementBatchDto row in rows.Where(row => row.IsOverrideEligible))
                     ActiveBatches.Add(row);
                 SelectedBatch = ActiveBatches.FirstOrDefault();
+                NotifyEmptyStateProperties();
             }
             catch (Exception ex)
             {

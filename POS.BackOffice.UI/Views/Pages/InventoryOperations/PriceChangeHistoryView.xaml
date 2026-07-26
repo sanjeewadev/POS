@@ -27,9 +27,9 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="6"/>
-            <RowDefinition Height="2*"/>
+            <RowDefinition Height="*" MinHeight="220"/>
             <RowDefinition Height="6"/>
-            <RowDefinition Height="3*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="6"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -37,12 +37,15 @@
         <Border Grid.Row="0" Style="{StaticResource Group}">
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                <DockPanel Grid.Row="0" Margin="0,0,0,7">
-                    <TextBlock Text="PRICE CHANGE HISTORY" FontSize="14" FontWeight="Bold" Foreground="#003366"/>
-                    <TextBlock Text="One row per saved operation" Margin="14,1,0,0" Foreground="#666666"/>
-                    <Button DockPanel.Dock="Right" Content="REFRESH" Command="{Binding RefreshCommand}" Style="{StaticResource Btn}"/>
+                <DockPanel Grid.Row="0" Margin="0,0,0,7" LastChildFill="False">
+                    <Button DockPanel.Dock="Right" Width="95" Content="REFRESH" Command="{Binding RefreshCommand}" Style="{StaticResource Btn}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="PRICE CHANGE HISTORY" FontSize="14" FontWeight="Bold" Foreground="#003366"/>
+                        <TextBlock Text="One row per saved operation" Margin="14,1,0,0" Foreground="#666666"/>
+                    </StackPanel>
                 </DockPanel>
                 <Grid Grid.Row="1">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="230"/><ColumnDefinition Width="6"/>
                         <ColumnDefinition Width="95"/><ColumnDefinition Width="6"/>
@@ -54,21 +57,29 @@
                         <ColumnDefinition Width="Auto"/><ColumnDefinition Width="6"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Input}" ToolTip="Change number, item, SKU, barcode, batch, action or document"/>
-                    <ComboBox Grid.Column="2" ItemsSource="{Binding PriceLevelFilters}" SelectedItem="{Binding SelectedPriceLevelFilter}" Style="{StaticResource Combo}"/>
-                    <ComboBox Grid.Column="4" ItemsSource="{Binding ChangeSourceFilters}" SelectedItem="{Binding SelectedChangeSourceFilter}" Style="{StaticResource Combo}"/>
-                    <ComboBox Grid.Column="6" ItemsSource="{Binding ChangedByFilters}" SelectedItem="{Binding SelectedChangedByFilter}" Style="{StaticResource Combo}"/>
-                    <DatePicker Grid.Column="8" SelectedDate="{Binding DateFrom}" Height="27"/>
-                    <DatePicker Grid.Column="10" SelectedDate="{Binding DateTo}" Height="27"/>
-                    <ComboBox Grid.Column="12" ItemsSource="{Binding RowLimitOptions}" SelectedItem="{Binding SelectedRowLimit}" Style="{StaticResource Combo}"/>
-                    <Button Grid.Column="14" Content="SEARCH" Command="{Binding SearchCommand}" Style="{StaticResource PrimaryBtn}"/>
-                    <Button Grid.Column="16" Content="CLEAR" Command="{Binding ClearFiltersCommand}" Style="{StaticResource Btn}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Search" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Level" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="4" Text="Source" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="6" Text="Changed By" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="8" Text="Date From" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="10" Text="Date To" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBlock Grid.Row="0" Grid.Column="12" Text="Rows" Foreground="#555555" Margin="0,0,0,3"/>
+                    <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Input}" ToolTip="Change number, item, SKU, barcode, batch, action or document"/>
+                    <ComboBox Grid.Row="1" Grid.Column="2" ItemsSource="{Binding PriceLevelFilters}" SelectedItem="{Binding SelectedPriceLevelFilter}" Style="{StaticResource Combo}"/>
+                    <ComboBox Grid.Row="1" Grid.Column="4" ItemsSource="{Binding ChangeSourceFilters}" SelectedItem="{Binding SelectedChangeSourceFilter}" Style="{StaticResource Combo}"/>
+                    <ComboBox Grid.Row="1" Grid.Column="6" ItemsSource="{Binding ChangedByFilters}" SelectedItem="{Binding SelectedChangedByFilter}" Style="{StaticResource Combo}"/>
+                    <DatePicker Grid.Row="1" Grid.Column="8" SelectedDate="{Binding DateFrom}" Height="27"/>
+                    <DatePicker Grid.Row="1" Grid.Column="10" SelectedDate="{Binding DateTo}" Height="27"/>
+                    <ComboBox Grid.Row="1" Grid.Column="12" ItemsSource="{Binding RowLimitOptions}" SelectedItem="{Binding SelectedRowLimit}" Style="{StaticResource Combo}"/>
+                    <Button Grid.Row="1" Grid.Column="14" Content="SEARCH" Command="{Binding SearchCommand}" Style="{StaticResource PrimaryBtn}"/>
+                    <Button Grid.Row="1" Grid.Column="16" Content="CLEAR" Command="{Binding ClearFiltersCommand}" Style="{StaticResource Btn}"/>
                 </Grid>
             </Grid>
         </Border>
 
         <Border Grid.Row="2" Style="{StaticResource Group}" Padding="0">
-            <DataGrid ItemsSource="{Binding Operations}" SelectedItem="{Binding SelectedOperation, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" RowHeight="28" AlternatingRowBackground="#F8F8F8" SelectionMode="Single" SelectionUnit="FullRow" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <Grid>
+                <DataGrid ItemsSource="{Binding Operations}" SelectedItem="{Binding SelectedOperation, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" RowHeight="28" AlternatingRowBackground="#F8F8F8" SelectionMode="Single" SelectionUnit="FullRow" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Changed At" Binding="{Binding ChangedAt, StringFormat=yyyy-MM-dd HH:mm}" Width="130"/>
                     <DataGridTextColumn Header="Change No" Binding="{Binding DisplayChangeNo}" Width="105"/>
@@ -80,15 +91,21 @@
                     <DataGridTextColumn Header="Source Document" Binding="{Binding SourceDocumentNo}" Width="120"/>
                     <DataGridTextColumn Header="Details" Binding="{Binding DetailRowCount}" Width="70" ElementStyle="{StaticResource RightText}"/>
                     <DataGridTextColumn Header="Description" Binding="{Binding ChangeReason}" Width="260"/>
-                </DataGrid.Columns>
-            </DataGrid>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Text="No saved price-change operations match the selected filters."
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#666666" FontStyle="Italic"
+                           Visibility="{Binding IsHistoryEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </Grid>
         </Border>
 
-        <Border Grid.Row="4" Style="{StaticResource Group}" Padding="0">
+        <Border Grid.Row="4" Height="260" Style="{StaticResource Group}" Padding="0"
+                Visibility="{Binding HasSelectedOperation, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                 <Border Grid.Row="0" Background="#E5E5E5" Padding="8,6">
-                    <DockPanel LastChildFill="True">
+                    <DockPanel LastChildFill="False">
                         <Button DockPanel.Dock="Right" Content="CLOSE DETAILS" Command="{Binding CloseDetailsCommand}" Style="{StaticResource Btn}"/>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="OPERATION DETAILS" FontWeight="Bold" Foreground="#005555"/>
