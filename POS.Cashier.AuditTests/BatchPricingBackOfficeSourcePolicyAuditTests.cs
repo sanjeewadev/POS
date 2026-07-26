@@ -1,4 +1,4 @@
-using POS.Core.Configuration;
+﻿using POS.Core.Configuration;
 
 namespace POS.Cashier.AuditTests;
 
@@ -24,6 +24,12 @@ internal static class BatchPricingBackOfficeSourcePolicyAuditTests
             "POS.BackOffice.UI",
             "ViewModels",
             "PriceManagementViewModel.cs");
+        string viewCodeBehind = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Pages",
+            "InventoryOperations",
+            "PriceManagementView.xaml.cs");
         string repository = Read(
             "POS.Core",
             "Repositories",
@@ -36,6 +42,15 @@ internal static class BatchPricingBackOfficeSourcePolicyAuditTests
         AuditAssert.Contains(view, "MinHeight=\"255\"", "Pricing editor minimum height");
         AuditAssert.Contains(view, "LastChildFill=\"False\"", "Pricing compact header docking");
         AuditAssert.Contains(view, "ShowBatchEmptyState", "Pricing batch empty-state visibility");
+        AuditAssert.Contains(view, "UpdateSourceTrigger=LostFocus", "stable decimal editor binding");
+        AuditAssert.Contains(view, "ValidatesOnExceptions=True", "invalid decimal editor validation");
+        AuditAssert.Contains(view, "Click=\"SaveMasterPrices_Click\"", "master price explicit commit route");
+        AuditAssert.Contains(view, "Click=\"SaveBatchOverride_Click\"", "batch price explicit commit route");
+        AuditAssert.Contains(view, "UNSAVED CHANGES", "pricing unsaved-change indicator");
+        AuditAssert.Contains(viewCodeBehind, "TryCommitPriceEditors", "pricing editor commit helper");
+        AuditAssert.Contains(viewCodeBehind, "binding?.UpdateSource()", "pricing binding source commit");
+        AuditAssert.Contains(viewCodeBehind, "Validation.GetHasError", "pricing invalid-text guard");
+        AuditAssert.Contains(viewCodeBehind, "ExecuteAsync(null)", "pricing async command handoff");
         AuditAssert.Contains(viewModel, "IsPricingListEmpty", "Pricing item empty-state property");
         AuditAssert.Contains(viewModel, "No active physical batches with available stock", "Pricing batch empty-state guidance");
         AuditAssert.False(view.Contains("Change Reason", StringComparison.OrdinalIgnoreCase), "Pricing still requires a reason.");
