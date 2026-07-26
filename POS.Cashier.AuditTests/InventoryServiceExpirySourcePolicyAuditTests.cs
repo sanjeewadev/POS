@@ -1,4 +1,4 @@
-using POS.Core.Configuration;
+﻿using POS.Core.Configuration;
 using POS.Core.Models.DTOs;
 
 namespace POS.Cashier.AuditTests;
@@ -148,22 +148,39 @@ internal static class InventoryServiceExpirySourcePolicyAuditTests
             "Repositories",
             "PriceManagementRepository.cs");
 
-        AuditAssert.Contains(
-            viewModel,
-            "ItemTypeFilters",
-            "Pricing item-type filter collection");
-        AuditAssert.Contains(
-            view,
-            "Header=\"Type\"",
-            "Pricing item-type column");
-        AuditAssert.Contains(
-            view,
-            "Stock Items only",
-            "Pricing stock synchronization guidance");
-        AuditAssert.Contains(
-            repository,
-            "string itemTypeFilter = \"All\"",
-            "Pricing repository item-type filter parameter");
+        AuditAssert.Contains(viewModel, "ItemTypeFilters", "Pricing item-type filter collection");
+        AuditAssert.Contains(viewModel, "CategoryFilters", "Pricing category filter collection");
+        AuditAssert.Contains(viewModel, "AuthService", "Pricing authenticated-user dependency");
+        AuditAssert.Contains(view, "Header=\"Type\"", "Pricing item-type column");
+        AuditAssert.Contains(view, "ItemsSource=\"{Binding CategoryFilters}\"", "Pricing category filter source");
+        AuditAssert.Contains(view, "Content=\"SAVE MASTER PRICES\"", "Pricing selected master editor save action");
+        AuditAssert.Contains(view, "SET BATCH PRICE OVERRIDE", "Pricing exact-batch override action");
+        AuditAssert.Contains(view, "REMOVE BATCH PRICE OVERRIDE", "Pricing exact-batch override removal action");
+        string[] retiredMarginLabels =
+        {
+            "Retail Margin",
+            "Wholesale Margin",
+            "Good Margin",
+            "Low Margin",
+            "Negative Margin"
+        };
+        foreach (string retiredLabel in retiredMarginLabels)
+        {
+            AuditAssert.False(
+                view.Contains(retiredLabel, StringComparison.OrdinalIgnoreCase),
+                $"The Pricing page still exposes the retired '{retiredLabel}' control.");
+        }
+        AuditAssert.False(
+            view.Contains("Apply selling prices to current", StringComparison.OrdinalIgnoreCase),
+            "The Pricing page still exposes manual stock synchronization.");
+        AuditAssert.False(
+            view.Contains("Change Reason", StringComparison.OrdinalIgnoreCase),
+            "The Pricing page still requires a free-text reason.");
+
+        AuditAssert.Contains(repository, "string itemTypeFilter = \"All\"", "Pricing repository item-type filter parameter");
+        AuditAssert.Contains(repository, "string categoryFilter = \"All\"", "Pricing repository category filter parameter");
+        AuditAssert.Contains(repository, "SetBatchPriceOverrideAsync", "Pricing explicit batch override operation");
+        AuditAssert.Contains(repository, "RemoveBatchPriceOverrideAsync", "Pricing explicit batch override removal operation");
         AuditAssert.Contains(
             repository,
             "EffectiveSellingPriceResolver.ValidateActiveOverridesAgainstMasterBounds",
@@ -172,10 +189,7 @@ internal static class InventoryServiceExpirySourcePolicyAuditTests
             repository,
             "EffectiveSellingPriceResolver.SynchronizeMasterMirror",
             "Pricing automatic nonoverride mirror synchronization");
-        AuditAssert.Contains(
-            repository,
-            "ItemTypeCodes.StockItem",
-            "Pricing synchronization limited to stock items");
+        AuditAssert.Contains(repository, "ItemTypeCodes.StockItem", "Pricing synchronization limited to stock items");
     }
 
     private static void VerifyExpiryMonitorAndExport()
@@ -200,22 +214,13 @@ internal static class InventoryServiceExpirySourcePolicyAuditTests
             "Exports",
             "OperationalExportBuilder.cs");
 
-        AuditAssert.Contains(
-            viewModel,
-            "\"Expiry Monitor\"",
-            "Expiry Monitor view option");
-        AuditAssert.Contains(
-            viewModel,
-            "GetExpiryMonitorAsync",
-            "Expiry Monitor repository call");
-        AuditAssert.Contains(
-            view,
-            "ItemsSource=\"{Binding ExpiryRows}\"",
-            "Expiry Monitor grid rows");
-        AuditAssert.Contains(
-            view,
-            "Command=\"{Binding ExportExpiryCsvCommand}\"",
-            "Expiry Monitor CSV action");
+        AuditAssert.Contains(viewModel, "\"Expiry Monitor\"", "Expiry Monitor view option");
+        AuditAssert.Contains(viewModel, "GetExpiryMonitorAsync", "Expiry Monitor repository call");
+        AuditAssert.Contains(view, "ItemsSource=\"{Binding ExpiryRows}\"", "Expiry Monitor grid rows");
+        AuditAssert.Contains(view, "Command=\"{Binding ExportExpiryCsvCommand}\"", "Expiry Monitor CSV action");
+        AuditAssert.Contains(view, "Header=\"Effective Retail\"", "Expiry Monitor effective Retail column");
+        AuditAssert.Contains(view, "Header=\"Effective W/S\"", "Expiry Monitor effective Wholesale column");
+        AuditAssert.Contains(view, "Header=\"Price Source\"", "Stock and Expiry price-source columns");
         AuditAssert.Contains(
             repository,
             "b.ItemVariant.ItemParent.ItemType == ItemTypeCodes.StockItem",
@@ -224,14 +229,15 @@ internal static class InventoryServiceExpirySourcePolicyAuditTests
             repository,
             "b.ItemVariant.ItemParent.HasBatchTracking",
             "Expiry Monitor requires batch tracking");
-        AuditAssert.Contains(
-            repository,
-            "ExpiryMonitorFilters.Within90Days",
-            "Expiry Monitor ninety-day filter");
-        AuditAssert.Contains(
-            exportBuilder,
-            "BuildExpiryMonitorCsv",
-            "Expiry Monitor CSV builder");
+        AuditAssert.Contains(repository, "ExpiryMonitorFilters.Within90Days", "Expiry Monitor ninety-day filter");
+        AuditAssert.Contains(repository, "EffectiveSellingPriceResolver.Resolve", "Stock and Expiry effective-price resolver");
+        AuditAssert.Contains(exportBuilder, "BuildExpiryMonitorCsv", "Expiry Monitor CSV builder");
+        AuditAssert.Contains(exportBuilder, "\"EffectiveRetail\"", "Expiry Monitor CSV effective Retail header");
+        AuditAssert.Contains(exportBuilder, "\"EffectiveWholesale\"", "Expiry Monitor CSV effective Wholesale header");
+        AuditAssert.Contains(exportBuilder, "\"PriceSource\"", "Expiry Monitor CSV price-source header");
+        AuditAssert.Contains(exportBuilder, "Money(row.EffectiveRetailPrice)", "Expiry Monitor CSV effective Retail value");
+        AuditAssert.Contains(exportBuilder, "Money(row.EffectiveWholesalePrice)", "Expiry Monitor CSV effective Wholesale value");
+        AuditAssert.Contains(exportBuilder, "row.PriceSourceText", "Expiry Monitor CSV price-source value");
     }
 
     private static string Read(params string[] segments) =>

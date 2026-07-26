@@ -47,7 +47,7 @@ internal static class SqlServerCollationSourcePolicyAuditTests
             "ProductReleaseInfo.cs");
         AuditAssert.Contains(
             release,
-            "20260726091000_AddBatchSellingPriceOverrideFoundation",
+            "20260726121000_CompleteBatchPricingBackOfficeWorkflow",
             "required latest SQL Server migration");
 
         string migration = Read(

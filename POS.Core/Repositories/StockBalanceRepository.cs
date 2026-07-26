@@ -236,6 +236,9 @@ namespace POS.Core.Repositories
                             WholesalePrice = EffectiveSellingPriceResolver
                                 .Resolve(variant, b)
                                 .WholesalePrice,
+                            PriceSource = EffectiveSellingPriceResolver
+                                .Resolve(variant, b)
+                                .PriceSource,
                             IsDeactivated = b.IsDeactivated,
                             BarcodePrintedCount = hasBatchTracking ? b.BarcodePrintedCount : 0,
                             LastBarcodePrintedAt = hasBatchTracking ? b.LastBarcodePrintedAt : null,
@@ -427,7 +430,10 @@ namespace POS.Core.Repositories
                         ReceivedDate = batch.ReceivedDate,
                         ExpiryDate = batch.ExpiryDate,
                         AvailableQty = batch.CurrentStock,
-                        UnitCost = Math.Round(batch.CostPrice, 2)
+                        UnitCost = Math.Round(batch.CostPrice, 2),
+                        EffectiveRetailPrice = EffectiveSellingPriceResolver.Resolve(variant, batch).RetailPrice,
+                        EffectiveWholesalePrice = EffectiveSellingPriceResolver.Resolve(variant, batch).WholesalePrice,
+                        PriceSource = EffectiveSellingPriceResolver.Resolve(variant, batch).PriceSource
                     };
                 })
                 .OrderBy(row => row.ExpiryDate ?? DateTime.MaxValue)

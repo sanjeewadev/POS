@@ -8,7 +8,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using POS.Core.Configuration;
 using POS.Core.Models.DTOs;
+using POS.Core.Services.Pricing;
 
 namespace POS.BackOffice.UI.Views.Dialogs
 {
@@ -16,19 +18,13 @@ namespace POS.BackOffice.UI.Views.Dialogs
     {
         private bool _isCompleting;
 
-        public GrnBulkSellingPriceDialog(
-            IReadOnlyList<GrnLineEntryDto> lines)
+        public GrnBulkSellingPriceDialog(IReadOnlyList<GrnLineEntryDto> lines)
         {
-            if (lines == null)
-                throw new ArgumentNullException(nameof(lines));
+            ArgumentNullException.ThrowIfNull(lines);
 
             foreach (GrnLineEntryDto line in lines)
             {
-                var row = new GrnBulkSellingPricePreviewRow(line)
-                {
-                    Apply = true
-                };
-
+                var row = new GrnBulkSellingPricePreviewRow(line);
                 row.PropertyChanged += Row_PropertyChanged;
                 Rows.Add(row);
             }
@@ -40,9 +36,18 @@ namespace POS.BackOffice.UI.Views.Dialogs
 
         public ObservableCollection<GrnBulkSellingPricePreviewRow> Rows { get; } = new();
 
+        public IReadOnlyList<string> PriceActions { get; } = new[]
+        {
+            GrnSellingPriceActionCodes.UseCurrentMasterPrice,
+            GrnSellingPriceActionCodes.UpdateMasterPrice,
+            GrnSellingPriceActionCodes.SetBatchPriceOverride
+        };
+
         private void ApplyBulkValues_Click(object sender, RoutedEventArgs e)
         {
             Keyboard.ClearFocus();
+
+            string action = GrnSellingPriceActionCodes.Normalize(cboBulkAction.SelectedValue?.ToString());
 
             if (!TryParseOptionalMoney(txtBulkRetail.Text, "Retail Price", out decimal? retail) ||
                 !TryParseOptionalMoney(txtBulkWholesale.Text, "Wholesale Price", out decimal? wholesale) ||
@@ -52,30 +57,20 @@ namespace POS.BackOffice.UI.Views.Dialogs
                 return;
             }
 
-            if (!retail.HasValue &&
-                !wholesale.HasValue &&
-                !minimum.HasValue &&
-                !maximum.HasValue)
+            List<GrnBulkSellingPricePreviewRow> selected = Rows.Where(row => row.Apply).ToList();
+            if (selected.Count == 0)
             {
-                MessageBox.Show(
-                    this,
-                    "Enter at least one bulk selling-price value.",
-                    "No Bulk Value",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                MessageBox.Show(this, "Select at least one GRN row.", "No Rows Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            List<GrnBulkSellingPricePreviewRow> selected = Rows
-                .Where(row => row.Apply)
-                .ToList();
-
-            if (selected.Count == 0)
+            if (action == GrnSellingPriceActionCodes.SetBatchPriceOverride &&
+                selected.Any(row => !row.CanUseBatchOverride))
             {
                 MessageBox.Show(
                     this,
-                    "Select at least one item row before applying bulk values.",
-                    "No Rows Selected",
+                    "Batch-only pricing can be applied only to true batch-tracked stock rows.",
+                    "Incompatible Rows",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
@@ -83,17 +78,25 @@ namespace POS.BackOffice.UI.Views.Dialogs
 
             foreach (GrnBulkSellingPricePreviewRow row in selected)
             {
+                row.SellingPriceAction = action;
+
+                if (action == GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+                    continue;
+
                 if (retail.HasValue)
                     row.NewRetailPrice = RoundMoney(retail.Value);
 
                 if (wholesale.HasValue)
                     row.NewWholesalePrice = RoundMoney(wholesale.Value);
 
-                if (minimum.HasValue)
-                    row.NewMinimumPrice = RoundMoney(minimum.Value);
+                if (action == GrnSellingPriceActionCodes.UpdateMasterPrice)
+                {
+                    if (minimum.HasValue)
+                        row.NewMinimumPrice = RoundMoney(minimum.Value);
 
-                if (maximum.HasValue)
-                    row.NewMaximumPrice = RoundMoney(maximum.Value);
+                    if (maximum.HasValue)
+                        row.NewMaximumPrice = RoundMoney(maximum.Value);
+                }
             }
 
             UpdateSummary();
@@ -125,37 +128,13 @@ namespace POS.BackOffice.UI.Views.Dialogs
             try
             {
                 Keyboard.ClearFocus();
+                PriceGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+                PriceGrid.CommitEdit(DataGridEditingUnit.Row, true);
 
-                bool cellCommitted = PriceGrid.CommitEdit(
-                    DataGridEditingUnit.Cell,
-                    true);
-                bool rowCommitted = PriceGrid.CommitEdit(
-                    DataGridEditingUnit.Row,
-                    true);
-
-                if (!cellCommitted || !rowCommitted)
-                {
-                    MessageBox.Show(
-                        this,
-                        "The active selling-price value could not be committed. Correct it and try again.",
-                        "Selling Price Not Ready",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                    return;
-                }
-
-                List<GrnBulkSellingPricePreviewRow> selected = Rows
-                    .Where(row => row.Apply)
-                    .ToList();
-
+                List<GrnBulkSellingPricePreviewRow> selected = Rows.Where(row => row.Apply).ToList();
                 if (selected.Count == 0)
                 {
-                    MessageBox.Show(
-                        this,
-                        "Select at least one item row.",
-                        "No Rows Selected",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    MessageBox.Show(this, "Select at least one GRN row.", "No Rows Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -166,56 +145,32 @@ namespace POS.BackOffice.UI.Views.Dialogs
                 {
                     MessageBox.Show(
                         this,
-                        $"Cannot apply prices for '{invalid.DisplayName}'.\n\n{invalid.ValidationMessage}",
-                        "Invalid Selling Price",
+                        $"Cannot apply the price action for '{invalid.DisplayName}'.\n\n{invalid.ValidationMessage}",
+                        "Invalid Price Action",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     return;
                 }
 
-                List<GrnBulkSellingPricePreviewRow> changed = selected
-                    .Where(row => row.HasAnyChange)
-                    .ToList();
+                int masterUpdates = selected.Count(row => row.IsMasterUpdate);
+                int batchOverrides = selected.Count(row => row.IsBatchOverride);
+                int keepCurrent = selected.Count(row => row.IsUseCurrentMaster);
 
-                if (changed.Count == 0)
-                {
-                    MessageBox.Show(
-                        this,
-                        "No selling prices were changed in the selected rows.",
-                        "No Price Changes",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                MessageBoxResult answer = MessageBox.Show(
+                    this,
+                    $"Apply these GRN price actions?\n\n" +
+                    $"Master updates: {masterUpdates}\n" +
+                    $"Batch overrides: {batchOverrides}\n" +
+                    $"Keep current pricing: {keepCurrent}",
+                    "Confirm GRN Price Actions",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (answer != MessageBoxResult.Yes)
                     return;
-                }
 
-                int wholesaleAboveRetailCount = changed.Count(row =>
-                    row.NewRetailPrice > 0m &&
-                    row.NewWholesalePrice > row.NewRetailPrice);
-
-                if (wholesaleAboveRetailCount > 0)
-                {
-                    MessageBoxResult answer = MessageBox.Show(
-                        this,
-                        $"{wholesaleAboveRetailCount} selected row(s) have a wholesale price above retail.\n\nContinue with these proposed prices?",
-                        "Wholesale Price Warning",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Warning);
-
-                    if (answer != MessageBoxResult.Yes)
-                        return;
-                }
-
-                foreach (GrnBulkSellingPricePreviewRow row in changed)
-                {
-                    GrnLineEntryDto line = row.SourceLine;
-                    line.NewRetailPrice = RoundMoney(row.NewRetailPrice);
-                    line.NewWholesalePrice = RoundMoney(row.NewWholesalePrice);
-                    line.NewMinimumPrice = RoundMoney(row.NewMinimumPrice);
-                    line.NewMaximumPrice = RoundMoney(row.NewMaximumPrice);
-                    line.RetailMarkupPercent = 0m;
-                    line.WholesaleMarkupPercent = 0m;
-                    line.UpdateSellingPrices = row.HasAnyChange;
-                }
+                foreach (GrnBulkSellingPricePreviewRow row in selected)
+                    row.ApplyToSource();
 
                 DialogResult = true;
             }
@@ -227,10 +182,8 @@ namespace POS.BackOffice.UI.Views.Dialogs
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            if (_isCompleting)
-                return;
-
-            DialogResult = false;
+            if (!_isCompleting)
+                DialogResult = false;
         }
 
         private void Row_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -243,53 +196,27 @@ namespace POS.BackOffice.UI.Views.Dialogs
             if (txtSummary == null)
                 return;
 
-            int selectedCount = Rows.Count(row => row.Apply);
-            int changedCount = Rows.Count(row => row.Apply && row.HasAnyChange);
-            txtSummary.Text = $"{selectedCount} selected | {changedCount} with proposed changes";
+            int selected = Rows.Count(row => row.Apply);
+            int master = Rows.Count(row => row.Apply && row.IsMasterUpdate);
+            int batch = Rows.Count(row => row.Apply && row.IsBatchOverride);
+            int keep = Rows.Count(row => row.Apply && row.IsUseCurrentMaster);
+            txtSummary.Text = $"{selected} selected | {master} master | {batch} batch override | {keep} keep current";
         }
 
-        private bool TryParseOptionalMoney(
-            string? text,
-            string label,
-            out decimal? value)
+        private bool TryParseOptionalMoney(string? text, string label, out decimal? value)
         {
             string normalized = (text ?? string.Empty).Trim();
-
             if (normalized.Length == 0)
             {
                 value = null;
                 return true;
             }
 
-            if (!decimal.TryParse(
-                    normalized,
-                    NumberStyles.Number,
-                    CultureInfo.CurrentCulture,
-                    out decimal parsed) &&
-                !decimal.TryParse(
-                    normalized,
-                    NumberStyles.Number,
-                    CultureInfo.InvariantCulture,
-                    out parsed))
+            if ((!decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.CurrentCulture, out decimal parsed) &&
+                 !decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out parsed)) ||
+                parsed < 0m)
             {
-                MessageBox.Show(
-                    this,
-                    $"{label} must be a valid number or left blank.",
-                    "Invalid Bulk Value",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                value = null;
-                return false;
-            }
-
-            if (parsed < 0m)
-            {
-                MessageBox.Show(
-                    this,
-                    $"{label} cannot be negative.",
-                    "Invalid Bulk Value",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show(this, $"{label} must be a valid non-negative number or left blank.", "Invalid Bulk Value", MessageBoxButton.OK, MessageBoxImage.Warning);
                 value = null;
                 return false;
             }
@@ -298,10 +225,8 @@ namespace POS.BackOffice.UI.Views.Dialogs
             return true;
         }
 
-        private static decimal RoundMoney(decimal value)
-        {
-            return Math.Round(value, 2, MidpointRounding.AwayFromZero);
-        }
+        private static decimal RoundMoney(decimal value) =>
+            Math.Round(value, 2, MidpointRounding.AwayFromZero);
     }
 
     public partial class GrnBulkSellingPricePreviewRow : ObservableObject
@@ -309,147 +234,147 @@ namespace POS.BackOffice.UI.Views.Dialogs
         public GrnBulkSellingPricePreviewRow(GrnLineEntryDto sourceLine)
         {
             SourceLine = sourceLine ?? throw new ArgumentNullException(nameof(sourceLine));
-            _newRetailPrice = sourceLine.UpdateSellingPrices
-                ? sourceLine.NewRetailPrice
-                : sourceLine.CurrentRetailPrice;
-            _newWholesalePrice = sourceLine.UpdateSellingPrices
-                ? sourceLine.NewWholesalePrice
-                : sourceLine.CurrentWholesalePrice;
-            _newMinimumPrice = sourceLine.UpdateSellingPrices
-                ? sourceLine.NewMinimumPrice
-                : sourceLine.CurrentMinimumPrice;
-            _newMaximumPrice = sourceLine.UpdateSellingPrices
-                ? sourceLine.NewMaximumPrice
-                : sourceLine.CurrentMaximumPrice;
+            _sellingPriceAction = GrnSellingPriceActionCodes.Normalize(sourceLine.SellingPriceAction, sourceLine.UpdateSellingPrices);
+            _newRetailPrice = sourceLine.NewRetailPrice;
+            _newWholesalePrice = sourceLine.NewWholesalePrice;
+            _newMinimumPrice = sourceLine.NewMinimumPrice;
+            _newMaximumPrice = sourceLine.NewMaximumPrice;
+            _apply = true;
+            NormalizeForAction();
         }
 
         public GrnLineEntryDto SourceLine { get; }
-
         public string DisplayName => SourceLine.DisplayName;
-
         public string SkuCode => SourceLine.SkuCode;
-
+        public string BatchNo => string.IsNullOrWhiteSpace(SourceLine.BatchNo) ? "Generated on post" : SourceLine.BatchNo;
         public decimal LandedCost => SourceLine.LandedCost;
-
+        public string CurrentPriceSource => SourceLine.CurrentPriceSource;
         public decimal CurrentRetailPrice => SourceLine.CurrentRetailPrice;
-
         public decimal CurrentWholesalePrice => SourceLine.CurrentWholesalePrice;
-
         public decimal CurrentMinimumPrice => SourceLine.CurrentMinimumPrice;
-
         public decimal CurrentMaximumPrice => SourceLine.CurrentMaximumPrice;
+        public bool CanUseBatchOverride => SourceLine.HasBatchTracking;
 
-        [ObservableProperty]
-        private bool _apply;
+        [ObservableProperty] private bool _apply;
+        [ObservableProperty] private string _sellingPriceAction;
+        [ObservableProperty] private decimal _newRetailPrice;
+        [ObservableProperty] private decimal _newWholesalePrice;
+        [ObservableProperty] private decimal _newMinimumPrice;
+        [ObservableProperty] private decimal _newMaximumPrice;
 
-        [ObservableProperty]
-        private decimal _newRetailPrice;
-
-        [ObservableProperty]
-        private decimal _newWholesalePrice;
-
-        [ObservableProperty]
-        private decimal _newMinimumPrice;
-
-        [ObservableProperty]
-        private decimal _newMaximumPrice;
-
-        public bool HasRetailChange =>
-            RoundMoney(CurrentRetailPrice) != RoundMoney(NewRetailPrice);
-
-        public bool HasWholesaleChange =>
-            RoundMoney(CurrentWholesalePrice) != RoundMoney(NewWholesalePrice);
-
-        public bool HasMinimumChange =>
-            RoundMoney(CurrentMinimumPrice) != RoundMoney(NewMinimumPrice);
-
-        public bool HasMaximumChange =>
-            RoundMoney(CurrentMaximumPrice) != RoundMoney(NewMaximumPrice);
-
-        public bool HasAnyChange =>
-            HasRetailChange ||
-            HasWholesaleChange ||
-            HasMinimumChange ||
-            HasMaximumChange;
+        public bool IsUseCurrentMaster => SellingPriceAction == GrnSellingPriceActionCodes.UseCurrentMasterPrice;
+        public bool IsMasterUpdate => SellingPriceAction == GrnSellingPriceActionCodes.UpdateMasterPrice;
+        public bool IsBatchOverride => SellingPriceAction == GrnSellingPriceActionCodes.SetBatchPriceOverride;
+        public bool CanEditRetailWholesale => !IsUseCurrentMaster;
+        public bool CanEditMasterBounds => IsMasterUpdate;
+        public string PriceActionText => GrnSellingPriceActionCodes.ToDisplayText(SellingPriceAction);
 
         public string ValidationMessage
         {
             get
             {
-                if (NewRetailPrice < 0m ||
-                    NewWholesalePrice < 0m ||
-                    NewMinimumPrice < 0m ||
-                    NewMaximumPrice < 0m)
-                {
-                    return "Selling prices cannot be negative.";
-                }
+                if (IsUseCurrentMaster)
+                    return string.Empty;
 
-                if (HasRetailChange && NewRetailPrice <= 0m)
-                    return "A changed Retail Price must be greater than zero.";
+                if (IsBatchOverride && !CanUseBatchOverride)
+                    return "Batch-only pricing requires a true batch-tracked stock row.";
 
-                if (HasWholesaleChange && NewWholesalePrice <= 0m)
-                    return "A changed Wholesale Price must be greater than zero.";
+                if (NewRetailPrice <= 0m || NewWholesalePrice <= 0m)
+                    return "Retail and Wholesale prices must be greater than zero.";
 
-                if (NewMaximumPrice > 0m && NewMinimumPrice > NewMaximumPrice)
+                decimal minimum = IsMasterUpdate ? NewMinimumPrice : CurrentMinimumPrice;
+                decimal maximum = IsMasterUpdate ? NewMaximumPrice : CurrentMaximumPrice;
+
+                if (minimum < 0m || maximum < 0m)
+                    return "Minimum and Maximum prices cannot be negative.";
+
+                if (maximum > 0m && minimum > maximum)
                     return "Minimum Price cannot be greater than Maximum Price.";
+
+                try
+                {
+                    EffectiveSellingPriceResolver.ValidateOverride(
+                        NewRetailPrice,
+                        NewWholesalePrice,
+                        minimum,
+                        maximum);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return ex.Message;
+                }
 
                 return string.Empty;
             }
         }
 
-        public string WarningText
+        public string WarningText => string.IsNullOrWhiteSpace(ValidationMessage)
+            ? PriceActionText
+            : ValidationMessage;
+
+        public void ApplyToSource()
         {
-            get
+            SourceLine.SellingPriceAction = SellingPriceAction;
+            SourceLine.UpdateSellingPrices = IsMasterUpdate;
+            SourceLine.NewRetailPrice = IsUseCurrentMaster ? SourceLine.CurrentRetailPrice : RoundMoney(NewRetailPrice);
+            SourceLine.NewWholesalePrice = IsUseCurrentMaster ? SourceLine.CurrentWholesalePrice : RoundMoney(NewWholesalePrice);
+            SourceLine.NewMinimumPrice = IsMasterUpdate ? RoundMoney(NewMinimumPrice) : SourceLine.CurrentMinimumPrice;
+            SourceLine.NewMaximumPrice = IsMasterUpdate ? RoundMoney(NewMaximumPrice) : SourceLine.CurrentMaximumPrice;
+            SourceLine.RetailMarkupPercent = 0m;
+            SourceLine.WholesaleMarkupPercent = 0m;
+        }
+
+        partial void OnSellingPriceActionChanged(string value)
+        {
+            string normalized = GrnSellingPriceActionCodes.Normalize(value);
+            if (!string.Equals(value, normalized, StringComparison.Ordinal))
             {
-                if (!string.IsNullOrWhiteSpace(ValidationMessage))
-                    return ValidationMessage;
-
-                if (NewRetailPrice > 0m && NewWholesalePrice > NewRetailPrice)
-                    return "Wholesale is above retail";
-
-                return HasAnyChange ? "Proposed" : "Keep current";
+                SellingPriceAction = normalized;
+                return;
             }
-        }
 
-        partial void OnApplyChanged(bool value)
-        {
+            if (IsBatchOverride && !CanUseBatchOverride)
+                SellingPriceAction = GrnSellingPriceActionCodes.UseCurrentMasterPrice;
+
+            NormalizeForAction();
             RaiseDerivedProperties();
         }
 
-        partial void OnNewRetailPriceChanged(decimal value)
-        {
-            RaiseDerivedProperties();
-        }
+        partial void OnApplyChanged(bool value) => RaiseDerivedProperties();
+        partial void OnNewRetailPriceChanged(decimal value) => RaiseDerivedProperties();
+        partial void OnNewWholesalePriceChanged(decimal value) => RaiseDerivedProperties();
+        partial void OnNewMinimumPriceChanged(decimal value) => RaiseDerivedProperties();
+        partial void OnNewMaximumPriceChanged(decimal value) => RaiseDerivedProperties();
 
-        partial void OnNewWholesalePriceChanged(decimal value)
+        private void NormalizeForAction()
         {
-            RaiseDerivedProperties();
-        }
-
-        partial void OnNewMinimumPriceChanged(decimal value)
-        {
-            RaiseDerivedProperties();
-        }
-
-        partial void OnNewMaximumPriceChanged(decimal value)
-        {
-            RaiseDerivedProperties();
+            if (IsUseCurrentMaster)
+            {
+                NewRetailPrice = CurrentRetailPrice;
+                NewWholesalePrice = CurrentWholesalePrice;
+                NewMinimumPrice = CurrentMinimumPrice;
+                NewMaximumPrice = CurrentMaximumPrice;
+            }
+            else if (IsBatchOverride)
+            {
+                NewMinimumPrice = CurrentMinimumPrice;
+                NewMaximumPrice = CurrentMaximumPrice;
+            }
         }
 
         private void RaiseDerivedProperties()
         {
-            OnPropertyChanged(nameof(HasRetailChange));
-            OnPropertyChanged(nameof(HasWholesaleChange));
-            OnPropertyChanged(nameof(HasMinimumChange));
-            OnPropertyChanged(nameof(HasMaximumChange));
-            OnPropertyChanged(nameof(HasAnyChange));
+            OnPropertyChanged(nameof(IsUseCurrentMaster));
+            OnPropertyChanged(nameof(IsMasterUpdate));
+            OnPropertyChanged(nameof(IsBatchOverride));
+            OnPropertyChanged(nameof(CanEditRetailWholesale));
+            OnPropertyChanged(nameof(CanEditMasterBounds));
+            OnPropertyChanged(nameof(PriceActionText));
             OnPropertyChanged(nameof(ValidationMessage));
             OnPropertyChanged(nameof(WarningText));
         }
 
-        private static decimal RoundMoney(decimal value)
-        {
-            return Math.Round(value, 2, MidpointRounding.AwayFromZero);
-        }
+        private static decimal RoundMoney(decimal value) =>
+            Math.Round(value, 2, MidpointRounding.AwayFromZero);
     }
 }

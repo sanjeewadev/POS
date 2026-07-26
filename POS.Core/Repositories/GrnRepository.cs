@@ -693,6 +693,45 @@ namespace POS.Core.Repositories
             };
         }
 
+        public async Task<GrnBatchPriceContextDto> GetBatchPriceContextAsync(
+            int itemVariantId,
+            string? batchNo)
+        {
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            ItemVariant variant = await context.ItemVariants
+                .AsNoTracking()
+                .Include(row => row.ItemParent)
+                .SingleOrDefaultAsync(row => row.Id == itemVariantId)
+                ?? throw new InvalidOperationException("The selected item variant was not found.");
+
+            string normalizedBatch = NormalizeText(batchNo).ToUpperInvariant();
+            ItemBatch? batch = null;
+
+            if (!string.IsNullOrWhiteSpace(normalizedBatch))
+            {
+                batch = await context.ItemBatches
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(row =>
+                        row.ItemVariantId == itemVariantId &&
+                        row.BatchNo == normalizedBatch &&
+                        !row.IsDeactivated);
+            }
+
+            EffectiveSellingPrice effective = EffectiveSellingPriceResolver.Resolve(variant, batch);
+
+            return new GrnBatchPriceContextDto
+            {
+                RetailPrice = effective.RetailPrice,
+                WholesalePrice = effective.WholesalePrice,
+                MinimumPrice = RoundMoney(variant.MinimumPrice),
+                MaximumPrice = RoundMoney(variant.MaximumPrice),
+                PriceSource = effective.PriceSource == SellingPriceSourceCodes.BatchOverride
+                    ? "Batch Override"
+                    : "Master Price"
+            };
+        }
+
         // =========================================================
         // POST GRN
         // =========================================================
@@ -741,11 +780,12 @@ namespace POS.Core.Repositories
                 header.UpdatedAt = now;
                 header.PostedAt = now;
 
-                if (string.IsNullOrWhiteSpace(header.CreatedBy))
-                    header.CreatedBy = "Admin";
-
-                if (string.IsNullOrWhiteSpace(header.PostedBy))
-                    header.PostedBy = header.CreatedBy;
+                if (string.IsNullOrWhiteSpace(header.CreatedBy) ||
+                    string.IsNullOrWhiteSpace(header.PostedBy))
+                {
+                    throw new InvalidOperationException(
+                        "An authenticated BackOffice username is required to post a GRN.");
+                }
 
                 header.Supplier = null!;
                 header.PurchaseOrder = null;
@@ -768,12 +808,25 @@ namespace POS.Core.Repositories
 
                 await context.SaveChangesAsync();
 
-                await CreateGrnPriceChangeHistoryAsync(
-                    context,
-                    header,
-                    lines,
-                    variants,
-                    now);
+                string? priceChangeNo = lines.Any(line =>
+                    GetSellingPriceAction(line) != GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+                    ? await GenerateDocumentNumberAsync(context, "PCH")
+                    : null;
+
+                if (!string.IsNullOrWhiteSpace(priceChangeNo))
+                {
+                    await CreateGrnMasterPriceChangeHistoryAsync(
+                        context,
+                        header,
+                        lines,
+                        variants,
+                        priceChangeNo,
+                        now);
+                }
+
+                ApplyProposedMasterPrices(lines, variants, now);
+
+                var batchPriceBefore = new Dictionary<int, EffectiveSellingPrice>();
 
                 PoHeader? linkedPo = null;
 
@@ -820,6 +873,22 @@ namespace POS.Core.Repositories
                     line.ItemBatch = batch;
                     line.ItemBatchId = batch.Id;
 
+                    if (GetSellingPriceAction(line) == GrnSellingPriceActionCodes.SetBatchPriceOverride)
+                    {
+                        EffectiveSellingPrice before = EffectiveSellingPriceResolver.Resolve(variant, batch);
+                        EffectiveSellingPriceResolver.ValidateOverride(
+                            variant,
+                            batch,
+                            line.NewRetailPrice,
+                            line.NewWholesalePrice);
+
+                        batchPriceBefore[line.Id] = before;
+                        batch.HasSellingPriceOverride = true;
+                        batch.RetailPrice = RoundMoney(line.NewRetailPrice);
+                        batch.WholesalePrice = RoundMoney(line.NewWholesalePrice);
+                        batch.UpdatedAt = now;
+                    }
+
                     var inventoryTx = new InventoryTransaction
                     {
                         ItemVariantId = variant.Id,
@@ -844,6 +913,18 @@ namespace POS.Core.Repositories
                     lines,
                     variants,
                     now);
+
+                if (!string.IsNullOrWhiteSpace(priceChangeNo))
+                {
+                    await CreateGrnBatchPriceChangeHistoryAsync(
+                        context,
+                        header,
+                        lines,
+                        variants,
+                        batchPriceBefore,
+                        priceChangeNo,
+                        now);
+                }
 
                 if (linkedPo != null)
                     CloseLinkedPurchaseOrderAfterGrn(linkedPo, now);
@@ -1067,8 +1148,26 @@ namespace POS.Core.Repositories
                         $"Expiry date cannot be before received date for item '{variant.SkuCode}'.");
                 }
 
-                if (line.UpdateSellingPrices)
+                string priceAction = GetSellingPriceAction(line);
+
+                if (priceAction == GrnSellingPriceActionCodes.UpdateMasterPrice)
+                {
                     ValidateSellingPrices(line, variant.SkuCode);
+                }
+                else if (priceAction == GrnSellingPriceActionCodes.SetBatchPriceOverride)
+                {
+                    if (variant.ItemParent.HasBatchTracking != true)
+                    {
+                        throw new InvalidOperationException(
+                            $"Batch-only pricing is not available for item '{variant.SkuCode}'.");
+                    }
+
+                    if (line.NewRetailPrice <= 0m || line.NewWholesalePrice <= 0m)
+                    {
+                        throw new InvalidOperationException(
+                            $"Batch override Retail and Wholesale prices must be greater than zero for item '{variant.SkuCode}'.");
+                    }
+                }
 
                 if (header.PurchaseOrderId.HasValue && header.PurchaseOrderId.Value > 0)
                 {
@@ -1107,7 +1206,7 @@ namespace POS.Core.Repositories
             }
 
             var inconsistentPriceGroup = lines
-                .Where(line => line.UpdateSellingPrices)
+                .Where(line => GetSellingPriceAction(line) == GrnSellingPriceActionCodes.UpdateMasterPrice)
                 .GroupBy(line => line.ItemVariantId)
                 .FirstOrDefault(group => group
                     .Select(line => new
@@ -1126,6 +1225,42 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException(
                     $"All GRN rows for item '{inconsistentVariant.SkuCode}' must use the same proposed selling prices.");
             }
+
+            var proposedMasterByVariant = lines
+                .Where(line => GetSellingPriceAction(line) == GrnSellingPriceActionCodes.UpdateMasterPrice)
+                .GroupBy(line => line.ItemVariantId)
+                .ToDictionary(group => group.Key, group => group.First());
+
+            foreach (GrnLine batchLine in lines.Where(line =>
+                         GetSellingPriceAction(line) == GrnSellingPriceActionCodes.SetBatchPriceOverride))
+            {
+                if (!variants.TryGetValue(batchLine.ItemVariantId, out ItemVariant? variant))
+                    continue;
+
+                decimal minimum = variant.MinimumPrice;
+                decimal maximum = variant.MaximumPrice;
+
+                if (proposedMasterByVariant.TryGetValue(batchLine.ItemVariantId, out GrnLine? masterLine))
+                {
+                    minimum = masterLine.NewMinimumPrice;
+                    maximum = masterLine.NewMaximumPrice;
+                }
+
+                try
+                {
+                    EffectiveSellingPriceResolver.ValidateOverride(
+                        batchLine.NewRetailPrice,
+                        batchLine.NewWholesalePrice,
+                        minimum,
+                        maximum);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Invalid batch-price override for item '{variant.SkuCode}': {ex.Message}",
+                        ex);
+                }
+            }
         }
 
         private static void ValidatePreparedLineDuplicates(List<GrnLine> lines)
@@ -1143,6 +1278,28 @@ namespace POS.Core.Repositories
             {
                 throw new InvalidOperationException(
                     "Duplicate GRN line found. Merge the same item and stock bucket/batch into one row.");
+            }
+
+            var conflictingBatchOverride = lines
+                .Where(line => GetSellingPriceAction(line) == GrnSellingPriceActionCodes.SetBatchPriceOverride)
+                .GroupBy(line => new
+                {
+                    line.ItemVariantId,
+                    BatchNo = NormalizeText(line.BatchNo).ToUpperInvariant()
+                })
+                .FirstOrDefault(group => group
+                    .Select(line => new
+                    {
+                        Retail = RoundMoney(line.NewRetailPrice),
+                        Wholesale = RoundMoney(line.NewWholesalePrice)
+                    })
+                    .Distinct()
+                    .Count() > 1);
+
+            if (conflictingBatchOverride != null)
+            {
+                throw new InvalidOperationException(
+                    "Rows resolving to the same exact batch cannot use conflicting batch-price overrides.");
             }
         }
 
@@ -1177,6 +1334,22 @@ namespace POS.Core.Repositories
             {
                 throw new InvalidOperationException(
                     $"Minimum price cannot be greater than maximum price for item '{skuCode}'.");
+            }
+
+            if (line.NewMinimumPrice > 0m &&
+                (line.NewRetailPrice < line.NewMinimumPrice ||
+                 (line.NewWholesalePrice > 0m && line.NewWholesalePrice < line.NewMinimumPrice)))
+            {
+                throw new InvalidOperationException(
+                    $"Retail and Wholesale prices cannot be below the Minimum price for item '{skuCode}'.");
+            }
+
+            if (line.NewMaximumPrice > 0m &&
+                (line.NewRetailPrice > line.NewMaximumPrice ||
+                 line.NewWholesalePrice > line.NewMaximumPrice))
+            {
+                throw new InvalidOperationException(
+                    $"Retail and Wholesale prices cannot be above the Maximum price for item '{skuCode}'.");
             }
 
             if (line.RetailMarkupPercent < -100 ||
@@ -1479,48 +1652,40 @@ namespace POS.Core.Repositories
             itemSupplier.UpdatedAt = now;
         }
 
-        private static async Task CreateGrnPriceChangeHistoryAsync(
+        private static async Task CreateGrnMasterPriceChangeHistoryAsync(
             AppDbContext context,
             GrnHeader header,
             List<GrnLine> lines,
             IReadOnlyDictionary<int, ItemVariant> variants,
+            string priceChangeNo,
             DateTime now)
         {
-            var proposedGroups = lines
-                .Where(line => line.UpdateSellingPrices)
-                .GroupBy(line => line.ItemVariantId)
-                .ToList();
-
-            if (proposedGroups.Count == 0)
-                return;
-
             var rows = new List<PriceChangeHistory>();
-            string? priceChangeNo = null;
 
-            foreach (var group in proposedGroups)
+            foreach (IGrouping<int, GrnLine> group in lines
+                         .Where(line => GetSellingPriceAction(line) == GrnSellingPriceActionCodes.UpdateMasterPrice)
+                         .GroupBy(line => line.ItemVariantId))
             {
-                if (!variants.TryGetValue(group.Key, out var variant))
+                if (!variants.TryGetValue(group.Key, out ItemVariant? variant))
                     throw new InvalidOperationException("One or more price-update variants were not found.");
 
-                var sourceLine = group.OrderBy(line => line.Id).First();
-
+                GrnLine sourceLine = group.OrderBy(line => line.Id).First();
                 decimal oldRetail = RoundMoney(variant.RetailPrice);
                 decimal oldWholesale = RoundMoney(variant.WholesalePrice);
                 decimal oldMinimum = RoundMoney(variant.MinimumPrice);
                 decimal oldMaximum = RoundMoney(variant.MaximumPrice);
-
                 decimal newRetail = RoundMoney(sourceLine.NewRetailPrice);
                 decimal newWholesale = RoundMoney(sourceLine.NewWholesalePrice);
                 decimal newMinimum = RoundMoney(sourceLine.NewMinimumPrice);
                 decimal newMaximum = RoundMoney(sourceLine.NewMaximumPrice);
 
-                bool retailChanged = oldRetail != newRetail;
-                bool wholesaleChanged = oldWholesale != newWholesale;
-                bool minimumChanged = oldMinimum != newMinimum;
-                bool maximumChanged = oldMaximum != newMaximum;
-                bool anyChanged = retailChanged || wholesaleChanged || minimumChanged || maximumChanged;
+                bool anyChanged =
+                    oldRetail != newRetail ||
+                    oldWholesale != newWholesale ||
+                    oldMinimum != newMinimum ||
+                    oldMaximum != newMaximum;
 
-                foreach (var line in group)
+                foreach (GrnLine line in group)
                 {
                     line.CurrentRetailPrice = oldRetail;
                     line.CurrentWholesalePrice = oldWholesale;
@@ -1536,36 +1701,19 @@ namespace POS.Core.Repositories
                 if (!anyChanged)
                     continue;
 
-                priceChangeNo ??= await GenerateDocumentNumberAsync(context, "PCH");
-
-                var changedParts = new List<string>();
-
-                if (retailChanged)
-                    changedParts.Add($"Retail {oldRetail:N2} to {newRetail:N2}");
-
-                if (wholesaleChanged)
-                    changedParts.Add($"Wholesale {oldWholesale:N2} to {newWholesale:N2}");
-
-                if (minimumChanged)
-                    changedParts.Add($"Minimum {oldMinimum:N2} to {newMinimum:N2}");
-
-                if (maximumChanged)
-                    changedParts.Add($"Maximum {oldMaximum:N2} to {newMaximum:N2}");
-
                 rows.Add(new PriceChangeHistory
                 {
                     PriceChangeNo = priceChangeNo,
                     PriceLevel = "Master",
                     ChangeSource = "GRN",
-
+                    ChangeAction = PriceChangeActionCodes.MasterPriceUpdated,
+                    OldPriceSource = SellingPriceSourceCodes.Master,
+                    NewPriceSource = SellingPriceSourceCodes.Master,
                     ItemVariantId = variant.Id,
-                    ItemBatchId = null,
-
                     SourceDocumentType = "GRN",
                     SourceDocumentId = header.Id,
                     SourceDocumentLineId = sourceLine.Id,
                     SourceDocumentNo = header.GrnNumber,
-
                     ItemCode = variant.ItemParent.ItemCode,
                     SkuCode = variant.SkuCode,
                     Barcode = variant.Barcode ?? string.Empty,
@@ -1573,11 +1721,7 @@ namespace POS.Core.Repositories
                     VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
                         ? "Standard"
                         : variant.VariantDescription,
-
-                    BatchNo = string.Empty,
-                    BatchExpiryDate = null,
                     EffectiveCost = RoundMoney(sourceLine.LandedCost),
-
                     OldMinimumPrice = oldMinimum,
                     NewMinimumPrice = newMinimum,
                     OldRetailPrice = oldRetail,
@@ -1586,14 +1730,84 @@ namespace POS.Core.Repositories
                     NewWholesalePrice = newWholesale,
                     OldMaximumPrice = oldMaximum,
                     NewMaximumPrice = newMaximum,
-
-                    ChangedBy = string.IsNullOrWhiteSpace(header.PostedBy)
-                        ? header.CreatedBy
-                        : header.PostedBy,
+                    ChangedBy = header.PostedBy,
                     ChangedAt = now,
-                    ReasonCode = "GRN_PRICE_UPDATE",
-                    ChangeReason = $"Selling price update from GRN {header.GrnNumber}",
-                    Remarks = string.Join("; ", changedParts)
+                    ReasonCode = "GRN_MASTER_PRICE_UPDATE",
+                    ChangeReason = $"Master price update from GRN {header.GrnNumber}",
+                    Remarks = "Variant master pricing updated during GRN posting."
+                });
+            }
+
+            if (rows.Count > 0)
+                await context.PriceChangeHistories.AddRangeAsync(rows);
+        }
+
+        private static async Task CreateGrnBatchPriceChangeHistoryAsync(
+            AppDbContext context,
+            GrnHeader header,
+            IReadOnlyCollection<GrnLine> lines,
+            IReadOnlyDictionary<int, ItemVariant> variants,
+            IReadOnlyDictionary<int, EffectiveSellingPrice> batchPriceBefore,
+            string priceChangeNo,
+            DateTime now)
+        {
+            var rows = new List<PriceChangeHistory>();
+
+            foreach (GrnLine line in lines.Where(line =>
+                         GetSellingPriceAction(line) == GrnSellingPriceActionCodes.SetBatchPriceOverride))
+            {
+                if (!variants.TryGetValue(line.ItemVariantId, out ItemVariant? variant) ||
+                    line.ItemBatch == null ||
+                    !batchPriceBefore.TryGetValue(line.Id, out EffectiveSellingPrice before))
+                {
+                    throw new InvalidOperationException(
+                        "The GRN batch-price history could not resolve its exact batch identity.");
+                }
+
+                EffectiveSellingPrice after = EffectiveSellingPriceResolver.Resolve(variant, line.ItemBatch);
+                string action = before.PriceSource == SellingPriceSourceCodes.BatchOverride
+                    ? PriceChangeActionCodes.BatchOverrideUpdated
+                    : PriceChangeActionCodes.BatchOverrideCreated;
+
+                rows.Add(new PriceChangeHistory
+                {
+                    PriceChangeNo = priceChangeNo,
+                    PriceLevel = "Batch",
+                    ChangeSource = "GRN",
+                    ChangeAction = action,
+                    OldPriceSource = before.PriceSource,
+                    NewPriceSource = after.PriceSource,
+                    ItemVariantId = variant.Id,
+                    ItemBatchId = line.ItemBatch.Id,
+                    SourceDocumentType = "GRN",
+                    SourceDocumentId = header.Id,
+                    SourceDocumentLineId = line.Id,
+                    SourceDocumentNo = header.GrnNumber,
+                    ItemCode = variant.ItemParent.ItemCode,
+                    SkuCode = variant.SkuCode,
+                    Barcode = variant.Barcode ?? string.Empty,
+                    ItemDescription = variant.ItemParent.ItemName,
+                    VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
+                        ? "Standard"
+                        : variant.VariantDescription,
+                    BatchNo = line.ItemBatch.BatchNo,
+                    BatchExpiryDate = line.ItemBatch.ExpiryDate,
+                    EffectiveCost = RoundMoney(line.LandedCost),
+                    OldMinimumPrice = RoundMoney(variant.MinimumPrice),
+                    NewMinimumPrice = RoundMoney(variant.MinimumPrice),
+                    OldRetailPrice = before.RetailPrice,
+                    NewRetailPrice = after.RetailPrice,
+                    OldWholesalePrice = before.WholesalePrice,
+                    NewWholesalePrice = after.WholesalePrice,
+                    OldMaximumPrice = RoundMoney(variant.MaximumPrice),
+                    NewMaximumPrice = RoundMoney(variant.MaximumPrice),
+                    ChangedBy = header.PostedBy,
+                    ChangedAt = now,
+                    ReasonCode = action == PriceChangeActionCodes.BatchOverrideCreated
+                        ? "GRN_BATCH_OVERRIDE_CREATED"
+                        : "GRN_BATCH_OVERRIDE_UPDATED",
+                    ChangeReason = $"Batch price override from GRN {header.GrnNumber}",
+                    Remarks = $"Exact batch {line.ItemBatch.BatchNo} received a batch selling-price override."
                 });
             }
 
@@ -1607,7 +1821,7 @@ namespace POS.Core.Repositories
             IReadOnlyDictionary<int, ItemVariant> variants)
         {
             foreach (IGrouping<int, GrnLine> group in lines
-                         .Where(line => line.UpdateSellingPrices)
+                         .Where(line => GetSellingPriceAction(line) == GrnSellingPriceActionCodes.UpdateMasterPrice)
                          .GroupBy(line => line.ItemVariantId))
             {
                 if (!variants.TryGetValue(group.Key, out ItemVariant? variant))
@@ -1636,7 +1850,7 @@ namespace POS.Core.Repositories
             DateTime now)
         {
             int[] updatedVariantIds = lines
-                .Where(line => line.UpdateSellingPrices)
+                .Where(line => GetSellingPriceAction(line) == GrnSellingPriceActionCodes.UpdateMasterPrice)
                 .Select(line => line.ItemVariantId)
                 .Distinct()
                 .ToArray();
@@ -1671,6 +1885,27 @@ namespace POS.Core.Repositories
                 : Math.Round(variant.RetailPrice, 2);
         }
 
+        private static void ApplyProposedMasterPrices(
+            IReadOnlyCollection<GrnLine> lines,
+            IReadOnlyDictionary<int, ItemVariant> variants,
+            DateTime now)
+        {
+            foreach (IGrouping<int, GrnLine> group in lines
+                         .Where(line => GetSellingPriceAction(line) == GrnSellingPriceActionCodes.UpdateMasterPrice)
+                         .GroupBy(line => line.ItemVariantId))
+            {
+                if (!variants.TryGetValue(group.Key, out ItemVariant? variant))
+                    throw new InvalidOperationException("One or more master-price variants were not found.");
+
+                GrnLine line = group.First();
+                variant.RetailPrice = RoundMoney(line.NewRetailPrice);
+                variant.WholesalePrice = RoundMoney(line.NewWholesalePrice);
+                variant.MinimumPrice = RoundMoney(line.NewMinimumPrice);
+                variant.MaximumPrice = RoundMoney(line.NewMaximumPrice);
+                variant.UpdatedAt = now;
+            }
+        }
+
         private static void UpdateVariantCostAndSellingPrices(
             ItemVariant variant,
             GrnLine line,
@@ -1694,14 +1929,6 @@ namespace POS.Core.Repositories
             }
 
             variant.CostPrice = line.LandedCost;
-
-            if (line.UpdateSellingPrices)
-            {
-                variant.RetailPrice = line.NewRetailPrice;
-                variant.WholesalePrice = line.NewWholesalePrice;
-                variant.MinimumPrice = line.NewMinimumPrice;
-                variant.MaximumPrice = line.NewMaximumPrice;
-            }
 
             variant.UpdatedAt = now;
             stockCache[variant.Id] = newTotalQty;
@@ -1979,11 +2206,12 @@ namespace POS.Core.Repositories
                     (header.DueDate.Date - header.InvoiceDate.Date).Days);
             }
 
-            if (string.IsNullOrWhiteSpace(header.CreatedBy))
-                header.CreatedBy = "Admin";
-
-            if (string.IsNullOrWhiteSpace(header.PostedBy))
-                header.PostedBy = header.CreatedBy;
+            if (string.IsNullOrWhiteSpace(header.CreatedBy) ||
+                string.IsNullOrWhiteSpace(header.PostedBy))
+            {
+                throw new InvalidOperationException(
+                    "An authenticated BackOffice username is required to post a GRN.");
+            }
         }
 
         private static void NormalizeLines(List<GrnLine> lines)
@@ -1997,6 +2225,11 @@ namespace POS.Core.Repositories
             line.BatchNo = NormalizeText(line.BatchNo);
             line.Uom = NormalizeText(line.Uom);
             line.LineDiscountMode = NormalizeDiscountMode(line.LineDiscountMode);
+            line.SellingPriceAction = GrnSellingPriceActionCodes.Normalize(
+                line.SellingPriceAction,
+                line.UpdateSellingPrices);
+            line.UpdateSellingPrices =
+                line.SellingPriceAction == GrnSellingPriceActionCodes.UpdateMasterPrice;
 
             if (string.IsNullOrWhiteSpace(line.Uom))
                 line.Uom = "PCS";
@@ -2007,6 +2240,13 @@ namespace POS.Core.Repositories
             {
                 line.LineDiscountValue = line.LineDiscount;
             }
+        }
+
+        private static string GetSellingPriceAction(GrnLine line)
+        {
+            return GrnSellingPriceActionCodes.Normalize(
+                line.SellingPriceAction,
+                line.UpdateSellingPrices);
         }
 
         private static int NormalizeTakeLimit(int take)

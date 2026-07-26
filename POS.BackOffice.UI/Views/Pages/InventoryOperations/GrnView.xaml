@@ -463,12 +463,12 @@
                                     Style="{StaticResource ClassicBtn}"
                                     Height="25"/>
                             <Button Grid.Column="6"
-                                    Content="CHANGE SELLING PRICES..."
+                                    Content="SET PRICE ACTIONS..."
                                     Command="{Binding OpenBulkSellingPriceDialogCommand}"
                                     Style="{StaticResource ActionBtn}"
                                     Height="25"/>
                             <Button Grid.Column="8"
-                                    Content="CLEAR PROPOSED PRICES"
+                                    Content="RESET PRICE ACTIONS"
                                     Command="{Binding ResetProposedSellingPricesCommand}"
                                     Style="{StaticResource ClassicBtn}"
                                     Height="25"/>

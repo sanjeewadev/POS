@@ -10,7 +10,7 @@ public static class ProductReleaseInfo
         ResolveProductVersion();
 
     public const string RequiredSqlServerMigration =
-        "20260726091000_AddBatchSellingPriceOverrideFoundation";
+        "20260726121000_CompleteBatchPricingBackOfficeWorkflow";
 
     private static string ResolveProductVersion()
     {

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using POS.Core.Configuration;
+using POS.Core.Services.Pricing;
 
 namespace POS.Core.Models
 {
@@ -23,6 +25,18 @@ namespace POS.Core.Models
         [Required]
         [MaxLength(50)]
         public string ChangeSource { get; set; } = "PriceManagement";
+
+        [Required]
+        [MaxLength(40)]
+        public string ChangeAction { get; set; } = PriceChangeActionCodes.Legacy;
+
+        [Required]
+        [MaxLength(30)]
+        public string OldPriceSource { get; set; } = SellingPriceSourceCodes.LegacyUnknown;
+
+        [Required]
+        [MaxLength(30)]
+        public string NewPriceSource { get; set; } = SellingPriceSourceCodes.LegacyUnknown;
 
         // =========================================================
         // ITEM / BATCH REFERENCES

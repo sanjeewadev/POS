@@ -82,8 +82,21 @@ internal static class BatchPricingSourcePolicyAuditTests
             "automatic nonoverride mirror synchronization");
         AuditAssert.Contains(
             pricingRepository,
-            "Batch selling-price override editing is not available",
-            "premature legacy batch editing is blocked");
+            "SetBatchPriceOverrideAsync",
+            "explicit batch override save authority");
+        AuditAssert.Contains(
+            pricingRepository,
+            "RemoveBatchPriceOverrideAsync",
+            "explicit batch override removal authority");
+        AuditAssert.Contains(
+            pricingRepository,
+            "EffectiveSellingPriceResolver.ValidateOverride",
+            "batch override validation remains centralized");
+        AuditAssert.False(
+            pricingRepository.Contains(
+                "Batch selling-price override editing is not available",
+                StringComparison.Ordinal),
+            "The Patch 1 temporary batch-editing prohibition remains after Patch 2.");
         AuditAssert.Contains(
             grnRepository,
             "SynchronizeMasterMirror",

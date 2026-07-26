@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -405,7 +405,8 @@ namespace POS.Core.Services.Exports
                     "ExpiryStatus", "DaysRemaining", "ExpiryDate", "ItemCode",
                     "SkuCode", "ItemBarcode", "Description", "Variant", "BatchNo",
                     "BatchBarcode", "Category", "Supplier", "Uom", "AvailableQty",
-                    "UnitCost", "CostValue", "ReceivedDate"
+                    "UnitCost", "EffectiveRetail", "EffectiveWholesale", "PriceSource",
+                    "CostValue", "RetailValue", "WholesaleValue", "ReceivedDate"
                 },
                 rows.Select(row => (IReadOnlyList<string?>)new string?[]
                 {
@@ -424,7 +425,12 @@ namespace POS.Core.Services.Exports
                     row.Uom,
                     Quantity(row.AvailableQty),
                     Money(row.UnitCost),
+                    Money(row.EffectiveRetailPrice),
+                    Money(row.EffectiveWholesalePrice),
+                    row.PriceSourceText,
                     Money(row.CostValue),
+                    Money(row.RetailValue),
+                    Money(row.WholesaleValue),
                     row.ReceivedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
                 }));
         }

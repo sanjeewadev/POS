@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Models.DTOs;
+using POS.Core.Configuration;
 using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
@@ -86,11 +87,23 @@ namespace POS.BackOffice.UI.ViewModels
 
         public int AnyPriceChangeCount => GrnLines.Count(line => line.HasAnySellingPriceChange);
 
-        public string PriceUpdateSummaryText => AnyPriceChangeCount == 0
-            ? "No selling-price changes are selected."
-            : $"{RetailPriceChangeCount} retail, {WholesalePriceChangeCount} wholesale, " +
-              $"{MinimumPriceChangeCount} minimum and {MaximumPriceChangeCount} maximum " +
-              "price change(s) will be applied when the GRN is posted.";
+        public int MasterPriceActionCount => GrnLines.Count(line =>
+            GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+            GrnSellingPriceActionCodes.UpdateMasterPrice);
+
+        public int BatchOverrideActionCount => GrnLines.Count(line =>
+            GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+            GrnSellingPriceActionCodes.SetBatchPriceOverride);
+
+        public int KeepCurrentPriceActionCount => GrnLines.Count(line =>
+            GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+            GrnSellingPriceActionCodes.UseCurrentMasterPrice);
+
+        public string PriceUpdateSummaryText => MasterPriceActionCount == 0 && BatchOverrideActionCount == 0
+            ? "All GRN rows will keep their current pricing authority."
+            : $"{MasterPriceActionCount} master update(s), " +
+              $"{BatchOverrideActionCount} batch override(s), and " +
+              $"{KeepCurrentPriceActionCount} row(s) keeping current pricing will be applied when the GRN is posted.";
 
         partial void OnSupplierPricesIncludeVatChanged(bool value)
         {
@@ -138,6 +151,28 @@ namespace POS.BackOffice.UI.ViewModels
                     return;
                 }
 
+                foreach (GrnLineEntryDto line in rows)
+                {
+                    GrnBatchPriceContextDto context = await _grnRepository.GetBatchPriceContextAsync(
+                        line.ItemVariantId,
+                        line.BatchNo);
+
+                    line.CurrentRetailPrice = context.RetailPrice;
+                    line.CurrentWholesalePrice = context.WholesalePrice;
+                    line.CurrentMinimumPrice = context.MinimumPrice;
+                    line.CurrentMaximumPrice = context.MaximumPrice;
+                    line.CurrentPriceSource = context.PriceSource;
+
+                    if (GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+                        GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+                    {
+                        line.NewRetailPrice = context.RetailPrice;
+                        line.NewWholesalePrice = context.WholesalePrice;
+                        line.NewMinimumPrice = context.MinimumPrice;
+                        line.NewMaximumPrice = context.MaximumPrice;
+                    }
+                }
+
                 var dialog = new GrnBulkSellingPriceDialog(rows)
                 {
                     Owner = GetDialogOwner()
@@ -175,6 +210,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             foreach (var line in GrnLines)
             {
+                line.SellingPriceAction = GrnSellingPriceActionCodes.UseCurrentMasterPrice;
                 line.UpdateSellingPrices = false;
                 line.NewRetailPrice = line.CurrentRetailPrice;
                 line.NewWholesalePrice = line.CurrentWholesalePrice;
@@ -190,7 +226,7 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanResetProposedSellingPrices()
         {
-            return !IsBusy && GrnLines.Any(line => line.UpdateSellingPrices);
+            return !IsBusy && GrnLines.Any(line => line.HasAnySellingPriceChange);
         }
 
         [RelayCommand]
@@ -303,6 +339,9 @@ namespace POS.BackOffice.UI.ViewModels
             OnPropertyChanged(nameof(MinimumPriceChangeCount));
             OnPropertyChanged(nameof(MaximumPriceChangeCount));
             OnPropertyChanged(nameof(AnyPriceChangeCount));
+            OnPropertyChanged(nameof(MasterPriceActionCount));
+            OnPropertyChanged(nameof(BatchOverrideActionCount));
+            OnPropertyChanged(nameof(KeepCurrentPriceActionCount));
             OnPropertyChanged(nameof(PriceUpdateSummaryText));
 
             OpenBulkSellingPriceDialogCommand.NotifyCanExecuteChanged();

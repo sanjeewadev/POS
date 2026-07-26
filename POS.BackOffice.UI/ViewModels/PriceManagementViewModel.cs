@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -9,262 +8,197 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
     public partial class PriceManagementViewModel : ObservableObject
     {
         private readonly PriceManagementRepository _repository;
+        private readonly AuthService _authService;
         private readonly DispatcherTimer _searchDebounceTimer;
-
-        private int _loadVersion = 0;
-
-        // =========================================================
-        // FILTERS
-        // =========================================================
-
-        [ObservableProperty]
-        private string _searchText = string.Empty;
-
-        [ObservableProperty]
-        private string _selectedMarginFilter = "All";
-
-        public ObservableCollection<string> MarginFilters { get; } = new(new[]
-        {
-            "All",
-            "Low Margin Alerts (< 20%)",
-            "Healthy Margins"
-        });
-
-        [ObservableProperty]
-        private string _selectedItemTypeFilter = "All";
-
-        public ObservableCollection<string> ItemTypeFilters { get; } = new(new[]
-        {
-            "All",
-            "Stock Items",
-            "Services"
-        });
-
-        [ObservableProperty]
-        private string _selectedTrackingFilter = "All";
-
-        public ObservableCollection<string> TrackingFilters { get; } = new(new[]
-        {
-            "All",
-            "Average Cost",
-            "Batch",
-            "Batch + Expiry",
-            "Service / No Stock"
-        });
-
-        // Kept only so old XAML bindings will not fail if an older view is still loaded.
-        [ObservableProperty]
-        private string _selectedExpiryFilter = "All";
-
-        public ObservableCollection<string> ExpiryFilters { get; } = new(new[]
-        {
-            "All",
-            "Expiring Soon"
-        });
-
-        // =========================================================
-        // COLLECTIONS
-        // =========================================================
+        private int _loadVersion;
 
         public ObservableCollection<PriceManagementSummaryDto> PricingItems { get; } = new();
-
-        // Kept for compatibility. The simplified page no longer edits batch rows separately.
         public ObservableCollection<PriceManagementBatchDto> ActiveBatches { get; } = new();
+        public ObservableCollection<string> ItemTypeFilters { get; } = new(new[] { "All", "Stock Items", "Services" });
+        public ObservableCollection<string> TrackingFilters { get; } = new(new[] { "All", "Average Cost", "Batch", "Batch + Expiry", "Service / No Stock" });
+        public ObservableCollection<string> CategoryFilters { get; } = new(new[] { "All" });
 
-        // =========================================================
-        // SELECTION
-        // =========================================================
+        [ObservableProperty] private string _searchText = string.Empty;
+        [ObservableProperty] private string _selectedItemTypeFilter = "All";
+        [ObservableProperty] private string _selectedTrackingFilter = "All";
+        [ObservableProperty] private string _selectedCategoryFilter = "All";
+        [ObservableProperty] private PriceManagementSummaryDto? _selectedItem;
+        [ObservableProperty] private PriceManagementBatchDto? _selectedBatch;
+        [ObservableProperty] private bool _isBusy;
+        [ObservableProperty] private bool _isBatchLoading;
+        [ObservableProperty] private string _statusMessage = "Ready.";
+        [ObservableProperty] private int _totalItems;
+        [ObservableProperty] private int _stockItemCount;
+        [ObservableProperty] private int _serviceItemCount;
+        [ObservableProperty] private int _batchOverrideCount;
 
-        [ObservableProperty]
-        private PriceManagementSummaryDto? _selectedItem;
+        public bool HasUnsavedChanges => SelectedItem?.IsDirty == true || SelectedBatch?.IsDirty == true;
+        public bool CanShowBatchEditor => SelectedItem?.CanManageBatchOverrides == true;
+        public bool HasSelectedItem => SelectedItem != null;
+        public bool HasSelectedBatch => SelectedBatch != null;
+        public bool CanRemoveSelectedOverride => SelectedBatch?.HasSellingPriceOverride == true;
+        public string BatchPanelMessage => SelectedItem?.BatchEditorMessage ?? "Select an item to view pricing details.";
 
-        // =========================================================
-        // SAVE OPTIONS
-        // =========================================================
-
-        [ObservableProperty]
-        private string _changeReason = string.Empty;
-
-        [ObservableProperty]
-        private bool _applySellingPriceToCurrentStock = true;
-
-        // =========================================================
-        // UI STATE
-        // =========================================================
-
-        [ObservableProperty]
-        private bool _isBusy = false;
-
-        [ObservableProperty]
-        private bool _isBatchPanelVisible = false;
-
-        [ObservableProperty]
-        private string _statusMessage = "Ready.";
-
-        [ObservableProperty]
-        private int _totalItems = 0;
-
-        [ObservableProperty]
-        private int _dirtyItemCount = 0;
-
-        [ObservableProperty]
-        private int _dirtyBatchCount = 0;
-
-        [ObservableProperty]
-        private int _stockItemCount = 0;
-
-        [ObservableProperty]
-        private int _serviceItemCount = 0;
-
-        [ObservableProperty]
-        private int _averageCostItemCount = 0;
-
-        [ObservableProperty]
-        private int _batchTrackedItemCount = 0;
-
-        [ObservableProperty]
-        private int _batchExpiryItemCount = 0;
-
-        public bool HasUnsavedChanges =>
-            PricingItems.Any(i => i.IsDirty);
-
-        public PriceManagementViewModel(PriceManagementRepository repository)
+        public PriceManagementViewModel(
+            PriceManagementRepository repository,
+            AuthService authService)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-
-            _searchDebounceTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(350)
-            };
-
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
             _searchDebounceTimer.Tick += async (_, _) =>
             {
                 _searchDebounceTimer.Stop();
-                await LoadDataAsync();
+                await LoadDataCoreAsync();
             };
-
-            _ = LoadDataAsync();
+            _ = InitializeAsync();
         }
 
-        // =========================================================
-        // FILTER CHANGE EVENTS
-        // =========================================================
-
-        partial void OnSearchTextChanged(string value)
+        private async Task InitializeAsync()
         {
-            QueueReload();
+            try
+            {
+                var categories = await _repository.GetCategoryNamesAsync();
+                CategoryFilters.Clear();
+                CategoryFilters.Add("All");
+                foreach (string category in categories)
+                    CategoryFilters.Add(category);
+            }
+            catch
+            {
+                CategoryFilters.Clear();
+                CategoryFilters.Add("All");
+            }
+
+            await LoadDataCoreAsync();
         }
 
-        partial void OnSelectedMarginFilterChanged(string value)
+        partial void OnSearchTextChanged(string value) => QueueReload();
+        partial void OnSelectedItemTypeFilterChanged(string value) => QueueReload();
+        partial void OnSelectedTrackingFilterChanged(string value) => QueueReload();
+        partial void OnSelectedCategoryFilterChanged(string value) => QueueReload();
+
+        partial void OnSelectedItemChanged(PriceManagementSummaryDto? value)
         {
-            QueueReload();
+            OnPropertyChanged(nameof(HasSelectedItem));
+            OnPropertyChanged(nameof(CanShowBatchEditor));
+            OnPropertyChanged(nameof(BatchPanelMessage));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            SelectedBatch = null;
+            ActiveBatches.Clear();
+            _ = LoadBatchesForSelectedItemAsync();
         }
 
-        partial void OnSelectedItemTypeFilterChanged(string value)
+        partial void OnSelectedBatchChanged(PriceManagementBatchDto? value)
         {
-            QueueReload();
-        }
-
-        partial void OnSelectedTrackingFilterChanged(string value)
-        {
-            QueueReload();
-        }
-
-        partial void OnSelectedExpiryFilterChanged(string value)
-        {
-            // Old filter kept for compatibility. It does not control the simplified grid.
+            value?.ResetEditor();
+            OnPropertyChanged(nameof(HasSelectedBatch));
+            OnPropertyChanged(nameof(CanRemoveSelectedOverride));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         private void QueueReload()
         {
             if (IsBusy)
                 return;
-
             _searchDebounceTimer.Stop();
             _searchDebounceTimer.Start();
         }
 
-        // =========================================================
-        // LOAD MAIN GRID
-        // =========================================================
-
         [RelayCommand]
-        private async Task LoadDataAsync()
+        private async Task LoadDataAsync() => await LoadDataCoreAsync();
+
+        private async Task LoadDataCoreAsync(int? preserveVariantId = null)
         {
             int version = ++_loadVersion;
-
             if (HasUnsavedChanges)
             {
-                var confirm = MessageBox.Show(
-                    "There are unsaved price changes. Reloading will discard them.\n\nContinue?",
-                    "Unsaved Changes",
+                MessageBoxResult result = MessageBox.Show(
+                    "Unsaved price edits will be discarded. Continue?",
+                    "Unsaved Pricing",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
-
-                if (confirm != MessageBoxResult.Yes)
-                {
-                    StatusMessage = "Reload cancelled because there are unsaved changes.";
+                if (result != MessageBoxResult.Yes)
                     return;
-                }
             }
 
             IsBusy = true;
             StatusMessage = "Loading pricing data...";
-
             try
             {
+                int? selectedId = preserveVariantId ?? SelectedItem?.ItemVariantId;
                 var rows = await _repository.GetPricingSummariesAsync(
-                    SelectedMarginFilter,
-                    SelectedTrackingFilter,
-                    SelectedItemTypeFilter,
-                    SearchText);
-
+                    trackingFilter: SelectedTrackingFilter,
+                    itemTypeFilter: SelectedItemTypeFilter,
+                    searchText: SearchText,
+                    categoryFilter: SelectedCategoryFilter);
                 if (version != _loadVersion)
                     return;
 
-                UnsubscribePricingItemEvents();
-
                 PricingItems.Clear();
-                ActiveBatches.Clear();
-
-                foreach (var row in rows)
-                {
-                    row.PropertyChanged += PricingItem_PropertyChanged;
+                foreach (PriceManagementSummaryDto row in rows)
                     PricingItems.Add(row);
-                }
-
-                SelectedItem = null;
 
                 TotalItems = PricingItems.Count;
-                StockItemCount = PricingItems.Count(i => !i.IsService);
-                ServiceItemCount = PricingItems.Count(i => i.IsService);
-                AverageCostItemCount = PricingItems.Count(i => !i.IsService && !i.HasBatchTracking);
-                BatchTrackedItemCount = PricingItems.Count(i => i.HasBatchTracking);
-                BatchExpiryItemCount = PricingItems.Count(i => i.HasBatchTracking && i.HasExpiryTracking);
-
-                RefreshDirtyCounters();
-
+                StockItemCount = PricingItems.Count(item => !item.IsService);
+                ServiceItemCount = PricingItems.Count(item => item.IsService);
+                BatchOverrideCount = PricingItems.Sum(item => item.BatchOverrideCount);
+                SelectedItem = selectedId.HasValue
+                    ? PricingItems.FirstOrDefault(item => item.ItemVariantId == selectedId.Value)
+                    : null;
                 StatusMessage = $"Loaded {TotalItems} pricing item(s).";
+                NotifySummaryProperties();
             }
             catch (Exception ex)
             {
                 StatusMessage = "Failed to load pricing data.";
-
                 MessageBox.Show(
                     $"Failed to load pricing data:\n\n{ex.Message}",
-                    "Database Error",
+                    "Pricing",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private async Task LoadBatchesForSelectedItemAsync()
+        {
+            int variantId = SelectedItem?.ItemVariantId ?? 0;
+            if (variantId <= 0 || SelectedItem?.CanManageBatchOverrides != true)
+                return;
+
+            IsBatchLoading = true;
+            try
+            {
+                var rows = await _repository.GetActiveBatchPriceRowsAsync(variantId);
+                if (SelectedItem?.ItemVariantId != variantId)
+                    return;
+                ActiveBatches.Clear();
+                foreach (PriceManagementBatchDto row in rows.Where(row => row.IsOverrideEligible))
+                    ActiveBatches.Add(row);
+                SelectedBatch = ActiveBatches.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to load batch prices:\n\n{ex.Message}",
+                    "Pricing",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBatchLoading = false;
             }
         }
 
@@ -272,136 +206,57 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task ClearFiltersAsync()
         {
             SearchText = string.Empty;
-            SelectedMarginFilter = "All";
             SelectedItemTypeFilter = "All";
             SelectedTrackingFilter = "All";
-            SelectedExpiryFilter = "All";
-
-            await LoadDataAsync();
+            SelectedCategoryFilter = "All";
+            await LoadDataCoreAsync();
         }
 
-        // =========================================================
-        // SAVE
-        // =========================================================
-
         [RelayCommand]
-        private async Task SaveAllDirtyAsync()
+        private async Task SaveMasterPricesAsync()
         {
-            var dirtyRows = PricingItems
-                .Where(i => i.IsDirty)
-                .ToList();
-
-            if (!dirtyRows.Any())
+            if (SelectedItem == null)
             {
-                MessageBox.Show(
-                    "There are no price changes to save.",
-                    "No Changes",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-
+                ShowSelectionRequired("Select an item or service first.");
+                return;
+            }
+            if (!SelectedItem.HasMasterPriceChanged)
+            {
+                MessageBox.Show("The selected master prices have not changed.", "Pricing", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            string reason = (ChangeReason ?? string.Empty).Trim();
-
-            if (string.IsNullOrWhiteSpace(reason))
+            var errors = SelectedItem.ValidateForSave();
+            if (errors.Count > 0)
             {
-                MessageBox.Show(
-                    "Enter a price change reason before saving.",
-                    "Reason Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-
+                MessageBox.Show(string.Join("\n", errors), "Price Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            var validationErrors = dirtyRows
-                .SelectMany(i => i.ValidateForSave())
-                .ToList();
-
-            if (validationErrors.Any())
-            {
-                MessageBox.Show(
-                    "Cannot save pricing because validation failed:\n\n" +
-                    string.Join("\n", validationErrors),
-                    "Price Validation",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-
-                return;
-            }
-
-            int negativeMarginCount = dirtyRows.Count(i => i.IsNegativeMargin);
-            int lowMarginCount = dirtyRows.Count(i => i.IsLowMargin);
-
-            if (negativeMarginCount > 0 || lowMarginCount > 0)
-            {
-                var warning = MessageBox.Show(
-                    $"Some changed prices have margin warnings.\n\n" +
-                    $"Negative margin rows: {negativeMarginCount}\n" +
-                    $"Low margin rows: {lowMarginCount}\n\n" +
-                    "Save anyway?",
-                    "Margin Warning",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-
-                if (warning != MessageBoxResult.Yes)
-                    return;
-            }
-
-            int serviceChangeCount = dirtyRows.Count(i => i.IsService);
-
-            string stockSyncText = ApplySellingPriceToCurrentStock
-                ? "Current active stock selling prices will also be updated for Stock Items only. Service rows always update master prices only."
-                : "Only master prices will be updated.";
-
-            var confirm = MessageBox.Show(
-                $"Save changed price rows?\n\n" +
-                $"Changed items: {dirtyRows.Count}\n" +
-                $"Changed services: {serviceChangeCount}\n\n" +
-                $"{stockSyncText}",
-                "Save Price Changes",
+            MessageBoxResult confirmation = MessageBox.Show(
+                $"Save master prices for {SelectedItem.DisplayDescription}?\n\n" +
+                $"Minimum: {SelectedItem.OriginalMinimumPrice:N2} → {SelectedItem.MinimumPrice:N2}\n" +
+                $"Retail: {SelectedItem.OriginalRetailPrice:N2} → {SelectedItem.RetailPrice:N2}\n" +
+                $"Wholesale: {SelectedItem.OriginalWholesalePrice:N2} → {SelectedItem.WholesalePrice:N2}\n" +
+                $"Maximum: {SelectedItem.OriginalMaximumPrice:N2} → {SelectedItem.MaximumPrice:N2}",
+                "Save Master Prices",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
-
-            if (confirm != MessageBoxResult.Yes)
+            if (confirmation != MessageBoxResult.Yes)
                 return;
 
             IsBusy = true;
-            StatusMessage = "Saving changed price rows...";
-
             try
             {
-                foreach (var item in dirtyRows)
-                {
-                    await _repository.UpdatePricingAsync(
-                        item,
-                        "Admin",
-                        reason,
-                        ApplySellingPriceToCurrentStock);
-
-                    item.AcceptChanges();
-                }
-
-                RefreshDirtyCounters();
-
-                StatusMessage = $"Saved {dirtyRows.Count} price change(s).";
-
-                MessageBox.Show(
-                    "Price changes saved successfully.",
-                    "Save Complete",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                int variantId = SelectedItem.ItemVariantId;
+                await _repository.UpdateMasterPricingAsync(SelectedItem, CurrentUsername());
+                StatusMessage = "Master prices saved.";
+                await LoadDataCoreAsync(variantId);
+                MessageBox.Show("Master prices saved successfully.", "Pricing", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                StatusMessage = "Save price changes failed.";
-
-                MessageBox.Show(
-                    $"Failed to save price changes:\n\n{ex.Message}",
-                    "Save Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show($"Master prices were not saved:\n\n{ex.Message}", "Pricing", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -409,65 +264,122 @@ namespace POS.BackOffice.UI.ViewModels
             }
         }
 
-        // Compatibility command. Old XAML may still call this.
         [RelayCommand]
-        private async Task SaveAdjustmentsAsync()
+        private void ResetMasterPrices()
         {
-            if (SelectedItem == null)
-            {
-                MessageBox.Show(
-                    "Select an item first.",
-                    "Selection Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+            SelectedItem?.ResetChanges();
+            NotifySummaryProperties();
+        }
 
+        [RelayCommand]
+        private async Task SaveBatchOverrideAsync()
+        {
+            if (SelectedItem == null || SelectedBatch == null)
+            {
+                ShowSelectionRequired("Select a physical batch first.");
+                return;
+            }
+            var errors = SelectedBatch.ValidateForSave();
+            if (errors.Count > 0)
+            {
+                MessageBox.Show(string.Join("\n", errors), "Batch Price Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (!SelectedItem.IsDirty)
-            {
-                MessageBox.Show(
-                    "The selected item has no price changes.",
-                    "No Changes",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+            MessageBoxResult confirmation = MessageBox.Show(
+                $"{SelectedBatch.OverrideActionText} for batch {SelectedBatch.BatchNo}?\n\n" +
+                $"Current source: {SelectedBatch.PriceSourceText}\n" +
+                $"Current Retail: {SelectedBatch.EffectiveRetailPrice:N2}\n" +
+                $"New Retail: {SelectedBatch.OverrideRetailPrice:N2}\n" +
+                $"Current Wholesale: {SelectedBatch.EffectiveWholesalePrice:N2}\n" +
+                $"New Wholesale: {SelectedBatch.OverrideWholesalePrice:N2}",
+                "Batch Price Override",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
 
+            IsBusy = true;
+            try
+            {
+                int variantId = SelectedItem.ItemVariantId;
+                await _repository.SetBatchPriceOverrideAsync(
+                    variantId,
+                    SelectedBatch.ItemBatchId,
+                    SelectedBatch.OverrideRetailPrice,
+                    SelectedBatch.OverrideWholesalePrice,
+                    CurrentUsername());
+                SelectedBatch.AcceptChanges();
+                StatusMessage = "Batch price override saved.";
+                await LoadDataCoreAsync(variantId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Batch price override was not saved:\n\n{ex.Message}", "Pricing", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        [RelayCommand]
+        private async Task RemoveBatchOverrideAsync()
+        {
+            if (SelectedItem == null || SelectedBatch == null || !SelectedBatch.HasSellingPriceOverride)
+            {
+                ShowSelectionRequired("Select a batch that currently has an override.");
                 return;
             }
 
-            await SaveAllDirtyAsync();
+            MessageBoxResult confirmation = MessageBox.Show(
+                $"Remove the selling-price override from batch {SelectedBatch.BatchNo}?\n\n" +
+                "The batch will immediately use the current master Retail and Wholesale prices.",
+                "Remove Batch Override",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            IsBusy = true;
+            try
+            {
+                int variantId = SelectedItem.ItemVariantId;
+                await _repository.RemoveBatchPriceOverrideAsync(
+                    variantId,
+                    SelectedBatch.ItemBatchId,
+                    CurrentUsername());
+                SelectedBatch.AcceptChanges();
+                StatusMessage = "Batch price override removed.";
+                await LoadDataCoreAsync(variantId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Batch price override was not removed:\n\n{ex.Message}", "Pricing", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
-        // Compatibility command. The simplified page does not use the batch panel.
         [RelayCommand]
-        private void CloseBatchPanel()
+        private void ResetBatchOverride() => SelectedBatch?.ResetEditor();
+
+        private string CurrentUsername()
         {
-            ActiveBatches.Clear();
-            IsBatchPanelVisible = false;
+            string username = (_authService.CurrentUser?.Username ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(username))
+                throw new InvalidOperationException("Your authenticated user session is unavailable. Sign in again before saving pricing changes.");
+            return username;
         }
 
-        // =========================================================
-        // EVENTS / DIRTY TRACKING
-        // =========================================================
+        private static void ShowSelectionRequired(string message) =>
+            MessageBox.Show(message, "Selection Required", MessageBoxButton.OK, MessageBoxImage.Warning);
 
-        private void PricingItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void NotifySummaryProperties()
         {
-            if (e.PropertyName == nameof(PriceManagementSummaryDto.IsDirty))
-                RefreshDirtyCounters();
-        }
-
-        private void RefreshDirtyCounters()
-        {
-            DirtyItemCount = PricingItems.Count(i => i.IsDirty);
-            DirtyBatchCount = 0;
-
             OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
-
-        private void UnsubscribePricingItemEvents()
-        {
-            foreach (var item in PricingItems)
-                item.PropertyChanged -= PricingItem_PropertyChanged;
         }
     }
 }

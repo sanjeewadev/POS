@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -291,6 +291,10 @@ namespace POS.Core.Models.DTOs
         public decimal CostPrice { get; set; }
         public decimal RetailPrice { get; set; }
         public decimal WholesalePrice { get; set; }
+        public string PriceSource { get; set; } = "Master";
+        public string PriceSourceText => PriceSource == "BatchOverride" ? "Batch Override" : "Master Price";
+        public decimal EffectiveRetailPrice => RetailPrice;
+        public decimal EffectiveWholesalePrice => WholesalePrice;
 
         public decimal TotalBatchCost => Math.Round(CurrentStock * CostPrice, 2);
         public decimal TotalBatchRetail => Math.Round(CurrentStock * RetailPrice, 2);
@@ -395,7 +399,13 @@ namespace POS.Core.Models.DTOs
 
         public decimal AvailableQty { get; set; }
         public decimal UnitCost { get; set; }
+        public decimal EffectiveRetailPrice { get; set; }
+        public decimal EffectiveWholesalePrice { get; set; }
+        public string PriceSource { get; set; } = "Master";
+        public string PriceSourceText => PriceSource == "BatchOverride" ? "Batch Override" : "Master Price";
         public decimal CostValue => Math.Round(AvailableQty * UnitCost, 2);
+        public decimal RetailValue => Math.Round(AvailableQty * EffectiveRetailPrice, 2);
+        public decimal WholesaleValue => Math.Round(AvailableQty * EffectiveWholesalePrice, 2);
 
         public int? DaysRemaining =>
             ExpiryDate.HasValue

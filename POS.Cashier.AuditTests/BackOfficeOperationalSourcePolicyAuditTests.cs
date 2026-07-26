@@ -738,63 +738,68 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "Models",
             "DTOs",
             "GrnDtos.cs");
+        string repository = Read(
+            "POS.Core",
+            "Repositories",
+            "GrnRepository.cs");
+        string viewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "GrnViewModel.cs");
 
         AuditAssert.Equal(
             1,
             CountOccurrences(grnXaml, "Command=\"{Binding OpenBulkSellingPriceDialogCommand}\""),
             "GRN selling-price dialog entry-point count");
-        AuditAssert.Contains(
-            grnXaml,
-            "Content=\"CHANGE SELLING PRICES...\"",
-            "single GRN selling-price action label");
+        AuditAssert.Contains(grnXaml, "Content=\"SET PRICE ACTIONS...\"", "GRN price-action label");
+        AuditAssert.Contains(grnXaml, "Content=\"RESET PRICE ACTIONS\"", "GRN price-action reset");
         AuditAssert.False(
             grnXaml.Contains("BULK SELLING PRICES", StringComparison.OrdinalIgnoreCase),
             "The duplicate matrix selling-price action remains visible.");
-        AuditAssert.Contains(
-            grnXaml,
-            "Content=\"CLEAR PROPOSED PRICES\"",
-            "clear proposed prices action");
 
-        AuditAssert.False(
-            dialogXaml.Contains("ComboBox", StringComparison.Ordinal),
-            "The selling-price dialog still contains method or rounding dropdowns.");
-        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkRetail\"", "bulk Retail field");
-        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkWholesale\"", "bulk Wholesale field");
-        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkMinimum\"", "bulk Minimum field");
-        AuditAssert.Contains(dialogXaml, "x:Name=\"txtBulkMaximum\"", "bulk Maximum field");
+        AuditAssert.Contains(dialogXaml, "ItemsSource=\"{Binding PriceActions}\"", "GRN price action selector");
+        AuditAssert.Contains(dialogXaml, "Header=\"Current Source\"", "GRN current price-source column");
+        AuditAssert.Contains(dialogXaml, "Header=\"Price Action\"", "GRN per-row price-action column");
         AuditAssert.Contains(dialogXaml, "Header=\"Current Retail\"", "current Retail column");
         AuditAssert.Contains(dialogXaml, "Header=\"New Retail\"", "new Retail column");
         AuditAssert.Contains(dialogXaml, "Header=\"Current W/S\"", "current Wholesale column");
         AuditAssert.Contains(dialogXaml, "Header=\"New W/S\"", "new Wholesale column");
-        AuditAssert.Contains(dialogXaml, "Header=\"Current Min\"", "current Minimum column");
-        AuditAssert.Contains(dialogXaml, "Header=\"New Min\"", "new Minimum column");
-        AuditAssert.Contains(dialogXaml, "Header=\"Current Max\"", "current Maximum column");
-        AuditAssert.Contains(dialogXaml, "Header=\"New Max\"", "new Maximum column");
-        AuditAssert.Contains(dialogXaml, "Content=\"SELECT ALL\"", "select-all action");
-        AuditAssert.Contains(dialogXaml, "Content=\"CLEAR SELECTION\"", "clear-selection action");
-        AuditAssert.Contains(dialogXaml, "Content=\"APPLY PRICES\"", "apply-prices action");
-        AuditAssert.Contains(dialogXaml, "Content=\"CANCEL\"", "cancel action");
+        AuditAssert.Contains(dialogXaml, "Header=\"Master Min\"", "master Minimum boundary column");
+        AuditAssert.Contains(dialogXaml, "Header=\"New Min\"", "new master Minimum column");
+        AuditAssert.Contains(dialogXaml, "Header=\"Master Max\"", "master Maximum boundary column");
+        AuditAssert.Contains(dialogXaml, "Header=\"New Max\"", "new master Maximum column");
+        AuditAssert.Contains(dialogXaml, "Content=\"APPLY PRICE ACTIONS\"", "apply price-actions command");
 
         AuditAssert.Contains(
             dialogCodeBehind,
-            "line.NewMinimumPrice = RoundMoney(row.NewMinimumPrice);",
-            "Minimum Price proposal assignment");
+            "GrnSellingPriceActionCodes.SetBatchPriceOverride",
+            "batch-only GRN price action");
         AuditAssert.Contains(
             dialogCodeBehind,
-            "line.NewMaximumPrice = RoundMoney(row.NewMaximumPrice);",
-            "Maximum Price proposal assignment");
+            "row.ApplyToSource();",
+            "price rows mutate source only after confirmation");
         AuditAssert.Contains(
             dialogCodeBehind,
-            "line.UpdateSellingPrices = row.HasAnyChange;",
-            "four-level selling-price update flag");
+            "EffectiveSellingPriceResolver.ValidateOverride",
+            "GRN dialog central batch-price validation");
+        AuditAssert.Contains(dto, "private string _sellingPriceAction", "GRN persisted action DTO state");
+        AuditAssert.Contains(dto, "IsUseCurrentMasterPriceAction", "Use Current Master action state");
+        AuditAssert.Contains(dto, "IsUpdateMasterPriceAction", "Update Master action state");
+        AuditAssert.Contains(dto, "IsBatchPriceOverrideAction", "Set Batch Only action state");
+
+        AuditAssert.Contains(repository, "GetBatchPriceContextAsync", "authoritative GRN batch price context");
+        AuditAssert.Contains(repository, "CreateGrnMasterPriceChangeHistoryAsync", "GRN master history creation");
+        AuditAssert.Contains(repository, "CreateGrnBatchPriceChangeHistoryAsync", "GRN exact-batch history creation");
+        AuditAssert.Contains(repository, "ItemBatchId = line.ItemBatch.Id", "GRN history exact batch identity");
+        AuditAssert.Contains(repository, "OldPriceSource = before.PriceSource", "GRN batch history old source");
+        AuditAssert.Contains(repository, "NewPriceSource = after.PriceSource", "GRN batch history new source");
+        AuditAssert.Contains(viewModel, "AuthService", "GRN authenticated-user dependency");
         AuditAssert.False(
-            dialogCodeBehind.Contains("SourceLine.NewRetailPrice =", StringComparison.Ordinal),
-            "Selling prices are mutated before the final Apply action.");
-        AuditAssert.Contains(dto, "public bool HasMinimumPriceChange", "Minimum Price change detection");
-        AuditAssert.Contains(dto, "public bool HasMaximumPriceChange", "Maximum Price change detection");
-        AuditAssert.Contains(dto, "public bool HasAnySellingPriceChange", "four-level price-change detection");
-        AuditAssert.Contains(dto, "parts.Add($\"Min ", "Minimum Price summary text");
-        AuditAssert.Contains(dto, "parts.Add($\"Max ", "Maximum Price summary text");
+            viewModel.Contains("CreatedBy = \"Admin\"", StringComparison.Ordinal),
+            "GRN still writes a fabricated CreatedBy user.");
+        AuditAssert.False(
+            viewModel.Contains("PostedBy = \"Admin\"", StringComparison.Ordinal),
+            "GRN still writes a fabricated PostedBy user.");
     }
 
     private static void VerifyConditionalVatRetry()

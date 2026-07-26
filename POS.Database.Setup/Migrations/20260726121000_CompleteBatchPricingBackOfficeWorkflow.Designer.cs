@@ -2,47 +2,56 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using POS.Core.Data;
 
 #nullable disable
 
-namespace POS.Core.Migrations
+namespace POS.Database.Setup.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260726121000_CompleteBatchPricingBackOfficeWorkflow")]
+    partial class CompleteBatchPricingBackOfficeWorkflow
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.28");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.28")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("POS.Core.Models.AttributeGroup", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DisplayOrder")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("GroupName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<bool>("IsDeactivated")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -60,31 +69,33 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("AttributeGroupId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DisplayOrder")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsDeactivated")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ValueName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -102,75 +113,77 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ActionType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("BackupFileName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(260)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(260)")
                         .HasDefaultValue("");
 
                     b.Property<string>("BackupFilePath")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(500)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Checksum")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(200)")
                         .HasDefaultValue("");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<long>("FileSizeBytes")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bigint")
                         .HasDefaultValue(0L);
 
                     b.Property<string>("MachineName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(150)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Message")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(1000)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(1000)")
                         .HasDefaultValue("");
 
                     b.Property<bool>("Success")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
@@ -188,44 +201,184 @@ namespace POS.Core.Migrations
                     b.ToTable("BackupHistory", (string)null);
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashDrawerEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthorizedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("CashMovementId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("FailureMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SalesHeaderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashMovementId");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("SalesHeaderId");
+
+                    b.HasIndex("ShiftSessionId", "RequestedAtUtc");
+
+                    b.HasIndex("TerminalNo", "RequestedAtUtc");
+
+                    b.ToTable("CashDrawerEvents", (string)null);
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("AuthorizedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MovementType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ReasonCategory")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReferenceVoucherNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MovementType");
+
+                    b.HasIndex("ReasonCategory");
+
+                    b.HasIndex("ReferenceVoucherNo")
+                        .IsUnique();
+
+                    b.HasIndex("Timestamp");
+
+                    b.HasIndex("ShiftSessionId", "Timestamp");
+
+                    b.ToTable("CashMovements");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CashierCartLine", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CashierCartSessionId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("LineNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("LineType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal>("LineTotal")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<string>("SnapshotJson")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
@@ -239,142 +392,144 @@ namespace POS.Core.Migrations
                     b.HasIndex("CashierCartSessionId", "LineNumber")
                         .IsUnique();
 
-                    b.ToTable("CashierCartLines");
+                    b.ToTable("CashierCartLines", (string)null);
                 });
 
             modelBuilder.Entity("POS.Core.Models.CashierCartSession", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
-                    b.Property<DateTime?>("CancelledAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CancelledBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CancellationReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CancellationReasonText")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancelledBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("CartToken")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<Guid>("CartToken")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("CustomerCodeSnapshot")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("CustomerMasterId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("CustomerNameSnapshot")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("CustomerSnapshotJson")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(max)")
                         .HasDefaultValue("");
 
                     b.Property<string>("CustomerTypeSnapshot")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("GrossTotal")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("HeldAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("HeldBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("InvoiceDiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsWholesaleMode")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("ItemCount")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("NetTotal")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("RecallCount")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("RecalledAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("RecalledBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ReferenceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int>("Revision")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("ShiftSessionId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Active")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("TotalDiscount")
                         .HasColumnType("decimal(18,2)");
@@ -383,12 +538,12 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -417,212 +572,78 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("TerminalNo", "ShiftSessionId", "Status");
 
-                    b.ToTable("CashierCartSessions");
-                });
-
-            modelBuilder.Entity("POS.Core.Models.CashDrawerEvent", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AuthorizedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("CashMovementId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("CashierName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("FailureMessage")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("RequestedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ShiftSessionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("Succeeded")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TerminalNo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CashMovementId");
-
-                    b.HasIndex("EventType");
-
-                    b.HasIndex("SalesHeaderId");
-
-                    b.HasIndex("ShiftSessionId", "RequestedAtUtc");
-
-                    b.HasIndex("TerminalNo", "RequestedAtUtc");
-
-                    b.ToTable("CashDrawerEvents");
-                });
-
-            modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("AuthorizedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CashierName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MovementType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReasonCategory")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReferenceVoucherNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Remarks")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ShiftSessionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MovementType");
-
-                    b.HasIndex("ReasonCategory");
-
-                    b.HasIndex("ReferenceVoucherNo")
-                        .IsUnique();
-
-                    b.HasIndex("ShiftSessionId");
-
-                    b.HasIndex("Timestamp");
-
-                    b.HasIndex("ShiftSessionId", "Timestamp");
-
-                    b.ToTable("CashMovements");
+                    b.ToTable("CashierCartSessions", (string)null);
                 });
 
             modelBuilder.Entity("POS.Core.Models.Category", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CategoryCode")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("DeactivatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(250)")
                         .HasDefaultValue("");
 
                     b.Property<int>("DisplayOrder")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<bool>("IsDeactivated")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
@@ -643,13 +664,13 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.CategoryAttributeGroup", b =>
                 {
                     b.Property<int>("CategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("AttributeGroupId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("CategoryId", "AttributeGroupId");
 
@@ -662,7 +683,9 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AllocatedAmount")
                         .HasColumnType("decimal(18,2)");
@@ -671,13 +694,13 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("CustomerMasterId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("CustomerPaymentReceiptId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("CustomerReturnHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("DebitAmount")
                         .HasColumnType("decimal(18,2)");
@@ -685,11 +708,11 @@ namespace POS.Core.Migrations
                     b.Property<string>("DocumentRef")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("DueDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("OriginalAmount")
                         .HasColumnType("decimal(18,2)");
@@ -700,32 +723,32 @@ namespace POS.Core.Migrations
                     b.Property<string>("ProcessedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<int?>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Open")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("TransactionType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -760,30 +783,32 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("CreditLedgerId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("CustomerMasterId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("CustomerPaymentReceiptId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("DebitLedgerId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -799,136 +824,45 @@ namespace POS.Core.Migrations
                     b.ToTable("CustomerLedgerAllocations");
                 });
 
-            modelBuilder.Entity("POS.Core.Models.CustomerPaymentReceipt", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("BankOrCardType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<int?>("CashMovementId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CustomerMasterId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("DestinationAccount")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("PaymentDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("ProcessedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReceiptNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<Guid>("ReceiptToken")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReferenceNo")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("Remarks")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("ShiftSessionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TerminalNo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CashMovementId");
-
-                    b.HasIndex("CustomerMasterId");
-
-                    b.HasIndex("PaymentDate");
-
-                    b.HasIndex("PaymentMethod");
-
-                    b.HasIndex("ReceiptNo")
-                        .IsUnique();
-
-                    b.HasIndex("ReceiptToken")
-                        .IsUnique();
-
-                    b.HasIndex("ShiftSessionId");
-
-                    b.ToTable("CustomerPaymentReceipts");
-                });
-
             modelBuilder.Entity("POS.Core.Models.CustomerMaster", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime?>("Birthday")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("BusinessRegistrationNumber")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(150)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("CreditDays")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<decimal>("CreditLimit")
@@ -938,9 +872,9 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("None")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("CurrentBalance")
                         .HasColumnType("decimal(18,2)");
@@ -948,60 +882,60 @@ namespace POS.Core.Migrations
                     b.Property<string>("CustomerCode")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("CustomerGroupId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("CustomerType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Retail")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(150)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsCreditEnabled")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsCreditLocked")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsDiscountEligible")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("LoyaltyCardNumber")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("LoyaltyPointsBalance")
                         .HasColumnType("decimal(18,2)");
@@ -1009,27 +943,27 @@ namespace POS.Core.Migrations
                     b.Property<string>("NicNumber")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("VatRegistrationNumber")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -1063,66 +997,181 @@ namespace POS.Core.Migrations
                     b.ToTable("CustomerMasters");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CustomerPaymentReceipt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BankOrCardType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int?>("CashMovementId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerMasterId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DestinationAccount")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("ProcessedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReceiptNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<Guid>("ReceiptToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReferenceNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int?>("ShiftSessionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashMovementId");
+
+                    b.HasIndex("CustomerMasterId");
+
+                    b.HasIndex("PaymentDate");
+
+                    b.HasIndex("PaymentMethod");
+
+                    b.HasIndex("ReceiptNo")
+                        .IsUnique();
+
+                    b.HasIndex("ReceiptToken")
+                        .IsUnique();
+
+                    b.HasIndex("ShiftSessionId");
+
+                    b.ToTable("CustomerPaymentReceipts");
+                });
+
             modelBuilder.Entity("POS.Core.Models.CustomerReturnHeader", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AccountCreditAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("CashRefundAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("GiftVoucherRefundAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("AuthorizedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("CashRefundAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("OriginalInvoiceNo")
+                    b.Property<string>("CreditNoteNo")
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<int?>("OriginalSalesHeaderId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("ReplacementGiftVoucherId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ReplacementGiftVoucherNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("DocumentType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Return")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("CreditNoteNo")
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("ExemptAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("GiftVoucherRefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("OriginalInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int?>("OriginalSalesHeaderId")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("OutOfScopeAmount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("RefundMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int?>("ReplacementGiftVoucherId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReplacementGiftVoucherNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReturnNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int>("ShiftSessionId")
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("StandardRatedAmount")
                         .HasColumnType("decimal(18,2)");
@@ -1131,41 +1180,26 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxableAmountTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal>("TotalRefundAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("TotalVatAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("ZeroRatedAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("RefundMethod")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("ReturnDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReturnNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ShiftSessionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TerminalNo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("TotalRefundAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -1180,49 +1214,52 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("ReplacementGiftVoucherNo");
 
-                    b.HasIndex("TaxSnapshotStatus");
-
                     b.HasIndex("ReturnNo")
                         .IsUnique();
 
-                    b.ToTable("CustomerReturnHeaders");
+                    b.HasIndex("TaxSnapshotStatus");
+
+                    b.ToTable("CustomerReturnHeaders", (string)null);
                 });
 
             modelBuilder.Entity("POS.Core.Models.CustomerReturnLine", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CustomerReturnHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<string>("InventoryAction")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<bool?>("IsTaxInclusiveSnapshot")
+                        .HasColumnType("bit");
 
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemDescription")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("ItemTypeSnapshot")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
-                    b.Property<int?>("SalesLineId")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("ItemVariantId")
+                        .HasColumnType("int");
 
-                    b.Property<int?>("TaxCategoryId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TaxCategoryCodeSnapshot")
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("TaxCodeSnapshot")
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<bool?>("IsTaxInclusiveSnapshot")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("LineTotalRefund")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("OriginalTaxInclusiveAmount")
                         .HasColumnType("decimal(18,2)");
@@ -1231,49 +1268,6 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("OriginalVatAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("TaxRateId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal?>("TaxRatePercentSnapshot")
-                        .HasColumnType("decimal(7,4)");
-
-                    b.Property<string>("TaxNameSnapshot")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TaxSnapshotStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal?>("TaxableAmountSnapshot")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("TaxInclusiveAmountSnapshot")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("VatAmountSnapshot")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("InventoryAction")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ItemDescription")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("LineTotalRefund")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("QuantityReturned")
@@ -1285,7 +1279,50 @@ namespace POS.Core.Migrations
                     b.Property<string>("ReturnReason")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("SalesLineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TaxCategoryCodeSnapshot")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int?>("TaxCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TaxCodeSnapshot")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal?>("TaxInclusiveAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TaxNameSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("TaxRateId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("TaxRatePercentSnapshot")
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<string>("TaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal?>("TaxableAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("VatAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -1303,36 +1340,38 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("TaxSnapshotStatus");
 
-                    b.ToTable("CustomerReturnLines");
+                    b.ToTable("CustomerReturnLines", (string)null);
                 });
 
             modelBuilder.Entity("POS.Core.Models.DiscountReason", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<int>("DisplayOrder")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<decimal>("ManagerApprovalThreshold")
@@ -1341,37 +1380,37 @@ namespace POS.Core.Migrations
                     b.Property<string>("ReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReasonName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(150)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("RequiresAdminApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("RequiresManagerApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -1395,80 +1434,82 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("AllowBelowMinimumPrice")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("AppliesToType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("All")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("CategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("CategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("CustomerType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("All")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("DiscountReasonId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("DiscountType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Percent")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("DiscountValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<string>("ItemName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<int?>("ItemParentId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("ManagerApprovalThreshold")
                         .HasColumnType("decimal(18,2)");
@@ -1494,62 +1535,62 @@ namespace POS.Core.Migrations
                     b.Property<string>("ReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReasonName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("RequiresAdminApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("RequiresManagerApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("RuleName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(150)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("SubCategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SubCategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("ValidFrom")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("ValidTo")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -1592,22 +1633,22 @@ namespace POS.Core.Migrations
                 {
                     b.Property<string>("DocumentType")
                         .HasMaxLength(10)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(10)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int>("NextSequenceNumber")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("PaddingLength")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Prefix")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("DocumentType");
 
@@ -1692,39 +1733,41 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ButtonColorHex")
                         .IsRequired()
                         .HasMaxLength(9)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(9)");
 
                     b.Property<string>("DisplayLabel")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("GridColumn")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("GridRow")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TabCategory")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("TextColorHex")
                         .IsRequired()
                         .HasMaxLength(9)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(9)");
 
                     b.HasKey("Id");
 
@@ -1740,34 +1783,36 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("DisplayOrder")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("FreeIssueType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("ShopCost")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("ManagerApprovalThreshold")
                         .HasColumnType("decimal(18,2)");
@@ -1775,35 +1820,35 @@ namespace POS.Core.Migrations
                     b.Property<string>("ReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReasonName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("RequiresClaimReference")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("RequiresManagerApproval")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("RequiresSupplier")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -1825,76 +1870,78 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("AllowCashierWithoutApproval")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("AppliesToType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("ItemVariant")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("CategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("CategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ClaimValueMode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Cost")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("FixedClaimValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("FreeIssueReasonId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("FreeIssueType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("ShopCost")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("ItemName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<int?>("ItemParentId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("ManagerApprovalThreshold")
                         .HasColumnType("decimal(18,2)");
@@ -1914,71 +1961,71 @@ namespace POS.Core.Migrations
                     b.Property<string>("ReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReasonName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("RequiresAdminApproval")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("RequiresManagerApproval")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("RuleName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("SubCategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SubCategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("SupplierId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SupplierName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("SupplierPromotionReference")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("ValidFrom")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("ValidTo")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -2014,55 +2061,100 @@ namespace POS.Core.Migrations
                     b.ToTable("FreeIssueRules");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.FreeItemClaimAdjustment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("ClaimValueReduction")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("CustomerReturnLineId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FreeItemClaimLogId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("QuantityReturned")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerReturnLineId")
+                        .IsUnique();
+
+                    b.HasIndex("FreeItemClaimLogId");
+
+                    b.ToTable("FreeItemClaimAdjustments");
+                });
+
             modelBuilder.Entity("POS.Core.Models.FreeItemClaimLog", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CancelReason")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancelledBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ClaimReferenceNo")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ClaimStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Pending")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("ClaimValue")
                         .HasColumnType("decimal(18,2)");
@@ -2071,107 +2163,107 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("ExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FreeApprovedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("FreeApprovedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("FreeApprovedByUserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("FreeApprovedRole")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("FreeIssueAppliedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("FreeIssueAppliedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("FreeIssueCostValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("FreeIssueRuleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("FreeIssueRuleName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("FreeIssueRuleSnapshotJson")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(max)")
                         .HasDefaultValue("");
+
+                    b.Property<decimal>("FreeIssueSellingValue")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("FreeIssueSnapshotStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal>("FreeIssueSellingValue")
-                        .HasColumnType("decimal(18,2)");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("FreeIssueType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("SupplierClaim")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("FreeReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("FreeReasonText")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<DateTime>("InvoiceDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("InvoiceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("ItemDescription")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<int?>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("OriginalUnitPrice")
                         .HasColumnType("decimal(18,2)");
@@ -2182,109 +2274,109 @@ namespace POS.Core.Migrations
                     b.Property<string>("RejectReason")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime?>("RejectedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("RejectedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("SalesLineId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("SettledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SettledBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("SettlementReferenceNo")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("SettlementType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("SubmittedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SubmittedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("SupplierId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SupplierName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("SupplierPromotionReference")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Uom")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("PCS")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("WriteOffReason")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime?>("WrittenOffAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("WrittenOffBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -2334,133 +2426,94 @@ namespace POS.Core.Migrations
                     b.ToTable("FreeItemClaimLogs");
                 });
 
-            modelBuilder.Entity("POS.Core.Models.FreeItemClaimAdjustment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("ClaimValueReduction")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CustomerReturnLineId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("FreeItemClaimLogId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("QuantityReturned")
-                        .HasColumnType("decimal(18,3)");
-
-                    b.Property<string>("Remarks")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerReturnLineId")
-                        .IsUnique();
-
-                    b.HasIndex("FreeItemClaimLogId");
-
-                    b.ToTable("FreeItemClaimAdjustments");
-                });
-
             modelBuilder.Entity("POS.Core.Models.GiftVoucher", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("ActivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("BlockReason")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime?>("BlockedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("BlockedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("CancelReason")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancelledBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("ExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("ForfeitedAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("PrintedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("PrintCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(0);
-
-                    b.Property<string>("PrintedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime?>("LastPrintedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LastPrintedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("PrintCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("PrintedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PrintedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("RedeemedAmount")
                         .HasColumnType("decimal(18,2)");
@@ -2468,75 +2521,75 @@ namespace POS.Core.Migrations
                     b.Property<string>("RedeemedCashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("RedeemedDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("RedeemedInvoiceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("RedeemedSalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("RedeemedTerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("SoldCashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("SoldDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SoldInvoiceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("SoldSalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SoldTerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("StatusBeforeBlock")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Created")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("StatusBeforeBlock")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("VoucherAmount")
                         .HasColumnType("decimal(18,2)");
@@ -2544,8 +2597,8 @@ namespace POS.Core.Migrations
                     b.Property<string>("VoucherNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -2580,7 +2633,9 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
@@ -2588,87 +2643,87 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("AppliedAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("AuthorizedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AuthorizedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("CustomerReturnHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("ForfeitedAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("GiftVoucherId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("ReferenceInvoiceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReferenceKey")
                         .HasMaxLength(120)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(120)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReferenceReturnNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int?>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("SalesPaymentId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("StatusAfter")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("TransactionType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("VoucherAmount")
                         .HasColumnType("decimal(18,2)");
@@ -2676,21 +2731,22 @@ namespace POS.Core.Migrations
                     b.Property<string>("VoucherNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Barcode");
 
-                    b.HasIndex("GiftVoucherId");
-
                     b.HasIndex("CustomerReturnHeaderId");
+
+                    b.HasIndex("GiftVoucherId");
 
                     b.HasIndex("ReferenceInvoiceNo");
 
                     b.HasIndex("ReferenceKey")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ReferenceKey] IS NOT NULL");
 
                     b.HasIndex("ReferenceReturnNo");
 
@@ -2711,49 +2767,54 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CancellationReason")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancelledBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("CreditDays")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("DueDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("ExemptAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("FreightAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("FreightTaxCategoryCodeSnapshot")
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("FreightTaxSnapshotStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("FreightTaxableAmount")
                         .HasColumnType("decimal(18,2)");
@@ -2767,14 +2828,14 @@ namespace POS.Core.Migrations
                     b.Property<string>("GrnNumber")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("InvoiceDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool?>("IsTaxInclusive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("NetPayable")
                         .HasColumnType("decimal(18,2)");
@@ -2783,23 +2844,23 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("PostedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PostedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int?>("PurchaseOrderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("ReceivedDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal?>("StandardRatedAmount")
                         .HasColumnType("decimal(18,2)");
@@ -2808,29 +2869,29 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Posted")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("Subtotal")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("SupplierId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SupplierInvoiceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("TaxSnapshotStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxableAmountTotal")
                         .HasColumnType("decimal(18,2)");
@@ -2842,12 +2903,9 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal?>("ZeroRatedAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("ExemptAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -2869,8 +2927,6 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("TaxSnapshotStatus");
 
-                    b.HasIndex("TaxSnapshotStatus");
-
                     b.HasIndex("SupplierId", "SupplierInvoiceNo")
                         .IsUnique();
 
@@ -2881,16 +2937,18 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("CurrentMaximumPrice")
                         .HasColumnType("decimal(18,2)");
@@ -2905,24 +2963,24 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("ExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("GrnHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool?>("IsTaxInclusiveSnapshot")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsVatIncluded")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LandedCost")
                         .HasColumnType("decimal(18,2)");
@@ -2934,9 +2992,9 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Amount")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("LineDiscountValue")
                         .HasColumnType("decimal(18,2)");
@@ -2945,9 +3003,9 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("Posted")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
@@ -2968,28 +3026,34 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<int?>("PoLineId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ReceivedQty")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal>("RetailMarkupPercent")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TaxCategoryCodeSnapshot")
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<int?>("TaxCategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TaxCodeSnapshot")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<decimal?>("TaxInclusiveAmountSnapshot")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TaxNameSnapshot")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("TaxRateId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("TaxRatePercentSnapshot")
                         .HasColumnType("decimal(7,4)");
@@ -2998,17 +3062,11 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxableAmountSnapshot")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ReceivedQty")
-                        .HasColumnType("decimal(18,3)");
-
-                    b.Property<decimal>("RetailMarkupPercent")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnitCost")
@@ -3017,23 +3075,24 @@ namespace POS.Core.Migrations
                     b.Property<string>("Uom")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("SellingPriceAction")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("UseCurrentMasterPrice")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<bool>("UpdateSellingPrices")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("VatAmount")
                         .HasColumnType("decimal(18,2)");
@@ -3079,21 +3138,23 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,3)");
@@ -3101,25 +3162,25 @@ namespace POS.Core.Migrations
                     b.Property<string>("ReferenceDocument")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("ReferenceLineId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("TransactionType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("UnitCost")
                         .HasColumnType("decimal(18,2)");
@@ -3145,71 +3206,73 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BarcodePrintedCount")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("CostPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("CurrentStock")
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("ExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("HasSellingPriceOverride")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("InternalBatchBarcode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<bool>("IsDeactivated")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("LastBarcodePrintedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LastBarcodePrintedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<DateTime>("ReceivedDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("RetailPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("WholesalePrice")
                         .HasColumnType("decimal(18,2)");
@@ -3240,112 +3303,116 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("AllowCashierDiscount")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<string>("BaseUom")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int>("CategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("HasBatchExpiry")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("HasBatchTracking")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("HasExpiryTracking")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsDeactivated")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsPurchaseLocked")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsSaleLocked")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsScaleItem")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsSerialized")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsTaxInclusive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("ItemCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ItemName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(150)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ItemType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("StockItem");
 
                     b.Property<string>("PrintName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("SubCategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("TaxCategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TaxCode")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("UnitOfMeasureId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(1);
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -3382,13 +3449,13 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.ItemPropertyMapping", b =>
                 {
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("AttributeGroupId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("AttributeValueId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("ItemVariantId", "AttributeGroupId", "AttributeValueId");
 
@@ -3406,36 +3473,38 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsPrimary")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LastCostPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("MinimumOrderQuantity")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(1);
 
                     b.Property<int>("SupplierId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SupplierItemCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -3455,7 +3524,9 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AverageCost")
                         .HasColumnType("decimal(18,2)");
@@ -3463,23 +3534,23 @@ namespace POS.Core.Migrations
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("CostPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsDeactivated")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<int>("ItemParentId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("MaximumPrice")
                         .HasColumnType("decimal(18,2)");
@@ -3488,7 +3559,7 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ReorderLevel")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("RetailPrice")
                         .HasColumnType("decimal(18,2)");
@@ -3496,17 +3567,17 @@ namespace POS.Core.Migrations
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("VariantDescription")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(250)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("WholesalePrice")
                         .HasColumnType("decimal(18,2)");
@@ -3533,99 +3604,101 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("ExpiresOn")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("GraceDays")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(7);
 
                     b.Property<DateTime>("ImportedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("ImportedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<DateTime>("IssuedOn")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LastVerifiedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LicenseId")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<string>("LicenseStatus")
                         .IsRequired()
                         .HasMaxLength(40)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(40)");
 
                     b.Property<string>("LicenseType")
                         .IsRequired()
                         .HasMaxLength(40)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(40)");
 
                     b.Property<string>("MachineCode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(200)")
                         .HasDefaultValue("");
 
                     b.Property<string>("RawLicenseJson")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(max)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(500)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Signature")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(max)")
                         .HasDefaultValue("");
 
                     b.Property<string>("StoreId")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(80)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(80)")
                         .HasDefaultValue("");
 
                     b.Property<string>("StoreName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(200)")
                         .HasDefaultValue("");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
@@ -3649,41 +3722,43 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ApplicationName")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("EventTimeUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("MachineName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<int?>("UserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("UsernameAttempted")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -3704,71 +3779,76 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ApprovedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CancellationReason")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancelledBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("ClosedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("CreditDays")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("ExemptAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("ExpectedDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("GlobalBillDiscount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsTaxInclusive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("NetPayable")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("OutOfScopeAmount")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("PoNumber")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal?>("StandardRatedAmount")
                         .HasColumnType("decimal(18,2)");
@@ -3776,22 +3856,22 @@ namespace POS.Core.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("Subtotal")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("SupplierId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TaxSnapshotStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxableAmountTotal")
                         .HasColumnType("decimal(18,2)");
@@ -3799,7 +3879,7 @@ namespace POS.Core.Migrations
                     b.Property<string>("Terms")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("TotalDiscountAmount")
                         .HasColumnType("decimal(18,2)");
@@ -3808,12 +3888,9 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal?>("ZeroRatedAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("ExemptAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -3838,27 +3915,29 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("ClosedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("ExpectedCost")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool?>("IsTaxInclusiveSnapshot")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsVatIncluded")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LineDiscount")
                         .HasColumnType("decimal(18,2)");
@@ -3867,9 +3946,9 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Amount")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("LineDiscountValue")
                         .HasColumnType("decimal(18,2)");
@@ -3877,8 +3956,8 @@ namespace POS.Core.Migrations
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
@@ -3887,7 +3966,7 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<int>("PoHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("ReceivedQty")
                         .HasColumnType("decimal(18,3)");
@@ -3895,32 +3974,37 @@ namespace POS.Core.Migrations
                     b.Property<string>("SupplierItemCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("TaxAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TaxCategoryCodeSnapshot")
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<int?>("TaxCategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<string>("TaxCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("TaxCodeSnapshot")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<decimal?>("TaxInclusiveAmountSnapshot")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TaxNameSnapshot")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("TaxRateId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("TaxRatePercentSnapshot")
                         .HasColumnType("decimal(7,4)");
@@ -3929,25 +4013,21 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxableAmountSnapshot")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("TaxCode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Uom")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal?>("VatAmountSnapshot")
                         .HasColumnType("decimal(18,2)");
@@ -3979,85 +4059,87 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("BatchExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ChangeAction")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(40)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(40)")
                         .HasDefaultValue("Legacy")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ChangeReason")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("ChangeSource")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ChangedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("EffectiveCost")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("ItemCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ItemDescription")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("NewPriceSource")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("OldPriceSource")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("NewMaximumPrice")
                         .HasColumnType("decimal(18,2)");
@@ -4086,54 +4168,54 @@ namespace POS.Core.Migrations
                     b.Property<string>("PriceChangeNo")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("PriceLevel")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReasonCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("SourceDocumentId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("SourceDocumentLineId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SourceDocumentNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("SourceDocumentType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int?>("SourceDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SourceDocumentLineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceDocumentNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("SourceDocumentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("VariantDescription")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.HasKey("Id");
 
@@ -4169,22 +4251,100 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("SourceDocumentType");
 
-                    b.HasIndex("SourceDocumentType", "SourceDocumentId");
-
-                    b.HasIndex("SourceDocumentType", "SourceDocumentId", "SourceDocumentLineId");
-
                     b.HasIndex("ItemVariantId", "ChangedAt");
 
                     b.HasIndex("PriceLevel", "ChangedAt");
 
+                    b.HasIndex("SourceDocumentType", "SourceDocumentId");
+
+                    b.HasIndex("SourceDocumentType", "SourceDocumentId", "SourceDocumentLineId");
+
                     b.ToTable("PriceChangeHistories", (string)null);
+                });
+
+            modelBuilder.Entity("POS.Core.Models.SalesDocumentAudit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CopyNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<bool>("IsSuccessful")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PrinterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("SalesHeaderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TerminalNo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentNumber");
+
+                    b.HasIndex("DocumentType");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("SalesHeaderId");
+
+                    b.HasIndex("SalesHeaderId", "DocumentType", "IsSuccessful");
+
+                    b.ToTable("SalesDocumentAudits", (string)null);
                 });
 
             modelBuilder.Entity("POS.Core.Models.SalesHeader", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AmountTendered")
                         .HasColumnType("decimal(18,2)");
@@ -4195,144 +4355,98 @@ namespace POS.Core.Migrations
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<Guid?>("CheckoutToken")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CustomerCode")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("CustomerCompanyName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CustomerCreditStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<bool>("CustomerIsCreditEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("CustomerIsDiscountEligible")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(false);
-
-                    b.Property<int?>("CustomerMasterId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("CustomerName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CustomerNicOrBrNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("CustomerPhone")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CustomerType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CustomerAddressSnapshot")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(500)")
                         .HasDefaultValue("");
+
+                    b.Property<string>("CustomerCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("CustomerCompanyName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("CustomerCreditStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<bool>("CustomerIsCreditEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("CustomerIsDiscountEligible")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<int?>("CustomerMasterId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("CustomerNicOrBrNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("CustomerPhone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("CustomerTinSnapshot")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("CustomerType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CustomerVatNoSnapshot")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("DocumentType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Receipt")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("ExemptAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<bool>("IsVatRegisteredSale")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(false);
-
-                    b.Property<decimal?>("OutOfScopeAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("StandardRatedAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("SupplierTinSnapshot")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue("")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("SupplierVatNoSnapshot")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue("")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("TaxInvoiceNo")
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("TaxSnapshotStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal?>("TaxableAmountTotal")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("TotalVatAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("ZeroRatedAmount")
+                    b.Property<decimal>("GiftVoucherIssueTotal")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GrossTotal")
@@ -4341,48 +4455,94 @@ namespace POS.Core.Migrations
                     b.Property<string>("InvoiceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<bool>("IsVatRegisteredSale")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsVoided")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsWholesaleSale")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<decimal>("NetTotal")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("GiftVoucherIssueTotal")
+                    b.Property<decimal?>("OutOfScopeAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("ShiftSessionId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("StandardRatedAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("SupplierTinSnapshot")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("SupplierVatNoSnapshot")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("TaxInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("TaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal?>("TaxableAmountTotal")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("TotalDiscount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal?>("TotalVatAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("ZeroRatedAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -4419,13 +4579,13 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("TerminalNo");
-
                     b.HasIndex("TaxInvoiceNo")
                         .IsUnique()
                         .HasFilter("\"TaxInvoiceNo\" IS NOT NULL");
 
                     b.HasIndex("TaxSnapshotStatus");
+
+                    b.HasIndex("TerminalNo");
 
                     b.HasIndex("TransactionDate");
 
@@ -4436,52 +4596,54 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CataloguePriceSourceSnapshot")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("CostPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("DiscountApprovedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("DiscountApprovedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("DiscountMode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("None")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("DiscountPercentage")
                         .HasColumnType("decimal(18,2)");
@@ -4489,217 +4651,177 @@ namespace POS.Core.Migrations
                     b.Property<string>("DiscountReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("DiscountReasonId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("DiscountReasonName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("DiscountRequiresAdminApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("DiscountRequiresManagerApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<int?>("DiscountRuleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("DiscountRuleName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<DateTime?>("ExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FreeApprovedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("FreeApprovedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("FreeApprovedByUserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("FreeApprovedRole")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("FreeIssueAppliedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("FreeIssueAppliedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("FreeIssueCostValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("FreeIssueRuleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("FreeIssueRuleName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("FreeIssueRuleSnapshotJson")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(max)")
                         .HasDefaultValue("");
+
+                    b.Property<decimal>("FreeIssueSellingValue")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("FreeIssueSnapshotStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal>("FreeIssueSellingValue")
-                        .HasColumnType("decimal(18,2)");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("FreeIssueType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("FreeReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("FreeReasonText")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("GiftVoucherBarcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("GiftVoucherId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("GiftVoucherNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("GrossAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsFreeItem")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsGiftVoucherSale")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsManualDiscount")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsPriceOverridden")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsReturned")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRuleDiscount")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsSupplierRecoverable")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool?>("IsTaxInclusiveSnapshot")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("ItemDescription")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("ItemTypeSnapshot")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
-                    b.Property<bool?>("IsTaxInclusiveSnapshot")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("TaxCategoryId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TaxCategoryCodeSnapshot")
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("TaxCodeSnapshot")
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal?>("TaxInclusiveAmountSnapshot")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TaxNameSnapshot")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("TaxRateId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal?>("TaxRatePercentSnapshot")
-                        .HasColumnType("decimal(7,4)");
-
-                    b.Property<string>("TaxSnapshotStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal?>("TaxableAmountSnapshot")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("VatAmountSnapshot")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<int?>("ItemVariantId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
@@ -4714,12 +4836,12 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("PriceOverrideApprovedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PriceOverrideApprovedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("ProfitAmount")
                         .HasColumnType("decimal(18,2)");
@@ -4728,45 +4850,82 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<int>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("SupplierClaimId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SupplierClaimReferenceNo")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("SupplierClaimStatus")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("SupplierClaimValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("SupplierId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SupplierName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("SupplierPromotionReference")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("TaxCategoryCodeSnapshot")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int?>("TaxCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TaxCodeSnapshot")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal?>("TaxInclusiveAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TaxNameSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("TaxRateId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("TaxRatePercentSnapshot")
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<string>("TaxSnapshotStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal?>("TaxableAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
@@ -4774,7 +4933,11 @@ namespace POS.Core.Migrations
                     b.Property<string>("Uom")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal?>("VatAmountSnapshot")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
@@ -4836,12 +4999,6 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("SalesHeaderId");
 
-                    b.HasIndex("TaxCategoryId");
-
-                    b.HasIndex("TaxRateId");
-
-                    b.HasIndex("TaxSnapshotStatus");
-
                     b.HasIndex("SupplierClaimId");
 
                     b.HasIndex("SupplierClaimReferenceNo");
@@ -4850,6 +5007,12 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("SupplierId");
 
+                    b.HasIndex("TaxCategoryId");
+
+                    b.HasIndex("TaxRateId");
+
+                    b.HasIndex("TaxSnapshotStatus");
+
                     b.ToTable("SalesLines");
                 });
 
@@ -4857,63 +5020,65 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ApprovedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Barcode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("CostPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("DiscountReasonId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int?>("DiscountRuleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("DiscountRuleName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("DiscountType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("DiscountValue")
                         .HasColumnType("decimal(18,2)");
@@ -4922,24 +5087,24 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("InvoiceDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("InvoiceNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int?>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("ItemDescription")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int?>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LineTotalAfterDiscount")
                         .HasColumnType("decimal(18,2)");
@@ -4956,51 +5121,51 @@ namespace POS.Core.Migrations
                     b.Property<string>("ReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReasonName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("RequiresAdminApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("RequiresManagerApproval")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<int>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("SalesLineId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("SkuCode")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("Uom")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
@@ -5043,85 +5208,13 @@ namespace POS.Core.Migrations
                     b.ToTable("SalesLineDiscountAudits");
                 });
 
-            modelBuilder.Entity("POS.Core.Models.SalesDocumentAudit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("CopyNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("DocumentNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("DocumentType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("ErrorMessage")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<bool>("IsSuccessful")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PerformedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PrinterName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TerminalNo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DocumentNumber");
-
-                    b.HasIndex("DocumentType");
-
-                    b.HasIndex("EventType");
-
-                    b.HasIndex("OccurredAtUtc");
-
-                    b.HasIndex("SalesHeaderId");
-
-                    b.HasIndex("SalesHeaderId", "DocumentType", "IsSuccessful");
-
-                    b.ToTable("SalesDocumentAudits");
-                });
-
             modelBuilder.Entity("POS.Core.Models.SalesPayment", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
@@ -5129,69 +5222,69 @@ namespace POS.Core.Migrations
                     b.Property<string>("BankOrCardType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CardLastDigits")
                         .IsRequired()
                         .HasMaxLength(6)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(6)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("ChangeAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("EnteredBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("GiftVoucherAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("GiftVoucherBarcode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<decimal>("GiftVoucherForfeitedAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("GiftVoucherAuthorizedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GiftVoucherBarcode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<decimal>("GiftVoucherForfeitedAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("GiftVoucherId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("GiftVoucherNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime?>("PaymentDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentType")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReferenceNo")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int>("SalesHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("TenderedAmount")
                         .HasColumnType("decimal(18,2)");
@@ -5199,8 +5292,8 @@ namespace POS.Core.Migrations
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -5227,12 +5320,14 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AuthorizedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("CardTenderTotal")
                         .HasColumnType("decimal(18,2)");
@@ -5246,36 +5341,36 @@ namespace POS.Core.Migrations
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("ChequeTenderTotal")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("CloseToken")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("ClosedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ClosedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("CompletedSaleCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("CountedCash")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("CustomerReturnCount")
-                        .HasColumnType("INTEGER");
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("CustomerCreditTenderTotal")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CustomerReturnCount")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("ExpectedCash")
                         .HasColumnType("decimal(18,2)");
@@ -5296,7 +5391,7 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("OpenedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("OpeningCash")
                         .HasColumnType("decimal(18,2)");
@@ -5311,13 +5406,13 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ShiftSessionId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("TotalDiscount")
                         .HasColumnType("decimal(18,2)");
@@ -5328,7 +5423,7 @@ namespace POS.Core.Migrations
                     b.Property<string>("VarianceNote")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal>("VatTotal")
                         .HasColumnType("decimal(18,2)");
@@ -5336,8 +5431,8 @@ namespace POS.Core.Migrations
                     b.Property<string>("ZReportNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -5352,14 +5447,16 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("TerminalNo", "ClosedAt");
 
-                    b.ToTable("ShiftCloseSnapshots");
+                    b.ToTable("ShiftCloseSnapshots", (string)null);
                 });
 
             modelBuilder.Entity("POS.Core.Models.ShiftSession", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("ActualCash")
                         .HasColumnType("decimal(18,2)");
@@ -5367,10 +5464,10 @@ namespace POS.Core.Migrations
                     b.Property<string>("CashierName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("EndTime")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("ExpectedCash")
                         .HasColumnType("decimal(18,2)");
@@ -5379,17 +5476,17 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("StartTime")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<decimal>("TotalCashSales")
                         .HasColumnType("decimal(18,2)");
@@ -5417,72 +5514,74 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("AdjustmentDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("AdjustmentMode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("AdjustmentNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("AuthorizedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CancellationReason")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancelledBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("PostedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PostedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Reference")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("TotalDecreaseQty")
                         .HasColumnType("decimal(18,3)");
@@ -5494,7 +5593,7 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -5516,7 +5615,9 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("ActualQty")
                         .HasColumnType("decimal(18,3)");
@@ -5525,33 +5626,33 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("ItemBatchId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("LineRemarks")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("LineStatus")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReasonCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<int>("StockAdjustmentHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("SystemQty")
                         .HasColumnType("decimal(18,3)");
@@ -5560,7 +5661,7 @@ namespace POS.Core.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("VarianceQty")
                         .HasColumnType("decimal(18,3)");
@@ -5587,206 +5688,208 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AddressLine1")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(250)")
                         .HasDefaultValue("");
 
                     b.Property<string>("AddressLine2")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(250)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Brn")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("City")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Country")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("Sri Lanka");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(10)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(10)")
                         .HasDefaultValue("LKR");
 
                     b.Property<string>("CurrencySymbol")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(10)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(10)")
                         .HasDefaultValue("Rs.");
 
                     b.Property<string>("DateFormat")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("dd/MM/yyyy");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(150)")
                         .HasDefaultValue("");
 
                     b.Property<int>("FinancialYearStartMonth")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(1);
 
                     b.Property<decimal>("GlobalVatRate")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(5, 2)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("decimal(5,2)")
                         .HasDefaultValue(0m);
 
                     b.Property<string>("InvoicePrefix")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("INV");
 
                     b.Property<string>("InvoiceTerms")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(4000)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(4000)")
                         .HasDefaultValue("");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsVatRegistered")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("LegalName")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Phone")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("PostalCode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("");
 
                     b.Property<string>("PurchaseOrderPrefix")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("PO");
 
                     b.Property<string>("QuotationPrefix")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("QT");
 
                     b.Property<string>("ReceiptFooter")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(1000)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(1000)")
                         .HasDefaultValue("Thank You! Come Again.");
 
                     b.Property<string>("ReceiptHeader")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(1000)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(1000)")
                         .HasDefaultValue("");
 
                     b.Property<string>("StoreName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("TaxInvoicePrefix")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("TI");
 
                     b.Property<string>("TaxNo")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("TaxpayerIdentificationNumber")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("");
 
                     b.Property<string>("TimeZoneId")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("Sri Lanka Standard Time");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("VatRegistrationNumber")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
@@ -5800,65 +5903,67 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("DeactivatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<int>("DisplayOrder")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<bool>("IsDeactivated")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("SubCategoryCode")
                         .IsRequired()
                         .HasMaxLength(40)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(40)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("SubCategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
@@ -5884,81 +5989,83 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(150)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ContactPerson")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("CurrentBalance")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DefaultCreditDays")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(30);
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<bool>("HasVat")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsDeactivated")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("Phone1")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Phone2")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("SupplierCode")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("SupplierName")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(150)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("VatNumber")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -5980,7 +6087,9 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("BalanceAfterTransaction")
                         .HasColumnType("decimal(18,2)");
@@ -5988,27 +6097,27 @@ namespace POS.Core.Migrations
                     b.Property<string>("BankName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("ChargeAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("DueDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("GrnHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsPaid")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("PaymentAmount")
                         .HasColumnType("decimal(18,2)");
@@ -6016,35 +6125,35 @@ namespace POS.Core.Migrations
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ReferenceDocument")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("ReferenceNumber")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<int>("SupplierId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("TransactionDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("TransactionType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.HasKey("Id");
 
@@ -6069,36 +6178,41 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AuthorizedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CancellationReason")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CancelledBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("ExemptAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("GrnHeaderId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("GrossCredit")
                         .HasColumnType("decimal(18,2)");
@@ -6106,22 +6220,59 @@ namespace POS.Core.Migrations
                     b.Property<decimal>("NetCredit")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal?>("ExemptAmount")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<string>("OriginalInvoiceNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("OutOfScopeAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("PostedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PostedBy")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Remarks")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("RestockingFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReturnNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
                     b.Property<decimal?>("StandardRatedAmount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int>("SupplierId")
+                        .HasColumnType("int");
 
                     b.Property<string>("TaxSnapshotStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxableAmountTotal")
                         .HasColumnType("decimal(18,2)");
@@ -6129,51 +6280,11 @@ namespace POS.Core.Migrations
                     b.Property<decimal?>("TotalVatAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("ZeroRatedAmount")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("OriginalInvoiceNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<DateTime?>("PostedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PostedBy")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Remarks")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("RestockingFee")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("ReturnDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ReturnNumber")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -6190,6 +6301,8 @@ namespace POS.Core.Migrations
 
                     b.HasIndex("SupplierId");
 
+                    b.HasIndex("TaxSnapshotStatus");
+
                     b.ToTable("SupplierReturnHeaders", (string)null);
                 });
 
@@ -6197,31 +6310,50 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("BatchNo")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("CreditValue")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("ExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("GrnLineId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal>("HistoricalCost")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool?>("IsTaxInclusiveSnapshot")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ItemBatchId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ItemVariantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LineRemarks")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("LineStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("OriginalTaxInclusiveAmount")
                         .HasColumnType("decimal(18,2)");
@@ -6232,28 +6364,40 @@ namespace POS.Core.Migrations
                     b.Property<decimal?>("OriginalVatAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("TaxCategoryId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("ReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int>("ReturnHeaderId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ReturnQty")
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<string>("TaxCategoryCodeSnapshot")
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<int?>("TaxCategoryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("TaxCodeSnapshot")
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxInclusiveAmountSnapshot")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TaxNameSnapshot")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("TaxRateId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("TaxRatePercentSnapshot")
                         .HasColumnType("decimal(7,4)");
@@ -6262,47 +6406,18 @@ namespace POS.Core.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("LegacyUnknown")
-                        .UseCollation("NOCASE");
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal?>("TaxableAmountSnapshot")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("VatAmountSnapshot")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ItemBatchId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ItemVariantId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("LineRemarks")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LineStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<string>("ReasonCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
-
-                    b.Property<int>("ReturnHeaderId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("ReturnQty")
-                        .HasColumnType("decimal(18,3)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -6334,50 +6449,52 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CategoryCode")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(30)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("CategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DisplayOrder")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsRateBased")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("TreatmentType")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.HasKey("Id");
@@ -6398,66 +6515,68 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ChangeReason")
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DisplayOrder")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<DateTime?>("EffectiveFrom")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("EffectiveTo")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsSystemDefault")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<decimal>("RatePercent")
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<int?>("TaxCategoryId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("TaxCode")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(20)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("TaxName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -6477,165 +6596,167 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("AutoLockTimeoutMinutes")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(10);
 
                     b.Property<bool>("AutoPrintReceipt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("DrawerKickCode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("27,112,0,25,250");
 
                     b.Property<string>("EftposPortOrIp")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("EftposProvider")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<bool>("EnableCashDrawer")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("EnableEftpos")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("EnablePoleDisplay")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("EnableScale")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<string>("Location")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("Main Store");
 
                     b.Property<string>("MachineName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(150)")
                         .HasDefaultValue("");
 
                     b.Property<bool>("OpenDrawerAfterCashSale")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(false);
 
                     b.Property<string>("PoleDisplayComPort")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("COM2");
 
                     b.Property<string>("PoleWelcomeMessage")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(40)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(40)")
                         .HasDefaultValue("WELCOME");
 
                     b.Property<string>("PrinterMode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("WindowsSpooler");
 
                     b.Property<int>("ReceiptCopies")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(1);
 
                     b.Property<int>("ReceiptPaperWidth")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(80);
 
                     b.Property<string>("ReceiptPrinterName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(150)")
                         .HasDefaultValue("");
 
                     b.Property<int>("ScaleBaudRate")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(9600);
 
                     b.Property<string>("ScaleComPort")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("COM1");
 
                     b.Property<string>("ScannerSuffixAction")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Enter");
 
                     b.Property<string>("TerminalName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
@@ -6654,95 +6775,97 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
+                        .HasColumnType("datetime2")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsBackOfficeAllowed")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsCashierTerminal")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LastSaleAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LicenseExpiryDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LicenseId")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.Property<DateTime?>("LicenseLastCheckedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Location")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(120)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(120)")
                         .HasDefaultValue("Main Store");
 
                     b.Property<string>("MachineCode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(200)")
                         .HasDefaultValue("");
 
                     b.Property<string>("MachineName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(150)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(150)")
                         .HasDefaultValue("");
 
                     b.Property<string>("Remarks")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(500)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(500)")
                         .HasDefaultValue("");
 
                     b.Property<string>("TerminalName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(120)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(120)")
                         .HasDefaultValue("");
 
                     b.Property<string>("TerminalNo")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
+                        .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("");
 
                     b.HasKey("Id");
@@ -6765,37 +6888,39 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("AllowDecimals")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DeactivatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DisplayOrder")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("UomCode")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(10)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<string>("UomDescription")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .UseCollation("NOCASE");
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -6826,60 +6951,62 @@ namespace POS.Core.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("EmployeeId")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("FailedLoginAttempts")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
+                        .HasColumnType("int")
                         .HasDefaultValue(0);
 
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastLoginAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("LockoutEndUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Mobile")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordSalt")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Role")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
@@ -6900,6 +7027,38 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("AttributeGroup");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CashDrawerEvent", b =>
+                {
+                    b.HasOne("POS.Core.Models.CashMovement", null)
+                        .WithMany()
+                        .HasForeignKey("CashMovementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.SalesHeader", null)
+                        .WithMany()
+                        .HasForeignKey("SalesHeaderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
+                        .WithMany()
+                        .HasForeignKey("ShiftSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ShiftSession");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
+                {
+                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
+                        .WithMany("CashMovements")
+                        .HasForeignKey("ShiftSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ShiftSession");
                 });
 
             modelBuilder.Entity("POS.Core.Models.CashierCartLine", b =>
@@ -6934,38 +7093,6 @@ namespace POS.Core.Migrations
                     b.Navigation("CustomerMaster");
 
                     b.Navigation("SalesHeader");
-
-                    b.Navigation("ShiftSession");
-                });
-
-            modelBuilder.Entity("POS.Core.Models.CashDrawerEvent", b =>
-                {
-                    b.HasOne("POS.Core.Models.CashMovement", null)
-                        .WithMany()
-                        .HasForeignKey("CashMovementId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("POS.Core.Models.SalesHeader", null)
-                        .WithMany()
-                        .HasForeignKey("SalesHeaderId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
-                        .WithMany()
-                        .HasForeignKey("ShiftSessionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ShiftSession");
-                });
-
-            modelBuilder.Entity("POS.Core.Models.CashMovement", b =>
-                {
-                    b.HasOne("POS.Core.Models.ShiftSession", "ShiftSession")
-                        .WithMany("CashMovements")
-                        .HasForeignKey("ShiftSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("ShiftSession");
                 });
@@ -7026,8 +7153,11 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("CreditLedger");
+
                     b.Navigation("CustomerMaster");
+
                     b.Navigation("CustomerPaymentReceipt");
+
                     b.Navigation("DebitLedger");
                 });
 
@@ -7050,8 +7180,27 @@ namespace POS.Core.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CashMovement");
+
                     b.Navigation("CustomerMaster");
+
                     b.Navigation("ShiftSession");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.CustomerReturnHeader", b =>
+                {
+                    b.HasOne("POS.Core.Models.SalesHeader", "OriginalSalesHeader")
+                        .WithMany()
+                        .HasForeignKey("OriginalSalesHeaderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("POS.Core.Models.GiftVoucher", "ReplacementGiftVoucher")
+                        .WithMany()
+                        .HasForeignKey("ReplacementGiftVoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("OriginalSalesHeader");
+
+                    b.Navigation("ReplacementGiftVoucher");
                 });
 
             modelBuilder.Entity("POS.Core.Models.CustomerReturnLine", b =>
@@ -7472,8 +7621,6 @@ namespace POS.Core.Migrations
                         .IsRequired();
 
                     b.Navigation("CustomerMaster");
-
-                    b.Navigation("CashierCartSession");
                 });
 
             modelBuilder.Entity("POS.Core.Models.SalesLine", b =>
@@ -7719,6 +7866,11 @@ namespace POS.Core.Migrations
                     b.Navigation("CategoryAssignments");
                 });
 
+            modelBuilder.Entity("POS.Core.Models.CashierCartSession", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("POS.Core.Models.Category", b =>
                 {
                     b.Navigation("CategoryAssignments");
@@ -7738,21 +7890,7 @@ namespace POS.Core.Migrations
 
             modelBuilder.Entity("POS.Core.Models.CustomerReturnHeader", b =>
                 {
-                    b.HasOne("POS.Core.Models.SalesHeader", "OriginalSalesHeader")
-                        .WithMany()
-                        .HasForeignKey("OriginalSalesHeaderId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("POS.Core.Models.GiftVoucher", "ReplacementGiftVoucher")
-                        .WithMany()
-                        .HasForeignKey("ReplacementGiftVoucherId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Lines");
-
-                    b.Navigation("OriginalSalesHeader");
-
-                    b.Navigation("ReplacementGiftVoucher");
                 });
 
             modelBuilder.Entity("POS.Core.Models.GiftVoucher", b =>
@@ -7763,18 +7901,6 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.GrnHeader", b =>
                 {
                     b.Navigation("GrnLines");
-                });
-
-            modelBuilder.Entity("POS.Core.Models.TaxCategory", b =>
-                {
-                    b.Navigation("Items");
-
-                    b.Navigation("TaxRates");
-                });
-
-            modelBuilder.Entity("POS.Core.Models.CashierCartSession", b =>
-                {
-                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("POS.Core.Models.ItemParent", b =>
@@ -7825,6 +7951,13 @@ namespace POS.Core.Migrations
             modelBuilder.Entity("POS.Core.Models.SupplierReturnHeader", b =>
                 {
                     b.Navigation("ReturnLines");
+                });
+
+            modelBuilder.Entity("POS.Core.Models.TaxCategory", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("TaxRates");
                 });
 
             modelBuilder.Entity("POS.Core.Models.UnitOfMeasure", b =>

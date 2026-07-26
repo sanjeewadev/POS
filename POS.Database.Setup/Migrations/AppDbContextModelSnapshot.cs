@@ -3076,6 +3076,14 @@ namespace POS.Database.Setup.Migrations
                         .HasColumnType("nvarchar(20)")
                         .UseCollation("Latin1_General_100_CI_AS_SC");
 
+                    b.Property<string>("SellingPriceAction")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("UseCurrentMasterPrice")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
                     b.Property<bool>("UpdateSellingPrices")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -3109,6 +3117,8 @@ namespace POS.Database.Setup.Migrations
                     b.HasIndex("LineStatus");
 
                     b.HasIndex("PoLineId");
+
+                    b.HasIndex("SellingPriceAction");
 
                     b.HasIndex("TaxCategoryId");
 
@@ -4066,6 +4076,14 @@ namespace POS.Database.Setup.Migrations
                         .HasColumnType("nvarchar(50)")
                         .UseCollation("Latin1_General_100_CI_AS_SC");
 
+                    b.Property<string>("ChangeAction")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasDefaultValue("Legacy")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
                     b.Property<string>("ChangeReason")
                         .IsRequired()
                         .HasMaxLength(250)
@@ -4104,6 +4122,22 @@ namespace POS.Database.Setup.Migrations
 
                     b.Property<int>("ItemVariantId")
                         .HasColumnType("int");
+
+                    b.Property<string>("NewPriceSource")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
+
+                    b.Property<string>("OldPriceSource")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("Latin1_General_100_CI_AS_SC");
 
                     b.Property<decimal>("NewMaximumPrice")
                         .HasColumnType("decimal(18,2)");
@@ -4187,6 +4221,8 @@ namespace POS.Database.Setup.Migrations
 
                     b.HasIndex("BatchNo");
 
+                    b.HasIndex("ChangeAction");
+
                     b.HasIndex("ChangeSource");
 
                     b.HasIndex("ChangedAt");
@@ -4198,6 +4234,10 @@ namespace POS.Database.Setup.Migrations
                     b.HasIndex("ItemCode");
 
                     b.HasIndex("ItemVariantId");
+
+                    b.HasIndex("NewPriceSource");
+
+                    b.HasIndex("OldPriceSource");
 
                     b.HasIndex("PriceChangeNo");
 

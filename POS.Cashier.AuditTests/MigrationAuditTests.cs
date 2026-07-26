@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Services.Pricing;
@@ -7,7 +8,7 @@ namespace POS.Cashier.AuditTests;
 
 internal static class MigrationAuditTests
 {
-    private const string LatestMigration = "20260726090000_AddBatchSellingPriceOverrideFoundation";
+    private const string LatestMigration = "20260726120000_CompleteBatchPricingBackOfficeWorkflow";
 
     public static Task MigrationFromEmptyCreatesCurrentSchemaAsync()
     {
@@ -43,6 +44,18 @@ internal static class MigrationAuditTests
             "Sales catalogue-price source snapshot is missing.");
         AuditAssert.True(SqliteObjectExists(context, "index", "IX_SalesLines_CataloguePriceSourceSnapshot"),
             "Catalogue-price source index is missing.");
+        AuditAssert.True(SqliteColumnExists(context, "PriceChangeHistories", "ChangeAction"),
+            "Price Change action is missing.");
+        AuditAssert.True(SqliteColumnExists(context, "PriceChangeHistories", "OldPriceSource"),
+            "Price Change old source is missing.");
+        AuditAssert.True(SqliteColumnExists(context, "PriceChangeHistories", "NewPriceSource"),
+            "Price Change new source is missing.");
+        AuditAssert.True(SqliteColumnExists(context, "GrnLines", "SellingPriceAction"),
+            "GRN selling-price action is missing.");
+        AuditAssert.True(SqliteObjectExists(context, "index", "IX_PriceChangeHistories_ChangeAction"),
+            "Price Change action index is missing.");
+        AuditAssert.True(SqliteObjectExists(context, "index", "IX_GrnLines_SellingPriceAction"),
+            "GRN selling-price action index is missing.");
         return Task.CompletedTask;
     }
 
@@ -71,6 +84,14 @@ internal static class MigrationAuditTests
                 "Batch override state is missing after approved-baseline upgrade.");
             AuditAssert.True(SqliteColumnExists(context, "SalesLines", "CataloguePriceSourceSnapshot"),
                 "Catalogue-price source snapshot is missing after approved-baseline upgrade.");
+            AuditAssert.True(SqliteColumnExists(context, "PriceChangeHistories", "ChangeAction"),
+                "Price Change action is missing after approved-baseline upgrade.");
+            AuditAssert.True(SqliteColumnExists(context, "PriceChangeHistories", "OldPriceSource"),
+                "Price Change old source is missing after approved-baseline upgrade.");
+            AuditAssert.True(SqliteColumnExists(context, "PriceChangeHistories", "NewPriceSource"),
+                "Price Change new source is missing after approved-baseline upgrade.");
+            AuditAssert.True(SqliteColumnExists(context, "GrnLines", "SellingPriceAction"),
+                "GRN selling-price action is missing after approved-baseline upgrade.");
 
             var markerVariant = context.ItemVariants
                 .AsNoTracking()
@@ -122,6 +143,56 @@ internal static class MigrationAuditTests
                     "Generated 1.0.7 sale catalogue source");
                 AuditAssert.Money(1200m, markerLine.UnitPrice, "Generated 1.0.7 sale price");
                 AuditAssert.Money(500m, markerLine.CostPrice, "Generated 1.0.7 sale cost");
+            }
+
+            bool backOfficeFixtureRequired = string.Equals(
+                Environment.GetEnvironmentVariable("POS_AUDIT_REQUIRE_BATCH_PRICING_BACKOFFICE_FIXTURE"),
+                "1",
+                StringComparison.Ordinal);
+
+            PriceChangeHistory? legacyMasterHistory = context.PriceChangeHistories
+                .AsNoTracking()
+                .SingleOrDefault(row => row.PriceChangeNo == "PCH-P1-MASTER");
+            PriceChangeHistory? legacyBatchHistory = context.PriceChangeHistories
+                .AsNoTracking()
+                .SingleOrDefault(row => row.PriceChangeNo == "PCH-P1-BATCH");
+            GrnLine? legacyMasterGrnLine = context.GrnLines
+                .AsNoTracking()
+                .SingleOrDefault(row => row.BatchNo == "BP-P1-MASTER");
+            GrnLine? legacyCurrentGrnLine = context.GrnLines
+                .AsNoTracking()
+                .SingleOrDefault(row => row.BatchNo == "BP-P1-CURRENT");
+
+            if (backOfficeFixtureRequired &&
+                (legacyMasterHistory is null || legacyBatchHistory is null ||
+                 legacyMasterGrnLine is null || legacyCurrentGrnLine is null))
+            {
+                throw new InvalidOperationException(
+                    "The generated Patch 1 BackOffice pricing fixture rows are missing.");
+            }
+
+            if (legacyMasterHistory is not null)
+            {
+                AuditAssert.Equal(PriceChangeActionCodes.LegacyMasterChange, legacyMasterHistory.ChangeAction, "legacy Master history action");
+                AuditAssert.Equal(SellingPriceSourceCodes.Master, legacyMasterHistory.OldPriceSource, "legacy Master old source");
+                AuditAssert.Equal(SellingPriceSourceCodes.Master, legacyMasterHistory.NewPriceSource, "legacy Master new source");
+            }
+
+            if (legacyBatchHistory is not null)
+            {
+                AuditAssert.Equal(PriceChangeActionCodes.LegacyBatchChange, legacyBatchHistory.ChangeAction, "legacy Batch history action");
+                AuditAssert.Equal(SellingPriceSourceCodes.LegacyUnknown, legacyBatchHistory.OldPriceSource, "legacy Batch old source");
+                AuditAssert.Equal(SellingPriceSourceCodes.LegacyUnknown, legacyBatchHistory.NewPriceSource, "legacy Batch new source");
+            }
+
+            if (legacyMasterGrnLine is not null)
+            {
+                AuditAssert.Equal(GrnSellingPriceActionCodes.UpdateMasterPrice, legacyMasterGrnLine.SellingPriceAction, "legacy GRN master action backfill");
+            }
+
+            if (legacyCurrentGrnLine is not null)
+            {
+                AuditAssert.Equal(GrnSellingPriceActionCodes.UseCurrentMasterPrice, legacyCurrentGrnLine.SellingPriceAction, "legacy GRN current action backfill");
             }
         }
         finally

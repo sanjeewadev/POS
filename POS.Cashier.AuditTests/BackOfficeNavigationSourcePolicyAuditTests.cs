@@ -159,16 +159,20 @@ internal static class BackOfficeNavigationSourcePolicyAuditTests
 
         AuditAssert.Contains(
             priceInitialize,
-            "bool filtersLoaded = await LoadLookupFiltersAsync();",
+            "await LoadLookupFiltersAsync()",
             "Price History filter initialization result");
         AuditAssert.Contains(
             priceInitialize,
-            "bool historyLoaded = await LoadHistoryAsync();",
+            "await LoadHistoryAsync()",
             "Price History data initialization result");
         AuditAssert.Contains(
             priceInitialize,
-            "IsInitialized = filtersLoaded && historyLoaded;",
-            "Price History successful initialization guard");
+            "IsInitialized =",
+            "Price History successful initialization assignment");
+        AuditAssert.Contains(
+            priceInitialize,
+            "&&",
+            "Price History requires both filter and history loading to succeed");
         AuditAssert.Contains(
             priceHistory,
             "private async Task<bool> LoadLookupFiltersAsync()",

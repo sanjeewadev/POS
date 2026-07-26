@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.Views.Dialogs;
 using POS.Core.Services;
+using POS.Core.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
@@ -22,6 +23,7 @@ namespace POS.BackOffice.UI.ViewModels
     {
         private readonly GrnRepository _grnRepository;
         private readonly IMessageBoxService _messageBoxService;
+        private readonly AuthService _authService;
         private readonly DispatcherTimer _recalculateTimer;
 
         private readonly List<GrnLineEntryDto> _allMatrixVariants = new();
@@ -184,12 +186,14 @@ namespace POS.BackOffice.UI.ViewModels
             GrnRepository grnRepository,
             ItemMasterRepository itemMasterRepository,
             PoRepository poRepository,
-            IMessageBoxService messageBoxService)
+            IMessageBoxService messageBoxService,
+            AuthService authService)
         {
             _grnRepository = grnRepository ?? throw new ArgumentNullException(nameof(grnRepository));
             _ = itemMasterRepository ?? throw new ArgumentNullException(nameof(itemMasterRepository));
             _ = poRepository ?? throw new ArgumentNullException(nameof(poRepository));
             _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
 
             _recalculateTimer = new DispatcherTimer
             {
@@ -1380,9 +1384,11 @@ namespace POS.BackOffice.UI.ViewModels
             if (newLine.RequiresExpiry)
                 existing.ExpiryDate = newExpiry;
 
-            if (newLine.UpdateSellingPrices)
+            if (newLine.HasAnySellingPriceChange)
             {
-                existing.UpdateSellingPrices = true;
+                existing.SellingPriceAction = GrnSellingPriceActionCodes.Normalize(newLine.SellingPriceAction);
+                existing.UpdateSellingPrices = existing.SellingPriceAction ==
+                    GrnSellingPriceActionCodes.UpdateMasterPrice;
                 existing.NewRetailPrice = newLine.NewRetailPrice;
                 existing.NewWholesalePrice = newLine.NewWholesalePrice;
                 existing.NewMinimumPrice = newLine.NewMinimumPrice;
@@ -1616,16 +1622,20 @@ namespace POS.BackOffice.UI.ViewModels
             if (!taxPreviewReady || !ValidateBeforePost())
                 return;
 
-            int retailChanges = GrnLines.Count(line => line.HasRetailPriceChange);
-            int wholesaleChanges = GrnLines.Count(line => line.HasWholesalePriceChange);
-            int minimumChanges = GrnLines.Count(line => line.HasMinimumPriceChange);
-            int maximumChanges = GrnLines.Count(line => line.HasMaximumPriceChange);
+            int masterUpdates = GrnLines.Count(line =>
+                GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+                GrnSellingPriceActionCodes.UpdateMasterPrice);
+            int batchOverrides = GrnLines.Count(line =>
+                GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+                GrnSellingPriceActionCodes.SetBatchPriceOverride);
+            int keepCurrent = GrnLines.Count(line =>
+                GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+                GrnSellingPriceActionCodes.UseCurrentMasterPrice);
 
-            string priceChangeText = GrnLines.All(line => !line.HasAnySellingPriceChange)
-                ? "No selling prices will change."
-                : $"{retailChanges} retail, {wholesaleChanges} wholesale, " +
-                  $"{minimumChanges} minimum and {maximumChanges} maximum price change(s) " +
-                  "will be applied and audited.";
+            string priceChangeText = masterUpdates == 0 && batchOverrides == 0
+                ? "All received rows will keep their current pricing authority."
+                : $"{masterUpdates} master price update(s), {batchOverrides} batch override(s), " +
+                  $"and {keepCurrent} row(s) keeping current pricing will be posted and audited.";
 
             bool confirmed = _messageBoxService.ShowConfirmation(
                 $"Post GRN for Rs. {NetPayable:N2}?\n\n" +
@@ -1656,6 +1666,8 @@ namespace POS.BackOffice.UI.ViewModels
                     .Select(ToPostingLine)
                     .ToList();
 
+                string authenticatedUsername = GetAuthenticatedUsername();
+
                 var header = new GrnHeader
                 {
                     PurchaseOrderId = SelectedPO?.PoHeaderId,
@@ -1675,8 +1687,8 @@ namespace POS.BackOffice.UI.ViewModels
                     TotalDiscountAmount = TotalDiscountAmount,
                     TotalVatAmount = TotalVatAmount,
                     NetPayable = NetPayable,
-                    CreatedBy = "Admin",
-                    PostedBy = "Admin"
+                    CreatedBy = authenticatedUsername,
+                    PostedBy = authenticatedUsername
                 };
 
                 await _grnRepository.PostGrnAsync(header, validLines);
@@ -1841,6 +1853,19 @@ namespace POS.BackOffice.UI.ViewModels
             return true;
         }
 
+        private string GetAuthenticatedUsername()
+        {
+            string username = _authService.CurrentUser?.Username?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new InvalidOperationException(
+                    "The authenticated BackOffice user is unavailable. Sign in again before posting the GRN.");
+            }
+
+            return username;
+        }
+
         private static GrnLine ToPostingLine(GrnLineEntryDto line)
         {
             return new GrnLine
@@ -1871,7 +1896,9 @@ namespace POS.BackOffice.UI.ViewModels
                 LandedCost = line.LandedCost,
                 LineTotal = line.LineTotal,
 
-                UpdateSellingPrices = line.UpdateSellingPrices,
+                SellingPriceAction = GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction),
+                UpdateSellingPrices = GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction) ==
+                    GrnSellingPriceActionCodes.UpdateMasterPrice,
                 CurrentRetailPrice = line.CurrentRetailPrice,
                 NewRetailPrice = line.NewRetailPrice,
                 CurrentWholesalePrice = line.CurrentWholesalePrice,
@@ -2025,7 +2052,8 @@ namespace POS.BackOffice.UI.ViewModels
                 OnPropertyChanged(nameof(IsMatrixExpiryEnabled));
             }
 
-            if (e.PropertyName == nameof(GrnLineEntryDto.UpdateSellingPrices) ||
+            if (e.PropertyName == nameof(GrnLineEntryDto.SellingPriceAction) ||
+                e.PropertyName == nameof(GrnLineEntryDto.UpdateSellingPrices) ||
                 e.PropertyName == nameof(GrnLineEntryDto.NewRetailPrice) ||
                 e.PropertyName == nameof(GrnLineEntryDto.NewWholesalePrice) ||
                 e.PropertyName == nameof(GrnLineEntryDto.NewMinimumPrice) ||
@@ -2238,7 +2266,9 @@ namespace POS.BackOffice.UI.ViewModels
                 NewMaximumPrice = source.NewMaximumPrice,
                 RetailMarkupPercent = source.RetailMarkupPercent,
                 WholesaleMarkupPercent = source.WholesaleMarkupPercent,
-                UpdateSellingPrices = source.UpdateSellingPrices
+                SellingPriceAction = GrnSellingPriceActionCodes.Normalize(source.SellingPriceAction),
+                UpdateSellingPrices = GrnSellingPriceActionCodes.Normalize(source.SellingPriceAction) ==
+                    GrnSellingPriceActionCodes.UpdateMasterPrice
             };
         }
     }

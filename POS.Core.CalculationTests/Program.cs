@@ -45,6 +45,10 @@ namespace POS.Core.CalculationTests
                 ("Batch pricing resolver uses eligible override", BatchPricingResolverUsesEligibleOverride),
                 ("Batch pricing resolver ignores Service and GENERAL overrides", BatchPricingResolverIgnoresIneligibleOverrides),
                 ("Batch pricing override validates master boundaries", BatchPricingOverrideValidatesMasterBoundaries),
+                ("Batch pricing BackOffice override lifecycle is audited", BatchPricingBackOfficeOverrideLifecycleIsAudited),
+                ("GRN Master and Batch actions share grouped history", GrnMasterAndBatchActionsShareGroupedHistory),
+                ("Grouped price history returns the whole operation", GroupedPriceHistoryReturnsWholeOperation),
+                ("Stock and Expiry views expose effective batch source", StockAndExpiryViewsExposeEffectiveBatchSource),
                 ("Non-VAT supplier profile preserves item category", NonVatSupplierProfilePreservesItemCategory),
                 ("VAT supplier profile retains effective purchasing rate", VatSupplierProfileRetainsEffectivePurchasingRate),
                 ("Non-VAT Purchase Order save forces zero VAT", NonVatPurchaseOrderSaveForcesZeroVat),
@@ -248,6 +252,7 @@ namespace POS.Core.CalculationTests
                 ("Free Issue rule names are unique", FreeIssueRuleNamesAreUnique),
                 ("Phase 8E migration applies from empty database", Phase8EMigrationAppliesFromEmptyDatabase),
                 ("Batch pricing migration applies from empty database", BatchPricingMigrationAppliesFromEmptyDatabase),
+                ("Batch pricing BackOffice migration applies from empty database", BatchPricingBackOfficeMigrationAppliesFromEmptyDatabase),
                 ("Phase 8E migration upgrades Phase 8D baseline", Phase8EMigrationUpgradesPhase8DBaseline),
                 ("Phase 8E migration duplicate preflight rolls back", Phase8EMigrationDuplicatePreflightRollsBack),
                 ("Stock Adjustment requires active Manager or Administrator", StockAdjustmentWorkflowTests.PostingRequiresActiveManagerOrAdministrator),
@@ -315,7 +320,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, batch-pricing foundation, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, POS Network SQL Server migration and setup foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, batch-pricing BackOffice workflow, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, POS Network SQL Server migration and setup foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
                 return 0;
             }
             catch (Exception ex)

@@ -705,6 +705,10 @@
                                                             Width="85"
                                                             ElementStyle="{StaticResource RightText}"/>
 
+                                        <DataGridTextColumn Header="Price Source"
+                                                            Binding="{Binding PriceSourceText}"
+                                                            Width="105"/>
+
                                         <DataGridTextColumn Header="Cost Value"
                                                             Binding="{Binding TotalBatchCost, StringFormat=N2}"
                                                             Width="105"
@@ -876,6 +880,20 @@
                                         Binding="{Binding UnitCost, StringFormat=N2}"
                                         Width="85"
                                         ElementStyle="{StaticResource RightText}"/>
+
+                    <DataGridTextColumn Header="Effective Retail"
+                                        Binding="{Binding EffectiveRetailPrice, StringFormat=N2}"
+                                        Width="95"
+                                        ElementStyle="{StaticResource RightText}"/>
+
+                    <DataGridTextColumn Header="Effective W/S"
+                                        Binding="{Binding EffectiveWholesalePrice, StringFormat=N2}"
+                                        Width="95"
+                                        ElementStyle="{StaticResource RightText}"/>
+
+                    <DataGridTextColumn Header="Price Source"
+                                        Binding="{Binding PriceSourceText}"
+                                        Width="105"/>
 
                     <DataGridTextColumn Header="Cost Value"
                                         Binding="{Binding CostValue, StringFormat=N2}"

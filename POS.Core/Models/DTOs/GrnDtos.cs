@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using POS.Core.Configuration;
 using POS.Core.Utilities;
 
 namespace POS.Core.Models.DTOs
@@ -199,6 +200,15 @@ namespace POS.Core.Models.DTOs
                 : GrnDisplayNameHelper.NormalizeText(VariantDescription);
     }
 
+    public sealed class GrnBatchPriceContextDto
+    {
+        public decimal RetailPrice { get; set; }
+        public decimal WholesalePrice { get; set; }
+        public decimal MinimumPrice { get; set; }
+        public decimal MaximumPrice { get; set; }
+        public string PriceSource { get; set; } = "Master Price";
+    }
+
     public sealed class GrnTaxPreviewLineDto
     {
         public int SourceIndex { get; set; }
@@ -359,6 +369,12 @@ namespace POS.Core.Models.DTOs
         // =========================================================
 
         [ObservableProperty]
+        private string _sellingPriceAction = GrnSellingPriceActionCodes.UseCurrentMasterPrice;
+
+        [ObservableProperty]
+        private string _currentPriceSource = "Master Price";
+
+        [ObservableProperty]
         private bool _updateSellingPrices;
 
         [ObservableProperty]
@@ -485,46 +501,58 @@ namespace POS.Core.Models.DTOs
             }
         }
 
+        public bool IsUseCurrentMasterPriceAction =>
+            GrnSellingPriceActionCodes.Normalize(SellingPriceAction, UpdateSellingPrices) ==
+            GrnSellingPriceActionCodes.UseCurrentMasterPrice;
+
+        public bool IsUpdateMasterPriceAction =>
+            GrnSellingPriceActionCodes.Normalize(SellingPriceAction, UpdateSellingPrices) ==
+            GrnSellingPriceActionCodes.UpdateMasterPrice;
+
+        public bool IsBatchPriceOverrideAction =>
+            GrnSellingPriceActionCodes.Normalize(SellingPriceAction, UpdateSellingPrices) ==
+            GrnSellingPriceActionCodes.SetBatchPriceOverride;
+
+        public string PriceActionText =>
+            GrnSellingPriceActionCodes.ToDisplayText(SellingPriceAction);
+
         public bool HasRetailPriceChange =>
-            UpdateSellingPrices && Math.Round(CurrentRetailPrice, 2) != Math.Round(NewRetailPrice, 2);
+            (IsUpdateMasterPriceAction || IsBatchPriceOverrideAction) &&
+            Math.Round(CurrentRetailPrice, 2) != Math.Round(NewRetailPrice, 2);
 
         public bool HasWholesalePriceChange =>
-            UpdateSellingPrices && Math.Round(CurrentWholesalePrice, 2) != Math.Round(NewWholesalePrice, 2);
+            (IsUpdateMasterPriceAction || IsBatchPriceOverrideAction) &&
+            Math.Round(CurrentWholesalePrice, 2) != Math.Round(NewWholesalePrice, 2);
 
         public bool HasMinimumPriceChange =>
-            UpdateSellingPrices && Math.Round(CurrentMinimumPrice, 2) != Math.Round(NewMinimumPrice, 2);
+            IsUpdateMasterPriceAction &&
+            Math.Round(CurrentMinimumPrice, 2) != Math.Round(NewMinimumPrice, 2);
 
         public bool HasMaximumPriceChange =>
-            UpdateSellingPrices && Math.Round(CurrentMaximumPrice, 2) != Math.Round(NewMaximumPrice, 2);
+            IsUpdateMasterPriceAction &&
+            Math.Round(CurrentMaximumPrice, 2) != Math.Round(NewMaximumPrice, 2);
 
         public bool HasAnySellingPriceChange =>
-            HasRetailPriceChange ||
-            HasWholesalePriceChange ||
-            HasMinimumPriceChange ||
-            HasMaximumPriceChange;
+            !IsUseCurrentMasterPriceAction;
 
         public string PriceUpdateText
         {
             get
             {
-                if (!HasAnySellingPriceChange)
-                    return "Keep current";
+                if (IsUseCurrentMasterPriceAction)
+                    return "Use Current Master Price";
+
+                if (IsBatchPriceOverrideAction)
+                {
+                    return $"Batch Override | Retail {NewRetailPrice:N2} | W/S {NewWholesalePrice:N2}";
+                }
 
                 var parts = new List<string>();
-
-                if (HasRetailPriceChange)
-                    parts.Add($"Retail {CurrentRetailPrice:N2} → {NewRetailPrice:N2}");
-
-                if (HasWholesalePriceChange)
-                    parts.Add($"W/S {CurrentWholesalePrice:N2} → {NewWholesalePrice:N2}");
-
-                if (HasMinimumPriceChange)
-                    parts.Add($"Min {CurrentMinimumPrice:N2} → {NewMinimumPrice:N2}");
-
-                if (HasMaximumPriceChange)
-                    parts.Add($"Max {CurrentMaximumPrice:N2} → {NewMaximumPrice:N2}");
-
-                return string.Join(" | ", parts);
+                if (HasRetailPriceChange) parts.Add($"Retail {CurrentRetailPrice:N2} → {NewRetailPrice:N2}");
+                if (HasWholesalePriceChange) parts.Add($"W/S {CurrentWholesalePrice:N2} → {NewWholesalePrice:N2}");
+                if (HasMinimumPriceChange) parts.Add($"Min {CurrentMinimumPrice:N2} → {NewMinimumPrice:N2}");
+                if (HasMaximumPriceChange) parts.Add($"Max {CurrentMaximumPrice:N2} → {NewMaximumPrice:N2}");
+                return parts.Count == 0 ? "Update Master Price (no amount change)" : string.Join(" | ", parts);
             }
         }
 
@@ -587,25 +615,39 @@ namespace POS.Core.Models.DTOs
             if (isPoLinked && OutstandingPoQty > 0 && ReceivedQty > OutstandingPoQty)
                 errors.Add($"{DisplayName}: received quantity cannot exceed PO ordered quantity.");
 
-            if (UpdateSellingPrices)
-            {
-                if (NewRetailPrice < 0 ||
-                    NewWholesalePrice < 0 ||
-                    NewMinimumPrice < 0 ||
-                    NewMaximumPrice < 0)
-                {
-                    errors.Add($"{DisplayName}: selling prices cannot be negative.");
-                }
+            string priceAction = GrnSellingPriceActionCodes.Normalize(SellingPriceAction, UpdateSellingPrices);
+            if (!GrnSellingPriceActionCodes.IsValid(priceAction))
+                errors.Add($"{DisplayName}: invalid selling price action.");
 
-                if (NewMaximumPrice > 0 && NewMinimumPrice > NewMaximumPrice)
-                {
+            if (priceAction == GrnSellingPriceActionCodes.SetBatchPriceOverride && !HasBatchTracking)
+                errors.Add($"{DisplayName}: a batch-only price override requires a batch-tracked Stock Item.");
+
+            if (priceAction == GrnSellingPriceActionCodes.UpdateMasterPrice ||
+                priceAction == GrnSellingPriceActionCodes.SetBatchPriceOverride)
+            {
+                if (NewRetailPrice <= 0m || NewWholesalePrice <= 0m)
+                    errors.Add($"{DisplayName}: Retail and Wholesale prices must be greater than zero.");
+
+                if (NewRetailPrice < 0m || NewWholesalePrice < 0m ||
+                    NewMinimumPrice < 0m || NewMaximumPrice < 0m)
+                    errors.Add($"{DisplayName}: selling prices cannot be negative.");
+
+                decimal minimum = priceAction == GrnSellingPriceActionCodes.UpdateMasterPrice
+                    ? NewMinimumPrice
+                    : CurrentMinimumPrice;
+                decimal maximum = priceAction == GrnSellingPriceActionCodes.UpdateMasterPrice
+                    ? NewMaximumPrice
+                    : CurrentMaximumPrice;
+
+                if (maximum > 0m && minimum > maximum)
                     errors.Add($"{DisplayName}: minimum price cannot be greater than maximum price.");
-                }
+                if (minimum > 0m && (NewRetailPrice < minimum || NewWholesalePrice < minimum))
+                    errors.Add($"{DisplayName}: Retail and Wholesale prices cannot be below the master Minimum price.");
+                if (maximum > 0m && (NewRetailPrice > maximum || NewWholesalePrice > maximum))
+                    errors.Add($"{DisplayName}: Retail and Wholesale prices cannot be above the master Maximum price.");
 
                 if (RetailMarkupPercent < -100 || WholesaleMarkupPercent < -100)
-                {
                     errors.Add($"{DisplayName}: markup percentage is invalid.");
-                }
             }
 
             return errors;
@@ -683,6 +725,34 @@ namespace POS.Core.Models.DTOs
                     LandedCost + (LandedCost * WholesaleMarkupPercent / 100m),
                     2);
             }
+        }
+
+        partial void OnSellingPriceActionChanged(string value)
+        {
+            string normalized = GrnSellingPriceActionCodes.Normalize(value);
+            if (!string.Equals(value, normalized, StringComparison.Ordinal))
+            {
+                SellingPriceAction = normalized;
+                return;
+            }
+
+            UpdateSellingPrices =
+                normalized == GrnSellingPriceActionCodes.UpdateMasterPrice;
+
+            if (normalized == GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+            {
+                NewRetailPrice = CurrentRetailPrice;
+                NewWholesalePrice = CurrentWholesalePrice;
+                NewMinimumPrice = CurrentMinimumPrice;
+                NewMaximumPrice = CurrentMaximumPrice;
+            }
+
+            OnPropertyChanged(nameof(IsUseCurrentMasterPriceAction));
+            OnPropertyChanged(nameof(IsUpdateMasterPriceAction));
+            OnPropertyChanged(nameof(IsBatchPriceOverrideAction));
+            OnPropertyChanged(nameof(PriceActionText));
+            OnPropertyChanged(nameof(HasAnySellingPriceChange));
+            OnPropertyChanged(nameof(PriceUpdateText));
         }
 
         partial void OnBatchNoChanged(string value)
@@ -768,6 +838,13 @@ namespace POS.Core.Models.DTOs
 
         partial void OnUpdateSellingPricesChanged(bool value)
         {
+            if (value &&
+                SellingPriceAction == GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+            {
+                SellingPriceAction = GrnSellingPriceActionCodes.UpdateMasterPrice;
+                return;
+            }
+
             if (value)
             {
                 if (NewRetailPrice <= 0)

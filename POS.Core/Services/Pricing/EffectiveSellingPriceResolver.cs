@@ -137,17 +137,29 @@ namespace POS.Core.Services.Pricing
                     "Only an active physical batch of a batch-tracked Stock Item can use a selling-price override.");
             }
 
+            ValidateOverride(
+                retailPrice,
+                wholesalePrice,
+                variant.MinimumPrice,
+                variant.MaximumPrice);
+        }
+
+        public static void ValidateOverride(
+            decimal retailPrice,
+            decimal wholesalePrice,
+            decimal minimumPrice,
+            decimal maximumPrice)
+        {
             retailPrice = RoundMoney(retailPrice);
             wholesalePrice = RoundMoney(wholesalePrice);
+            minimumPrice = RoundMoney(minimumPrice);
+            maximumPrice = RoundMoney(maximumPrice);
 
             if (retailPrice <= 0m)
                 throw new InvalidOperationException("Batch override Retail price must be greater than zero.");
 
             if (wholesalePrice <= 0m)
                 throw new InvalidOperationException("Batch override Wholesale price must be greater than zero.");
-
-            decimal minimumPrice = RoundMoney(variant.MinimumPrice);
-            decimal maximumPrice = RoundMoney(variant.MaximumPrice);
 
             if (minimumPrice > 0m)
             {

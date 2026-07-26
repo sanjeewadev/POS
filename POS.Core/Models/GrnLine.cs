@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using POS.Core.Configuration;
@@ -212,6 +212,11 @@ namespace POS.Core.Models
         // =========================================================
         // SELLING PRICE UPDATE SNAPSHOT
         // =========================================================
+
+        [Required]
+        [MaxLength(30)]
+        public string SellingPriceAction { get; set; } =
+            GrnSellingPriceActionCodes.UseCurrentMasterPrice;
 
         public bool UpdateSellingPrices { get; set; } = false;
 

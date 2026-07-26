@@ -737,6 +737,24 @@ namespace POS.Core.Data
                     .HasMaxLength(50)
                     .UseCollation(CaseInsensitiveCollation);
 
+                entity.Property(p => p.ChangeAction)
+                    .IsRequired()
+                    .HasMaxLength(40)
+                    .HasDefaultValue(PriceChangeActionCodes.Legacy)
+                    .UseCollation(CaseInsensitiveCollation);
+
+                entity.Property(p => p.OldPriceSource)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(POS.Core.Services.Pricing.SellingPriceSourceCodes.LegacyUnknown)
+                    .UseCollation(CaseInsensitiveCollation);
+
+                entity.Property(p => p.NewPriceSource)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(POS.Core.Services.Pricing.SellingPriceSourceCodes.LegacyUnknown)
+                    .UseCollation(CaseInsensitiveCollation);
+
                 entity.Property(p => p.SourceDocumentType)
                     .IsRequired()
                     .HasMaxLength(30)
@@ -826,6 +844,12 @@ namespace POS.Core.Data
                 entity.HasIndex(p => p.PriceLevel);
 
                 entity.HasIndex(p => p.ChangeSource);
+
+                entity.HasIndex(p => p.ChangeAction);
+
+                entity.HasIndex(p => p.OldPriceSource);
+
+                entity.HasIndex(p => p.NewPriceSource);
 
                 entity.HasIndex(p => p.SourceDocumentType);
 
@@ -1131,6 +1155,12 @@ namespace POS.Core.Data
                     .HasDefaultValue(TaxSnapshotStatuses.LegacyUnknown)
                     .UseCollation(CaseInsensitiveCollation);
 
+                entity.Property(l => l.SellingPriceAction)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+                    .UseCollation(CaseInsensitiveCollation);
+
                 entity.Property(l => l.UpdateSellingPrices)
                     .HasDefaultValue(false);
 
@@ -1211,6 +1241,8 @@ namespace POS.Core.Data
                 entity.HasIndex(l => l.BatchNo);
 
                 entity.HasIndex(l => l.LineStatus);
+
+                entity.HasIndex(l => l.SellingPriceAction);
 
                 entity.HasIndex(l => l.TaxCategoryId);
 
