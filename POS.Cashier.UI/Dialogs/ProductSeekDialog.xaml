@@ -39,9 +39,12 @@
                                FontSize="11"/>
                 </StackPanel>
 
-                <TextBlock Grid.Column="1"
-                           Text="ENTER = SEARCH / ADD   |   ESC = CLOSE"
-                           Style="{StaticResource CashierShortcutHint}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="MODE: " Style="{StaticResource CashierShortcutHint}"/>
+                    <TextBlock Text="{Binding PricingModeText}" Foreground="{StaticResource CashierHeaderHintBrush}" FontWeight="Bold" Margin="0,0,18,0"/>
+                    <TextBlock Text="ENTER = SEARCH / ADD   |   ESC = CLOSE"
+                               Style="{StaticResource CashierShortcutHint}"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -199,9 +202,13 @@
                                                     Binding="{Binding TrackingText}"
                                                     Width="110"
                                                     ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
-                                <DataGridTextColumn Header="Retail"
+                                <DataGridTextColumn Header="Master Retail"
                                                     Binding="{Binding RetailPrice, StringFormat={}{0:N2}}"
-                                                    Width="90"
+                                                    Width="95"
+                                                    ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
+                                <DataGridTextColumn Header="Master Wholesale"
+                                                    Binding="{Binding WholesalePrice, StringFormat={}{0:N2}}"
+                                                    Width="110"
                                                     ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
                                 <DataGridTextColumn Header="Stock"
                                                     Binding="{Binding StockOnHand, StringFormat={}{0:#,##0.###}}"
@@ -273,14 +280,21 @@
                                                 Binding="{Binding CostPrice, StringFormat={}{0:N2}}"
                                                 Width="88"
                                                 ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
-                            <DataGridTextColumn Header="Retail"
+                            <DataGridTextColumn Header="Effective Retail"
                                                 Binding="{Binding RetailPrice, StringFormat={}{0:N2}}"
-                                                Width="88"
+                                                Width="105"
                                                 ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
-                            <DataGridTextColumn Header="Wholesale"
+                            <DataGridTextColumn Header="Effective Wholesale"
                                                 Binding="{Binding WholesalePrice, StringFormat={}{0:N2}}"
-                                                Width="96"
+                                                Width="120"
                                                 ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
+                            <DataGridTextColumn Header="Active Price"
+                                                Binding="{Binding ActivePrice, StringFormat={}{0:N2}}"
+                                                Width="95"
+                                                ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
+                            <DataGridTextColumn Header="Source"
+                                                Binding="{Binding PriceSourceText}"
+                                                Width="105"/>
                             <DataGridTextColumn Header="Received"
                                                 Binding="{Binding ReceivedDate, StringFormat={}{0:yyyy-MM-dd}}"
                                                 Width="105"

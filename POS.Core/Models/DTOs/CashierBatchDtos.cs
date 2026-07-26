@@ -10,6 +10,8 @@ namespace POS.Core.Models.DTOs
 
         public string BatchNo { get; set; } = string.Empty;
 
+        public string InternalBatchBarcode { get; set; } = string.Empty;
+
         public DateTime? ExpiryDate { get; set; }
 
         public DateTime ReceivedDate { get; set; }
@@ -29,6 +31,11 @@ namespace POS.Core.Models.DTOs
                 StringComparison.Ordinal);
 
         public decimal AvailableQty { get; set; }
+
+        public string PriceSourceText =>
+            HasSellingPriceOverride
+                ? "Batch Override"
+                : "Master Price";
 
         public bool IsExpired =>
             ExpiryDate.HasValue &&

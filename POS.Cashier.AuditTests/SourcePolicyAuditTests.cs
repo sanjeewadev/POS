@@ -591,6 +591,7 @@ internal static class SourcePolicyAuditTests
         string[] dialogs =
         {
             "ProductSeekDialog.xaml",
+            "BatchSelectionDialog.xaml",
             "B2BCustomerDialogView.xaml",
             "LoyaltyCustomerDialogView.xaml",
             "QuickCustomerCreateDialog.xaml",

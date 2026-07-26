@@ -34,6 +34,11 @@ namespace POS.Cashier.UI.ViewModels
         [ObservableProperty]
         private bool _isBusy = false;
 
+        [ObservableProperty]
+        private bool _isWholesaleMode;
+
+        public string PricingModeText => IsWholesaleMode ? "WHOLESALE" : "RETAIL";
+
         public ObservableCollection<ParentSeekDto> ParentResults { get; } = new();
 
         public ObservableCollection<VariantSeekDto> VariantResults { get; } = new();
@@ -54,6 +59,29 @@ namespace POS.Cashier.UI.ViewModels
         public PluSearchViewModel(ItemMasterRepository itemRepository)
         {
             _itemRepository = itemRepository ?? throw new ArgumentNullException(nameof(itemRepository));
+        }
+
+        public void ConfigurePricingMode(bool isWholesaleMode)
+        {
+            IsWholesaleMode = isWholesaleMode;
+            OnPropertyChanged(nameof(PricingModeText));
+
+            foreach (VariantSeekDto variant in VariantResults)
+            {
+                variant.ActivePrice = IsWholesaleMode
+                    ? variant.WholesalePrice
+                    : variant.RetailPrice;
+            }
+
+            foreach (BatchSeekDto batch in BatchResults)
+            {
+                batch.ActivePrice = IsWholesaleMode
+                    ? batch.WholesalePrice
+                    : batch.RetailPrice;
+            }
+
+            OnPropertyChanged(nameof(VariantResults));
+            OnPropertyChanged(nameof(BatchResults));
         }
 
         partial void OnSelectedParentChanged(ParentSeekDto? value)
@@ -237,7 +265,12 @@ namespace POS.Cashier.UI.ViewModels
                 var variants = await _itemRepository.GetSeekVariantsAsync(parentId);
 
                 foreach (var variant in variants)
+                {
+                    variant.ActivePrice = IsWholesaleMode
+                        ? variant.WholesalePrice
+                        : variant.RetailPrice;
                     VariantResults.Add(variant);
+                }
 
                 if (VariantResults.Count == 0)
                 {
@@ -276,7 +309,12 @@ namespace POS.Cashier.UI.ViewModels
                 var batches = await _itemRepository.GetSeekBatchesByVariantIdAsync(variantId);
 
                 foreach (var batch in batches)
+                {
+                    batch.ActivePrice = IsWholesaleMode
+                        ? batch.WholesalePrice
+                        : batch.RetailPrice;
                     BatchResults.Add(batch);
+                }
 
                 if (BatchResults.Count == 0)
                 {

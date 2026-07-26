@@ -49,6 +49,10 @@ namespace POS.Core.CalculationTests
                 ("GRN Master and Batch actions share grouped history", GrnMasterAndBatchActionsShareGroupedHistory),
                 ("Grouped price history returns the whole operation", GroupedPriceHistoryReturnsWholeOperation),
                 ("Stock and Expiry views expose effective batch source", StockAndExpiryViewsExposeEffectiveBatchSource),
+                ("Cashier sellable batches use FEFO and effective prices", CashierSellableBatchesUseFefoAndEffectivePrices),
+                ("Cashier sellable batches exclude invalid rows", CashierSellableBatchesExcludeInvalidRows),
+                ("Product Seek rows expose both prices and source", ProductSeekRowsExposeBothPricesAndSource),
+                ("Sales Explorer uses saved batch and price-source snapshots", SalesExplorerUsesSavedBatchAndPriceSourceSnapshots),
                 ("Non-VAT supplier profile preserves item category", NonVatSupplierProfilePreservesItemCategory),
                 ("VAT supplier profile retains effective purchasing rate", VatSupplierProfileRetainsEffectivePurchasingRate),
                 ("Non-VAT Purchase Order save forces zero VAT", NonVatPurchaseOrderSaveForcesZeroVat),
@@ -320,7 +324,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, batch-pricing BackOffice workflow, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, POS Network SQL Server migration and setup foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, batch-pricing Cashier completion, batch-pricing BackOffice workflow, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, POS Network SQL Server migration and setup foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
                 return 0;
             }
             catch (Exception ex)

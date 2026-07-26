@@ -5,6 +5,7 @@ internal static class CashierWindowStabilizationSourcePolicyAuditTests
     private static readonly HashSet<string> OperationalDialogFiles = new(StringComparer.Ordinal)
     {
         "B2BCustomerDialogView.xaml",
+        "BatchSelectionDialog.xaml",
         "ExpressItemDialogView.xaml",
         "HoldRecallDialog.xaml",
         "LoyaltyCustomerDialogView.xaml",
@@ -29,6 +30,7 @@ internal static class CashierWindowStabilizationSourcePolicyAuditTests
     private static readonly string[] RoutineDialogFiles =
     {
         "ActiveCartRecoveryDialog.xaml",
+        "BatchSelectionDialog.xaml",
         "B2BCustomerDialogView.xaml",
         "CardTenderDialog.xaml",
         "CartCancellationReasonDialog.xaml",

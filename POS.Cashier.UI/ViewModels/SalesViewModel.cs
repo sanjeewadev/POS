@@ -33,8 +33,10 @@ namespace POS.Cashier.UI.ViewModels
         private readonly TillRepository _tillRepository;
         private readonly IReceiptPrintService _printService;
         private readonly CashDrawerAuditService _drawerAuditService;
+        private readonly ICashierBatchSelectionService _batchSelectionService;
         private readonly SalesTaxService _salesTaxService = new();
         private readonly SemaphoreSlim _barcodeProcessingGate = new(1, 1);
+        private readonly SemaphoreSlim _batchSelectionGate = new(1, 1);
         private int _pendingBarcodeOperations;
 
         public bool IsBarcodeProcessing =>
@@ -130,7 +132,8 @@ namespace POS.Cashier.UI.ViewModels
             CashierCartRepository cashierCartRepository,
             TillRepository tillRepository,
             IReceiptPrintService printService,
-            CashDrawerAuditService drawerAuditService)
+            CashDrawerAuditService drawerAuditService,
+            ICashierBatchSelectionService batchSelectionService)
         {
             _itemRepository = itemRepository;
             _salesRepository = salesRepository;
@@ -139,6 +142,7 @@ namespace POS.Cashier.UI.ViewModels
             _tillRepository = tillRepository;
             _printService = printService;
             _drawerAuditService = drawerAuditService;
+            _batchSelectionService = batchSelectionService;
 
             Cart.CollectionChanged += (_, e) =>
             {
@@ -1648,17 +1652,14 @@ namespace POS.Cashier.UI.ViewModels
                     return;
                 }
 
-                if (item.HasBatchTracking)
-                {
-                    _ = ShowNotificationAsync("Batch item. Scan GRN batch barcode.", "#F59E0B");
-                    return;
-                }
-
-                await AddVariantToCartAsync(item.VariantId, 1m);
+                await RouteSellableItemToCartAsync(item, 1m);
             }
             catch (Exception ex)
             {
-                _ = ShowNotificationAsync($"Database Error: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException("Cashier", "Resolve scanned item", ex);
+                _ = ShowNotificationAsync(
+                    "The scanned item could not be loaded. Cashier remains available.",
+                    "#EF4444");
             }
         }
 
@@ -1704,7 +1705,10 @@ namespace POS.Cashier.UI.ViewModels
             }
             catch (Exception ex)
             {
-                _ = ShowNotificationAsync($"Add batch failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException("Cashier", "Add exact batch", ex);
+                _ = ShowNotificationAsync(
+                    "The selected batch could not be added. Cashier remains available.",
+                    "#EF4444");
             }
         }
 
@@ -1738,31 +1742,127 @@ namespace POS.Cashier.UI.ViewModels
                     return;
                 }
 
-                if (item.IsService)
-                {
-                    AddServiceToCart(item, quantity);
-                    return;
-                }
-
-                if (item.HasBatchTracking)
-                {
-                    _ = ShowNotificationAsync("Batch item. Scan GRN batch barcode.", "#F59E0B");
-                    return;
-                }
-
-                var selectedBatch = await _itemRepository.GetGeneralSellableBatchForVariantAsync(item.VariantId);
-
-                if (selectedBatch == null)
-                {
-                    _ = ShowNotificationAsync($"No sellable stock: {item.DisplayDescription}", "#F59E0B");
-                    return;
-                }
-
-                AddSelectedBatchToCart(item, selectedBatch, quantity);
+                await RouteSellableItemToCartAsync(item, quantity);
             }
             catch (Exception ex)
             {
-                _ = ShowNotificationAsync($"Add item failed: {ex.Message}", "#EF4444");
+                LocalLogService.WriteException("Cashier", "Add sellable item", ex);
+                _ = ShowNotificationAsync(
+                    "The item could not be added. Cashier remains available.",
+                    "#EF4444");
+            }
+        }
+
+        private async Task RouteSellableItemToCartAsync(
+            CashierSellableItemDto item,
+            decimal quantity)
+        {
+            if (item.IsService)
+            {
+                AddServiceToCart(item, quantity);
+                return;
+            }
+
+            if (!item.HasBatchTracking)
+            {
+                CashierBatchDto? generalBatch =
+                    await _itemRepository.GetGeneralSellableBatchForVariantAsync(item.VariantId);
+
+                if (generalBatch == null)
+                {
+                    _ = ShowNotificationAsync(
+                        $"No sellable stock: {item.DisplayDescription}",
+                        "#F59E0B");
+                    return;
+                }
+
+                AddSelectedBatchToCart(item, generalBatch, quantity);
+                return;
+            }
+
+            List<CashierBatchDto> batches =
+                await _itemRepository.GetSellableBatchesByVariantIdAsync(item.VariantId);
+
+            if (batches.Count == 0)
+            {
+                _ = ShowNotificationAsync(
+                    $"No non-expired physical batch has sellable stock for {item.DisplayDescription}.",
+                    "#F59E0B");
+                return;
+            }
+
+            if (batches.Count == 1)
+            {
+                AddSelectedBatchToCart(item, batches[0], quantity);
+                return;
+            }
+
+            if (!await _batchSelectionGate.WaitAsync(0))
+            {
+                _ = ShowNotificationAsync(
+                    "Complete the current batch selection before adding another batch item.",
+                    "#F59E0B");
+                return;
+            }
+
+            try
+            {
+                CashierBatchSelectionResult? selected =
+                    await _batchSelectionService.SelectBatchAsync(
+                        new CashierBatchSelectionRequest
+                        {
+                            Item = item,
+                            Batches = batches,
+                            RequestedQuantity = quantity,
+                            IsWholesaleMode = IsWholesaleMode
+                        });
+
+                if (selected == null)
+                    return;
+
+                CashierBatchDto? current =
+                    await _itemRepository.GetSellableBatchByIdAsync(selected.ItemBatchId);
+
+                if (current == null ||
+                    current.ItemVariantId != item.VariantId)
+                {
+                    _ = ShowNotificationAsync(
+                        "The selected batch is no longer sellable. Reopen batch selection.",
+                        "#F59E0B");
+                    return;
+                }
+
+                bool priceChanged =
+                    Math.Round(current.RetailPrice, 2) !=
+                        Math.Round(selected.ExpectedRetailPrice, 2) ||
+                    Math.Round(current.WholesalePrice, 2) !=
+                        Math.Round(selected.ExpectedWholesalePrice, 2) ||
+                    !string.Equals(
+                        current.PriceSource,
+                        selected.ExpectedPriceSource,
+                        StringComparison.Ordinal);
+
+                if (priceChanged)
+                {
+                    _ = ShowNotificationAsync(
+                        "The selected batch price or source changed. Reopen batch selection.",
+                        "#F59E0B");
+                    return;
+                }
+
+                if (current.AvailableQty < quantity)
+                {
+                    _ = ShowNotificationAsync(
+                        $"Only {QuantityDisplayFormatter.Format(current.AvailableQty)} remains in the selected batch. Reopen batch selection.",
+                        "#F59E0B");
+                    return;
+                }
+
+                AddSelectedBatchToCart(item, current, quantity);
+            }
+            finally
+            {
+                _batchSelectionGate.Release();
             }
         }
 

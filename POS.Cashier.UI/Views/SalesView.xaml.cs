@@ -1711,7 +1711,8 @@ namespace POS.Cashier.UI.Views
 
             try
             {
-                var seekDialog = new ProductSeekDialog
+                var seekDialog = new ProductSeekDialog(
+                    ViewModel?.IsWholesaleMode == true)
                 {
                     Owner = this
                 };

@@ -85,6 +85,14 @@ namespace POS.Core.Models.DTOs
         public string ItemCode { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string ItemType { get; set; } = string.Empty;
+        public string BatchNo { get; set; } = string.Empty;
+        public string CataloguePriceSource { get; set; } = string.Empty;
+        public string CataloguePriceSourceText =>
+            CataloguePriceSource == "BatchOverride"
+                ? "Batch Override"
+                : CataloguePriceSource == "Master"
+                    ? "Master Price"
+                    : "Legacy / Unknown";
         public decimal Qty { get; set; }
         public decimal ReturnedQty { get; set; }
         public decimal UnitPrice { get; set; }

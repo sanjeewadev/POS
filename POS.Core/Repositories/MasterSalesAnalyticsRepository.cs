@@ -251,6 +251,8 @@ namespace POS.Core.Repositories
                         ItemCode = FirstNonEmpty(line.SkuCode, line.Barcode),
                         Description = line.ItemDescription,
                         ItemType = line.ItemTypeSnapshot ?? string.Empty,
+                        BatchNo = line.BatchNo,
+                        CataloguePriceSource = line.CataloguePriceSourceSnapshot,
                         Qty = line.Quantity,
                         ReturnedQty = RoundQuantity(returnedQuantity),
                         UnitPrice = line.UnitPrice,

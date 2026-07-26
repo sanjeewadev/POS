@@ -88,6 +88,9 @@ namespace POS.Cashier.UI
 
             services.AddSingleton<AuthService>();
             services.AddSingleton<CashierLockService>();
+            services.AddSingleton<
+                ICashierBatchSelectionService,
+                CashierBatchSelectionService>();
 
             services.AddSingleton<SalesDocumentTextFormatter>();
             services.AddSingleton<CustomerCreditNoteTextFormatter>();

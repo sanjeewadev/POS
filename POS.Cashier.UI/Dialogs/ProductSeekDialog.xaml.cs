@@ -19,7 +19,7 @@ namespace POS.Cashier.UI.Dialogs
         private bool _isCompletingWindowAction;
         private bool _isProcessingRowAction;
 
-        public ProductSeekDialog()
+        public ProductSeekDialog(bool isWholesaleMode = false)
         {
             InitializeComponent();
 
@@ -27,6 +27,7 @@ namespace POS.Cashier.UI.Dialogs
                 throw new InvalidOperationException("Application services are not available.");
 
             _viewModel = App.Services.GetRequiredService<PluSearchViewModel>();
+            _viewModel.ConfigurePricingMode(isWholesaleMode);
             DataContext = _viewModel;
 
             _viewModel.ActionCompleted += OnActionCompleted;
@@ -227,7 +228,9 @@ namespace POS.Cashier.UI.Dialogs
             if (row?.DataContext is not VariantSeekDto variant)
                 return;
 
-            ExecuteVariantRowAction(variant);
+            _viewModel.SelectedVariant = variant;
+            VariantDataGrid.SelectedItem = variant;
+            VariantDataGrid.ScrollIntoView(variant);
 
             e.Handled = true;
         }
@@ -245,7 +248,9 @@ namespace POS.Cashier.UI.Dialogs
             if (row?.DataContext is not VariantSeekDto variant)
                 return;
 
-            ExecuteVariantRowAction(variant);
+            _viewModel.SelectedVariant = variant;
+            VariantDataGrid.SelectedItem = variant;
+            VariantDataGrid.ScrollIntoView(variant);
 
             e.Handled = true;
         }
@@ -263,7 +268,9 @@ namespace POS.Cashier.UI.Dialogs
             if (row?.DataContext is not BatchSeekDto batch)
                 return;
 
-            ExecuteBatchRowAction(batch);
+            _viewModel.SelectedBatch = batch;
+            BatchDataGrid.SelectedItem = batch;
+            BatchDataGrid.ScrollIntoView(batch);
 
             e.Handled = true;
         }
@@ -281,7 +288,9 @@ namespace POS.Cashier.UI.Dialogs
             if (row?.DataContext is not BatchSeekDto batch)
                 return;
 
-            ExecuteBatchRowAction(batch);
+            _viewModel.SelectedBatch = batch;
+            BatchDataGrid.SelectedItem = batch;
+            BatchDataGrid.ScrollIntoView(batch);
 
             e.Handled = true;
         }
