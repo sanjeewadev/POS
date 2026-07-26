@@ -8,6 +8,7 @@ using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Services.Tax;
+using POS.Core.Services.Pricing;
 using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
@@ -729,6 +730,11 @@ namespace POS.Core.Repositories
                     .Where(v => variantIds.Contains(v.Id))
                     .ToDictionaryAsync(v => v.Id);
 
+                await ValidateGrnMasterPriceChangesAsync(
+                    context,
+                    lines,
+                    variants);
+
                 header.GrnNumber = await GenerateDocumentNumberAsync(context, "GRN");
                 header.Status = "Posted";
                 header.CreatedAt = now;
@@ -832,6 +838,12 @@ namespace POS.Core.Repositories
 
                     await context.InventoryTransactions.AddAsync(inventoryTx);
                 }
+
+                await SynchronizeUpdatedMasterBatchMirrorsAsync(
+                    context,
+                    lines,
+                    variants,
+                    now);
 
                 if (linkedPo != null)
                     CloseLinkedPurchaseOrderAfterGrn(linkedPo, now);
@@ -1589,6 +1601,76 @@ namespace POS.Core.Repositories
                 await context.PriceChangeHistories.AddRangeAsync(rows);
         }
 
+        private static async Task ValidateGrnMasterPriceChangesAsync(
+            AppDbContext context,
+            IReadOnlyCollection<GrnLine> lines,
+            IReadOnlyDictionary<int, ItemVariant> variants)
+        {
+            foreach (IGrouping<int, GrnLine> group in lines
+                         .Where(line => line.UpdateSellingPrices)
+                         .GroupBy(line => line.ItemVariantId))
+            {
+                if (!variants.TryGetValue(group.Key, out ItemVariant? variant))
+                    throw new InvalidOperationException("One or more price-update variants were not found.");
+
+                GrnLine sourceLine = group.First();
+
+                List<ItemBatch> activeBatches = await context.ItemBatches
+                    .Where(batch =>
+                        batch.ItemVariantId == variant.Id &&
+                        !batch.IsDeactivated)
+                    .ToListAsync();
+
+                EffectiveSellingPriceResolver.ValidateActiveOverridesAgainstMasterBounds(
+                    variant,
+                    activeBatches,
+                    sourceLine.NewMinimumPrice,
+                    sourceLine.NewMaximumPrice);
+            }
+        }
+
+        private static async Task SynchronizeUpdatedMasterBatchMirrorsAsync(
+            AppDbContext context,
+            IReadOnlyCollection<GrnLine> lines,
+            IReadOnlyDictionary<int, ItemVariant> variants,
+            DateTime now)
+        {
+            int[] updatedVariantIds = lines
+                .Where(line => line.UpdateSellingPrices)
+                .Select(line => line.ItemVariantId)
+                .Distinct()
+                .ToArray();
+
+            if (updatedVariantIds.Length == 0)
+                return;
+
+            List<ItemBatch> batches = await context.ItemBatches
+                .Where(batch =>
+                    updatedVariantIds.Contains(batch.ItemVariantId) &&
+                    !batch.IsDeactivated)
+                .ToListAsync();
+
+            foreach (ItemBatch batch in batches)
+            {
+                if (!variants.TryGetValue(batch.ItemVariantId, out ItemVariant? variant))
+                    continue;
+
+                EffectiveSellingPriceResolver.SynchronizeMasterMirror(
+                    variant,
+                    batch,
+                    now);
+            }
+        }
+
+        private static decimal ResolveMasterWholesalePrice(
+            ItemVariant variant)
+        {
+            decimal wholesale = Math.Round(variant.WholesalePrice, 2);
+            return wholesale > 0m
+                ? wholesale
+                : Math.Round(variant.RetailPrice, 2);
+        }
+
         private static void UpdateVariantCostAndSellingPrices(
             ItemVariant variant,
             GrnLine line,
@@ -1653,8 +1735,9 @@ namespace POS.Core.Repositories
                     ExpiryDate = line.ExpiryDate?.Date,
                     ReceivedDate = header.ReceivedDate.Date,
                     CostPrice = line.LandedCost,
-                    RetailPrice = variant.RetailPrice,
-                    WholesalePrice = variant.WholesalePrice,
+                    RetailPrice = Math.Round(variant.RetailPrice, 2),
+                    WholesalePrice = ResolveMasterWholesalePrice(variant),
+                    HasSellingPriceOverride = false,
                     CurrentStock = line.ReceivedQty,
                     InternalBatchBarcode = string.Empty,
                     BarcodePrintedCount = 0,
@@ -1709,8 +1792,12 @@ namespace POS.Core.Repositories
 
             batch.CurrentStock += line.ReceivedQty;
             batch.CostPrice = line.LandedCost;
-            batch.RetailPrice = variant.RetailPrice;
-            batch.WholesalePrice = variant.WholesalePrice;
+
+            EffectiveSellingPriceResolver.SynchronizeMasterMirror(
+                variant,
+                batch,
+                now);
+
             batch.UpdatedAt = now;
 
             return batch;

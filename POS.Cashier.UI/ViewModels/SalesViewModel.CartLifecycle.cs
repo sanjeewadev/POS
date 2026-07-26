@@ -416,6 +416,7 @@ namespace POS.Cashier.UI.ViewModels
                 CostPrice = item.CostPrice,
                 RetailPrice = item.RetailPrice,
                 WholesalePrice = item.WholesalePrice,
+                CataloguePriceSource = item.CataloguePriceSource,
                 MinimumPrice = item.MinimumPrice,
                 MaximumPrice = item.MaximumPrice,
                 UnitPrice = item.UnitPrice,
@@ -502,6 +503,9 @@ namespace POS.Cashier.UI.ViewModels
                 CostPrice = snapshot.CostPrice,
                 RetailPrice = snapshot.RetailPrice,
                 WholesalePrice = snapshot.WholesalePrice,
+                CataloguePriceSource = string.IsNullOrWhiteSpace(snapshot.CataloguePriceSource)
+                    ? "LegacyUnknown"
+                    : snapshot.CataloguePriceSource,
                 MinimumPrice = snapshot.MinimumPrice,
                 MaximumPrice = snapshot.MaximumPrice,
                 UnitPrice = snapshot.UnitPrice,

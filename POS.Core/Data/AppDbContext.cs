@@ -677,6 +677,9 @@ namespace POS.Core.Data
                 entity.Property(b => b.WholesalePrice)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(b => b.HasSellingPriceOverride)
+                    .HasDefaultValue(false);
+
                 entity.Property(b => b.CurrentStock)
                     .HasColumnType("decimal(18,3)");
 
@@ -3502,6 +3505,12 @@ namespace POS.Core.Data
                 entity.Property(l => l.CostPrice)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(l => l.CataloguePriceSourceSnapshot)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue("LegacyUnknown")
+                    .UseCollation(CaseInsensitiveCollation);
+
                 entity.Property(l => l.GrossAmount)
                     .HasColumnType("decimal(18,2)");
 
@@ -3546,6 +3555,8 @@ namespace POS.Core.Data
                 entity.HasIndex(l => l.IsManualDiscount);
 
                 entity.HasIndex(l => l.IsPriceOverridden);
+
+                entity.HasIndex(l => l.CataloguePriceSourceSnapshot);
 
                 entity.HasOne(l => l.SalesHeader)
                     .WithMany(h => h.SalesLines)

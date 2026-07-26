@@ -20,6 +20,14 @@ namespace POS.Core.Models.DTOs
 
         public decimal WholesalePrice { get; set; }
 
+        public string PriceSource { get; set; } = "Master";
+
+        public bool HasSellingPriceOverride =>
+            string.Equals(
+                PriceSource,
+                "BatchOverride",
+                StringComparison.Ordinal);
+
         public decimal AvailableQty { get; set; }
 
         public bool IsExpired =>

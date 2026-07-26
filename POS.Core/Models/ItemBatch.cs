@@ -40,6 +40,10 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal WholesalePrice { get; set; } = 0m;
 
+        // false = Retail/Wholesale mirror the variant master values.
+        // true  = Retail/Wholesale are authoritative for this exact batch.
+        public bool HasSellingPriceOverride { get; set; } = false;
+
         // =========================================================
         // STOCK
         // =========================================================

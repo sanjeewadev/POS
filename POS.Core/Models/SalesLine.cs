@@ -108,6 +108,10 @@ namespace POS.Core.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal CostPrice { get; set; } = 0m;
 
+        [Required]
+        [MaxLength(30)]
+        public string CataloguePriceSourceSnapshot { get; set; } = "LegacyUnknown";
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal GrossAmount { get; set; } = 0m;
 

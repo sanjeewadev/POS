@@ -97,5 +97,5 @@
 - [ ] Duplicate SKU, item barcode, and batch-barcode conflicts show useful messages.
 - [ ] Correcting a failed new-item save succeeds without `Item record was not found`.
 - [ ] Existing historical mismatched SKUs remain unchanged unless separately approved.
-- [ ] Server setup records migration `20260724043000_RepairOperationalTextCollations`.
+- [ ] Server setup records migration `20260726091000_AddBatchSellingPriceOverrideFoundation`.
 - [ ] All Cashier terminals run the matching Version 1.0.5 application.

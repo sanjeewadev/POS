@@ -56,6 +56,7 @@ internal static class AuditTestCatalog
         new("Store identity and licence requests are consistent", AuditGroups.SourcePolicy, StoreIdentitySourcePolicyAuditTests.StoreIdentityAndLicenceRequestsAreConsistentAsync),
         new("Licence and terminal responsibilities are separated", AuditGroups.SourcePolicy, LicenseTerminalWorkflowSourcePolicyAuditTests.LicenceAndTerminalResponsibilitiesAreSeparatedAsync),
         new("Item, service, pricing and expiry workflows are explicit", AuditGroups.SourcePolicy, InventoryServiceExpirySourcePolicyAuditTests.InventoryServicePricingAndExpiryWorkflowsAreExplicitAsync),
+        new("Batch pricing authority is centralized and transaction safe", AuditGroups.SourcePolicy, BatchPricingSourcePolicyAuditTests.BatchPricingFoundationIsCentralizedAndTransactionSafeAsync),
         new("User-facing quantities are compact and consistent", AuditGroups.SourcePolicy, QuantityDisplaySourcePolicyAuditTests.QuantityDisplayIsCompactAndConsistentAsync),
         new("Item Master matrix and save failures are controlled", AuditGroups.SourcePolicy, ItemMasterSaveSafetySourcePolicyAuditTests.ItemMasterMatrixAndSaveFailuresAreControlledAsync),
         new("Paid In and Paid Out UI do not require manager password", AuditGroups.SourcePolicy, SourcePolicyAuditTests.PaidInAndPaidOutDoNotRequireManagerPasswordAsync),

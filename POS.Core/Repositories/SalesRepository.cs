@@ -9,6 +9,7 @@ using POS.Core.Enums;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Services.Tax;
+using POS.Core.Services.Pricing;
 using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
@@ -1165,6 +1166,15 @@ namespace POS.Core.Repositories
                     ? "PCS"
                     : NormalizeText(line.Uom);
 
+                line.CataloguePriceSourceSnapshot = NormalizeText(
+                    line.CataloguePriceSourceSnapshot);
+
+                if (string.IsNullOrWhiteSpace(line.CataloguePriceSourceSnapshot))
+                {
+                    line.CataloguePriceSourceSnapshot =
+                        SellingPriceSourceCodes.LegacyUnknown;
+                }
+
                 if (line.IsFreeItem)
                 {
                     NormalizeFreeIssueLine(line);
@@ -1561,6 +1571,7 @@ namespace POS.Core.Repositories
 
             FinalizePreparedNormalSaleLine(
                 batch.ItemVariant,
+                batch,
                 line,
                 isWholesaleSale);
         }
@@ -1587,17 +1598,20 @@ namespace POS.Core.Repositories
 
             FinalizePreparedNormalSaleLine(
                 variant,
+                null,
                 line,
                 isWholesaleSale);
         }
 
         private static void FinalizePreparedNormalSaleLine(
             ItemVariant? variant,
+            ItemBatch? batch,
             SalesLine line,
             bool isWholesaleSale)
         {
             ValidateCataloguePrice(
                 variant,
+                batch,
                 line,
                 isWholesaleSale);
 
@@ -1623,17 +1637,36 @@ namespace POS.Core.Repositories
 
         private static void ValidateCataloguePrice(
             ItemVariant? variant,
+            ItemBatch? batch,
             SalesLine line,
             bool isWholesaleSale)
         {
             if (variant == null)
                 throw new InvalidOperationException("Current item price could not be verified.");
 
+            EffectiveSellingPrice effectivePrice =
+                EffectiveSellingPriceResolver.Resolve(
+                    variant,
+                    batch);
+
             decimal currentPrice = Math.Round(
-                isWholesaleSale && variant.WholesalePrice > 0m
-                    ? variant.WholesalePrice
-                    : variant.RetailPrice,
+                effectivePrice.ResolveForMode(isWholesaleSale),
                 2);
+
+            string submittedSource = NormalizeText(
+                line.CataloguePriceSourceSnapshot);
+
+            if (!string.IsNullOrWhiteSpace(submittedSource) &&
+                !submittedSource.Equals(
+                    SellingPriceSourceCodes.LegacyUnknown,
+                    StringComparison.OrdinalIgnoreCase) &&
+                !submittedSource.Equals(
+                    effectivePrice.PriceSource,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Catalogue price source changed for item '{line.ItemDescription}'. Refresh the cart before checkout.");
+            }
 
             if (line.IsPriceOverridden)
             {
@@ -1644,6 +1677,8 @@ namespace POS.Core.Repositories
                         $"Catalogue price changed for item '{line.ItemDescription}'. Re-enter and re-approve the New Price.");
                 }
 
+                line.CataloguePriceSourceSnapshot =
+                    effectivePrice.PriceSource;
                 return;
             }
 
@@ -1653,6 +1688,9 @@ namespace POS.Core.Repositories
                 throw new InvalidOperationException(
                     $"Catalogue price changed for item '{line.ItemDescription}'. Current price is Rs. {currentPrice:N2}. Refresh the cart before checkout.");
             }
+
+            line.CataloguePriceSourceSnapshot =
+                effectivePrice.PriceSource;
         }
 
         private static void ValidateMinimumPrice(
@@ -2252,11 +2290,25 @@ namespace POS.Core.Repositories
                 }
 
                 decimal quantity = Math.Round(line.Quantity, 3);
-                decimal originalUnitPrice = ResolveFreeIssueOriginalUnitPrice(
-                    header,
-                    variant,
-                    freeBatch);
-                line.OriginalUnitPrice = originalUnitPrice;
+                EffectiveSellingPrice freeIssuePrice =
+                    EffectiveSellingPriceResolver.Resolve(
+                        variant,
+                        freeBatch);
+                decimal originalUnitPrice = freeIssuePrice.ResolveForMode(
+                    header.IsWholesaleSale);
+
+                if (originalUnitPrice <= 0m)
+                {
+                    string mode = header.IsWholesaleSale
+                        ? "wholesale"
+                        : "retail";
+                    throw new InvalidOperationException(
+                        $"A positive {mode} selling price is required for Free Issue item '{variant.FullDisplayName}'.");
+                }
+
+                line.OriginalUnitPrice = Math.Round(originalUnitPrice, 2);
+                line.CataloguePriceSourceSnapshot =
+                    freeIssuePrice.PriceSource;
 
                 if (quantity <= 0m)
                     throw new InvalidOperationException("Free Issue quantity must be greater than zero.");
@@ -2360,39 +2412,6 @@ namespace POS.Core.Repositories
             }
         }
 
-
-        private static decimal ResolveFreeIssueOriginalUnitPrice(
-            SalesHeader header,
-            ItemVariant variant,
-            ItemBatch? batch)
-        {
-            decimal price;
-            if (header.IsWholesaleSale)
-            {
-                price = variant.WholesalePrice > 0m
-                    ? variant.WholesalePrice
-                    : variant.RetailPrice > 0m
-                        ? variant.RetailPrice
-                        : batch?.WholesalePrice > 0m
-                            ? batch.WholesalePrice
-                            : batch?.RetailPrice ?? 0m;
-            }
-            else
-            {
-                price = variant.RetailPrice > 0m
-                    ? variant.RetailPrice
-                    : batch?.RetailPrice ?? 0m;
-            }
-
-            if (price <= 0m)
-            {
-                string mode = header.IsWholesaleSale ? "wholesale" : "retail";
-                throw new InvalidOperationException(
-                    $"A positive {mode} selling price is required for Free Issue item '{variant.FullDisplayName}'.");
-            }
-
-            return Math.Round(price, 2);
-        }
 
         private static async Task ProcessFreeItemSupplierClaimsAsync(
             AppDbContext context,

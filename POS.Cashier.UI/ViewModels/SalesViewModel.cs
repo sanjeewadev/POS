@@ -19,6 +19,7 @@ using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
 using POS.Core.Services;
 using POS.Core.Services.Documents;
+using POS.Core.Services.Pricing;
 using POS.Core.Services.Tax;
 using POS.Core.Utilities;
 
@@ -1792,7 +1793,13 @@ namespace POS.Cashier.UI.ViewModels
                 !c.IsPriceOverridden &&
                 c.DiscountAmount <= 0m &&
                 c.ItemVariantId == item.VariantId &&
-                c.ItemBatchId == selectedBatch.ItemBatchId);
+                c.ItemBatchId == selectedBatch.ItemBatchId &&
+                Math.Round(c.RetailPrice, 2) == Math.Round(selectedBatch.RetailPrice, 2) &&
+                Math.Round(c.WholesalePrice, 2) == Math.Round(selectedBatch.WholesalePrice, 2) &&
+                string.Equals(
+                    c.CataloguePriceSource,
+                    selectedBatch.PriceSource,
+                    StringComparison.Ordinal));
 
             if (existingItem != null)
             {
@@ -1810,9 +1817,10 @@ namespace POS.Cashier.UI.ViewModels
                 return;
             }
 
-            decimal sellingPrice = IsWholesaleMode && item.WholesalePrice > 0m ? item.WholesalePrice : item.RetailPrice;
-            if (sellingPrice <= 0m && selectedBatch.RetailPrice > 0m)
-                sellingPrice = selectedBatch.RetailPrice;
+            decimal sellingPrice =
+                IsWholesaleMode
+                    ? selectedBatch.WholesalePrice
+                    : selectedBatch.RetailPrice;
 
             var cartItem = new CartItem
             {
@@ -1835,8 +1843,9 @@ namespace POS.Cashier.UI.ViewModels
                 ExpiryDate = selectedBatch.ExpiryDate,
                 ReceivedDate = selectedBatch.ReceivedDate,
                 CostPrice = selectedBatch.CostPrice,
-                RetailPrice = item.RetailPrice,
-                WholesalePrice = item.WholesalePrice,
+                RetailPrice = selectedBatch.RetailPrice,
+                WholesalePrice = selectedBatch.WholesalePrice,
+                CataloguePriceSource = selectedBatch.PriceSource,
                 MinimumPrice = item.MinimumPrice,
                 MaximumPrice = item.MaximumPrice,
                 UnitPrice = sellingPrice,
@@ -1886,7 +1895,17 @@ namespace POS.Cashier.UI.ViewModels
                 !c.IsManualDiscount &&
                 !c.IsPriceOverridden &&
                 c.DiscountAmount <= 0m &&
-                c.ItemVariantId == item.VariantId);
+                c.ItemVariantId == item.VariantId &&
+                Math.Round(c.RetailPrice, 2) == Math.Round(item.RetailPrice, 2) &&
+                Math.Round(c.WholesalePrice, 2) == Math.Round(
+                    item.WholesalePrice > 0m
+                        ? item.WholesalePrice
+                        : item.RetailPrice,
+                    2) &&
+                string.Equals(
+                    c.CataloguePriceSource,
+                    SellingPriceSourceCodes.Master,
+                    StringComparison.Ordinal));
 
             if (existingItem != null)
             {
@@ -1934,7 +1953,10 @@ namespace POS.Cashier.UI.ViewModels
                 ReceivedDate = null,
                 CostPrice = serviceCost,
                 RetailPrice = item.RetailPrice,
-                WholesalePrice = item.WholesalePrice,
+                WholesalePrice = item.WholesalePrice > 0m
+                    ? item.WholesalePrice
+                    : item.RetailPrice,
+                CataloguePriceSource = SellingPriceSourceCodes.Master,
                 MinimumPrice = item.MinimumPrice,
                 MaximumPrice = item.MaximumPrice,
                 UnitPrice = sellingPrice,
@@ -2249,6 +2271,7 @@ namespace POS.Cashier.UI.ViewModels
                 CostPrice = source.CostPrice,
                 RetailPrice = source.RetailPrice,
                 WholesalePrice = source.WholesalePrice,
+                CataloguePriceSource = source.CataloguePriceSource,
                 MinimumPrice = source.MinimumPrice,
                 MaximumPrice = source.MaximumPrice,
                 UnitPrice = source.UnitPrice,
@@ -2745,6 +2768,7 @@ namespace POS.Cashier.UI.ViewModels
                     Quantity = c.Quantity,
                     UnitPrice = c.UnitPrice,
                     CostPrice = c.CostPrice,
+                    CataloguePriceSourceSnapshot = c.CataloguePriceSource,
                     GrossAmount = c.GrossAmount,
                     DiscountPercentage = c.IsGiftVoucherSale || c.IsFreeItem ? 0m : c.DiscountPercentage,
                     DiscountAmount = c.IsGiftVoucherSale || c.IsFreeItem ? 0m : c.DiscountAmount,

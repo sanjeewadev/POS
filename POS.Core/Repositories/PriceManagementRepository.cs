@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
+using POS.Core.Services.Pricing;
 using POS.Core.Utilities;
 
 namespace POS.Core.Repositories
@@ -154,6 +155,7 @@ namespace POS.Core.Repositories
                     b.CostPrice,
                     b.RetailPrice,
                     b.WholesalePrice,
+                    b.HasSellingPriceOverride,
                     b.ReceivedDate,
                     b.ExpiryDate
                 })
@@ -182,8 +184,28 @@ namespace POS.Core.Repositories
 
                 decimal totalSoh = allBatches.Sum(b => (decimal)b.CurrentStock);
                 decimal stockValue = allBatches.Sum(b => (decimal)b.CurrentStock * (decimal)b.CostPrice);
-                decimal retailValue = allBatches.Sum(b => (decimal)b.CurrentStock * (decimal)b.RetailPrice);
-                decimal wholesaleValue = allBatches.Sum(b => (decimal)b.CurrentStock * (decimal)b.WholesalePrice);
+                decimal retailValue = allBatches.Sum(b =>
+                    (decimal)b.CurrentStock * EffectiveSellingPriceResolver.Resolve(
+                        variant.ItemType,
+                        variant.HasBatchTracking,
+                        b.BatchNo,
+                        false,
+                        b.HasSellingPriceOverride,
+                        b.RetailPrice,
+                        b.WholesalePrice,
+                        variant.RetailPrice,
+                        variant.WholesalePrice).RetailPrice);
+                decimal wholesaleValue = allBatches.Sum(b =>
+                    (decimal)b.CurrentStock * EffectiveSellingPriceResolver.Resolve(
+                        variant.ItemType,
+                        variant.HasBatchTracking,
+                        b.BatchNo,
+                        false,
+                        b.HasSellingPriceOverride,
+                        b.RetailPrice,
+                        b.WholesalePrice,
+                        variant.RetailPrice,
+                        variant.WholesalePrice).WholesalePrice);
 
                 decimal weightedCost = totalSoh > 0
                     ? Math.Round(stockValue / totalSoh, 2)
@@ -307,6 +329,10 @@ namespace POS.Core.Repositories
             if (changeReason.Length > 250)
                 throw new InvalidOperationException("Price change reason cannot be longer than 250 characters.");
 
+            // Transitional compatibility only. Master-price saves now keep
+            // non-overridden batch mirrors synchronized automatically.
+            _ = applySellingPriceToCurrentStock;
+
             ValidateMasterPricing(pricing);
 
             await using var context = await _contextFactory.CreateDbContextAsync();
@@ -316,7 +342,7 @@ namespace POS.Core.Repositories
             {
                 DateTime now = DateTime.Now;
 
-                var variant = await context.ItemVariants
+                ItemVariant? variant = await context.ItemVariants
                     .Include(v => v.ItemParent)
                     .FirstOrDefaultAsync(v =>
                         v.Id == pricing.ItemVariantId &&
@@ -325,8 +351,6 @@ namespace POS.Core.Repositories
 
                 if (variant == null)
                     throw new InvalidOperationException("Selected item variant was not found or is inactive.");
-
-                var historyRows = new List<PriceChangeHistory>();
 
                 decimal oldMinimumPrice = RoundMoney(variant.MinimumPrice);
                 decimal oldRetailPrice = RoundMoney(variant.RetailPrice);
@@ -338,118 +362,65 @@ namespace POS.Core.Repositories
                 decimal newWholesalePrice = RoundMoney(pricing.WholesalePrice);
                 decimal newMaximumPrice = RoundMoney(pricing.MaximumPrice);
 
+                List<ItemBatch> activeBatches =
+                    string.Equals(
+                        variant.ItemParent.ItemType,
+                        ItemTypeCodes.StockItem,
+                        StringComparison.Ordinal)
+                        ? await context.ItemBatches
+                            .Where(b =>
+                                b.ItemVariantId == variant.Id &&
+                                !b.IsDeactivated)
+                            .OrderBy(b => b.BatchNo)
+                            .ThenBy(b => b.Id)
+                            .ToListAsync()
+                        : new List<ItemBatch>();
+
+                EffectiveSellingPriceResolver.ValidateActiveOverridesAgainstMasterBounds(
+                    variant,
+                    activeBatches,
+                    newMinimumPrice,
+                    newMaximumPrice);
+
                 bool masterChanged =
                     oldMinimumPrice != newMinimumPrice ||
                     oldRetailPrice != newRetailPrice ||
                     oldWholesalePrice != newWholesalePrice ||
                     oldMaximumPrice != newMaximumPrice;
 
-                bool canSyncCurrentStock =
-                    applySellingPriceToCurrentStock &&
-                    string.Equals(
+                EffectiveSellingPrice expectedMasterPrice =
+                    EffectiveSellingPriceResolver.Resolve(
                         variant.ItemParent.ItemType,
-                        ItemTypeCodes.StockItem,
-                        StringComparison.Ordinal);
+                        variant.ItemParent.HasBatchTracking,
+                        batchNo: null,
+                        isBatchDeactivated: false,
+                        hasSellingPriceOverride: false,
+                        batchRetailPrice: 0m,
+                        batchWholesalePrice: 0m,
+                        masterRetailPrice: newRetailPrice,
+                        masterWholesalePrice: newWholesalePrice);
 
-                var currentStockBatches = canSyncCurrentStock
-                    ? await context.ItemBatches
-                        .Where(b =>
-                            b.ItemVariantId == variant.Id &&
-                            !b.IsDeactivated &&
-                            b.CurrentStock != 0)
-                        .OrderBy(b => b.BatchNo)
-                        .ThenBy(b => b.Id)
-                        .ToListAsync()
-                    : new List<ItemBatch>();
+                bool mirrorChanged = activeBatches.Any(batch =>
+                    !batch.HasSellingPriceOverride &&
+                    (RoundMoney(batch.RetailPrice) != expectedMasterPrice.RetailPrice ||
+                     RoundMoney(batch.WholesalePrice) != expectedMasterPrice.WholesalePrice));
 
-                bool batchPriceChanged = false;
-
-                if (canSyncCurrentStock)
-                {
-                    batchPriceChanged = currentStockBatches.Any(b =>
-                        RoundMoney(b.RetailPrice) != newRetailPrice ||
-                        RoundMoney(b.WholesalePrice) != newWholesalePrice);
-                }
-
-                if (!masterChanged && !batchPriceChanged)
+                if (!masterChanged && !mirrorChanged)
                     return;
-
-                string priceChangeNo = await GenerateDocumentNumberAsync(context, "PCH");
 
                 if (masterChanged)
                 {
-                    historyRows.Add(new PriceChangeHistory
-                    {
-                        PriceChangeNo = priceChangeNo,
-                        PriceLevel = "Master",
-                        ChangeSource = "PriceManagement",
+                    string priceChangeNo = await GenerateDocumentNumberAsync(context, "PCH");
 
-                        ItemVariantId = variant.Id,
-                        ItemBatchId = null,
-
-                        ItemCode = variant.ItemParent.ItemCode,
-                        SkuCode = variant.SkuCode,
-                        Barcode = variant.Barcode ?? string.Empty,
-                        ItemDescription = variant.ItemParent.ItemName,
-                        VariantDescription = string.IsNullOrWhiteSpace(variant.VariantDescription)
-                            ? "Standard"
-                            : variant.VariantDescription,
-
-                        BatchNo = string.Empty,
-                        BatchExpiryDate = null,
-
-                        EffectiveCost = ResolveEffectiveCost(variant.AverageCost, variant.CostPrice),
-
-                        OldMinimumPrice = oldMinimumPrice,
-                        NewMinimumPrice = newMinimumPrice,
-
-                        OldRetailPrice = oldRetailPrice,
-                        NewRetailPrice = newRetailPrice,
-
-                        OldWholesalePrice = oldWholesalePrice,
-                        NewWholesalePrice = newWholesalePrice,
-
-                        OldMaximumPrice = oldMaximumPrice,
-                        NewMaximumPrice = newMaximumPrice,
-
-                        ChangedBy = updatedBy,
-                        ChangedAt = now,
-                        ReasonCode = string.Empty,
-                        ChangeReason = changeReason,
-                        Remarks = applySellingPriceToCurrentStock
-                            ? "Master price updated. Current stock selling prices were also synced."
-                            : "Master price updated only."
-                    });
-                }
-
-                variant.MinimumPrice = newMinimumPrice;
-                variant.RetailPrice = newRetailPrice;
-                variant.WholesalePrice = newWholesalePrice;
-                variant.MaximumPrice = newMaximumPrice;
-                variant.UpdatedAt = now;
-
-                if (canSyncCurrentStock)
-                {
-                    foreach (var batch in currentStockBatches)
-                    {
-                        decimal oldBatchRetail = RoundMoney(batch.RetailPrice);
-                        decimal oldBatchWholesale = RoundMoney(batch.WholesalePrice);
-
-                        bool thisBatchChanged =
-                            oldBatchRetail != newRetailPrice ||
-                            oldBatchWholesale != newWholesalePrice;
-
-                        if (!thisBatchChanged)
-                            continue;
-
-                        historyRows.Add(new PriceChangeHistory
+                    await context.PriceChangeHistories.AddAsync(
+                        new PriceChangeHistory
                         {
                             PriceChangeNo = priceChangeNo,
-                            PriceLevel = "Batch",
+                            PriceLevel = "Master",
                             ChangeSource = "PriceManagement",
 
                             ItemVariantId = variant.Id,
-                            ItemBatchId = batch.Id,
+                            ItemBatchId = null,
 
                             ItemCode = variant.ItemParent.ItemCode,
                             SkuCode = variant.SkuCode,
@@ -459,40 +430,43 @@ namespace POS.Core.Repositories
                                 ? "Standard"
                                 : variant.VariantDescription,
 
-                            BatchNo = batch.BatchNo,
-                            BatchExpiryDate = batch.ExpiryDate,
+                            BatchNo = string.Empty,
+                            BatchExpiryDate = null,
 
-                            EffectiveCost = RoundMoney(batch.CostPrice),
+                            EffectiveCost = ResolveEffectiveCost(
+                                variant.AverageCost,
+                                variant.CostPrice),
 
-                            OldMinimumPrice = 0m,
-                            NewMinimumPrice = 0m,
-
-                            OldRetailPrice = oldBatchRetail,
+                            OldMinimumPrice = oldMinimumPrice,
+                            NewMinimumPrice = newMinimumPrice,
+                            OldRetailPrice = oldRetailPrice,
                             NewRetailPrice = newRetailPrice,
-
-                            OldWholesalePrice = oldBatchWholesale,
+                            OldWholesalePrice = oldWholesalePrice,
                             NewWholesalePrice = newWholesalePrice,
-
-                            OldMaximumPrice = 0m,
-                            NewMaximumPrice = 0m,
+                            OldMaximumPrice = oldMaximumPrice,
+                            NewMaximumPrice = newMaximumPrice,
 
                             ChangedBy = updatedBy,
                             ChangedAt = now,
                             ReasonCode = string.Empty,
                             ChangeReason = changeReason,
-                            Remarks = IsGeneralBatch(batch.BatchNo)
-                                ? "GENERAL stock bucket selling price synced from master price."
-                                : "Current batch selling price synced from master price."
+                            Remarks = "Master price updated. Non-overridden batch mirrors were synchronized automatically."
                         });
-
-                        batch.RetailPrice = newRetailPrice;
-                        batch.WholesalePrice = newWholesalePrice;
-                        batch.UpdatedAt = now;
-                    }
                 }
 
-                if (historyRows.Any())
-                    await context.PriceChangeHistories.AddRangeAsync(historyRows);
+                variant.MinimumPrice = newMinimumPrice;
+                variant.RetailPrice = newRetailPrice;
+                variant.WholesalePrice = newWholesalePrice;
+                variant.MaximumPrice = newMaximumPrice;
+                variant.UpdatedAt = now;
+
+                foreach (ItemBatch batch in activeBatches)
+                {
+                    EffectiveSellingPriceResolver.SynchronizeMasterMirror(
+                        variant,
+                        batch,
+                        now);
+                }
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -517,7 +491,9 @@ namespace POS.Core.Repositories
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            var rows = await context.ItemBatches
+            List<ItemBatch> batches = await context.ItemBatches
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
                 .Where(b =>
                     b.ItemVariantId == itemVariantId &&
@@ -527,24 +503,39 @@ namespace POS.Core.Repositories
                 .ThenBy(b => b.ExpiryDate.HasValue ? b.ExpiryDate.Value : DateTime.MaxValue)
                 .ThenBy(b => b.ReceivedDate)
                 .ThenBy(b => b.BatchNo)
-                .Select(b => new PriceManagementBatchDto
-                {
-                    ItemBatchId = b.Id,
-                    ItemVariantId = b.ItemVariantId,
-                    BatchNo = b.BatchNo,
-                    InternalBatchBarcode = b.InternalBatchBarcode ?? string.Empty,
-                    IsGeneralStockBucket = b.BatchNo.ToUpper() == GeneralBatchNo,
-                    ExpiryDate = b.ExpiryDate,
-                    ReceivedDate = b.ReceivedDate,
-                    CurrentStock = b.CurrentStock,
-                    CostPrice = RoundMoney(b.CostPrice),
-                    RetailPrice = RoundMoney(b.RetailPrice),
-                    WholesalePrice = RoundMoney(b.WholesalePrice)
-                })
                 .ToListAsync();
 
-            foreach (var row in rows)
+            var rows = new List<PriceManagementBatchDto>();
+
+            foreach (ItemBatch batch in batches)
+            {
+                EffectiveSellingPrice effectivePrice =
+                    EffectiveSellingPriceResolver.Resolve(
+                        batch.ItemVariant,
+                        batch);
+
+                var row = new PriceManagementBatchDto
+                {
+                    ItemBatchId = batch.Id,
+                    ItemVariantId = batch.ItemVariantId,
+                    BatchNo = batch.BatchNo,
+                    InternalBatchBarcode = batch.InternalBatchBarcode ?? string.Empty,
+                    IsGeneralStockBucket = IsGeneralBatch(batch.BatchNo),
+                    ExpiryDate = batch.ExpiryDate,
+                    ReceivedDate = batch.ReceivedDate,
+                    CurrentStock = batch.CurrentStock,
+                    CostPrice = RoundMoney(batch.CostPrice),
+                    RetailPrice = effectivePrice.RetailPrice,
+                    WholesalePrice = effectivePrice.WholesalePrice,
+                    PriceSource = effectivePrice.PriceSource,
+                    HasSellingPriceOverride =
+                        effectivePrice.PriceSource ==
+                        SellingPriceSourceCodes.BatchOverride
+                };
+
                 row.AcceptChanges();
+                rows.Add(row);
+            }
 
             return rows;
         }
@@ -576,6 +567,17 @@ namespace POS.Core.Repositories
             string changeReason = "Price updated from Price Management page",
             string reasonCode = "")
         {
+            if (batchOverrides == null)
+                throw new ArgumentNullException(nameof(batchOverrides));
+
+            if (batchOverrides.Any(row => row.HasBatchPriceChanged))
+            {
+                throw new InvalidOperationException(
+                    "Batch selling-price override editing is not available until the dedicated Pricing workflow is installed.");
+            }
+
+            _ = reasonCode;
+
             await UpdatePricingAsync(
                 masterPricing,
                 updatedBy,
@@ -587,6 +589,15 @@ namespace POS.Core.Repositories
             PriceManagementSummaryDto masterPricing,
             List<ItemBatch> batchOverrides)
         {
+            if (batchOverrides == null)
+                throw new ArgumentNullException(nameof(batchOverrides));
+
+            if (batchOverrides.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "Legacy batch-price editing is disabled. Batch overrides will be managed through the dedicated Pricing workflow.");
+            }
+
             await UpdatePricingAsync(
                 masterPricing,
                 "Admin",

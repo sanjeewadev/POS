@@ -485,6 +485,10 @@ namespace POS.Core.Models.DTOs
 
         public bool IsGeneralStockBucket { get; set; }
 
+        public bool HasSellingPriceOverride { get; set; }
+
+        public string PriceSource { get; set; } = "Master";
+
         public DateTime? ExpiryDate { get; set; }
         public DateTime ReceivedDate { get; set; }
 

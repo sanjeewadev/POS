@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace POS.Core.Configuration;
 
@@ -10,7 +10,7 @@ public static class ProductReleaseInfo
         ResolveProductVersion();
 
     public const string RequiredSqlServerMigration =
-        "20260724043000_RepairOperationalTextCollations";
+        "20260726091000_AddBatchSellingPriceOverrideFoundation";
 
     private static string ResolveProductVersion()
     {

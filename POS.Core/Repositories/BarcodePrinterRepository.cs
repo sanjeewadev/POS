@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POS.Core.Data;
 using POS.Core.Models.DTOs;
+using POS.Core.Services.Pricing;
 
 namespace POS.Core.Repositories
 {
@@ -175,7 +176,12 @@ namespace POS.Core.Repositories
 
                     CostPrice = l.ItemBatch.CostPrice,
                     BatchRetailPrice = l.ItemBatch.RetailPrice,
+                    BatchWholesalePrice = l.ItemBatch.WholesalePrice,
+                    HasSellingPriceOverride = l.ItemBatch.HasSellingPriceOverride,
                     VariantRetailPrice = l.ItemVariant.RetailPrice,
+                    VariantWholesalePrice = l.ItemVariant.WholesalePrice,
+                    ItemType = l.ItemVariant.ItemParent.ItemType,
+                    HasBatchTracking = l.ItemVariant.ItemParent.HasBatchTracking,
 
                     BarcodePrintedCount = l.ItemBatch.BarcodePrintedCount,
                     LastBarcodePrintedAt = l.ItemBatch.LastBarcodePrintedAt,
@@ -187,6 +193,18 @@ namespace POS.Core.Repositories
 
             foreach (var row in rows)
             {
+                EffectiveSellingPrice effectivePrice =
+                    EffectiveSellingPriceResolver.Resolve(
+                        row.ItemType,
+                        row.HasBatchTracking,
+                        row.BatchNo,
+                        false,
+                        row.HasSellingPriceOverride,
+                        row.BatchRetailPrice,
+                        row.BatchWholesalePrice,
+                        row.VariantRetailPrice,
+                        row.VariantWholesalePrice);
+
                 int suggestedQty = ConvertReceivedQtyToLabelQty(row.ReceivedQty);
                 int remainingToPrint = suggestedQty - row.BarcodePrintedCount;
 
@@ -219,9 +237,7 @@ namespace POS.Core.Repositories
                     InternalBatchBarcode = row.InternalBatchBarcode,
                     Barcode = row.InternalBatchBarcode,
 
-                    Price = row.BatchRetailPrice > 0m
-                        ? row.BatchRetailPrice
-                        : row.VariantRetailPrice,
+                    Price = effectivePrice.RetailPrice,
 
                     CostPrice = row.CostPrice,
 
@@ -288,7 +304,12 @@ namespace POS.Core.Repositories
 
                     b.CostPrice,
                     BatchRetailPrice = b.RetailPrice,
+                    BatchWholesalePrice = b.WholesalePrice,
+                    b.HasSellingPriceOverride,
                     VariantRetailPrice = b.ItemVariant.RetailPrice,
+                    VariantWholesalePrice = b.ItemVariant.WholesalePrice,
+                    ItemType = b.ItemVariant.ItemParent.ItemType,
+                    HasBatchTracking = b.ItemVariant.ItemParent.HasBatchTracking,
 
                     b.BarcodePrintedCount,
                     b.LastBarcodePrintedAt,
@@ -298,6 +319,18 @@ namespace POS.Core.Repositories
 
             if (batch != null)
             {
+                EffectiveSellingPrice effectivePrice =
+                    EffectiveSellingPriceResolver.Resolve(
+                        batch.ItemType,
+                        batch.HasBatchTracking,
+                        batch.BatchNo,
+                        false,
+                        batch.HasSellingPriceOverride,
+                        batch.BatchRetailPrice,
+                        batch.BatchWholesalePrice,
+                        batch.VariantRetailPrice,
+                        batch.VariantWholesalePrice);
+
                 return new BarcodePrintQueueItemDto
                 {
                     ItemVariantId = batch.ItemVariantId,
@@ -322,9 +355,7 @@ namespace POS.Core.Repositories
                     InternalBatchBarcode = batch.InternalBatchBarcode,
                     Barcode = batch.InternalBatchBarcode,
 
-                    Price = batch.BatchRetailPrice > 0m
-                        ? batch.BatchRetailPrice
-                        : batch.VariantRetailPrice,
+                    Price = effectivePrice.RetailPrice,
 
                     CostPrice = batch.CostPrice,
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using POS.Core.Configuration;
 using POS.Core.Data;
 using POS.Core.Models.DTOs;
+using POS.Core.Services.Pricing;
 
 namespace POS.Core.Repositories
 {
@@ -99,15 +100,17 @@ namespace POS.Core.Repositories
                     variant.AverageCost,
                     variant.CostPrice);
 
-                decimal totalRetailValue = CalculateTotalRetailValue(
-                    stockRows,
-                    totalQty,
-                    variant.RetailPrice);
+                decimal totalRetailValue = stockRows.Sum(batch =>
+                    batch.CurrentStock *
+                    EffectiveSellingPriceResolver.Resolve(
+                        variant,
+                        batch).RetailPrice);
 
-                decimal totalWholesaleValue = CalculateTotalWholesaleValue(
-                    stockRows,
-                    totalQty,
-                    variant.WholesalePrice);
+                decimal totalWholesaleValue = stockRows.Sum(batch =>
+                    batch.CurrentStock *
+                    EffectiveSellingPriceResolver.Resolve(
+                        variant,
+                        batch).WholesalePrice);
 
                 decimal unitCost = CalculateUnitValue(
                     totalCostValue,
@@ -227,12 +230,12 @@ namespace POS.Core.Repositories
                             CostPrice = hasBatchTracking
                                 ? b.CostPrice
                                 : unitCost,
-                            RetailPrice = b.RetailPrice > 0m
-                                ? b.RetailPrice
-                                : variant.RetailPrice,
-                            WholesalePrice = b.WholesalePrice > 0m
-                                ? b.WholesalePrice
-                                : variant.WholesalePrice,
+                            RetailPrice = EffectiveSellingPriceResolver
+                                .Resolve(variant, b)
+                                .RetailPrice,
+                            WholesalePrice = EffectiveSellingPriceResolver
+                                .Resolve(variant, b)
+                                .WholesalePrice,
                             IsDeactivated = b.IsDeactivated,
                             BarcodePrintedCount = hasBatchTracking ? b.BarcodePrintedCount : 0,
                             LastBarcodePrintedAt = hasBatchTracking ? b.LastBarcodePrintedAt : null,
@@ -479,28 +482,6 @@ namespace POS.Core.Repositories
             }
 
             return stockRows.Sum(b => b.CurrentStock * b.CostPrice);
-        }
-
-        private static decimal CalculateTotalRetailValue(
-            List<POS.Core.Models.ItemBatch> stockRows,
-            decimal totalQty,
-            decimal fallbackRetail)
-        {
-            if (!stockRows.Any())
-                return totalQty * fallbackRetail;
-
-            return stockRows.Sum(b => b.CurrentStock * (b.RetailPrice > 0m ? b.RetailPrice : fallbackRetail));
-        }
-
-        private static decimal CalculateTotalWholesaleValue(
-            List<POS.Core.Models.ItemBatch> stockRows,
-            decimal totalQty,
-            decimal fallbackWholesale)
-        {
-            if (!stockRows.Any())
-                return totalQty * fallbackWholesale;
-
-            return stockRows.Sum(b => b.CurrentStock * (b.WholesalePrice > 0m ? b.WholesalePrice : fallbackWholesale));
         }
 
         private static decimal CalculateUnitValue(

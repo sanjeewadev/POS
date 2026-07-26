@@ -288,6 +288,9 @@ namespace POS.Cashier.UI.Models
         private decimal _wholesalePrice = 0m;
 
         [ObservableProperty]
+        private string _cataloguePriceSource = "LegacyUnknown";
+
+        [ObservableProperty]
         private decimal _minimumPrice = 0m;
 
         [ObservableProperty]

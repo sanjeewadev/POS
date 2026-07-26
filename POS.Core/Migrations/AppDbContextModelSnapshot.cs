@@ -3163,6 +3163,11 @@ namespace POS.Core.Migrations
                     b.Property<DateTime?>("ExpiryDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("HasSellingPriceOverride")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("InternalBatchBarcode")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -4405,6 +4410,14 @@ namespace POS.Core.Migrations
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
+                    b.Property<string>("CataloguePriceSourceSnapshot")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("LegacyUnknown")
+                        .UseCollation("NOCASE");
+
                     b.Property<decimal>("CostPrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -4726,6 +4739,8 @@ namespace POS.Core.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BatchNo");
+
+                    b.HasIndex("CataloguePriceSourceSnapshot");
 
                     b.HasIndex("DiscountApprovedBy");
 

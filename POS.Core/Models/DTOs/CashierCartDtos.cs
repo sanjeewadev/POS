@@ -86,6 +86,7 @@ namespace POS.Core.Models.DTOs
         public decimal CostPrice { get; set; }
         public decimal RetailPrice { get; set; }
         public decimal WholesalePrice { get; set; }
+        public string CataloguePriceSource { get; set; } = "LegacyUnknown";
         public decimal MinimumPrice { get; set; }
         public decimal MaximumPrice { get; set; }
         public decimal UnitPrice { get; set; }

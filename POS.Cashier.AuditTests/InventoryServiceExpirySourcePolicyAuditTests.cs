@@ -166,12 +166,12 @@ internal static class InventoryServiceExpirySourcePolicyAuditTests
             "Pricing repository item-type filter parameter");
         AuditAssert.Contains(
             repository,
-            "bool canSyncCurrentStock =",
-            "Pricing stock synchronization guard");
+            "EffectiveSellingPriceResolver.ValidateActiveOverridesAgainstMasterBounds",
+            "Pricing active override boundary guard");
         AuditAssert.Contains(
             repository,
-            "variant.ItemParent.ItemType",
-            "Pricing item type used for synchronization guard");
+            "EffectiveSellingPriceResolver.SynchronizeMasterMirror",
+            "Pricing automatic nonoverride mirror synchronization");
         AuditAssert.Contains(
             repository,
             "ItemTypeCodes.StockItem",

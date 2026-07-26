@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using POS.Core.Utilities;
 
 namespace POS.Cashier.AuditTests;
@@ -47,8 +47,8 @@ internal static class SqlServerCollationSourcePolicyAuditTests
             "ProductReleaseInfo.cs");
         AuditAssert.Contains(
             release,
-            "20260724043000_RepairOperationalTextCollations",
-            "required SQL Server collation migration");
+            "20260726091000_AddBatchSellingPriceOverrideFoundation",
+            "required latest SQL Server migration");
 
         string migration = Read(
             "POS.Database.Setup",

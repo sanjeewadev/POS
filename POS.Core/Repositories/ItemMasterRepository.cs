@@ -5,6 +5,7 @@ using POS.Core.Data.Configuration;
 using POS.Core.Models;
 using POS.Core.Models.DTOs;
 using POS.Core.Services.Tax;
+using POS.Core.Services.Pricing;
 using POS.Core.Utilities;
 using System;
 using System.Collections.Generic;
@@ -157,6 +158,8 @@ namespace POS.Core.Repositories
         public decimal RetailPrice { get; set; }
 
         public decimal WholesalePrice { get; set; }
+
+        public string PriceSource { get; set; } = SellingPriceSourceCodes.Master;
 
         public decimal AvailableQty { get; set; }
 
@@ -1859,7 +1862,9 @@ namespace POS.Core.Repositories
 
             DateTime today = DateTime.Today;
 
-            var rows = await context.ItemBatches
+            List<ItemBatch> rows = await context.ItemBatches
+                .Include(b => b.ItemVariant)
+                    .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
                 .Where(b =>
                     b.ItemVariantId == itemVariantId &&
@@ -1871,22 +1876,10 @@ namespace POS.Core.Repositories
                     b.ItemVariant.ItemParent.HasBatchTracking &&
                     !string.IsNullOrWhiteSpace(b.InternalBatchBarcode) &&
                     (!b.ExpiryDate.HasValue || b.ExpiryDate.Value >= today))
-                .Select(b => new BatchSeekDto
-                {
-                    ItemBatchId = b.Id,
-                    ItemVariantId = b.ItemVariantId,
-                    InternalBatchBarcode = b.InternalBatchBarcode ?? string.Empty,
-                    BatchNo = b.BatchNo,
-                    ExpiryDate = b.ExpiryDate,
-                    ReceivedDate = b.ReceivedDate,
-                    CostPrice = b.CostPrice,
-                    RetailPrice = b.RetailPrice,
-                    WholesalePrice = b.WholesalePrice,
-                    AvailableQty = b.CurrentStock
-                })
                 .ToListAsync();
 
             return rows
+                .Select(BuildBatchSeekDto)
                 .OrderBy(b => b.ExpiryDate.HasValue ? 0 : 1)
                 .ThenBy(b => b.ExpiryDate)
                 .ThenBy(b => b.ReceivedDate)
@@ -1911,11 +1904,11 @@ namespace POS.Core.Repositories
 
             DateTime today = DateTime.Today;
 
-            return await context.ItemBatches
+            ItemBatch? batch = await context.ItemBatches
                 .Include(b => b.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
-                .Where(b =>
+                .FirstOrDefaultAsync(b =>
                     !b.IsDeactivated &&
                     b.CurrentStock > 0 &&
                     !b.ItemVariant.IsDeactivated &&
@@ -1924,20 +1917,11 @@ namespace POS.Core.Repositories
                     b.ItemVariant.ItemParent.HasBatchTracking &&
                     !string.IsNullOrWhiteSpace(b.InternalBatchBarcode) &&
                     b.InternalBatchBarcode.ToUpper() == upperTerm &&
-                    (!b.ExpiryDate.HasValue || b.ExpiryDate.Value >= today))
-                .Select(b => new CashierBatchDto
-                {
-                    ItemBatchId = b.Id,
-                    ItemVariantId = b.ItemVariantId,
-                    BatchNo = b.BatchNo,
-                    ExpiryDate = b.ExpiryDate,
-                    ReceivedDate = b.ReceivedDate,
-                    CostPrice = b.CostPrice,
-                    RetailPrice = b.RetailPrice,
-                    WholesalePrice = b.WholesalePrice,
-                    AvailableQty = b.CurrentStock
-                })
-                .FirstOrDefaultAsync();
+                    (!b.ExpiryDate.HasValue || b.ExpiryDate.Value >= today));
+
+            return batch == null
+                ? null
+                : BuildCashierBatchDto(batch);
         }
 
         public async Task<CashierBatchDto?> GetGeneralSellableBatchForVariantAsync(int itemVariantId)
@@ -1947,7 +1931,7 @@ namespace POS.Core.Repositories
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 
-            return await context.ItemBatches
+            ItemBatch? batch = await context.ItemBatches
                 .Include(b => b.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
@@ -1961,19 +1945,11 @@ namespace POS.Core.Repositories
                     !b.ItemVariant.ItemParent.HasBatchTracking &&
                     b.BatchNo.ToUpper() == GeneralBatchNo)
                 .OrderBy(b => b.Id)
-                .Select(b => new CashierBatchDto
-                {
-                    ItemBatchId = b.Id,
-                    ItemVariantId = b.ItemVariantId,
-                    BatchNo = b.BatchNo,
-                    ExpiryDate = b.ExpiryDate,
-                    ReceivedDate = b.ReceivedDate,
-                    CostPrice = b.CostPrice,
-                    RetailPrice = b.RetailPrice,
-                    WholesalePrice = b.WholesalePrice,
-                    AvailableQty = b.CurrentStock
-                })
                 .FirstOrDefaultAsync();
+
+            return batch == null
+                ? null
+                : BuildCashierBatchDto(batch);
         }
 
         public async Task<List<CashierBatchDto>> GetSellableBatchesByVariantIdAsync(int itemVariantId)
@@ -1985,7 +1961,7 @@ namespace POS.Core.Repositories
 
             DateTime today = DateTime.Today;
 
-            var batches = await context.ItemBatches
+            List<ItemBatch> batches = await context.ItemBatches
                 .Include(b => b.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
@@ -1997,21 +1973,10 @@ namespace POS.Core.Repositories
                     !b.ItemVariant.ItemParent.IsDeactivated &&
                     !b.ItemVariant.ItemParent.IsSaleLocked &&
                     (!b.ExpiryDate.HasValue || b.ExpiryDate.Value >= today))
-                .Select(b => new CashierBatchDto
-                {
-                    ItemBatchId = b.Id,
-                    ItemVariantId = b.ItemVariantId,
-                    BatchNo = b.BatchNo,
-                    ExpiryDate = b.ExpiryDate,
-                    ReceivedDate = b.ReceivedDate,
-                    CostPrice = b.CostPrice,
-                    RetailPrice = b.RetailPrice,
-                    WholesalePrice = b.WholesalePrice,
-                    AvailableQty = b.CurrentStock
-                })
                 .ToListAsync();
 
             return batches
+                .Select(BuildCashierBatchDto)
                 .OrderBy(b => b.ExpiryDate.HasValue ? 0 : 1)
                 .ThenBy(b => b.ExpiryDate)
                 .ThenBy(b => b.ReceivedDate)
@@ -2028,31 +1993,22 @@ namespace POS.Core.Repositories
 
             DateTime today = DateTime.Today;
 
-            return await context.ItemBatches
+            ItemBatch? batch = await context.ItemBatches
                 .Include(b => b.ItemVariant)
                     .ThenInclude(v => v.ItemParent)
                 .AsNoTracking()
-                .Where(b =>
+                .FirstOrDefaultAsync(b =>
                     b.Id == itemBatchId &&
                     !b.IsDeactivated &&
                     b.CurrentStock > 0 &&
                     !b.ItemVariant.IsDeactivated &&
                     !b.ItemVariant.ItemParent.IsDeactivated &&
                     !b.ItemVariant.ItemParent.IsSaleLocked &&
-                    (!b.ExpiryDate.HasValue || b.ExpiryDate.Value >= today))
-                .Select(b => new CashierBatchDto
-                {
-                    ItemBatchId = b.Id,
-                    ItemVariantId = b.ItemVariantId,
-                    BatchNo = b.BatchNo,
-                    ExpiryDate = b.ExpiryDate,
-                    ReceivedDate = b.ReceivedDate,
-                    CostPrice = b.CostPrice,
-                    RetailPrice = b.RetailPrice,
-                    WholesalePrice = b.WholesalePrice,
-                    AvailableQty = b.CurrentStock
-                })
-                .FirstOrDefaultAsync();
+                    (!b.ExpiryDate.HasValue || b.ExpiryDate.Value >= today));
+
+            return batch == null
+                ? null
+                : BuildCashierBatchDto(batch);
         }
 
         public async Task<CashierSellableItemDto?> GetSellableItemByVariantIdAsync(int variantId)
@@ -2155,6 +2111,51 @@ namespace POS.Core.Repositories
             }
 
             return profile;
+        }
+
+        private static CashierBatchDto BuildCashierBatchDto(ItemBatch batch)
+        {
+            EffectiveSellingPrice effectivePrice =
+                EffectiveSellingPriceResolver.Resolve(
+                    batch.ItemVariant,
+                    batch);
+
+            return new CashierBatchDto
+            {
+                ItemBatchId = batch.Id,
+                ItemVariantId = batch.ItemVariantId,
+                BatchNo = batch.BatchNo,
+                ExpiryDate = batch.ExpiryDate,
+                ReceivedDate = batch.ReceivedDate,
+                CostPrice = batch.CostPrice,
+                RetailPrice = effectivePrice.RetailPrice,
+                WholesalePrice = effectivePrice.WholesalePrice,
+                PriceSource = effectivePrice.PriceSource,
+                AvailableQty = batch.CurrentStock
+            };
+        }
+
+        private static BatchSeekDto BuildBatchSeekDto(ItemBatch batch)
+        {
+            EffectiveSellingPrice effectivePrice =
+                EffectiveSellingPriceResolver.Resolve(
+                    batch.ItemVariant,
+                    batch);
+
+            return new BatchSeekDto
+            {
+                ItemBatchId = batch.Id,
+                ItemVariantId = batch.ItemVariantId,
+                InternalBatchBarcode = batch.InternalBatchBarcode ?? string.Empty,
+                BatchNo = batch.BatchNo,
+                ExpiryDate = batch.ExpiryDate,
+                ReceivedDate = batch.ReceivedDate,
+                CostPrice = batch.CostPrice,
+                RetailPrice = effectivePrice.RetailPrice,
+                WholesalePrice = effectivePrice.WholesalePrice,
+                PriceSource = effectivePrice.PriceSource,
+                AvailableQty = batch.CurrentStock
+            };
         }
 
         private static CashierSellableItemDto BuildCashierSellableItemDto(ItemVariant variant)

@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace POS.Cashier.AuditTests;
 
@@ -261,11 +261,11 @@ internal static class SqlServerMigrationSourcePolicyAuditTests
             .ToArray();
 
         AuditAssert.True(
-            primaryMigrations.Length == 2,
-            $"expected the SQL Server baseline and collation repair migrations, found {primaryMigrations.Length}");
+            primaryMigrations.Length == 3,
+            $"expected the SQL Server baseline, collation repair, and batch-pricing migrations, found {primaryMigrations.Length}");
         AuditAssert.True(
-            designers.Length == 2,
-            $"expected two SQL Server migration designers, found {designers.Length}");
+            designers.Length == 3,
+            $"expected three SQL Server migration designers, found {designers.Length}");
         AuditAssert.True(
             snapshots.Length == 1,
             $"expected one SQL Server model snapshot, found {snapshots.Length}");
@@ -278,14 +278,19 @@ internal static class SqlServerMigrationSourcePolicyAuditTests
             Path.GetFileName(path).Contains(
                 "RepairOperationalTextCollations",
                 StringComparison.Ordinal));
+        string batchPricingMigrationPath = primaryMigrations.Single(path =>
+            Path.GetFileName(path).Contains(
+                "AddBatchSellingPriceOverrideFoundation",
+                StringComparison.Ordinal));
 
         string migration = File.ReadAllText(baselineMigrationPath);
         string repairMigration = File.ReadAllText(repairMigrationPath);
+        string batchPricingMigration = File.ReadAllText(batchPricingMigrationPath);
         string designer = string.Join(
             Environment.NewLine,
             designers.Select(File.ReadAllText));
         string snapshot = File.ReadAllText(snapshots[0]);
-        string combined = migration + repairMigration + designer + snapshot;
+        string combined = migration + repairMigration + batchPricingMigration + designer + snapshot;
 
         AuditAssert.Contains(
             migration,
@@ -319,6 +324,18 @@ internal static class SqlServerMigrationSourcePolicyAuditTests
             designer,
             "Microsoft.EntityFrameworkCore.Metadata",
             "generated SQL Server migration metadata");
+        AuditAssert.Contains(
+            batchPricingMigration,
+            "HasSellingPriceOverride",
+            "SQL Server batch override column migration");
+        AuditAssert.Contains(
+            batchPricingMigration,
+            "CataloguePriceSourceSnapshot",
+            "SQL Server sale source snapshot migration");
+        AuditAssert.Contains(
+            batchPricingMigration,
+            "UPDATE b",
+            "SQL Server legacy batch mirror synchronization");
 
         int createTableCount = Regex.Matches(
             migration,

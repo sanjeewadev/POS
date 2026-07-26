@@ -85,7 +85,7 @@ Version 1.0.5 repairs SQL Server operational-text collations, removes unsafe UOM
 1. Close BackOffice and every Cashier application.
 2. Run `Advanced_POS_Server_Setup_1.0.5.exe` on the BackOffice/SQL Server computer first.
 3. Keep the current configuration for a normal in-place upgrade.
-4. The Server upgrade creates a verified pre-upgrade backup and applies `20260724043000_RepairOperationalTextCollations`.
+4. The Server upgrade creates a verified pre-upgrade backup and applies `20260726091000_AddBatchSellingPriceOverrideFoundation`.
 5. Confirm GRN, Purchase Order, Price Management, Item Master save/retry, and SQL Server backup tools.
 6. Run `Advanced_POS_Cashier_Setup_1.0.5.exe` on every Cashier computer.
 7. Keep the current configuration and complete the customer acceptance checklist.

@@ -18,7 +18,7 @@ using POS.Core.Utilities;
 
 namespace POS.Core.CalculationTests
 {
-    internal static class Program
+    internal static partial class Program
     {
         private static readonly PurchasingTaxService Service = new();
         private static readonly SalesTaxService SalesService = new();
@@ -41,6 +41,10 @@ namespace POS.Core.CalculationTests
                 ("GRN keep-current pricing", GrnKeepCurrentPricing),
                 ("GRN four-level price changes are detected", GrnFourLevelPriceChangesAreDetected),
                 ("GRN price summary preserves unchanged levels", GrnPriceSummaryPreservesUnchangedLevels),
+                ("Batch pricing resolver uses master and Wholesale fallback", BatchPricingResolverUsesMasterAndWholesaleFallback),
+                ("Batch pricing resolver uses eligible override", BatchPricingResolverUsesEligibleOverride),
+                ("Batch pricing resolver ignores Service and GENERAL overrides", BatchPricingResolverIgnoresIneligibleOverrides),
+                ("Batch pricing override validates master boundaries", BatchPricingOverrideValidatesMasterBoundaries),
                 ("Non-VAT supplier profile preserves item category", NonVatSupplierProfilePreservesItemCategory),
                 ("VAT supplier profile retains effective purchasing rate", VatSupplierProfileRetainsEffectivePurchasingRate),
                 ("Non-VAT Purchase Order save forces zero VAT", NonVatPurchaseOrderSaveForcesZeroVat),
@@ -116,6 +120,7 @@ namespace POS.Core.CalculationTests
                 ("Mixed cart saves and restores", MixedCartSavesAndRestores),
                 ("Customer and Wholesale mode restore", CustomerAndWholesaleModeRestore),
                 ("Batch and selected pricing restore", BatchAndSelectedPricingRestore),
+                ("Legacy cart JSON defaults catalogue price source", LegacyCartJsonDefaultsCataloguePriceSource),
                 ("Manual line discount restores", ManualLineDiscountRestores),
                 ("Invoice discount restores", InvoiceDiscountRestores),
                 ("Price override audit restores", PriceOverrideAuditRestores),
@@ -129,6 +134,15 @@ namespace POS.Core.CalculationTests
                 ("Completed and cancelled carts cannot be recalled", CompletedAndCancelledCartsCannotBeRecalled),
                 ("Checkout token is idempotent", CheckoutTokenIsIdempotent),
                 ("Duplicate checkout creates one stock and payment effect", DuplicateCheckoutCreatesOneStockAndPaymentEffect),
+                ("Exact batch lookup returns effective override", ExactBatchLookupReturnsEffectiveOverride),
+                ("Batch override checkout persists source and deducts exact batch", BatchOverrideCheckoutPersistsSourceAndDeductsExactBatch),
+                ("Stale batch override checkout rolls back", StaleBatchOverrideCheckoutRollsBack),
+                ("Master price update preserves override and syncs mirrors", MasterPriceUpdatePreservesOverrideAndSyncsMirrors),
+                ("Master boundary conflict rolls back pricing", MasterBoundaryConflictRollsBackPricing),
+                ("GRN receipt preserves existing batch override", GrnReceiptPreservesExistingBatchOverride),
+                ("Labels and stock valuation use effective batch price", LabelsAndStockValuationUseEffectiveBatchPrice),
+                ("Customer return preserves current batch override", CustomerReturnPreservesCurrentBatchOverride),
+                ("Supplier return preserves current batch override", SupplierReturnPreservesCurrentBatchOverride),
                 ("Failed checkout leaves cart recoverable", FailedCheckoutLeavesCartRecoverable),
                 ("Successful checkout completes cart", SuccessfulCheckoutCompletesCart),
                 ("Manager approval preserves cashier session", ManagerApprovalPreservesCashierSession),
@@ -233,12 +247,14 @@ namespace POS.Core.CalculationTests
                 ("Free Issue checkout rollback preserves stock", FreeIssueCheckoutRollbackPreservesStock),
                 ("Free Issue rule names are unique", FreeIssueRuleNamesAreUnique),
                 ("Phase 8E migration applies from empty database", Phase8EMigrationAppliesFromEmptyDatabase),
+                ("Batch pricing migration applies from empty database", BatchPricingMigrationAppliesFromEmptyDatabase),
                 ("Phase 8E migration upgrades Phase 8D baseline", Phase8EMigrationUpgradesPhase8DBaseline),
                 ("Phase 8E migration duplicate preflight rolls back", Phase8EMigrationDuplicatePreflightRollsBack),
                 ("Stock Adjustment requires active Manager or Administrator", StockAdjustmentWorkflowTests.PostingRequiresActiveManagerOrAdministrator),
                 ("Stock Adjustment zero-cost increase rolls back", StockAdjustmentWorkflowTests.ZeroCostIncreaseIsRejectedAtomically),
                 ("Stock Adjustment increase updates cost and value", StockAdjustmentWorkflowTests.IncreaseUsesEnteredCostAndUpdatesAverageValue),
                 ("Stock Adjustment decrease uses authoritative cost", StockAdjustmentWorkflowTests.DecreaseUsesAuthoritativeExistingCost),
+                ("Stock Adjustment preserves selling-price state", StockAdjustmentWorkflowTests.SellingPriceStateIsPreserved),
                 ("Stock Adjustment history and reversal are idempotent", StockAdjustmentWorkflowTests.HistoryLoadsAndReversalIsIdempotent),
                 ("Stock Adjustment reversal blocks negative stock", StockAdjustmentWorkflowTests.ReversalBlocksWhenLaterUsageWouldMakeStockNegative),
                 ("Stock Adjustment concurrent snapshot cannot double decrement", StockAdjustmentWorkflowTests.ConcurrentSameStockSnapshotNeverDoubleDecrements),
@@ -299,7 +315,7 @@ namespace POS.Core.CalculationTests
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, POS Network SQL Server migration and setup foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
+                Console.WriteLine($"All {tests.Length} purchasing, GRN pricing, batch-pricing foundation, sales VAT, repository, sales document, customer return, supplier return, VAT report, cashier cart safety, shift cash, drawer, reconciliation, customer credit, customer ledger, one-time Gift Voucher lifecycle, Free Issue, Supplier Claim, Stock Adjustment, Phase 11A database-provider foundation, POS Network SQL Server migration and setup foundation, Phase 9A operational reporting and Phase 9B export/dashboard checks passed.");
                 return 0;
             }
             catch (Exception ex)
@@ -6454,6 +6470,7 @@ namespace POS.Core.CalculationTests
             CashierCartLineSnapshotDto line = CreateStockCartSnapshot(scenario);
             line.UnitPrice = 1062m;
             line.WholesalePrice = 1062m;
+            line.CataloguePriceSource = SellingPriceSourceCodes.BatchOverride;
             line.BatchNo = "TEST-BATCH";
 
             repository.SaveActiveAsync(CreateCartRequest(scenario, token, line))
@@ -6464,6 +6481,10 @@ namespace POS.Core.CalculationTests
             AssertEqual(scenario.StockBatchId, restored.ItemBatchId, "restored batch ID");
             AssertEqual("TEST-BATCH", restored.BatchNo, "restored batch number");
             AssertMoney(1062m, restored.UnitPrice, "restored selected price");
+            AssertEqual(
+                SellingPriceSourceCodes.BatchOverride,
+                restored.CataloguePriceSource,
+                "restored catalogue price source");
         }
 
         private static void ManualLineDiscountRestores()
@@ -8945,6 +8966,7 @@ namespace POS.Core.CalculationTests
                 CostPrice = 600m,
                 RetailPrice = 1180m,
                 WholesalePrice = 1062m,
+                CataloguePriceSource = SellingPriceSourceCodes.Master,
                 MinimumPrice = 600m,
                 UnitPrice = 1180m,
                 Quantity = quantity,
@@ -8974,6 +8996,7 @@ namespace POS.Core.CalculationTests
                 CostPrice = 400m,
                 RetailPrice = 1180m,
                 WholesalePrice = 1062m,
+                CataloguePriceSource = SellingPriceSourceCodes.Master,
                 MinimumPrice = 400m,
                 UnitPrice = 1180m,
                 Quantity = 1m,

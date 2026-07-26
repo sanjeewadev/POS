@@ -96,6 +96,6 @@ New Store never overwrites an existing database or login. Upgrade/Repair refuses
 
 Version 1.0.5 includes the SQL Server operational-text collation repair and Item Master matrix/save safety corrections. Run the Server installer first on the BackOffice/SQL Server computer. For an existing store, choose the normal upgrade path that keeps the current configuration.
 
-The Server upgrade creates a verified pre-upgrade SQL backup, applies pending migrations including `20260724043000_RepairOperationalTextCollations`, verifies database integrity, and preserves all store data, licences, terminal assignments, and encrypted connection profiles.
+The Server upgrade creates a verified pre-upgrade SQL backup, applies pending migrations including `20260726091000_AddBatchSellingPriceOverrideFoundation`, verifies database integrity, and preserves all store data, licences, terminal assignments, and encrypted connection profiles.
 
 After the Server passes acceptance, upgrade every Cashier computer with the matching Version 1.0.5 Cashier installer.

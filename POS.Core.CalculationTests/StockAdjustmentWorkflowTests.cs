@@ -129,6 +129,37 @@ namespace POS.Core.CalculationTests
             AssertEqual(100m, transaction.UnitCost, "decrease transaction cost");
         }
 
+        public static void SellingPriceStateIsPreserved()
+        {
+            using var fixture = StockAdjustmentFixture.Create(stock: 10m, cost: 100m);
+
+            using (AppDbContext setup = fixture.Factory.CreateDbContext())
+            {
+                ItemBatch batch = setup.ItemBatches.Single();
+                batch.HasSellingPriceOverride = true;
+                batch.RetailPrice = 175m;
+                batch.WholesalePrice = 160m;
+                setup.SaveChanges();
+            }
+
+            var repository = new StockAdjustmentRepository(fixture.Factory);
+            repository.SaveAdjustmentAsync(
+                    fixture.CreateHeader("Stock Decrease"),
+                    new List<StockAdjustmentLine>
+                    {
+                        fixture.CreateLine(systemQty: 10m, actualQty: 9m, unitCost: 100m)
+                    },
+                    fixture.ManagerActor,
+                    isDraft: false)
+                .GetAwaiter().GetResult();
+
+            using AppDbContext verify = fixture.Factory.CreateDbContext();
+            ItemBatch saved = verify.ItemBatches.Single();
+            AssertTrue(saved.HasSellingPriceOverride, "stock adjustment override state");
+            AssertEqual(175m, saved.RetailPrice, "stock adjustment Retail price");
+            AssertEqual(160m, saved.WholesalePrice, "stock adjustment Wholesale price");
+        }
+
         public static void HistoryLoadsAndReversalIsIdempotent()
         {
             using var fixture = StockAdjustmentFixture.Create(stock: 10m, cost: 100m);
