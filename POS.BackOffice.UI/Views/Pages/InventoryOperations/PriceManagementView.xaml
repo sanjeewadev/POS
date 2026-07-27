@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.PriceManagementView"
+<UserControl x:Class="POS.BackOffice.UI.Views.Pages.InventoryOperations.PriceManagementView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -55,11 +55,6 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#003333"/>
         </Style>
-        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource Button}">
-            <Setter Property="Background" Value="#8B1A1A"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#5C1010"/>
-        </Style>
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="#003366"/>
             <Setter Property="Foreground" Value="White"/>
@@ -91,7 +86,7 @@
             <RowDefinition Height="6"/>
             <RowDefinition Height="*" MinHeight="180"/>
             <RowDefinition Height="6"/>
-            <RowDefinition Height="Auto" MinHeight="255"/>
+            <RowDefinition Height="Auto" MinHeight="300"/>
             <RowDefinition Height="6"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -106,7 +101,7 @@
                     <Button DockPanel.Dock="Right" Width="95" Content="REFRESH" Command="{Binding LoadDataCommand}" Style="{StaticResource Button}"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="PRICE MANAGEMENT" FontSize="14" FontWeight="Bold" Foreground="#003366"/>
-                        <TextBlock Text="Master prices and exact batch overrides" Margin="14,1,0,0" Foreground="#666666"/>
+                        <TextBlock Text="Quick master price changes and exact batch overrides" Margin="14,1,0,0" Foreground="#666666"/>
                     </StackPanel>
                 </DockPanel>
                 <Grid Grid.Row="1">
@@ -141,35 +136,35 @@
         <Border Grid.Row="2" Style="{StaticResource GroupBox}" Padding="0">
             <Grid>
                 <DataGrid ItemsSource="{Binding PricingItems}"
-                      SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      HeadersVisibility="Column"
-                      RowHeight="28"
-                      AlternatingRowBackground="#F8F8F8"
-                      GridLinesVisibility="All"
-                      FrozenColumnCount="3"
-                      SelectionMode="Single"
-                      SelectionUnit="FullRow"
-                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                      ScrollViewer.VerticalScrollBarVisibility="Auto">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Item / Variant" Binding="{Binding DisplayDescription}" Width="220"/>
-                    <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" Width="115"/>
-                    <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}" Width="125"/>
-                    <DataGridTextColumn Header="Type" Binding="{Binding ItemTypeText}" Width="80"/>
-                    <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="120"/>
-                    <DataGridTextColumn Header="Tracking" Binding="{Binding TrackingText}" Width="115"/>
-                    <DataGridTextColumn Header="Qty" Binding="{Binding InventoryStockOnHand, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display, TargetNullValue=—}" Width="75" ElementStyle="{StaticResource RightText}"/>
-                    <DataGridTextColumn Header="Avg Cost" Binding="{Binding MovingAverageCost, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
-                    <DataGridTextColumn Header="Last Cost" Binding="{Binding LastLandedCost, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
-                    <DataGridTextColumn Header="Minimum" Binding="{Binding MinimumPrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
-                    <DataGridTextColumn Header="Retail" Binding="{Binding RetailPrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
-                    <DataGridTextColumn Header="Wholesale" Binding="{Binding WholesalePrice, StringFormat=N2}" Width="90" ElementStyle="{StaticResource RightText}"/>
-                    <DataGridTextColumn Header="Maximum" Binding="{Binding MaximumPrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
-                    <DataGridTextColumn Header="Batch Price Status" Binding="{Binding BatchPriceStatus}" Width="135"/>
+                          SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          HeadersVisibility="Column"
+                          RowHeight="28"
+                          AlternatingRowBackground="#F8F8F8"
+                          GridLinesVisibility="All"
+                          FrozenColumnCount="3"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Item / Variant" Binding="{Binding DisplayDescription, Mode=OneWay}" Width="220"/>
+                        <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode, Mode=OneWay}" Width="115"/>
+                        <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode, Mode=OneWay}" Width="125"/>
+                        <DataGridTextColumn Header="Type" Binding="{Binding ItemTypeText, Mode=OneWay}" Width="80"/>
+                        <DataGridTextColumn Header="Category" Binding="{Binding CategoryName, Mode=OneWay}" Width="120"/>
+                        <DataGridTextColumn Header="Tracking" Binding="{Binding TrackingText, Mode=OneWay}" Width="115"/>
+                        <DataGridTextColumn Header="Qty" Binding="{Binding InventoryStockOnHand, Mode=OneWay, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display, TargetNullValue=—}" Width="75" ElementStyle="{StaticResource RightText}"/>
+                        <DataGridTextColumn Header="Avg Cost" Binding="{Binding MovingAverageCost, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                        <DataGridTextColumn Header="Last Cost" Binding="{Binding LastLandedCost, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                        <DataGridTextColumn Header="Minimum" Binding="{Binding MinimumPrice, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                        <DataGridTextColumn Header="Retail" Binding="{Binding RetailPrice, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                        <DataGridTextColumn Header="Wholesale" Binding="{Binding WholesalePrice, Mode=OneWay, StringFormat=N2}" Width="90" ElementStyle="{StaticResource RightText}"/>
+                        <DataGridTextColumn Header="Maximum" Binding="{Binding MaximumPrice, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                        <DataGridTextColumn Header="Batch Price Status" Binding="{Binding BatchPriceStatus, Mode=OneWay}" Width="135"/>
                     </DataGrid.Columns>
                 </DataGrid>
                 <TextBlock Text="No pricing items match the selected filters."
@@ -181,24 +176,24 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="4" MinHeight="255">
+        <Grid Grid.Row="4" MinHeight="300">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="360"/>
+                <ColumnDefinition Width="390"/>
                 <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Style="{StaticResource GroupBox}" MinHeight="255">
+            <Border Grid.Column="0" Style="{StaticResource GroupBox}" MinHeight="300">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="SELECTED ITEM — MASTER PRICES" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,7"/>
+                    <TextBlock Grid.Row="0" Text="SELECTED ITEM — MASTER PRICING REFERENCE" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,8"/>
                     <Grid Grid.Row="1" IsEnabled="{Binding HasSelectedItem}">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="95"/>
+                            <ColumnDefinition Width="120"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -209,91 +204,118 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Item" Style="{StaticResource Label}" Margin="0,0,0,5"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedItem.DisplayDescription, TargetNullValue=Select an item}" FontWeight="Bold" TextTrimming="CharacterEllipsis" Margin="0,0,0,5"/>
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="SKU / Type" Style="{StaticResource Label}" Margin="0,0,0,5"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,5"><Run Text="{Binding SelectedItem.SkuCode}"/><Run Text="  |  "/><Run Text="{Binding SelectedItem.ItemTypeText}"/></TextBlock>
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Minimum" Style="{StaticResource Label}" Margin="0,0,0,5"/>
-                        <TextBox x:Name="MasterMinimumPriceTextBox" Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.MinimumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" Margin="0,0,0,5" HorizontalContentAlignment="Right"/>
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Retail" Style="{StaticResource Label}" Margin="0,0,0,5"/>
-                        <TextBox x:Name="MasterRetailPriceTextBox" Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.RetailPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" Margin="0,0,0,5" HorizontalContentAlignment="Right"/>
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Wholesale" Style="{StaticResource Label}" Margin="0,0,0,5"/>
-                        <TextBox x:Name="MasterWholesalePriceTextBox" Grid.Row="4" Grid.Column="1" Text="{Binding SelectedItem.WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" Margin="0,0,0,5" HorizontalContentAlignment="Right"/>
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Maximum" Style="{StaticResource Label}" Margin="0,0,0,5"/>
-                        <TextBox x:Name="MasterMaximumPriceTextBox" Grid.Row="5" Grid.Column="1" Text="{Binding SelectedItem.MaximumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" Margin="0,0,0,5" HorizontalContentAlignment="Right"/>
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Tracking" Style="{StaticResource Label}"/>
-                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedItem.TrackingText}" Foreground="#555555"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Item" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedItem.DisplayDescription, Mode=OneWay, TargetNullValue=Select an item}" FontWeight="Bold" TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="SKU / Type" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,0,6"><Run Text="{Binding SelectedItem.SkuCode, Mode=OneWay}"/><Run Text="  |  "/><Run Text="{Binding SelectedItem.ItemTypeText, Mode=OneWay}"/></TextBlock>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Average Cost" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.MovingAverageCost, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Last Cost" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.LastLandedCost, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Minimum" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedItem.MinimumPrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Master Retail" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedItem.RetailPrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Master Wholesale" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedItem.WholesalePrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="Maximum" Style="{StaticResource Label}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding SelectedItem.MaximumPrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="8" Grid.Column="0" Text="Tracking" Style="{StaticResource Label}"/>
+                        <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding SelectedItem.TrackingText, Mode=OneWay}" Foreground="#555555"/>
                     </Grid>
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                        <TextBlock Text="UNSAVED CHANGES" Foreground="#8B4513" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" Visibility="{Binding SelectedItem.HasMasterPriceChanged, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        <Button Content="RESET" Click="ResetMasterPrices_Click" Style="{StaticResource Button}" Margin="0,0,6,0"/>
-                        <Button Content="SAVE MASTER PRICES" Click="SaveMasterPrices_Click" Style="{StaticResource PrimaryButton}"/>
+                    <StackPanel Grid.Row="2" Margin="0,8,0,0">
+                        <TextBlock Text="Average Cost and Last Cost are calculated inventory references and cannot be edited here." Foreground="#555555" TextWrapping="Wrap" Margin="0,0,0,7"/>
+                        <Button Content="QUICK CHANGE MASTER PRICE" Click="QuickChangeMasterPrice_Click" Style="{StaticResource PrimaryButton}" IsEnabled="{Binding HasSelectedItem}" HorizontalAlignment="Stretch"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <Border Grid.Column="2" Style="{StaticResource GroupBox}" MinHeight="255">
+            <Border Grid.Column="2" Style="{StaticResource GroupBox}" MinHeight="300">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="False">
-                        <TextBlock Text="SELECTED ITEM — BATCH PRICES" FontWeight="Bold" Foreground="#005555"/>
+                        <TextBlock Text="SELECTED ITEM — EXACT BATCH PRICING" FontWeight="Bold" Foreground="#005555"/>
                         <TextBlock DockPanel.Dock="Right" Text="{Binding BatchPanelMessage}" Foreground="#666666" FontStyle="Italic" Margin="12,0,0,0"/>
                     </DockPanel>
                     <Grid Grid.Row="1" IsEnabled="{Binding CanShowBatchEditor}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*"/>
                             <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="235"/>
+                            <ColumnDefinition Width="285"/>
                         </Grid.ColumnDefinitions>
                         <Grid Grid.Column="0">
                             <DataGrid ItemsSource="{Binding ActiveBatches}" SelectedItem="{Binding SelectedBatch, Mode=TwoWay}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False" RowHeight="27" HeadersVisibility="Column" AlternatingRowBackground="#F8F8F8" SelectionMode="Single" SelectionUnit="FullRow" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
-                                <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo}" Width="105"/>
-                                <DataGridTextColumn Header="Internal Barcode" Binding="{Binding InternalBatchBarcode}" Width="120"/>
-                                <DataGridTextColumn Header="Expiry" Binding="{Binding ExpiryDisplayText}" Width="88"/>
-                                <DataGridTextColumn Header="Qty" Binding="{Binding CurrentStock, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}" Width="65" ElementStyle="{StaticResource RightText}"/>
-                                <DataGridTextColumn Header="Cost" Binding="{Binding CostPrice, StringFormat=N2}" Width="75" ElementStyle="{StaticResource RightText}"/>
-                                <DataGridTextColumn Header="Eff. Retail" Binding="{Binding EffectiveRetailPrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
-                                <DataGridTextColumn Header="Eff. W/S" Binding="{Binding EffectiveWholesalePrice, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
-                                <DataGridTextColumn Header="Source" Binding="{Binding PriceSourceText}" Width="105"/>
+                                    <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo, Mode=OneWay}" Width="105"/>
+                                    <DataGridTextColumn Header="Internal Barcode" Binding="{Binding InternalBatchBarcode, Mode=OneWay}" Width="120"/>
+                                    <DataGridTextColumn Header="Expiry" Binding="{Binding ExpiryDisplayText, Mode=OneWay}" Width="88"/>
+                                    <DataGridTextColumn Header="Qty" Binding="{Binding CurrentStock, Mode=OneWay, Converter={StaticResource SmartQuantityConverter}, ConverterParameter=Display}" Width="65" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="Batch Cost" Binding="{Binding CostPrice, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="Eff. Retail" Binding="{Binding EffectiveRetailPrice, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="Retail Margin %" Binding="{Binding RetailMarginPercentage, Mode=OneWay, StringFormat=N2}" Width="90" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="Eff. W/S" Binding="{Binding EffectiveWholesalePrice, Mode=OneWay, StringFormat=N2}" Width="85" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="W/S Margin %" Binding="{Binding WholesaleMarginPercentage, Mode=OneWay, StringFormat=N2}" Width="90" ElementStyle="{StaticResource RightText}"/>
+                                    <DataGridTextColumn Header="Source" Binding="{Binding PriceSourceText, Mode=OneWay}" Width="105"/>
                                 </DataGrid.Columns>
                             </DataGrid>
-                            <Border Background="#F7F7F7" Opacity="0.96"
-                                    Visibility="{Binding ShowBatchEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="{Binding BatchEmptyMessage}"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           TextAlignment="Center" TextWrapping="Wrap"
-                                           MaxWidth="420" Margin="18" Foreground="#555555" FontStyle="Italic"/>
+                            <Border Background="#F7F7F7" Opacity="0.96" Visibility="{Binding ShowBatchEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="{Binding BatchEmptyMessage}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420" Margin="18" Foreground="#555555" FontStyle="Italic"/>
                             </Border>
                         </Grid>
+
                         <Border Grid.Column="2" Background="#E8E8E8" BorderBrush="#AAAAAA" BorderThickness="1" Padding="8" IsEnabled="{Binding HasSelectedBatch}">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock Grid.Row="0" Text="{Binding SelectedBatch.BatchNo, TargetNullValue=Select a batch}" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,7"/>
-                                <TextBlock Grid.Row="1" Text="{Binding SelectedBatch.PriceSourceText}" Foreground="#555555" Margin="0,0,0,7"/>
-                                <TextBlock Grid.Row="2" Text="Override Retail" Style="{StaticResource Label}"/>
-                                <TextBox x:Name="BatchOverrideRetailPriceTextBox" Grid.Row="3" Text="{Binding SelectedBatch.OverrideRetailPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" HorizontalContentAlignment="Right" Margin="0,3,0,7"/>
-                                <TextBlock Grid.Row="4" Text="Override Wholesale" Style="{StaticResource Label}"/>
-                                <StackPanel Grid.Row="5">
-                                    <TextBox x:Name="BatchOverrideWholesalePriceTextBox" Text="{Binding SelectedBatch.OverrideWholesalePrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" HorizontalContentAlignment="Right" Margin="0,3,0,5"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding SelectedBatch.BatchNo, Mode=OneWay, TargetNullValue=Select a batch}" FontWeight="Bold" Foreground="#003366" Margin="0,0,0,5"/>
+                                    <TextBlock Text="{Binding SelectedBatch.PriceSourceText, Mode=OneWay}" Foreground="#555555" Margin="0,0,0,8"/>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="135"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Batch Cost" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedBatch.CostPrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Average Cost" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedBatch.AverageCost, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Master Retail" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedBatch.MasterRetailPrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Master Wholesale" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedBatch.MasterWholesalePrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Current Retail" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedBatch.EffectiveRetailPrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Current Wholesale" Style="{StaticResource Label}"/>
+                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedBatch.EffectiveWholesalePrice, Mode=OneWay, StringFormat=N2}" HorizontalAlignment="Right"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Batch Retail" Style="{StaticResource Label}"/>
+                                    <TextBox x:Name="BatchOverrideRetailPriceTextBox" Text="{Binding SelectedBatch.OverrideRetailPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" HorizontalContentAlignment="Right" Margin="0,3,0,7"/>
+                                    <TextBlock Text="Batch Wholesale" Style="{StaticResource Label}"/>
+                                    <TextBox x:Name="BatchOverrideWholesalePriceTextBox" Text="{Binding SelectedBatch.OverrideWholesalePrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True, NotifyOnValidationError=True, StringFormat=N2}" Style="{StaticResource Input}" HorizontalContentAlignment="Right" Margin="0,3,0,7"/>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="135"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Retail profit / margin" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,0,4"><Run Text="{Binding SelectedBatch.ProposedRetailProfit, Mode=OneWay, StringFormat=N2}"/><Run Text=" / "/><Run Text="{Binding SelectedBatch.ProposedRetailMarginPercentage, Mode=OneWay, StringFormat=N2}"/><Run Text="%"/></TextBlock>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="W/S profit / margin" Style="{StaticResource Label}"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"><Run Text="{Binding SelectedBatch.ProposedWholesaleProfit, Mode=OneWay, StringFormat=N2}"/><Run Text=" / "/><Run Text="{Binding SelectedBatch.ProposedWholesaleMarginPercentage, Mode=OneWay, StringFormat=N2}"/><Run Text="%"/></TextBlock>
+                                    </Grid>
+
+                                    <TextBlock Text="{Binding SelectedBatch.ProposedCostWarning, Mode=OneWay}" Foreground="#9A4A00" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,5"/>
                                     <TextBlock Text="UNSAVED CHANGES" Foreground="#8B4513" FontWeight="SemiBold" Margin="0,0,0,5" Visibility="{Binding SelectedBatch.HasBatchPriceChanged, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                    <Button Content="{Binding SelectedBatch.OverrideActionText, TargetNullValue=SET BATCH PRICE OVERRIDE}" Click="SaveBatchOverride_Click" Style="{StaticResource PrimaryButton}" Margin="0,0,0,5"/>
-                                    <Button Content="REMOVE BATCH PRICE OVERRIDE" Command="{Binding RemoveBatchOverrideCommand}" Style="{StaticResource DangerButton}" IsEnabled="{Binding CanRemoveSelectedOverride}" Margin="0,0,0,5"/>
+                                    <Button Content="{Binding SelectedBatch.OverrideActionText, Mode=OneWay, TargetNullValue=SET BATCH PRICE OVERRIDE}" Click="SaveBatchOverride_Click" Style="{StaticResource PrimaryButton}" Margin="0,0,0,5"/>
+                                    <Button Content="USE MASTER PRICE" Command="{Binding UseMasterPriceCommand}" Style="{StaticResource Button}" IsEnabled="{Binding CanUseMasterPrice}" Margin="0,0,0,5" ToolTip="Remove only the batch override and return this batch to the current master price."/>
                                     <Button Content="RESET" Click="ResetBatchOverride_Click" Style="{StaticResource Button}"/>
                                 </StackPanel>
-                            </Grid>
+                            </ScrollViewer>
                         </Border>
                     </Grid>
                 </Grid>

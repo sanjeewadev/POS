@@ -39,11 +39,11 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private int _serviceItemCount;
         [ObservableProperty] private int _batchOverrideCount;
 
-        public bool HasUnsavedChanges => SelectedItem?.IsDirty == true || SelectedBatch?.IsDirty == true;
+        public bool HasUnsavedChanges => SelectedBatch?.IsDirty == true;
         public bool CanShowBatchEditor => SelectedItem?.CanManageBatchOverrides == true;
         public bool HasSelectedItem => SelectedItem != null;
         public bool HasSelectedBatch => SelectedBatch != null;
-        public bool CanRemoveSelectedOverride => SelectedBatch?.HasSellingPriceOverride == true;
+        public bool CanUseMasterPrice => SelectedBatch?.HasSellingPriceOverride == true;
         public bool IsPricingListEmpty => !IsBusy && PricingItems.Count == 0;
         public bool ShowBatchEmptyState => !IsBatchLoading && ActiveBatches.Count == 0;
         public string BatchPanelMessage => SelectedItem?.BatchEditorMessage ?? "Select an item to view pricing details.";
@@ -118,7 +118,7 @@ namespace POS.BackOffice.UI.ViewModels
         {
             value?.ResetEditor();
             OnPropertyChanged(nameof(HasSelectedBatch));
-            OnPropertyChanged(nameof(CanRemoveSelectedOverride));
+            OnPropertyChanged(nameof(CanUseMasterPrice));
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -239,63 +239,55 @@ namespace POS.BackOffice.UI.ViewModels
             await LoadDataCoreAsync();
         }
 
-        [RelayCommand]
-        private async Task SaveMasterPricesAsync()
+        public async Task ApplyMasterPriceChangeAsync(MasterPriceQuickChangeResult result)
         {
-            if (SelectedItem == null)
+            if (SelectedItem == null || SelectedItem.ItemVariantId != result.ItemVariantId)
             {
-                ShowSelectionRequired("Select an item or service first.");
-                return;
-            }
-            if (!SelectedItem.HasMasterPriceChanged)
-            {
-                MessageBox.Show("The selected master prices have not changed.", "Pricing", MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowSelectionRequired("The selected item changed. Reopen Quick Change Master Price.");
                 return;
             }
 
-            var errors = SelectedItem.ValidateForSave();
-            if (errors.Count > 0)
+            var pricing = new PriceManagementSummaryDto
             {
-                MessageBox.Show(string.Join("\n", errors), "Price Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            MessageBoxResult confirmation = MessageBox.Show(
-                $"Save master prices for {SelectedItem.DisplayDescription}?\n\n" +
-                $"Minimum: {SelectedItem.OriginalMinimumPrice:N2} → {SelectedItem.MinimumPrice:N2}\n" +
-                $"Retail: {SelectedItem.OriginalRetailPrice:N2} → {SelectedItem.RetailPrice:N2}\n" +
-                $"Wholesale: {SelectedItem.OriginalWholesalePrice:N2} → {SelectedItem.WholesalePrice:N2}\n" +
-                $"Maximum: {SelectedItem.OriginalMaximumPrice:N2} → {SelectedItem.MaximumPrice:N2}",
-                "Save Master Prices",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-            if (confirmation != MessageBoxResult.Yes)
-                return;
+                ItemVariantId = SelectedItem.ItemVariantId,
+                ItemParentId = SelectedItem.ItemParentId,
+                ItemCode = SelectedItem.ItemCode,
+                SkuCode = SelectedItem.SkuCode,
+                Barcode = SelectedItem.Barcode,
+                Description = SelectedItem.Description,
+                VariantAttributes = SelectedItem.VariantAttributes,
+                ItemType = SelectedItem.ItemType,
+                MinimumPrice = result.MinimumPrice,
+                RetailPrice = result.RetailPrice,
+                WholesalePrice = result.WholesalePrice,
+                MaximumPrice = result.MaximumPrice
+            };
 
             IsBusy = true;
             try
             {
-                int variantId = SelectedItem.ItemVariantId;
-                await _repository.UpdateMasterPricingAsync(SelectedItem, CurrentUsername());
+                int variantId = result.ItemVariantId;
+                await _repository.UpdateMasterPricingAsync(pricing, CurrentUsername());
                 StatusMessage = "Master prices saved.";
                 await LoadDataCoreAsync(variantId);
-                MessageBox.Show("Master prices saved successfully.", "Pricing", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    "Master prices saved successfully. The change is available in Price Change History.",
+                    "Pricing",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Master prices were not saved:\n\n{ex.Message}", "Pricing", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(
+                    $"Master prices were not saved:\n\n{ex.Message}",
+                    "Pricing",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
             finally
             {
                 IsBusy = false;
             }
-        }
-
-        [RelayCommand]
-        private void ResetMasterPrices()
-        {
-            SelectedItem?.ResetChanges();
-            NotifySummaryProperties();
         }
 
         [RelayCommand]
@@ -306,6 +298,16 @@ namespace POS.BackOffice.UI.ViewModels
                 ShowSelectionRequired("Select a physical batch first.");
                 return;
             }
+            if (!SelectedBatch.HasBatchPriceChanged)
+            {
+                MessageBox.Show(
+                    "The selected batch prices have not changed.",
+                    "Batch Pricing",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
             var errors = SelectedBatch.ValidateForSave();
             if (errors.Count > 0)
             {
@@ -313,13 +315,22 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
             }
 
+            string costWarning = string.IsNullOrWhiteSpace(SelectedBatch.ProposedCostWarning)
+                ? string.Empty
+                : $"\n\n{SelectedBatch.ProposedCostWarning}";
+
             MessageBoxResult confirmation = MessageBox.Show(
                 $"{SelectedBatch.OverrideActionText} for batch {SelectedBatch.BatchNo}?\n\n" +
                 $"Current source: {SelectedBatch.PriceSourceText}\n" +
+                $"Batch Cost: {SelectedBatch.CostPrice:N2}\n" +
+                $"Average Cost: {SelectedBatch.AverageCost:N2}\n\n" +
                 $"Current Retail: {SelectedBatch.EffectiveRetailPrice:N2}\n" +
                 $"New Retail: {SelectedBatch.OverrideRetailPrice:N2}\n" +
+                $"Retail profit / margin: {SelectedBatch.ProposedRetailProfit:N2} / {SelectedBatch.ProposedRetailMarginPercentage:N2}%\n\n" +
                 $"Current Wholesale: {SelectedBatch.EffectiveWholesalePrice:N2}\n" +
-                $"New Wholesale: {SelectedBatch.OverrideWholesalePrice:N2}",
+                $"New Wholesale: {SelectedBatch.OverrideWholesalePrice:N2}\n" +
+                $"Wholesale profit / margin: {SelectedBatch.ProposedWholesaleProfit:N2} / {SelectedBatch.ProposedWholesaleMarginPercentage:N2}%" +
+                costWarning,
                 "Batch Price Override",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
@@ -351,7 +362,7 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
-        private async Task RemoveBatchOverrideAsync()
+        private async Task UseMasterPriceAsync()
         {
             if (SelectedItem == null || SelectedBatch == null || !SelectedBatch.HasSellingPriceOverride)
             {
@@ -360,11 +371,13 @@ namespace POS.BackOffice.UI.ViewModels
             }
 
             MessageBoxResult confirmation = MessageBox.Show(
-                $"Remove the selling-price override from batch {SelectedBatch.BatchNo}?\n\n" +
-                "The batch will immediately use the current master Retail and Wholesale prices.",
-                "Remove Batch Override",
+                $"Return batch {SelectedBatch.BatchNo} to the current master price?\n\n" +
+                $"Current batch override:\nRetail: {SelectedBatch.EffectiveRetailPrice:N2}\nWholesale: {SelectedBatch.EffectiveWholesalePrice:N2}\n\n" +
+                $"Current master price:\nRetail: {SelectedBatch.MasterRetailPrice:N2}\nWholesale: {SelectedBatch.MasterWholesalePrice:N2}\n\n" +
+                "This does not remove the batch or its history.",
+                "Use Master Price",
                 MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+                MessageBoxImage.Question);
             if (confirmation != MessageBoxResult.Yes)
                 return;
 
@@ -377,12 +390,12 @@ namespace POS.BackOffice.UI.ViewModels
                     SelectedBatch.ItemBatchId,
                     CurrentUsername());
                 SelectedBatch.AcceptChanges();
-                StatusMessage = "Batch price override removed.";
+                StatusMessage = "Batch now uses the master price.";
                 await LoadDataCoreAsync(variantId);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Batch price override was not removed:\n\n{ex.Message}", "Pricing", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"The batch was not returned to the master price:\n\n{ex.Message}", "Pricing", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {

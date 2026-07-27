@@ -30,36 +30,72 @@ internal static class BatchPricingBackOfficeSourcePolicyAuditTests
             "Pages",
             "InventoryOperations",
             "PriceManagementView.xaml.cs");
+        string quickDialog = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "MasterPriceQuickChangeDialog.xaml");
+        string quickDialogCode = Read(
+            "POS.BackOffice.UI",
+            "Views",
+            "Dialogs",
+            "MasterPriceQuickChangeDialog.xaml.cs");
+        string quickDialogViewModel = Read(
+            "POS.BackOffice.UI",
+            "ViewModels",
+            "MasterPriceQuickChangeDialogViewModel.cs");
+        string calculator = Read(
+            "POS.Core",
+            "Services",
+            "Pricing",
+            "SellingPriceSuggestionCalculator.cs");
         string repository = Read(
             "POS.Core",
             "Repositories",
             "PriceManagementRepository.cs");
 
-        AuditAssert.Contains(view, "SELECTED ITEM — MASTER PRICES", "selected master-price editor");
-        AuditAssert.Contains(view, "SELECTED ITEM — BATCH PRICES", "selected exact-batch panel");
-        AuditAssert.Contains(view, "Binding=\"{Binding BatchPriceStatus}\"", "batch-price status column");
-        AuditAssert.Contains(view, "Binding=\"{Binding PriceSourceText}\"", "batch price-source column");
-        AuditAssert.Contains(view, "MinHeight=\"255\"", "Pricing editor minimum height");
-        AuditAssert.Contains(view, "LastChildFill=\"False\"", "Pricing compact header docking");
+        AuditAssert.Contains(view, "SELECTED ITEM — MASTER PRICING REFERENCE", "read-only master-price reference");
+        AuditAssert.Contains(view, "QUICK CHANGE MASTER PRICE", "master price dialog entry point");
+        AuditAssert.Contains(view, "SELECTED ITEM — EXACT BATCH PRICING", "selected exact-batch panel");
+        AuditAssert.Contains(view, "USE MASTER PRICE", "clear override-reversion action");
+        AuditAssert.Contains(view, "Batch Cost", "exact batch cost reference");
+        AuditAssert.Contains(view, "Average Cost", "average cost reference");
+        AuditAssert.Contains(view, "Retail profit / margin", "batch Retail profitability preview");
+        AuditAssert.Contains(view, "W/S profit / margin", "batch Wholesale profitability preview");
+        AuditAssert.Contains(view, "Binding=\"{Binding ItemTypeText, Mode=OneWay}\"", "read-only item type binding");
+        AuditAssert.Contains(view, "Binding=\"{Binding PriceSourceText, Mode=OneWay}\"", "read-only batch price-source binding");
         AuditAssert.Contains(view, "ShowBatchEmptyState", "Pricing batch empty-state visibility");
-        AuditAssert.Contains(view, "UpdateSourceTrigger=LostFocus", "stable decimal editor binding");
-        AuditAssert.Contains(view, "ValidatesOnExceptions=True", "invalid decimal editor validation");
-        AuditAssert.Contains(view, "Click=\"SaveMasterPrices_Click\"", "master price explicit commit route");
+        AuditAssert.Contains(view, "UpdateSourceTrigger=LostFocus", "stable batch decimal editor binding");
+        AuditAssert.Contains(view, "ValidatesOnExceptions=True", "invalid batch decimal validation");
         AuditAssert.Contains(view, "Click=\"SaveBatchOverride_Click\"", "batch price explicit commit route");
-        AuditAssert.Contains(view, "UNSAVED CHANGES", "pricing unsaved-change indicator");
-        AuditAssert.Contains(viewCodeBehind, "TryCommitPriceEditors", "pricing editor commit helper");
-        AuditAssert.Contains(viewCodeBehind, "binding?.UpdateSource()", "pricing binding source commit");
-        AuditAssert.Contains(viewCodeBehind, "Validation.GetHasError", "pricing invalid-text guard");
-        AuditAssert.Contains(viewCodeBehind, "ExecuteAsync(null)", "pricing async command handoff");
-        AuditAssert.Contains(viewModel, "IsPricingListEmpty", "Pricing item empty-state property");
-        AuditAssert.Contains(viewModel, "No active physical batches with available stock", "Pricing batch empty-state guidance");
-        AuditAssert.False(view.Contains("Change Reason", StringComparison.OrdinalIgnoreCase), "Pricing still requires a reason.");
-        AuditAssert.False(view.Contains("Projected", StringComparison.OrdinalIgnoreCase), "Pricing still shows projected-value cards.");
-        AuditAssert.False(view.Contains("Good Margin", StringComparison.OrdinalIgnoreCase), "Pricing still shows margin classifications.");
+        AuditAssert.False(view.Contains("MasterMinimumPriceTextBox", StringComparison.Ordinal), "inline master price editor remains.");
+        AuditAssert.False(view.Contains("REMOVE BATCH PRICE OVERRIDE", StringComparison.Ordinal), "destructive override wording remains.");
+        AuditAssert.False(view.Contains("DangerButton", StringComparison.Ordinal), "batch reversion remains styled as destructive.");
 
-        AuditAssert.Contains(viewModel, "CurrentUsername()", "Pricing authenticated username retrieval");
+        AuditAssert.Contains(viewCodeBehind, "MasterPriceQuickChangeDialog", "owner-aware master price dialog route");
+        AuditAssert.Contains(viewCodeBehind, "Owner = Window.GetWindow(this)", "master price dialog owner");
+        AuditAssert.Contains(viewCodeBehind, "TryCommitPriceEditors", "batch editor commit helper");
+        AuditAssert.Contains(viewCodeBehind, "binding?.UpdateSource()", "batch binding source commit");
+        AuditAssert.Contains(viewCodeBehind, "Validation.GetHasError", "batch invalid-text guard");
+
+        AuditAssert.Contains(quickDialog, "CALCULATE FROM COST (OPTIONAL)", "cost-based price suggestion section");
+        AuditAssert.Contains(quickDialogViewModel, "SellingPriceCalculationMethods.MarkupOnCost", "master price markup option");
+        AuditAssert.Contains(quickDialogViewModel, "SellingPriceCalculationMethods.TargetMargin", "master price margin option");
+        AuditAssert.Contains(quickDialogViewModel, "SellingPriceCalculationMethods.DiscountFromRetail", "Wholesale Retail-discount option");
+        AuditAssert.Contains(quickDialog, "Average Cost and Last Cost are read-only", "cost authority guidance");
+        AuditAssert.Contains(quickDialogCode, "TryBuildResult", "master dialog explicit validation");
+        AuditAssert.Contains(quickDialogCode, "Confirm Master Price Change", "master dialog confirmation");
+        AuditAssert.Contains(quickDialogViewModel, "Wholesale price cannot be greater than Retail price", "Wholesale ordering validation");
+        AuditAssert.Contains(quickDialogViewModel, "No master price has changed", "no-change master guard");
+        AuditAssert.Contains(calculator, "FromMarkup", "markup calculation authority");
+        AuditAssert.Contains(calculator, "FromTargetMargin", "target-margin calculation authority");
+        AuditAssert.Contains(calculator, "FromRetailDiscount", "Wholesale Retail-discount authority");
+        AuditAssert.Contains(calculator, "RoundToIncrement", "price rounding authority");
+
+        AuditAssert.Contains(viewModel, "ApplyMasterPriceChangeAsync", "master price save handoff");
         AuditAssert.Contains(viewModel, "SaveBatchOverrideAsync", "Pricing batch override save command");
-        AuditAssert.Contains(viewModel, "RemoveBatchOverrideAsync", "Pricing batch override removal command");
+        AuditAssert.Contains(viewModel, "UseMasterPriceAsync", "Pricing master-price reversion command");
+        AuditAssert.Contains(viewModel, "ProposedRetailProfit", "batch profit confirmation");
         AuditAssert.False(viewModel.Contains("\"Admin\"", StringComparison.Ordinal), "Pricing still hard-codes Admin.");
 
         AuditAssert.Contains(repository, "IsolationLevel.Serializable", "Pricing serializable transaction");

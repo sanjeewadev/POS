@@ -153,22 +153,34 @@ internal static class InventoryServiceExpirySourcePolicyAuditTests
         AuditAssert.Contains(viewModel, "AuthService", "Pricing authenticated-user dependency");
         AuditAssert.Contains(view, "Header=\"Type\"", "Pricing item-type column");
         AuditAssert.Contains(view, "ItemsSource=\"{Binding CategoryFilters}\"", "Pricing category filter source");
-        AuditAssert.Contains(view, "Content=\"SAVE MASTER PRICES\"", "Pricing selected master editor save action");
+        AuditAssert.Contains(view, "QUICK CHANGE MASTER PRICE", "Pricing owner-aware master-price quick-change action");
         AuditAssert.Contains(view, "SET BATCH PRICE OVERRIDE", "Pricing exact-batch override action");
-        AuditAssert.Contains(view, "REMOVE BATCH PRICE OVERRIDE", "Pricing exact-batch override removal action");
-        string[] retiredMarginLabels =
+        AuditAssert.Contains(view, "USE MASTER PRICE", "Pricing clear exact-batch reversion action");
+        AuditAssert.False(
+            view.Contains("SAVE MASTER PRICES", StringComparison.Ordinal),
+            "The retired inline master-price save action remains on Pricing.");
+        AuditAssert.False(
+            view.Contains("REMOVE BATCH PRICE OVERRIDE", StringComparison.Ordinal),
+            "The destructive batch-override removal wording remains on Pricing.");
+        AuditAssert.Contains(
+            view,
+            "Retail profit / margin",
+            "Pricing exact-batch Retail profit and margin preview");
+        AuditAssert.Contains(
+            view,
+            "W/S profit / margin",
+            "Pricing exact-batch Wholesale profit and margin preview");
+        string[] retiredMarginStatusLabels =
         {
-            "Retail Margin",
-            "Wholesale Margin",
             "Good Margin",
             "Low Margin",
             "Negative Margin"
         };
-        foreach (string retiredLabel in retiredMarginLabels)
+        foreach (string retiredLabel in retiredMarginStatusLabels)
         {
             AuditAssert.False(
                 view.Contains(retiredLabel, StringComparison.OrdinalIgnoreCase),
-                $"The Pricing page still exposes the retired '{retiredLabel}' control.");
+                $"The Pricing page still exposes the retired '{retiredLabel}' status control.");
         }
         AuditAssert.False(
             view.Contains("Apply selling prices to current", StringComparison.OrdinalIgnoreCase),

@@ -186,6 +186,8 @@ namespace POS.Core.Models.DTOs
                 errors.Add($"Retail price must be greater than zero for '{DisplayDescription}'.");
             if (WholesalePrice < 0m || MinimumPrice < 0m || MaximumPrice < 0m)
                 errors.Add($"Prices cannot be negative for '{DisplayDescription}'.");
+            if (WholesalePrice > RetailPrice)
+                errors.Add($"Wholesale price cannot be greater than Retail price for '{DisplayDescription}'.");
             if (MinimumPrice > 0m && MaximumPrice > 0m && MinimumPrice > MaximumPrice)
                 errors.Add($"Minimum price cannot be greater than Maximum price for '{DisplayDescription}'.");
             if (MinimumPrice > 0m && RetailPrice < MinimumPrice)
@@ -246,6 +248,12 @@ namespace POS.Core.Models.DTOs
         public decimal EffectiveRetailPrice { get; set; }
         public decimal EffectiveWholesalePrice { get; set; }
         public string PriceSource { get; set; } = SellingPriceSourceCodes.Master;
+        public decimal AverageCost { get; set; }
+        public decimal LastCost { get; set; }
+        public decimal MasterMinimumPrice { get; set; }
+        public decimal MasterRetailPrice { get; set; }
+        public decimal MasterWholesalePrice { get; set; }
+        public decimal MasterMaximumPrice { get; set; }
 
         public decimal OverrideRetailPrice
         {
@@ -257,8 +265,7 @@ namespace POS.Core.Models.DTOs
                     return;
                 _overrideRetailPrice = rounded;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(IsDirty));
-                OnPropertyChanged(nameof(HasBatchPriceChanged));
+                NotifyProposedPriceProperties();
             }
         }
 
@@ -272,8 +279,7 @@ namespace POS.Core.Models.DTOs
                     return;
                 _overrideWholesalePrice = rounded;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(IsDirty));
-                OnPropertyChanged(nameof(HasBatchPriceChanged));
+                NotifyProposedPriceProperties();
             }
         }
 
@@ -300,6 +306,15 @@ namespace POS.Core.Models.DTOs
         public bool HasBatchPriceChanged => IsDirty;
         public decimal RetailMarginPercentage => EffectiveRetailPrice > 0m && CostPrice > 0m ? Math.Round(((EffectiveRetailPrice - CostPrice) / EffectiveRetailPrice) * 100m, 2) : 0m;
         public decimal WholesaleMarginPercentage => EffectiveWholesalePrice > 0m && CostPrice > 0m ? Math.Round(((EffectiveWholesalePrice - CostPrice) / EffectiveWholesalePrice) * 100m, 2) : 0m;
+        public decimal ProposedRetailProfit => SellingPriceSuggestionCalculator.ProfitPerUnit(OverrideRetailPrice, CostPrice);
+        public decimal ProposedWholesaleProfit => SellingPriceSuggestionCalculator.ProfitPerUnit(OverrideWholesalePrice, CostPrice);
+        public decimal ProposedRetailMarginPercentage => SellingPriceSuggestionCalculator.MarginPercent(OverrideRetailPrice, CostPrice);
+        public decimal ProposedWholesaleMarginPercentage => SellingPriceSuggestionCalculator.MarginPercent(OverrideWholesalePrice, CostPrice);
+        public bool IsProposedRetailBelowCost => CostPrice > 0m && OverrideRetailPrice > 0m && OverrideRetailPrice < CostPrice;
+        public bool IsProposedWholesaleBelowCost => CostPrice > 0m && OverrideWholesalePrice > 0m && OverrideWholesalePrice < CostPrice;
+        public string ProposedCostWarning => IsProposedRetailBelowCost || IsProposedWholesaleBelowCost
+            ? "Warning: one or more proposed batch prices are below Batch Cost."
+            : string.Empty;
         public bool IsNegativeMargin => EffectiveRetailPrice > 0m && CostPrice > 0m && EffectiveRetailPrice < CostPrice;
         public bool IsLowMargin => EffectiveRetailPrice > 0m && CostPrice > 0m && EffectiveRetailPrice >= CostPrice && RetailMarginPercentage < 20m;
         public bool IsExpired => ExpiryDate.HasValue && ExpiryDate.Value.Date < DateTime.Today;
@@ -313,16 +328,14 @@ namespace POS.Core.Models.DTOs
             OverrideWholesalePrice = HasSellingPriceOverride ? StoredWholesalePrice : EffectiveWholesalePrice;
             OriginalRetailPrice = OverrideRetailPrice;
             OriginalWholesalePrice = OverrideWholesalePrice;
-            OnPropertyChanged(nameof(IsDirty));
-            OnPropertyChanged(nameof(HasBatchPriceChanged));
+            NotifyProposedPriceProperties();
         }
 
         public void AcceptChanges()
         {
             OriginalRetailPrice = OverrideRetailPrice;
             OriginalWholesalePrice = OverrideWholesalePrice;
-            OnPropertyChanged(nameof(IsDirty));
-            OnPropertyChanged(nameof(HasBatchPriceChanged));
+            NotifyProposedPriceProperties();
         }
 
         public void ResetEditor()
@@ -345,9 +358,32 @@ namespace POS.Core.Models.DTOs
                 errors.Add($"Retail price must be greater than zero for batch '{BatchNo}'.");
             if (OverrideWholesalePrice <= 0m)
                 errors.Add($"Wholesale price must be greater than zero for batch '{BatchNo}'.");
+            if (OverrideWholesalePrice > OverrideRetailPrice)
+                errors.Add($"Wholesale price cannot be greater than Retail price for batch '{BatchNo}'.");
+            if (MasterMinimumPrice > 0m && OverrideRetailPrice < MasterMinimumPrice)
+                errors.Add($"Retail price cannot be below the master Minimum price for batch '{BatchNo}'.");
+            if (MasterMinimumPrice > 0m && OverrideWholesalePrice < MasterMinimumPrice)
+                errors.Add($"Wholesale price cannot be below the master Minimum price for batch '{BatchNo}'.");
+            if (MasterMaximumPrice > 0m && OverrideRetailPrice > MasterMaximumPrice)
+                errors.Add($"Retail price cannot be above the master Maximum price for batch '{BatchNo}'.");
+            if (MasterMaximumPrice > 0m && OverrideWholesalePrice > MasterMaximumPrice)
+                errors.Add($"Wholesale price cannot be above the master Maximum price for batch '{BatchNo}'.");
             return errors;
         }
 
+
+        private void NotifyProposedPriceProperties()
+        {
+            OnPropertyChanged(nameof(IsDirty));
+            OnPropertyChanged(nameof(HasBatchPriceChanged));
+            OnPropertyChanged(nameof(ProposedRetailProfit));
+            OnPropertyChanged(nameof(ProposedWholesaleProfit));
+            OnPropertyChanged(nameof(ProposedRetailMarginPercentage));
+            OnPropertyChanged(nameof(ProposedWholesaleMarginPercentage));
+            OnPropertyChanged(nameof(IsProposedRetailBelowCost));
+            OnPropertyChanged(nameof(IsProposedWholesaleBelowCost));
+            OnPropertyChanged(nameof(ProposedCostWarning));
+        }
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

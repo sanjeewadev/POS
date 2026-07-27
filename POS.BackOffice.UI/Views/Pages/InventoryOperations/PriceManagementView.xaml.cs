@@ -1,10 +1,10 @@
-﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using POS.BackOffice.UI.ViewModels;
+using POS.BackOffice.UI.Views.Dialogs;
 
 namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
 {
@@ -15,39 +15,35 @@ namespace POS.BackOffice.UI.Views.Pages.InventoryOperations
             InitializeComponent();
         }
 
-        private async void SaveMasterPrices_Click(object sender, RoutedEventArgs e)
+        private async void QuickChangeMasterPrice_Click(object sender, RoutedEventArgs e)
         {
-            if (!TryCommitPriceEditors(
-                    "Master Price Validation",
-                    MasterMinimumPriceTextBox,
-                    MasterRetailPriceTextBox,
-                    MasterWholesalePriceTextBox,
-                    MasterMaximumPriceTextBox))
+            if (DataContext is not PriceManagementViewModel viewModel || viewModel.SelectedItem == null)
             {
+                MessageBox.Show(
+                    "Select an item or service first.",
+                    "Selection Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
 
-            if (DataContext is PriceManagementViewModel viewModel &&
-                viewModel.SaveMasterPricesCommand.CanExecute(null))
+            if (viewModel.HasUnsavedChanges)
             {
-                await viewModel.SaveMasterPricesCommand.ExecuteAsync(null);
-            }
-        }
-
-        private void ResetMasterPrices_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is not PriceManagementViewModel viewModel ||
-                !viewModel.ResetMasterPricesCommand.CanExecute(null))
-            {
+                MessageBox.Show(
+                    "Reset or save the current batch-price edit before changing master prices.",
+                    "Unsaved Batch Price",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 return;
             }
 
-            viewModel.ResetMasterPricesCommand.Execute(null);
-            RefreshPriceEditors(
-                MasterMinimumPriceTextBox,
-                MasterRetailPriceTextBox,
-                MasterWholesalePriceTextBox,
-                MasterMaximumPriceTextBox);
+            var dialog = new MasterPriceQuickChangeDialog(viewModel.SelectedItem)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            if (dialog.ShowDialog() == true && dialog.Result is MasterPriceQuickChangeResult result)
+                await viewModel.ApplyMasterPriceChangeAsync(result);
         }
 
         private async void SaveBatchOverride_Click(object sender, RoutedEventArgs e)

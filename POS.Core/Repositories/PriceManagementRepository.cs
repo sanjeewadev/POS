@@ -291,6 +291,18 @@ namespace POS.Core.Repositories
                 .ThenBy(batch => batch.BatchNo)
                 .ToListAsync();
 
+            decimal totalStock = batches.Sum(row => row.CurrentStock);
+            decimal weightedStockCost = batches.Sum(row => row.CurrentStock * row.CostPrice);
+            decimal calculatedAverageCost = batches.Count > 0 && batches[0].ItemVariant.AverageCost > 0m
+                ? RoundMoney(batches[0].ItemVariant.AverageCost)
+                : totalStock > 0m
+                    ? RoundMoney(weightedStockCost / totalStock)
+                    : 0m;
+            decimal latestCost = batches
+                .OrderByDescending(row => row.ReceivedDate)
+                .Select(row => row.CostPrice)
+                .FirstOrDefault();
+
             var rows = new List<PriceManagementBatchDto>();
             foreach (ItemBatch batch in batches)
             {
@@ -322,7 +334,15 @@ namespace POS.Core.Repositories
                     StoredWholesalePrice = RoundMoney(batch.WholesalePrice),
                     EffectiveRetailPrice = effective.RetailPrice,
                     EffectiveWholesalePrice = effective.WholesalePrice,
-                    PriceSource = effective.PriceSource
+                    PriceSource = effective.PriceSource,
+                    AverageCost = calculatedAverageCost,
+                    LastCost = batch.ItemVariant.CostPrice > 0m
+                        ? RoundMoney(batch.ItemVariant.CostPrice)
+                        : RoundMoney(latestCost),
+                    MasterMinimumPrice = RoundMoney(batch.ItemVariant.MinimumPrice),
+                    MasterRetailPrice = RoundMoney(batch.ItemVariant.RetailPrice),
+                    MasterWholesalePrice = RoundMoney(batch.ItemVariant.WholesalePrice),
+                    MasterMaximumPrice = RoundMoney(batch.ItemVariant.MaximumPrice)
                 };
                 row.InitializeEditor();
                 rows.Add(row);
