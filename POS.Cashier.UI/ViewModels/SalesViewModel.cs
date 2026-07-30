@@ -1663,6 +1663,31 @@ namespace POS.Cashier.UI.ViewModels
             }
         }
 
+        // New - for seek
+
+        public async Task AddItemFromSeekAsync(ProductSeekResult result)
+        {
+            if (result == null || result.VariantId <= 0)
+                return;
+
+            if (IsPaymentModeActive)
+            {
+                _ = ShowNotificationAsync("Cancel payment mode before adding more items.", "#F59E0B");
+                return;
+            }
+
+            // If the seek window resolved an exact batch, add that specific batch
+            if (result.BatchId.HasValue && result.BatchId.Value > 0)
+            {
+                await AddBatchToCartAsync(result.BatchId.Value, 1m);
+            }
+            else
+            {
+                // Otherwise, add the variant (e.g., for Services or items without batch tracking)
+                await AddVariantToCartAsync(result.VariantId, 1m);
+            }
+        }
+
         public async Task AddBatchToCartAsync(int itemBatchId, decimal quantity = 1m)
         {
             if (IsPaymentModeActive)
@@ -1868,6 +1893,19 @@ namespace POS.Cashier.UI.ViewModels
 
         private void AddSelectedBatchToCart(CashierSellableItemDto item, CashierBatchDto selectedBatch, decimal quantity)
         {
+            // Diagnostic logging: record selection and cart state
+            try
+            {
+                string diag = $"AddSelectedBatchToCart called. VariantId={item.VariantId}, BatchId={selectedBatch.ItemBatchId}, BatchNo='{selectedBatch.BatchNo}', Qty={quantity}, Available={selectedBatch.AvailableQty:N3}";
+                LocalLogService.WriteInformation("Cashier", "Add exact batch - start", diag);
+
+                var cartSnapshot = string.Join(
+                    Environment.NewLine,
+                    Cart.Select(c => $"CartLine: VariantId={c.ItemVariantId}, BatchId={c.ItemBatchId}, BatchNo='{c.BatchNo}', Qty={c.Quantity}, UnitPrice={c.UnitPrice:N2}, CataloguePriceSource='{c.CataloguePriceSource}'"));
+                LocalLogService.WriteInformation("Cashier", "Cart snapshot before add", cartSnapshot);
+            }
+            catch { /* never let logging break the flow */ }
+
             if (!item.IsStockItem)
             {
                 _ = ShowNotificationAsync("Only Stock Items can be added from a stock batch.", "#EF4444");
@@ -1903,6 +1941,13 @@ namespace POS.Cashier.UI.ViewModels
 
             if (existingItem != null)
             {
+                try
+                {
+                    string reason = $"Merging into existing cart line. Existing BatchId={existingItem.ItemBatchId}, BatchNo='{existingItem.BatchNo}', ExistingQty={existingItem.Quantity}, SelectedBatchId={selectedBatch.ItemBatchId}, SelectedBatchNo='{selectedBatch.BatchNo}'";
+                    LocalLogService.WriteInformation("Cashier", "Add exact batch - merging", reason);
+                }
+                catch { }
+
                 if (existingItem.Quantity + quantity > selectedBatch.AvailableQty)
                 {
                     _ = ShowNotificationAsync($"Only {QuantityDisplayFormatter.Format(selectedBatch.AvailableQty)} available in selected stock.", "#F59E0B");
@@ -1971,6 +2016,13 @@ namespace POS.Cashier.UI.ViewModels
                 : $"Batch {selectedBatch.BatchNo}";
 
             _ = ShowNotificationAsync($"Added: {item.DisplayDescription} / {batchText}", "#10B981");
+
+            try
+            {
+                LocalLogService.WriteInformation("Cashier", "Add exact batch - finished",
+                    $"Added cart line: VariantId={cartItem.ItemVariantId}, BatchId={cartItem.ItemBatchId}, BatchNo='{cartItem.BatchNo}', Qty={cartItem.Quantity}");
+            }
+            catch { }
         }
 
         private void AddServiceToCart(
@@ -3408,3 +3460,11 @@ namespace POS.Cashier.UI.ViewModels
         }
     }
 }
+// Remove/replace the existingItem search and merge logic and ALWAYS create a new cart line:
+// (Insert this in place of the block that finds `existingItem` and merges.)
+//
+// NOTE: Doing this will create separate lines for repeated selections of the same batch.
+
+// --- Force new cart line: do not attempt to merge into an existing line ---
+// (Comment-out or remove the existing `existingItem` search / merge block above.)
+// Proceed straight to creating the CartItem and add it to Cart.

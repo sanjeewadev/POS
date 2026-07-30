@@ -732,16 +732,6 @@ namespace POS.BackOffice.UI.ViewModels
         // =========================================================
 
         [RelayCommand]
-        private void SaveDraft()
-        {
-            MessageBox.Show(
-                "Draft supplier returns are not supported in this version. Please post the supplier return directly.",
-                "Draft Disabled",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        }
-
-        [RelayCommand]
         private async Task PostReturnAsync()
         {
             await PostReturnExecutionAsync();

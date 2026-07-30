@@ -111,6 +111,11 @@
             <DataTemplate DataType="{x:Type viewmodels:VatReportViewModel}">
                 <reports:VatReportView />
             </DataTemplate>
+            <!-- In POS.BackOffice.UI/App.xaml, inside <Application.Resources> -->
+            <DataTemplate DataType="{x:Type viewmodels:ShopCostFreeIssueReportViewModel}">
+                <reports:ShopCostFreeIssueReportView/>
+            </DataTemplate>
+
 
             <DataTemplate DataType="{x:Type viewmodels:SalesExplorerViewModel}">
                 <sales:SalesExplorerView />

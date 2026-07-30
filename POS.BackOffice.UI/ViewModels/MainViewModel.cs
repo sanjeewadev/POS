@@ -362,6 +362,10 @@ namespace POS.BackOffice.UI.ViewModels
             NavigateTo<CashMovementDashboardViewModel>();
 
         [RelayCommand]
+        private void NavigateToShopCostFreeIssueReport() =>
+            NavigateTo<ShopCostFreeIssueReportViewModel>();
+
+        [RelayCommand]
         private void NavigateToVatReport() =>
             NavigateTo<VatReportViewModel>();
     }

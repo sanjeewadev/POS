@@ -236,7 +236,7 @@
                                     <TextBox Grid.Column="1" Text="{Binding Username}" Style="{StaticResource ClassicInput}" FontWeight="Bold"/>
 
                                     <TextBlock Grid.Column="3" Text="Password:" Style="{StaticResource InlineLabel}"/>
-                                    <PasswordBox Grid.Column="4" x:Name="pwdBox" Style="{StaticResource ClassicPassword}" ToolTip="Use at least 6 characters with a letter and number. Leave blank to keep the existing password."/>
+                                    <PasswordBox Grid.Column="4" x:Name="pwdBox" Style="{StaticResource ClassicPassword}" ToolTip="Use at least 4 characters with a letter and number. Leave blank to keep the existing password."/>
                                 </Grid>
 
                             </StackPanel>

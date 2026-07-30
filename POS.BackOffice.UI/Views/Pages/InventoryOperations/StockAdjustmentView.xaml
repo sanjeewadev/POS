@@ -290,17 +290,6 @@
                                  ToolTip="Taken from the authenticated Manager or Administrator session."/>
                     </StackPanel>
 
-                    <StackPanel Margin="0,0,25,5">
-                        <TextBlock Text="Reference / Reason Document *"
-                                   Style="{StaticResource InlineLabel}"/>
-
-                        <TextBox Text="{Binding Reference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ClassicInput}"
-                                 Width="310"
-                                 Margin="0,4,0,0"
-                                 ToolTip="Example: Monthly stock audit, damage report, opening balance, manager approval note."/>
-                    </StackPanel>
-
                     <Border Background="#E0FFFF"
                             BorderBrush="#005555"
                             BorderThickness="1"
@@ -772,19 +761,6 @@
                         <ColumnDefinition Width="15"/>
                         <ColumnDefinition Width="390"/>
                     </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="Final Audit Notes / Board Remarks:"
-                                   Style="{StaticResource InlineLabel}"
-                                   Margin="0,0,0,5"/>
-
-                        <TextBox Text="{Binding Remarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 TextWrapping="Wrap"
-                                 AcceptsReturn="True"
-                                 Height="78"
-                                 Style="{StaticResource ClassicInput}"
-                                 IsReadOnly="{Binding IsDocumentLocked}"/>
-                    </StackPanel>
 
                     <Rectangle Grid.Column="1"
                                Width="1"

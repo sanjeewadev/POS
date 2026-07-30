@@ -1694,14 +1694,10 @@ namespace POS.Cashier.UI.Views
 
         private void SeekBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (!CanStartTerminalAction(
-                    "opening product search",
-                    requireSelectedLine: false))
-            {
+            if (!CanStartTerminalAction("opening product search", requireSelectedLine: false))
                 return;
-            }
 
-            if (_isDialogOpen)
+            if (_isDialogOpen || ViewModel == null || App.Services == null)
                 return;
 
             _isDialogOpen = true;
@@ -1711,13 +1707,30 @@ namespace POS.Cashier.UI.Views
 
             try
             {
-                var seekDialog = new ProductSeekDialog(
-                    ViewModel?.IsWholesaleMode == true)
+                var seekViewModel = App.Services.GetRequiredService<PluSearchViewModel>();
+                seekViewModel.ConfigurePricingMode(ViewModel.IsWholesaleMode);
+
+                // CONTINUOUS SCANNING MAGIC: Listen for the item and throw it in the cart in the background!
+                seekViewModel.ItemSelected += async (result) =>
+                {
+                    if (result != null)
+                    {
+                        await ViewModel.AddItemFromSeekAsync(result);
+                    }
+                };
+
+                var seekDialog = new ProductSeekDialog(seekViewModel)
                 {
                     Owner = this
                 };
 
                 seekDialog.ShowDialog();
+
+                ResetTerminalActionMode();
+            }
+            catch (Exception ex)
+            {
+                _ = ViewModel.ShowNotificationAsync($"Search error: {ex.Message}", "#EF4444");
             }
             finally
             {

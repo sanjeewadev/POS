@@ -5,7 +5,7 @@ namespace POS.Core.Utilities
 {
     public static class PasswordPolicy
     {
-        public const int MinimumLength = 6;
+        public const int MinimumLength = 4;
         public const int MaximumLength = 64;
 
         public static (bool IsValid, string ErrorMessage) Validate(

@@ -119,12 +119,6 @@ namespace POS.BackOffice.UI.ViewModels
         private string _authorizedBy = string.Empty;
 
         [ObservableProperty]
-        private string _reference = string.Empty;
-
-        [ObservableProperty]
-        private string _remarks = string.Empty;
-
-        [ObservableProperty]
         private string _documentStatus = "UNPOSTED";
 
         [ObservableProperty]
@@ -465,8 +459,8 @@ namespace POS.BackOffice.UI.ViewModels
                     AdjustmentDate = AdjustmentDate,
                     AdjustmentMode = AdjustmentMode.Trim(),
                     AuthorizedBy = AuthorizedBy.Trim(),
-                    Reference = Reference.Trim(),
-                    Remarks = Remarks.Trim(),
+                    Reference = string.Empty,
+                    Remarks = string.Empty,
 
                     TotalImpact = TotalImpact,
                     TotalIncreaseQty = TotalIncreaseQty,
@@ -556,24 +550,6 @@ namespace POS.BackOffice.UI.ViewModels
             if (AuthorizedBy.Trim().Length > 50)
             {
                 MessageBox.Show("Authorized By cannot be longer than 50 characters.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(Reference))
-            {
-                MessageBox.Show("Reference / reason document is required before posting.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return false;
-            }
-
-            if (Reference.Trim().Length > 100)
-            {
-                MessageBox.Show("Reference cannot be longer than 100 characters.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return false;
-            }
-
-            if ((Remarks ?? string.Empty).Trim().Length > 500)
-            {
-                MessageBox.Show("Final audit notes cannot be longer than 500 characters.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
 
@@ -689,8 +665,6 @@ namespace POS.BackOffice.UI.ViewModels
             AdjustmentDate = DateTime.Now;
             AdjustmentMode = "Physical Count Correction";
             AuthorizedBy = GetCurrentUserName();
-            Reference = string.Empty;
-            Remarks = string.Empty;
             ScanBarcode = string.Empty;
 
             AdjustmentLines.Clear();

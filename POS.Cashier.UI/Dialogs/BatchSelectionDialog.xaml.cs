@@ -50,13 +50,14 @@ namespace POS.Cashier.UI.Dialogs
             _isCompleting = true;
             try
             {
+                // Setting DialogResult automatically closes the window!
                 DialogResult = accepted;
             }
             catch
             {
-                // ShowDialog is expected; closing remains safe if ownership changes.
+                // Only manually close if DialogResult fails
+                Close();
             }
-            Close();
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -76,22 +77,23 @@ namespace POS.Cashier.UI.Dialogs
             }
         }
 
-        private void BatchDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        // UPDATED: Single-click handler replaces the double-click handler
+        private void BatchDataGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton != MouseButton.Left ||
-                _viewModel.ConfirmCommand.CanExecute(null) == false)
+            // Notice the <DataGridRow> added here!
+            if (e.OriginalSource is DependencyObject source && FindParent<DataGridRow>(source) != null)
             {
-                return;
-            }
+                e.Handled = true;
 
-            if (e.OriginalSource is DependencyObject source &&
-                FindParent<DataGridRow>(source) == null)
-            {
-                return;
+                // Push the code to the back of the UI queue so the mouse click can finish first!
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (_viewModel.ConfirmCommand.CanExecute(null))
+                    {
+                        _viewModel.ConfirmCommand.Execute(null);
+                    }
+                }), System.Windows.Threading.DispatcherPriority.Background);
             }
-
-            _viewModel.ConfirmCommand.Execute(null);
-            e.Handled = true;
         }
 
         private static T? FindParent<T>(DependencyObject? child)

@@ -443,17 +443,6 @@ namespace POS.Core.Repositories
             }
         }
 
-        public async Task SaveSupplierReturnAsync(
-            SupplierReturnHeader header,
-            List<SupplierReturnLine> lines,
-            bool isDraft)
-        {
-            if (isDraft)
-                throw new InvalidOperationException("Draft supplier returns are not supported. Please post the supplier return directly.");
-
-            await PostSupplierReturnAsync(header, lines);
-        }
-
         public async Task<SupplierDebitNoteDto> GetSupplierDebitNoteAsync(int supplierReturnHeaderId)
         {
             using AppDbContext context = await _contextFactory.CreateDbContextAsync();

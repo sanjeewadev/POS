@@ -134,6 +134,12 @@ namespace POS.BackOffice.UI
             services.AddTransient<VatReportRepository>();
             services.AddTransient<DashboardRepository>();
 
+            // In POS.BackOffice.UI/App.xaml.cs, inside ConfigureServices method:
+
+services.AddTransient<ShopCostFreeIssueReportRepository>();
+services.AddTransient<ShopCostFreeIssueReportViewModel>();
+
+
             // ==========================================
             // CORE SERVICES
             // ==========================================

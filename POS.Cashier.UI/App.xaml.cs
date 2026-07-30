@@ -76,6 +76,7 @@ namespace POS.Cashier.UI
             // Core repositories.
             services.AddTransient<UserRepository>();
             services.AddTransient<ItemMasterRepository>();
+            services.AddTransient<CategoryRepository>();
             services.AddTransient<SalesRepository>();
             services.AddTransient<SalesDocumentRepository>();
             services.AddTransient<CashierCartRepository>();
@@ -88,8 +89,7 @@ namespace POS.Cashier.UI
 
             services.AddSingleton<AuthService>();
             services.AddSingleton<CashierLockService>();
-            services.AddSingleton<
-                ICashierBatchSelectionService,
+            services.AddTransient<ICashierBatchSelectionService,
                 CashierBatchSelectionService>();
 
             services.AddSingleton<SalesDocumentTextFormatter>();
@@ -126,6 +126,8 @@ namespace POS.Cashier.UI
             services.AddTransient<PluSearchViewModel>();
             services.AddTransient<CustomerReturnViewModel>();
             services.AddTransient<StockInquiryViewModel>();
+            services.AddTransient<BatchSelectionViewModel>();
+            services.AddTransient<BatchSelectionDialog>();
 
             services.AddTransient<ExpressItemRepository>();
             services.AddTransient<StockInquiryRepository>();

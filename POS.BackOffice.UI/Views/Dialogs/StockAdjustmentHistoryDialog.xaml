@@ -1,8 +1,8 @@
 <Window x:Class="POS.BackOffice.UI.Views.Dialogs.StockAdjustmentHistoryDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Stock Adjustment History and Reversal"
-        Width="1250"
+        Title="Stock Adjustment History"
+        Width="1100"
         Height="760"
         MinWidth="1000"
         MinHeight="620"
@@ -35,35 +35,26 @@
                     <ColumnDefinition Width="120"/>
                     <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="130"/>
-                    <ColumnDefinition Width="10"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="220"/>
                     <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="From" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <DatePicker Grid.Column="1" SelectedDate="{Binding FromDate, Mode=TwoWay}" Height="26"/>
+                <TextBlock Grid.Column="0" Text="From" VerticalAlignment="Center" FontWeight="SemiBold" />
+                <DatePicker Grid.Column="1" SelectedDate="{Binding FromDate, Mode=TwoWay}" Height="26" />
 
-                <TextBlock Grid.Column="3" Text="To" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate, Mode=TwoWay}" Height="26"/>
+                <TextBlock Grid.Column="3" Text="To" VerticalAlignment="Center" FontWeight="SemiBold" />
+                <DatePicker Grid.Column="4" SelectedDate="{Binding ToDate, Mode=TwoWay}" Height="26" />
 
-                <TextBlock Grid.Column="6" Text="Status" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <ComboBox Grid.Column="7"
-                          ItemsSource="{Binding StatusOptions}"
-                          SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"
-                          Height="26"/>
-
-                <TextBlock Grid.Column="9" Text="Search" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <TextBox Grid.Column="10"
+                <TextBlock Grid.Column="6" Text="Search" VerticalAlignment="Center" FontWeight="SemiBold" />
+                <TextBox Grid.Column="7"
                          Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          Height="26"
                          Padding="5,0"
-                         VerticalContentAlignment="Center"/>
+                         VerticalContentAlignment="Center" />
 
-                <Button Grid.Column="12"
+                <Button Grid.Column="9"
                         Content="REFRESH"
                         Command="{Binding LoadHistoryCommand}"
                         Height="28"
@@ -71,8 +62,7 @@
                         FontWeight="Bold"
                         Background="#005555"
                         Foreground="White"/>
-
-                <TextBlock Grid.Column="13"
+                <TextBlock Grid.Column="11"
                            Text="{Binding StatusMessage}"
                            VerticalAlignment="Center"
                            Foreground="#555555"
@@ -98,7 +88,6 @@
                 <DataGridTextColumn Header="Document" Binding="{Binding AdjustmentNo}" Width="110"/>
                 <DataGridTextColumn Header="Date" Binding="{Binding AdjustmentDate, StringFormat=yyyy-MM-dd HH:mm}" Width="135"/>
                 <DataGridTextColumn Header="Mode" Binding="{Binding AdjustmentMode}" Width="175"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85"/>
                 <DataGridTextColumn Header="Authorized By" Binding="{Binding AuthorizedBy}" Width="110"/>
                 <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="*"/>
                 <DataGridTextColumn Header="Lines" Binding="{Binding LineCount}" Width="55"/>
@@ -132,7 +121,6 @@
                 <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCost, StringFormat=N2}" Width="80"/>
                 <DataGridTextColumn Header="Impact" Binding="{Binding CostImpact, StringFormat=N2}" Width="85"/>
                 <DataGridTextColumn Header="Reason" Binding="{Binding ReasonCode}" Width="145"/>
-                <DataGridTextColumn Header="Line Status" Binding="{Binding LineStatus}" Width="90"/>
                 <DataGridTextColumn Header="Remarks" Binding="{Binding LineRemarks}" Width="180"/>
             </DataGrid.Columns>
         </DataGrid>
@@ -144,40 +132,7 @@
                 Padding="8"
                 Margin="0,8,0,0">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="10"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="10"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0"
-                           Text="Reversal reason *"
-                           VerticalAlignment="Center"
-                           FontWeight="Bold"
-                           Foreground="#991B1B"
-                           Margin="0,0,8,0"/>
-
-                <TextBox Grid.Column="1"
-                         Text="{Binding ReverseReason, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Height="28"
-                         Padding="6,0"
-                         VerticalContentAlignment="Center"
-                         MaxLength="250"/>
-
-                <Button Grid.Column="3"
-                        Content="REVERSE SELECTED"
-                        Command="{Binding ReverseSelectedCommand}"
-                        IsEnabled="{Binding CanReverseSelected}"
-                        Height="30"
-                        Padding="18,0"
-                        FontWeight="Bold"
-                        Background="#B45309"
-                        Foreground="White"/>
-
-                <Button Grid.Column="5"
+                <Button HorizontalAlignment="Right"
                         Content="CLOSE"
                         Click="Close_Click"
                         Height="30"

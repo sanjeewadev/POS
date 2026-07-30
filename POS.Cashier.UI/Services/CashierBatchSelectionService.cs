@@ -2,11 +2,12 @@ using POS.Cashier.UI.Dialogs;
 using POS.Cashier.UI.ViewModels;
 using POS.Core.Models.DTOs;
 using POS.Core.Repositories;
+using POS.Core.Services;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace POS.Cashier.UI.Services
 {
@@ -45,28 +46,80 @@ namespace POS.Cashier.UI.Services
             if (Application.Current == null)
                 return null;
 
-            return await Application.Current.Dispatcher.InvokeAsync(() =>
+            try
             {
-                var viewModel = new BatchSelectionViewModel(request);
-                var dialog = new BatchSelectionDialog(viewModel)
+                return await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Owner = ResolveOwner()
-                };
+                    try
+                    {
+                        var viewModel = new BatchSelectionViewModel(request);
+                        var dialog = new BatchSelectionDialog(viewModel);
 
-                bool? accepted = dialog.ShowDialog();
-                return accepted == true
-                    ? viewModel.SelectionResult
-                    : null;
-            });
-        }
+                        try
+                        {
+                            if (Application.Current.MainWindow != null &&
+                                Application.Current.MainWindow.IsVisible)
+                            {
+                                dialog.Owner = Application.Current.MainWindow;
+                            }
+                        }
+                        catch (Exception exOwner)
+                        {
+                            // log but continue
+                            LocalLogService.WriteException("Cashier", "Setting dialog.Owner", exOwner);
+                        }
 
-        private static Window? ResolveOwner()
-        {
-            Window? active = Application.Current.Windows
-                .OfType<Window>()
-                .FirstOrDefault(window => window.IsActive && window.IsVisible);
+                        dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-            return active ?? Application.Current.MainWindow;
+                        bool? accepted = null;
+                        try
+                        {
+                            accepted = dialog.ShowDialog();
+                        }
+                        catch (Exception exShow)
+                        {
+                            LocalLogService.WriteException("Cashier", "Show batch selection dialog", exShow);
+                            try
+                            {
+                                MessageBox.Show(
+                                    "Failed to open batch selection dialog.\n\n" +
+                                    "Technical details were saved in the local POS Logs folder.",
+                                    "Batch Dialog Error",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Error);
+                            }
+                            catch { /* swallow UI message failures */ }
+
+                            return null;
+                        }
+
+                        return accepted == true
+                            ? viewModel.SelectionResult
+                            : null;
+                    }
+                    catch (Exception ex)
+                    {
+                        LocalLogService.WriteException("Cashier", "SelectBatchAsync dispatcher operation", ex);
+                        try
+                        {
+                            MessageBox.Show(
+                                "Unexpected error while preparing batch selection.\n\n" +
+                                "Technical details were saved in the local POS Logs folder.",
+                                "Batch Selection Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+                        }
+                        catch { }
+
+                        return null;
+                    }
+                }, DispatcherPriority.ApplicationIdle);
+            }
+            catch (Exception exOuter)
+            {
+                LocalLogService.WriteException("Cashier", "SelectBatchAsync outer", exOuter);
+                return null;
+            }
         }
     }
 }

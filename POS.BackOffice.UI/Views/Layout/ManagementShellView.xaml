@@ -130,6 +130,9 @@
                           Command="{Binding NavigateToVatReportCommand}"/>
                 <MenuItem Header="Suspended Transactions"
                           Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}"/>
+                <!-- Inside the "Reports" MenuItem -->
+<MenuItem Header="Shop Cost Free Issues" Command="{Binding NavigateToShopCostFreeIssueReportCommand}"/>
+          
             </MenuItem>
 
             <MenuItem Header="_Administration">

@@ -1711,6 +1711,104 @@ namespace POS.Core.Repositories
         // CASHIER SEEK / PRODUCT SEARCH
         // =========================================================
 
+        public async Task<List<ProductSeekResultDto>> SearchSellableProductsAsync(string searchTerm, string categoryFilter = "ALL CATEGORIES")
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            var query = context.ItemVariants
+                .Include(v => v.ItemParent)
+                    .ThenInclude(p => p.Category)
+                .AsNoTracking()
+                .Where(v =>
+                    !v.IsDeactivated &&
+                    !v.ItemParent.IsDeactivated &&
+                    !v.ItemParent.IsSaleLocked &&
+                    (v.ItemParent.ItemType == ItemTypeCodes.StockItem || v.ItemParent.ItemType == ItemTypeCodes.Service));
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                string term = searchTerm.Trim();
+                string upperTerm = term.ToUpperInvariant();
+
+                query = query.Where(v =>
+                    EF.Functions.Like(v.ItemParent.ItemName, $"%{term}%") ||
+                    EF.Functions.Like(v.ItemParent.ItemCode, $"%{term}%") ||
+                    v.SkuCode.ToUpper() == upperTerm ||
+                    (v.Barcode != null && v.Barcode.ToUpper() == upperTerm) ||
+                    EF.Functions.Like(v.VariantDescription, $"%{term}%")
+                );
+            }
+
+            if (!string.IsNullOrWhiteSpace(categoryFilter) && categoryFilter != "ALL CATEGORIES")
+            {
+                query = query.Where(v => v.ItemParent.Category.CategoryName == categoryFilter);
+            }
+
+            var variants = await query
+                .OrderBy(v => v.ItemParent.ItemName)
+                .ThenBy(v => v.VariantDescription)
+                .Take(100)
+                .Select(v => new
+                {
+                    v.Id,
+                    v.ItemParentId,
+                    v.ItemParent.ItemCode,
+                    v.ItemParent.ItemName,
+                    v.SkuCode,
+                    v.Barcode,
+                    VariantDescription = string.IsNullOrWhiteSpace(v.VariantDescription) ? "Standard" : v.VariantDescription,
+                    CategoryName = v.ItemParent.Category.CategoryName,
+                    v.RetailPrice,
+                    WholesalePrice = v.WholesalePrice > 0m ? v.WholesalePrice : v.RetailPrice,
+                    v.ItemParent.ItemType,
+                    HasBatchTracking = v.ItemParent.ItemType == ItemTypeCodes.StockItem && v.ItemParent.HasBatchTracking
+                })
+                .ToListAsync();
+
+            if (!variants.Any())
+                return new List<ProductSeekResultDto>();
+
+            var variantIds = variants.Select(v => v.Id).ToList();
+
+            var rawStock = await context.ItemBatches
+                            .Where(b => variantIds.Contains(b.ItemVariantId) && !b.IsDeactivated)
+                            .Select(b => new { b.ItemVariantId, b.CurrentStock })
+                            .ToListAsync();
+
+            var stockData = rawStock
+                .GroupBy(b => b.ItemVariantId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.CurrentStock));
+
+            var results = new List<ProductSeekResultDto>();
+
+            foreach (var v in variants)
+            {
+                decimal stock = v.ItemType == ItemTypeCodes.Service ? 0m : (stockData.TryGetValue(v.Id, out decimal s) ? s : 0m);
+
+                results.Add(new ProductSeekResultDto
+                {
+                    VariantId = v.Id,
+                    ParentId = v.ItemParentId,
+                    ItemCode = v.ItemCode,
+                    ItemName = v.ItemName,
+                    SkuCode = v.SkuCode,
+                    Barcode = v.Barcode ?? string.Empty,
+                    VariantDescription = v.VariantDescription,
+                    CategoryName = v.CategoryName,
+                    RetailPrice = v.RetailPrice,
+                    WholesalePrice = v.WholesalePrice,
+                    IsService = v.ItemType == ItemTypeCodes.Service,
+                    HasBatchTracking = v.HasBatchTracking,
+                    StockOnHand = stock
+                });
+            }
+
+            return results;
+        }
+
+
+        // I think old function. But I dont know really
+
         public async Task<List<ParentSeekDto>> SearchSeekParentsAsync(
             string searchTerm,
             string categoryFilter = "ALL CATEGORIES")

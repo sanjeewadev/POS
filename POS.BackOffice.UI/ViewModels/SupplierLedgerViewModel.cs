@@ -8,12 +8,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using POS.Core.Models;
 using POS.Core.Repositories;
+using POS.Core.Services;
 
 namespace POS.BackOffice.UI.ViewModels
 {
     public partial class SupplierLedgerViewModel : ObservableObject
     {
         private readonly SupplierLedgerRepository _repository;
+        private readonly AuthService _authService;
         private List<SupplierLedgerEntryDto> _allLedgerEntries = new();
 
         [ObservableProperty]
@@ -73,9 +75,12 @@ namespace POS.BackOffice.UI.ViewModels
 
         public ObservableCollection<SupplierLedgerEntryDto> LedgerEntries { get; } = new();
 
-        public SupplierLedgerViewModel(SupplierLedgerRepository repository)
+        public SupplierLedgerViewModel(
+            SupplierLedgerRepository repository,
+            AuthService authService)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
             _ = InitializeAsync();
         }
 
@@ -333,7 +338,7 @@ namespace POS.BackOffice.UI.ViewModels
                     DueDate = PaymentDate.Date,
                     IsPaid = true,
 
-                    CreatedBy = "Admin",
+                    CreatedBy = GetCurrentUserName(),
                     CreatedAt = DateTime.Now,
 
                     Remarks = string.IsNullOrWhiteSpace(PaymentRemarks)
@@ -505,6 +510,11 @@ namespace POS.BackOffice.UI.ViewModels
             return entryType == "DEBIT_NOTE" ||
                    entryType == "CREDIT_NOTE" ||
                    entryType == "SUPPLIER_RETURN";
+        }
+
+        private string GetCurrentUserName()
+        {
+            return (_authService.CurrentUser?.Username ?? string.Empty).Trim();
         }
     }
 }

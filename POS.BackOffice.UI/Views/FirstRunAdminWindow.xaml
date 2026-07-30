@@ -237,7 +237,7 @@
                         BorderThickness="1"
                         Padding="8"
                         Margin="0,8,0,0">
-                    <TextBlock Text="Password requirement: at least 6 characters with at least one letter and one number. Special characters are optional."
+                    <TextBlock Text="Password requirement: at least 4 characters with at least one letter and one number. Special characters are optional."
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                TextWrapping="Wrap"/>
                 </Border>
