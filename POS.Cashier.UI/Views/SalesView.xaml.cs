@@ -29,6 +29,8 @@ namespace POS.Cashier.UI.Views
         private TerminalActionMode _terminalActionMode = TerminalActionMode.Normal;
         private bool _isDialogOpen;
 
+        private DispatcherTimer? _clockTimer;
+
         private enum TerminalActionMode
         {
             Normal,
@@ -90,6 +92,9 @@ namespace POS.Cashier.UI.Views
             UpdateNumLockStatus();
             await HandleActiveCartRecoveryAsync();
             ReturnFocusToTerminalInput();
+
+            // start the live clock
+            StartClock();
         }
 
         private void SalesView_Activated(object? sender, EventArgs e)
@@ -201,6 +206,9 @@ namespace POS.Cashier.UI.Views
                 ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
 
             _lockService.Stop();
+
+            _clockTimer?.Stop();
+            _clockTimer = null;
         }
 
         private void ViewModel_PropertyChanged(
@@ -866,8 +874,8 @@ namespace POS.Cashier.UI.Views
                 ViewModel.PaymentLines.Count - 1);
 
             ViewModel.SelectedPaymentLine = ViewModel.PaymentLines[currentIndex];
-            PaymentDataGrid.SelectedItem = ViewModel.SelectedPaymentLine;
-            PaymentDataGrid.ScrollIntoView(ViewModel.SelectedPaymentLine);
+
+            // UI grid was removed — selection/scrolling is no longer performed here.
         }
 
         private void MovePaymentSelectionToBoundary(bool toStart)
@@ -877,8 +885,8 @@ namespace POS.Cashier.UI.Views
 
             int index = toStart ? 0 : ViewModel.PaymentLines.Count - 1;
             ViewModel.SelectedPaymentLine = ViewModel.PaymentLines[index];
-            PaymentDataGrid.SelectedItem = ViewModel.SelectedPaymentLine;
-            PaymentDataGrid.ScrollIntoView(ViewModel.SelectedPaymentLine);
+
+            // UI grid removed — no SelectedItem/ScrollIntoView calls.
         }
 
         private void MoveCartSelection(int direction)
@@ -2634,7 +2642,29 @@ namespace POS.Cashier.UI.Views
 
         private void MoreBtn_Click(object sender, RoutedEventArgs e)
         {
-            OpenMoreMenu();
+            var btn = (Button)sender;
+            var menu = (ContextMenu)FindResource("MoreContextMenu");
+            menu.PlacementTarget = btn;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            menu.IsOpen = true;
+        }
+
+        private void LockTerminalMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            // Defer actual navigation/action until after the menu closes
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // Reuse your existing handler or perform navigation here
+                LockTerminalBtn_Click(this, new RoutedEventArgs());
+            }), DispatcherPriority.Background);
+        }
+
+        private void ShiftMenuMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                ShiftMenuBtn_Click(this, new RoutedEventArgs());
+            }), DispatcherPriority.Background);
         }
 
         private void OpenMoreMenu()
@@ -2873,5 +2903,28 @@ namespace POS.Cashier.UI.Views
             if (result == true && previewDialog.PrintRequested)
                 await ViewModel.PrintPreparedDocumentAsync(document);
         }
+
+        private void StartClock()
+{
+    // stop and detach any existing timer to avoid duplicate handlers
+    if (_clockTimer != null)
+    {
+        _clockTimer.Stop();
+        _clockTimer.Tick -= ClockTimer_Tick;
+    }
+
+    _clockTimer = new DispatcherTimer
+    {
+        Interval = TimeSpan.FromSeconds(1)
+    };
+    _clockTimer.Tick += ClockTimer_Tick;
+    _clockTimer.Start();
+}
+
+private void ClockTimer_Tick(object? sender, EventArgs e)
+{
+    if (ViewModel != null)
+        ViewModel.CurrentDate = DateTime.Now;
+}
     }
 }

@@ -4,10 +4,10 @@
         xmlns:components="clr-namespace:POS.Cashier.UI.Components"
         Title="Cheque Payment"
         Style="{StaticResource CashierDialogWindow}"
-        Width="920"
-        Height="650"
-        MinWidth="840"
-        MinHeight="560"
+        Width="900"
+        Height="620"
+        MinWidth="820"
+        MinHeight="540"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -19,7 +19,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="70"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="56"/>
+            <RowDefinition Height="58"/>
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
@@ -35,7 +35,7 @@
                         Style="{StaticResource CashierTransactionHeaderIcon}">
                     <TextBlock Text="CHQ"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="10"
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
@@ -67,21 +67,21 @@
             <Grid MinHeight="420">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="340"/>
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0"
                         Style="{StaticResource CashierPanel}"
                         CornerRadius="3"
-                        Padding="14"
-                        Margin="0,0,10,0">
+                        Padding="10"
+                        Margin="0,0,8,0">
                     <Grid>
+                        <!-- Match Card dialog row sizing pattern -->
                         <Grid.RowDefinitions>
                             <RowDefinition Height="50"/>
                             <RowDefinition Height="58"/>
                             <RowDefinition Height="58"/>
-                            <RowDefinition Height="52"/>
-                            <RowDefinition Height="52"/>
+                            <RowDefinition Height="64"/>
                             <RowDefinition Height="52"/>
                             <RowDefinition Height="52"/>
                             <RowDefinition Height="*"/>
@@ -117,7 +117,7 @@
 
                         <Grid Grid.Row="1" Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="BALANCE DUE"
@@ -132,9 +132,9 @@
                             </Border>
                         </Grid>
 
-                        <Grid Grid.Row="2" Margin="0,8,0,0">
+                        <Grid Grid.Row="2" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="CHEQUE AMOUNT"
@@ -150,9 +150,9 @@
                                      PreviewMouseLeftButtonDown="ChequeAmountTextBox_PreviewMouseLeftButtonDown"/>
                         </Grid>
 
-                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                        <Grid Grid.Row="3" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="CHEQUE NUMBER"
@@ -168,9 +168,9 @@
                                      PreviewMouseLeftButtonDown="ChequeNoTextBox_PreviewMouseLeftButtonDown"/>
                         </Grid>
 
-                        <Grid Grid.Row="4" Margin="0,8,0,0">
+                        <Grid Grid.Row="4" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="BANK NAME"
@@ -186,9 +186,9 @@
                                      PreviewMouseLeftButtonDown="BankNameTextBox_PreviewMouseLeftButtonDown"/>
                         </Grid>
 
-                        <Grid Grid.Row="5" Margin="0,8,0,0">
+                        <Grid Grid.Row="5" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="BRANCH"
@@ -206,7 +206,7 @@
 
                         <Grid Grid.Row="6" Margin="0,8,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="CHEQUE DATE"

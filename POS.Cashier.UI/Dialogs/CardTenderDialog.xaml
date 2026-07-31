@@ -19,7 +19,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="70"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="56"/>
+            <RowDefinition Height="58"/>
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
@@ -67,20 +67,20 @@
             <Grid MinHeight="390">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="320"/>
+                    <ColumnDefinition Width="340"/>
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0"
                         Style="{StaticResource CashierPanel}"
                         CornerRadius="3"
-                        Padding="14"
-                        Margin="0,0,10,0">
+                        Padding="10"
+                        Margin="0,0,8,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="50"/>
                             <RowDefinition Height="58"/>
                             <RowDefinition Height="58"/>
-                            <RowDefinition Height="58"/>
+                            <RowDefinition Height="64"/>
                             <RowDefinition Height="52"/>
                             <RowDefinition Height="52"/>
                             <RowDefinition Height="*"/>
@@ -132,7 +132,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid Grid.Row="2" Margin="0,8,0,0">
+                        <Grid Grid.Row="2" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
@@ -149,7 +149,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                        <Grid Grid.Row="3" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
@@ -167,7 +167,7 @@
                                      PreviewMouseLeftButtonDown="CardAmountTextBox_PreviewMouseLeftButtonDown"/>
                         </Grid>
 
-                        <Grid Grid.Row="4" Margin="0,8,0,0">
+                        <Grid Grid.Row="4" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
@@ -186,7 +186,7 @@
                                      PreviewMouseLeftButtonDown="LastSixDigitsTextBox_PreviewMouseLeftButtonDown"/>
                         </Grid>
 
-                        <Grid Grid.Row="5" Margin="0,8,0,0">
+                        <Grid Grid.Row="5" Margin="0,6,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
@@ -253,7 +253,7 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="145"/>
                     <ColumnDefinition Width="178"/>
                 </Grid.ColumnDefinitions>
 

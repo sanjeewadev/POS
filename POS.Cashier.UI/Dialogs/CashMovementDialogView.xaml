@@ -4,14 +4,59 @@
         Title="Cash Movement"
         Style="{StaticResource CashierDialogWindow}"
         Width="560"
-        Height="610"
+        Height="640"
         MinWidth="500"
-        MinHeight="540"
+        MinHeight="580"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         Loaded="Window_Loaded"
         PreviewKeyDown="Window_PreviewKeyDown">
+    <Window.Resources>
+        <Style x:Key="CashierTransactionReasonListItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F3FAFD"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <!-- selected background/foreground -->
+                                <Setter TargetName="Bd" Property="Background" Value="#CDEBF6"/>
+                                <Setter Property="Foreground" Value="#0B3A4B"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource CashierBorderBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="0,0,0,1"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True"/>
+                                    <Condition Property="IsEnabled" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Grid.RowDefinitions>
             <RowDefinition Height="72"/>
@@ -32,25 +77,23 @@
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding HeaderTitle}" Style="{StaticResource CashierDialogTitle}"/>
-                    <TextBlock Text="Select a reason and confirm the cash movement"
-                               Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
                 </StackPanel>
                 <TextBlock Grid.Column="2" Text="ENTER = CONFIRM   |   ESC = CANCEL"
                            Style="{StaticResource CashierShortcutHint}" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" Margin="10" Padding="6"
+        <ScrollViewer Grid.Row="1" Margin="6" Padding="4"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
-                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,4">
                     <StackPanel>
                         <TextBlock Text="AMOUNT" Style="{StaticResource CashierTransactionFieldLabel}"/>
                         <Border Style="{StaticResource CashierTransactionAmountPanel}"
                                 Background="{StaticResource CashierTransactionDueBrush}"
                                 BorderBrush="{StaticResource CashierTransactionDueBorderBrush}"
-                                Margin="0,6,0,0">
+                                Margin="0,4,0,0">
                             <TextBlock Text="{Binding Amount, StringFormat='Rs. {0:N2}'}"
                                        Style="{StaticResource CashierTransactionAmountText}"
                                        Foreground="White"/>
@@ -58,7 +101,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
+                <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,4">
                     <StackPanel>
                         <TextBlock Text="SELECT REASON" Style="{StaticResource CashierTransactionFieldLabel}"/>
                         <ListBox x:Name="ReasonListBox"
@@ -70,7 +113,7 @@
                                  Background="{StaticResource CashierInputBrush}"
                                  MinHeight="150"
                                  MaxHeight="190"
-                                 Margin="0,6,0,0"
+                                 Margin="0,4,0,0"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                     </StackPanel>
                 </Border>
@@ -81,16 +124,14 @@
                                    Style="{StaticResource CashierTransactionFieldLabel}"/>
                         <TextBox Text="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource CashierTransactionMultilineTextBox}"
-                                 Margin="0,6,0,0" MaxLength="500"/>
+                                 Margin="0,4,0,0" MaxLength="500"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,0">
             <Grid>
-                <TextBlock Text="The active cashier is recorded as the authorized operator."
-                           Style="{StaticResource CashierTransactionFooterHint}"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="CANCEL" IsCancel="True" Click="CancelBtn_Click"
                             Style="{StaticResource CashierTransactionCancelButton}" Margin="0,0,10,0"/>

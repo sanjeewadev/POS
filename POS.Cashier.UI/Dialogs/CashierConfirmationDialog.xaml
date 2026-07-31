@@ -93,7 +93,7 @@
 
         <Border Grid.Row="2"
                 Style="{StaticResource CashierDialogFooter}"
-                Margin="10,0,10,10">
+                Margin="10,0,10,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Apply Free Issue"
         Style="{StaticResource CashierDialogWindow}"
-        Width="760"
-        Height="570"
+        Width="780"
+        Height="640"
         MinWidth="700"
-        MinHeight="500"
+        MinHeight="600"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
@@ -40,14 +40,14 @@
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1" Margin="10" Padding="6"
+        <ScrollViewer Grid.Row="1" Margin="10" Padding="0"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
                 <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="150"/>
@@ -77,12 +77,12 @@
                             <ColumnDefinition Width="135"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="130"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="48"/>
-                            <RowDefinition Height="56"/>
-                            <RowDefinition Height="42"/>
+                            <RowDefinition Height="64"/>
+                            <RowDefinition Height="36"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="FREE ISSUE RULE" Style="{StaticResource CashierTransactionFieldLabel}" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1" Grid.ColumnSpan="3"
@@ -113,7 +113,7 @@
                         <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource CashierTransactionStatusSymbol}"/>
                         <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="White"
-                                   FontWeight="Bold" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                                   FontWeight="Normal" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
                     </Grid>
                 </Border>
 
@@ -124,7 +124,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="CANCEL" Command="{Binding CancelCommand}" IsCancel="True"
                         Style="{StaticResource CashierTransactionCancelButton}" Margin="0,0,10,0"/>

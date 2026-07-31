@@ -12,6 +12,11 @@
         Activated="SalesView_Activated">
 
     <Window.Resources>
+        <ContextMenu x:Key="MoreContextMenu">
+            <MenuItem Header="Lock Terminal (F12)" Click="LockTerminalMenuItem_Click"/>
+            <Separator/>
+            <MenuItem Header="Shift Menu (F11)" Click="ShiftMenuMenuItem_Click"/>
+        </ContextMenu>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <!-- Native readable selection colors -->
@@ -1205,46 +1210,6 @@
                                            MaxWidth="250"
                                            TextTrimming="CharacterEllipsis"/>
                             </Grid>
-
-                            <DataGrid x:Name="PaymentDataGrid"
-                                      Grid.Row="3"
-                                      ItemsSource="{Binding PaymentLines}"
-                                      SelectedItem="{Binding SelectedPaymentLine, Mode=TwoWay}"
-                                      Visibility="{Binding IsPaymentModeActive, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                      AutoGenerateColumns="False"
-                                      CanUserAddRows="False"
-                                      CanUserDeleteRows="False"
-                                      CanUserResizeColumns="False"
-                                      CanUserReorderColumns="False"
-                                      CanUserSortColumns="False"
-                                      IsReadOnly="True"
-                                      HeadersVisibility="Column"
-                                      RowHeight="27"
-                                      MaxHeight="86"
-                                      Margin="0,8,0,0"
-                                      Background="#F8FAFC"
-                                      BorderBrush="#94A3B8"
-                                      BorderThickness="1"
-                                      GridLinesVisibility="Horizontal"
-                                      HorizontalGridLinesBrush="#CBD5E1"
-                                      SelectionMode="Single"
-                                      SelectionUnit="FullRow"
-                                      Focusable="False">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="PAYMENT"
-                                                        Binding="{Binding DisplayPaymentType}"
-                                                        Width="*"/>
-                                    <DataGridTextColumn Header="APPLIED"
-                                                        Binding="{Binding Amount, StringFormat={}{0:N2}}"
-                                                        Width="120"/>
-                                    <DataGridTextColumn Header="TENDERED"
-                                                        Binding="{Binding TenderedAmount, StringFormat={}{0:N2}}"
-                                                        Width="120"/>
-                                    <DataGridTextColumn Header="CHANGE"
-                                                        Binding="{Binding ChangeAmount, StringFormat={}{0:N2}}"
-                                                        Width="110"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
                         </Grid>
                     </Border>
                 </Grid>
@@ -1252,29 +1217,30 @@
                 <!-- RIGHT: ACTIONS AND NUMPAD -->
                 <Grid Grid.Column="1">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="3*"/>
-                        <RowDefinition Height="5*"/>
+                        <RowDefinition Height="4*"/>
+                        <RowDefinition Height="6*"/>
                     </Grid.RowDefinitions>
 
                     <UniformGrid Grid.Row="0" Columns="3" Rows="4" Margin="0,0,0,1">
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Suspend (F6)" Click="SuspendBtn_Click"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Recall (F7)" Click="RecallBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Return" Click="ReturnBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Inv Disc  F4" Click="InvoiceDiscountBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Line Disc  F3" Click="FixedDiscountBtn_Click"/>
 
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Suspend  F6" Click="SuspendBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Recall  F7" Click="RecallBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Qty  F2 / *" Click="QtyBtn_Click"/>
-
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Line Disc (F3)" Click="FixedDiscountBtn_Click"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="% Disc (Shift+F3)" Click="PercentDiscountBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Float Cash" Click="FloatCashBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="% Disc  Shift+F3" Click="PercentDiscountBtn_Click"/>
+
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Qty (F2 / *)" Click="QtyBtn_Click"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Inv Disc (F4)" Click="InvoiceDiscountBtn_Click"/>
                         <Button Background="{StaticResource ActionBtnBrush}" Content="Drawer" Click="DrawerBtn_Click"/>
+
 
                         <Button Background="{StaticResource ActionBtnBrush}"
                                 Style="{StaticResource RightActionIconButtonStyle}"
-                                Tag="&#xE721;"
-                                Content="Search  F1"
+                                
+                                Content="Search (F1)"
                                 Click="SeekBtn_Click"/>
-                        <Button Background="{StaticResource ActionBtnBrush}" Content="Remove  Del / -" Click="RemoveBtn_Click"/>
+                        <Button Background="{StaticResource ActionBtnBrush}" Content="Remove (Del / -)" Click="RemoveBtn_Click"/>
                         <Button Background="{StaticResource CancelBtnBrush}"
                                 Style="{StaticResource RightActionIconButtonStyle}"
                                 Tag="&#xE711;"
@@ -1284,24 +1250,10 @@
 
                     <UniformGrid Grid.Row="1"
                                  Columns="3"
-                                 Rows="6"
+                                 Rows="5"
                                  Background="#0E3A47">
 
-                        <Button Background="#0E3A47"
-                                BorderBrush="#B9CDD4"
-                                Foreground="White"
-                                Content="*  QTY"
-                                FontSize="14"
-                                Click="QtyBtn_Click"/>
-
-                        <Button Background="#0E3A47"
-                                BorderBrush="#B9CDD4"
-                                Foreground="White"
-                                Content="+  CASH"
-                                FontSize="14"
-                                Click="PlusBtn_Click"/>
-
-                        <Button Background="#991B1B"
+                        <Button Background="#292727"
                                 BorderBrush="#B9CDD4"
                                 Foreground="White"
                                 Style="{StaticResource RightActionIconButtonStyle}"
@@ -1313,17 +1265,11 @@
                         <Button Background="#0E3A47"
                                 BorderBrush="#B9CDD4"
                                 Foreground="White"
-                                Content="/"
+                                Content=":)"
                                 FontSize="18"
                                 IsEnabled="False"
                                 ToolTip="Reserved"/>
 
-                        <Button Background="#0E3A47"
-                                BorderBrush="#B9CDD4"
-                                Foreground="White"
-                                Content="-  REMOVE"
-                                FontSize="12"
-                                Click="MinusBtn_Click"/>
 
                         <Button Background="#0E3A47"
                                 BorderBrush="#B9CDD4"
@@ -1458,8 +1404,8 @@
 
                     <Button Background="{StaticResource ActionBtnBrush}"
                             Style="{StaticResource CompactTextButtonStyle}"
-                            Content="Reload"
-                            Click="ReloadBtn_Click"/>
+                            Content="{Binding PricingModeButtonText}"
+                            Click="PricingModeBtn_Click"/>
 
                     <Button Background="{StaticResource ExpressBtnBrush}"
                             Foreground="White"
@@ -1472,42 +1418,13 @@
                             Style="{StaticResource CompactTextButtonStyle}"
                             Content="Stock Inq."
                             Click="StockInquiryBtn_Click"/>
+                   
 
                     <Button Background="{StaticResource ActionBtnBrush}"
                             Style="{StaticResource CompactTextButtonStyle}"
                             Content="Sell Voucher"
                             Click="SellVoucherBtn_Click"/>
-
-                    <Button Background="{StaticResource ActionBtnBrush}"
-                            Style="{StaticResource CompactTextButtonStyle}"
-                            Content="Customer R."
-                            Click="CustomerRegisterBtn_Click"/>
-
-                    <Button Background="{StaticResource ActionBtnBrush}"
-                            Style="{StaticResource CompactTextButtonStyle}"
-                            Content="Customer  F5"
-                            Click="CustomerBtn_Click"/>
-
-                    <Button Background="{StaticResource ActionBtnBrush}"
-                            Style="{StaticResource CompactTextButtonStyle}"
-                            Content="{Binding PricingModeButtonText}"
-                            Click="PricingModeBtn_Click"/>
-
-                    <Button x:Name="MoreBtn"
-                            Background="{StaticResource SystemBtnBrush}"
-                            Style="{StaticResource FeatureIconButtonStyle}"
-                            Tag="&#xE712;"
-                            Content="More"
-                            Click="MoreBtn_Click">
-                        <Button.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Lock Terminal (F12)" Click="LockTerminalBtn_Click"/>
-                                <Separator/>
-                                <MenuItem Header="Shift Menu (F11)" Click="ShiftMenuBtn_Click"/>
-                            </ContextMenu>
-                        </Button.ContextMenu>
-                    </Button>
-
+                    
                     <Button Background="{StaticResource ActionBtnBrush}"
                             Style="{StaticResource CompactTextButtonStyle}"
                             Content="No Sale"
@@ -1522,6 +1439,28 @@
                             Style="{StaticResource CompactTextButtonStyle}"
                             Content="Free"
                             Click="FreeBtn_Click"/>
+
+                    <Button x:Name="MoreBtn"
+                            Background="{StaticResource SystemBtnBrush}"
+                            Style="{StaticResource FeatureIconButtonStyle}"
+                            Tag="&#xE712;"
+                            Content="More"
+                            Click="MoreBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactTextButtonStyle}"
+                            Content="Refresh =)"
+                            Click="ReloadBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactTextButtonStyle}"
+                            Content="Customer R."
+                            Click="CustomerRegisterBtn_Click"/>
+
+                    <Button Background="{StaticResource ActionBtnBrush}"
+                            Style="{StaticResource CompactTextButtonStyle}"
+                            Content="Customer  F5"
+                            Click="CustomerBtn_Click"/>
 
                     <Button Background="{StaticResource LoyaltyBgBrush}"
                             Foreground="#FACC15"
@@ -1595,15 +1534,22 @@
                     </UniformGrid>
 
                     <Button Grid.Column="1"
-                            Background="{StaticResource SubTotalBtnBrush}"
-                            Style="{StaticResource PrimaryFeatureIconButtonStyle}"
-                            Tag="&#xE8EF;"
-                            Content="Payment  F10"
-                            FontSize="18"
-                            Margin="0,1,1,1"
-                            HorizontalContentAlignment="Center"
-                            VerticalContentAlignment="Center"
-                            Click="SubTotalBtn_Click"/>
+                        Background="{StaticResource SubTotalBtnBrush}"
+                        Style="{StaticResource PrimaryFeatureIconButtonStyle}"
+                        Tag="&#xE8EF;"
+                        FontSize="18"
+                        Margin="0,1,1,1"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Click="SubTotalBtn_Click">
+                        <Button.Content>
+                            <TextBlock TextAlignment="Center">
+                                <Run Text="Sub Total" FontSize="20"/>
+                                <LineBreak/>
+                                <Run Text="(F10)" FontSize="18"/>
+                            </TextBlock>
+                        </Button.Content>
+                    </Button>
 
                     <Grid Grid.Column="2">
                         <Grid.RowDefinitions>
@@ -1615,7 +1561,7 @@
                                 Background="{StaticResource PluBtnBrush}"
                                 Style="{StaticResource PrimaryFeatureIconButtonStyle}"
                                 Tag="&#xEC5A;"
-                                Content="Search  F1"
+                                Content="Search (F1)"
                                 FontSize="20"
                                 Margin="0,1,1,1"
                                 Click="SeekBtn_Click"/>
@@ -1624,7 +1570,7 @@
                                 Background="{StaticResource CashBtnBrush}"
                                 Style="{StaticResource PrimaryFeatureIconButtonStyle}"
                                 Tag="&#xEC59;"
-                                Content="Cash  F8 / +"
+                                Content="Cash (F8 / +)"
                                 FontSize="20"
                                 Margin="0,1,1,1"
                                 Click="PayBtn_Click"/>

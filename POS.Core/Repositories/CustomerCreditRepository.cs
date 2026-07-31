@@ -359,17 +359,20 @@ namespace POS.Core.Repositories
                 .Where(row => row.CustomerPaymentReceiptId == receiptId)
                 .OrderBy(row => row.Id)
                 .ToListAsync();
-
+            
             StoreSettings? settings = await context.StoreSettings
                 .AsNoTracking()
                 .Where(row => row.IsActive)
                 .OrderBy(row => row.Id)
                 .FirstOrDefaultAsync();
-
-            decimal remainingBalance = await context.CustomerLedgers
+            
+            // Fetch all ledger entries for the customer into memory, then sum client-side.
+            // This resolves SQLite's limitation with Sum on decimal types while remaining compatible with SQL Server.
+            List<CustomerLedger> customerLedgers = await context.CustomerLedgers
                 .AsNoTracking()
                 .Where(row => row.CustomerMasterId == receipt.CustomerMasterId)
-                .SumAsync(row => (decimal?)(row.DebitAmount - row.CreditAmount)) ?? 0m;
+                .ToListAsync();
+            decimal remainingBalance = customerLedgers.Sum(row => row.DebitAmount - row.CreditAmount);
 
             string address = string.Join(", ", new[]
             {

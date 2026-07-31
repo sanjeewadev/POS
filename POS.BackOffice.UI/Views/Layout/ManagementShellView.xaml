@@ -117,7 +117,7 @@
                           Command="{Binding NavigateToSupplierLedgerCommand}"/>
                 <MenuItem Header="Cash Movement"
                           Command="{Binding NavigateToCashMovementDashboardCommand}"/>
-                <MenuItem Header="Float Cash Log"
+                <MenuItem Header="Shift Reconciliation"
                           Command="{Binding NavigateToFloatCashLogCommand}"/>
                 <MenuItem Header="Financial Summary"
                           Command="{Binding NavigateToFinancialSummaryCommand}"/>
@@ -128,7 +128,7 @@
                           Command="{Binding NavigateToSupplierReportCommand}"/>
                 <MenuItem Header="VAT Report &amp; Reconciliation"
                           Command="{Binding NavigateToVatReportCommand}"/>
-                <MenuItem Header="Suspended Transactions"
+                <MenuItem Header="Cart Activity Monitor"
                           Command="{Binding NavigateToSuspendedTransactionsMonitorCommand}"/>
                 <!-- Inside the "Reports" MenuItem -->
 <MenuItem Header="Shop Cost Free Issues" Command="{Binding NavigateToShopCostFreeIssueReportCommand}"/>

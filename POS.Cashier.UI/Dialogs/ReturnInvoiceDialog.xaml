@@ -167,8 +167,12 @@
                            Text="Authorized By"
                            Style="{StaticResource CashierOperationalInlineLabel}"/>
                 <TextBox Grid.Column="3"
-                         Text="{Binding AuthorizedBy, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource CashierOperationalTextBox}"/>
+                             Text="{Binding AuthorizedBy, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource CashierOperationalTextBox}"
+                             IsReadOnly="True"
+                             Background="#F3F4F6"
+                             Foreground="{StaticResource CashierTextBrush}"
+                             AutomationProperties.Name="Authorized by"/>
             </Grid>
         </Border>
 

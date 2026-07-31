@@ -22,7 +22,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="3*" MinHeight="220"/>
-            <RowDefinition Height="2.3*" MinHeight="260"/>
+            <RowDefinition Height="3*" MinHeight="260"/>
         </Grid.RowDefinitions>
 
         <!-- SEARCH AND PAGE ACTIONS -->

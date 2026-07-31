@@ -24,7 +24,7 @@
             <Grid>
                 <TextBlock Text="SUSPENDED TRANSACTIONS"
                            Style="{StaticResource CashierOperationalHeaderTitle}"/>
-                <TextBlock Text="ENTER recalls · ESC closes"
+                <TextBlock Text="ENTER recalls | ESC closes"
                            Style="{StaticResource CashierShortcutHint}"
                            HorizontalAlignment="Right"/>
             </Grid>

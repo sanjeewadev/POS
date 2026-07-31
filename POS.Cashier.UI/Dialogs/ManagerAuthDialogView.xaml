@@ -4,9 +4,9 @@
         Title="Manager Authorization"
         Style="{StaticResource CashierDialogWindow}"
         Width="470"
-        Height="430"
+        Height="490"
         MinWidth="430"
-        MinHeight="390"
+        MinHeight="485"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -31,18 +31,18 @@
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="MANAGER AUTHORIZATION" Style="{StaticResource CashierDialogTitle}"/>
-                    <TextBlock Text="Manager or administrator credentials are required"
+                    <TextBlock Text="MANAGER AUTH" Style="{StaticResource CashierDialogTitle}"/>
+                    <TextBlock Text="is required"
                                Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
                 </StackPanel>
-                <TextBlock Grid.Column="2" Text="ENTER = AUTHORIZE   |   ESC = CANCEL"
+                <TextBlock Grid.Column="2" Text="ESC = CANCEL"
                            Style="{StaticResource CashierShortcutHint}" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
         <Border Grid.Row="1" Style="{StaticResource CashierTransactionContentPanel}" Margin="10">
             <StackPanel>
-                <Border Style="{StaticResource CashierTransactionSectionPanel}" Margin="0,0,0,14">
+                <Border Style="{StaticResource CashierTransactionSectionPanel}" Margin="0,0,0,10">
                     <TextBlock Text="Enter the approving user's credentials. The password is cleared immediately after validation."
                                Style="{StaticResource CashierTransactionFooterHint}"/>
                 </Border>
@@ -51,12 +51,12 @@
                 <TextBox x:Name="UsernameBox"
                          Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
                          Style="{StaticResource CashierTransactionInputTextBox}"
-                         Margin="0,6,0,14" MaxLength="100"/>
+                         Margin="0,6,0,10" MaxLength="100"/>
 
                 <TextBlock Text="PASSWORD" Style="{StaticResource CashierTransactionFieldLabel}"/>
                 <PasswordBox x:Name="PwdBox"
                              Style="{StaticResource CashierTransactionPasswordBox}"
-                             Margin="0,6,0,14" MaxLength="256"/>
+                             Margin="0,6,0,10" MaxLength="256"/>
 
                 <Border Style="{StaticResource CashierTransactionSectionPanel}">
                     <TextBlock Text="{Binding ErrorMessage}"
@@ -66,7 +66,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,10">
+        <Border Grid.Row="2" Style="{StaticResource CashierDialogFooter}" Margin="10,0,10,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="CANCEL" IsCancel="True" Click="CancelBtn_Click"
                         Style="{StaticResource CashierTransactionCancelButton}" Margin="0,0,10,0"/>

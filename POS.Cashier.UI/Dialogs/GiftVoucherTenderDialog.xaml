@@ -4,7 +4,7 @@
         Title="Gift Voucher Payment"
         Style="{StaticResource CashierDialogWindow}"
         Width="900"
-        Height="620"
+        Height="630"
         MinWidth="820"
         MinHeight="540"
         WindowStartupLocation="CenterOwner"
@@ -18,7 +18,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="70"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="56"/>
+            <RowDefinition Height="58"/>
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
@@ -34,7 +34,7 @@
                         Style="{StaticResource CashierTransactionHeaderIcon}">
                     <TextBlock Text="GV"
                                Foreground="White"
-                               FontSize="13"
+                               FontSize="10"
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
@@ -45,7 +45,7 @@
                     <TextBlock Text="GIFT VOUCHER PAYMENT"
                                Style="{StaticResource CashierDialogTitle}"
                                FontSize="22"/>
-                    <TextBlock Text="Validate and apply a one-time voucher"
+                    <TextBlock Text="Scan or type the voucher barcode, verify it, then confirm the payment."
                                Style="{StaticResource CashierTransactionHeaderSubtitle}"/>
                 </StackPanel>
 
@@ -65,12 +65,13 @@
                       Focusable="False">
             <Border Style="{StaticResource CashierPanel}"
                     CornerRadius="3"
-                    Padding="14">
+                    Padding="10"
+                    Margin="0,0,8,0">
                 <Grid MinHeight="390">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="50"/>
                         <RowDefinition Height="58"/>
-                        <RowDefinition Height="54"/>
+                        <RowDefinition Height="58"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
@@ -120,7 +121,7 @@
                         </Border>
                     </Grid>
 
-                    <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid Grid.Row="2" Margin="0,6,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180"/>
                             <ColumnDefinition Width="*"/>
@@ -132,7 +133,7 @@
                                  Grid.Column="1"
                                  Text="{Binding VoucherBarcode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource CashierTransactionInputTextBox}"
-                                 FontSize="17"
+                                 FontSize="15"
                                  TabIndex="0"
                                  AutomationProperties.Name="Gift voucher barcode"/>
                         <Button Grid.Column="2"
@@ -147,7 +148,7 @@
                     <Border Grid.Row="3"
                             Margin="0,10,0,0"
                             Style="{StaticResource CashierStatusPanel}"
-                            Padding="12">
+                            Padding="10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -276,12 +277,6 @@
                             </StackPanel>
                         </Grid>
                     </Border>
-
-                    <TextBlock Grid.Row="4"
-                               Margin="0,8,0,0"
-                               Text="Scan or type the voucher barcode, verify it, then confirm the payment."
-                               Style="{StaticResource CashierMutedText}"
-                               FontWeight="SemiBold"/>
                 </Grid>
             </Border>
         </ScrollViewer>
@@ -294,7 +289,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="110"/>
-                    <ColumnDefinition Width="130"/>
+                    <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="190"/>
                 </Grid.ColumnDefinitions>
 

@@ -30,7 +30,7 @@ namespace POS.Cashier.UI.ViewModels
         private string _directoryTitle = "Customer Directory";
 
         [ObservableProperty]
-        private string _searchLabel = "Search (Code/Name/Phone/NIC/BR/VAT):";
+        private string _searchLabel = "Search:";
 
         [ObservableProperty]
         private string _attachButtonText = "ATTACH TO INVOICE";
@@ -101,7 +101,7 @@ namespace POS.Cashier.UI.ViewModels
             LookupMode = "All";
             DialogTitle = "CUSTOMER LOOKUP";
             DirectoryTitle = "Customer Directory";
-            SearchLabel = "Search (Code/Name/Phone/NIC/BR/VAT):";
+            SearchLabel = "Search:";
             AttachButtonText = "ATTACH CUSTOMER";
         }
 
@@ -110,7 +110,7 @@ namespace POS.Cashier.UI.ViewModels
             LookupMode = "Loyalty";
             DialogTitle = "LOYALTY CUSTOMER LOOKUP";
             DirectoryTitle = "Retail Loyalty Customers";
-            SearchLabel = "Search Loyalty Customer (Name/Phone/Code/NIC):";
+            SearchLabel = "Search:";
             AttachButtonText = "ATTACH LOYALTY CUSTOMER";
         }
 

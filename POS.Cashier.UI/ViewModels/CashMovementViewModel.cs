@@ -51,7 +51,7 @@ namespace POS.Cashier.UI.ViewModels
 
             if (string.Equals(movementType, CashMovementTypeCodes.PaidIn, StringComparison.OrdinalIgnoreCase))
             {
-                HeaderTitle = "PAID IN — RECEIVE CASH";
+                HeaderTitle = "PAID IN";
                 ThemeColorHex = "#10B981";
                 ButtonText = "CONFIRM PAID IN";
                 ReasonCategories.Add(CashMovementReasonCodes.ChangeFundAdjustment);
@@ -59,7 +59,7 @@ namespace POS.Cashier.UI.ViewModels
             }
             else
             {
-                HeaderTitle = "PAID OUT — REMOVE CASH";
+                HeaderTitle = "PAID OUT";
                 ThemeColorHex = "#EF4444";
                 ButtonText = "CONFIRM PAID OUT";
                 ReasonCategories.Add(CashMovementReasonCodes.StoreExpense);

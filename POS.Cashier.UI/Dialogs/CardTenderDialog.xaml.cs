@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using POS.Cashier.UI.ViewModels;
@@ -169,6 +170,120 @@ namespace POS.Cashier.UI.Dialogs
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
         {
             _viewModel.CancelCommand.Execute(null);
+        }
+
+        // =========================================================
+        // INPUT HELPERS: digits-only and decimal/number validation
+        // =========================================================
+
+        // Blocks non-digit characters for Last6 input
+        private void DigitsOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !e.Text.All(char.IsDigit);
+        }
+
+        private void DigitsOnly_Pasting(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.DataObject.GetDataPresent(DataFormats.Text))
+            {
+                e.CancelCommand();
+                return;
+            }
+
+            var text = e.DataObject.GetData(DataFormats.Text) as string ?? string.Empty;
+            if (!text.All(char.IsDigit))
+                e.CancelCommand();
+        }
+
+        // Allows digits and the current culture decimal separator, limits to a single separator and two fractional digits.
+        private void Decimal_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (sender is not TextBox tb)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            var decimalSep = System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+            // Reject any input text that contains non-digit and non-decimal-separator chars
+            if (!e.Text.All(c => char.IsDigit(c) || c.ToString() == decimalSep))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Build proposed text after input (account for selection)
+            string current = tb.Text ?? string.Empty;
+            int selectionStart = tb.SelectionStart;
+            int selectionLen = tb.SelectionLength;
+            string proposed;
+            if (selectionLen > 0)
+                proposed = current.Remove(selectionStart, selectionLen).Insert(selectionStart, e.Text);
+            else
+                proposed = current.Insert(selectionStart, e.Text);
+
+            // Only one decimal separator allowed
+            if (proposed.Count(ch => ch.ToString() == decimalSep) > 1)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Limit fractional digits to 2
+            int idx = proposed.IndexOf(decimalSep, System.StringComparison.Ordinal);
+            if (idx >= 0)
+            {
+                int decimals = proposed.Length - idx - 1;
+                if (decimals > 2)
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            e.Handled = false;
+        }
+
+        private void Decimal_Pasting(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.DataObject.GetDataPresent(DataFormats.Text))
+            {
+                e.CancelCommand();
+                return;
+            }
+
+            var pasteText = e.DataObject.GetData(DataFormats.Text) as string ?? string.Empty;
+            var decimalSep = System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+
+            // Reject if contains invalid chars
+            if (!pasteText.All(c => char.IsDigit(c) || c.ToString() == decimalSep))
+            {
+                e.CancelCommand();
+                return;
+            }
+
+            // Only one decimal separator allowed
+            if (pasteText.Count(ch => ch.ToString() == decimalSep) > 1)
+            {
+                e.CancelCommand();
+                return;
+            }
+
+            // If textbox already has a separator, ensure combined fractional length <= 2
+            if (sender is TextBox tb)
+            {
+                string combined = tb.Text.Insert(tb.SelectionStart, pasteText);
+                int idx = combined.IndexOf(decimalSep, System.StringComparison.Ordinal);
+                if (idx >= 0)
+                {
+                    int decimals = combined.Length - idx - 1;
+                    if (decimals > 2)
+                    {
+                        e.CancelCommand();
+                        return;
+                    }
+                }
+            }
         }
 
         protected override void OnClosed(System.EventArgs e)

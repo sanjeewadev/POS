@@ -35,7 +35,7 @@
                            Foreground="White"
                            FontSize="19"
                            FontWeight="Heavy"
-                           HorizontalAlignment="Center"/>
+                           HorizontalAlignment="Left"/>
 
                 <TextBlock Text="Retail customers with Loyalty enabled only"
                            Foreground="{StaticResource CashierHeaderHintBrush}"

@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True"
         ResizeMode="NoResize"
-        Height="450"
+        Height="480"
         Width="520"
         FocusManager.FocusedElement="{Binding ElementName=UsernameTextBox}">
 
