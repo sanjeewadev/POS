@@ -565,11 +565,12 @@
                     <Setter Property="Background" Value="#EAF4FF"/>
                 </Trigger>
 
+                <!-- Remove the left BorderThickness on the row (this was causing the layout shift) -->
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#123A66"/>
                     <Setter Property="Foreground" Value="#FFFFFF"/>
                     <Setter Property="BorderBrush" Value="#60A5FA"/>
-                    <Setter Property="BorderThickness" Value="4,0,0,0"/>
+                    <Setter Property="BorderThickness" Value="0"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -586,6 +587,20 @@
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="Foreground" Value="#FFFFFF"/>
                 </Trigger>
+
+                <!-- Add a left accent only inside the first cell of the selected row.
+                     This draws the visual 4px accent without changing overall layout
+                     (so header/columns won't shift). -->
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <!-- Column.DisplayIndex == 0 (first column) -->
+                        <Condition Binding="{Binding Column.DisplayIndex, RelativeSource={RelativeSource Self}}" Value="0"/>
+                        <!-- Ancestor DataGridRow is selected -->
+                        <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="BorderBrush" Value="#60A5FA"/>
+                    <Setter Property="BorderThickness" Value="4,0,0,0"/>
+                </MultiDataTrigger>
             </Style.Triggers>
         </Style>
 

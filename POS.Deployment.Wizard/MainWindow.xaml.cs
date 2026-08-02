@@ -683,6 +683,7 @@ public partial class MainWindow : Window
 
         string networkScript = Path.Combine(
             ToolsFolder,
+            "network",
             "Configure-POS-SqlServer-Network.ps1");
 
         if (!File.Exists(networkScript))

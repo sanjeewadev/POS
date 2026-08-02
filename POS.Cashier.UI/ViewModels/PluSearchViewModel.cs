@@ -19,11 +19,17 @@ namespace POS.Cashier.UI.ViewModels
         private readonly CategoryRepository _categoryRepository;
         private readonly ICashierBatchSelectionService _batchSelectionService;
 
+        // This holds the full list of search results from the repository.
+        private List<ProductSeekResultDto> _fullSearchResults = new();
+
         [ObservableProperty]
         private string _searchTerm = string.Empty;
 
         [ObservableProperty]
         private string _selectedCategory = "ALL CATEGORIES";
+
+        [ObservableProperty]
+        private bool _showAvailableOnly = true;
 
         [ObservableProperty]
         private bool _isBusy;
@@ -102,26 +108,23 @@ namespace POS.Cashier.UI.ViewModels
                 StatusText = "Searching...";
                 StatusColorHex = "#555555";
                 SearchResults.Clear();
-                SelectedProduct = null;
 
                 string term = (SearchTerm ?? string.Empty).Trim();
 
                 // Fast path for exact GRN batch barcode
                 if (!string.IsNullOrWhiteSpace(term))
                 {
-                    var exactBatch = await _itemRepository.GetSellableBatchByInternalBarcodeAsync(term);
-                    if (exactBatch != null)
+                    var exactBatch = await _itemRepository.GetSellableBatchByInternalBarcodeAsync(term); // This is a good optimization
+                    if (exactBatch != null) // If we find an exact batch, we don't need to search or filter
                     {
                         CompleteSelectionAndReset(new ProductSeekResult { VariantId = exactBatch.ItemVariantId, BatchId = exactBatch.ItemBatchId });
                         return;
                     }
                 }
 
-                var results = await _itemRepository.SearchSellableProductsAsync(term, SelectedCategory);
-                foreach (var item in results)
-                {
-                    SearchResults.Add(item);
-                }
+                _fullSearchResults = await _itemRepository.SearchSellableProductsAsync(term, SelectedCategory);
+
+                ApplyFilter();
 
                 if (SearchResults.Any())
                 {
@@ -144,6 +147,40 @@ namespace POS.Cashier.UI.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        partial void OnShowAvailableOnlyChanged(bool value)
+        {
+            ApplyFilter();
+        }
+
+        private void ApplyFilter()
+        {
+            SearchResults.Clear();
+            SelectedProduct = null;
+
+            IEnumerable<ProductSeekResultDto> filtered;
+
+            if (ShowAvailableOnly)
+            {
+                // Show service items OR items with stock > 0
+                filtered = _fullSearchResults
+                    .Where(r => r.IsService || r.StockOnHand > 0m);
+            }
+            else
+            {
+                // Show all items, but sort the ones with stock to the top.
+                filtered = _fullSearchResults
+                    .OrderByDescending(r => r.IsService || r.StockOnHand > 0m);
+            }
+
+            foreach (var item in filtered)
+            {
+                SearchResults.Add(item);
+            }
+
+            if (SearchResults.Any())
+                SelectedProduct = SearchResults.First();
         }
 
         private bool CanConfirmSelection() => SelectedProduct != null && !IsBusy;

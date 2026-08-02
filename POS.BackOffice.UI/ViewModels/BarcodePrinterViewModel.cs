@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Windows.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -19,6 +20,9 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly IBarcodePrintService _printService;
         private readonly BarcodePrinterRepository _printerRepository;
         private readonly StoreSettingsRepository _storeSettingsRepository;
+
+        private const int RecentGrnDaysBack = 30;
+        private const int RecentGrnTakeLimit = 50;
 
         private string _configuredStoreName = string.Empty;
 
@@ -45,6 +49,14 @@ namespace POS.BackOffice.UI.ViewModels
 
         [ObservableProperty]
         private BarcodeRecentGrnDto? _selectedGrn;
+
+        public ICollectionView RecentGrnsView { get; }
+
+        [ObservableProperty]
+        private string _grnSearchText = string.Empty;
+
+        [ObservableProperty]
+        private bool _isGrnDropdownOpen = false;
 
         // =========================================================
         // MANUAL INTAKE
@@ -109,6 +121,9 @@ namespace POS.BackOffice.UI.ViewModels
                     nameof(storeSettingsRepository));
 
             PrintQueue.CollectionChanged += PrintQueue_CollectionChanged;
+
+            RecentGrnsView = CollectionViewSource.GetDefaultView(RecentGrns);
+            RecentGrnsView.Filter = FilterRecentGrns;
 
             _ = InitializeAsync();
         }
@@ -197,8 +212,8 @@ namespace POS.BackOffice.UI.ViewModels
                 RecentGrns.Clear();
 
                 var grns = await _printerRepository.GetRecentPostedGrnsAsync(
-                    daysBack: 30,
-                    take: 50);
+                    daysBack: RecentGrnDaysBack,
+                    take: RecentGrnTakeLimit);
 
                 foreach (var grn in grns)
                     RecentGrns.Add(grn);
@@ -227,6 +242,26 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnSelectedPrinterChanged(string value)
         {
             PrintConfig.PrinterName = value ?? string.Empty;
+        }
+
+        partial void OnGrnSearchTextChanged(string value)
+        {
+            IsGrnDropdownOpen = true;
+            RecentGrnsView.Refresh();
+        }
+
+        private bool FilterRecentGrns(object item)
+        {
+            if (string.IsNullOrWhiteSpace(GrnSearchText))
+                return true;
+
+            if (item is BarcodeRecentGrnDto grn)
+            {
+                return grn.GrnNumber.Contains(GrnSearchText, StringComparison.OrdinalIgnoreCase) ||
+                       grn.SupplierName.Contains(GrnSearchText, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
         }
 
         partial void OnManualQtyChanged(int value)

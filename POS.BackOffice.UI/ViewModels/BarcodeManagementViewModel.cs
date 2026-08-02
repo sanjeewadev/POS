@@ -85,7 +85,6 @@ namespace POS.BackOffice.UI.ViewModels
                 await LoadDataAsync();
             };
 
-            _ = InitializeAsync();
         }
 
         // =========================================================
@@ -114,7 +113,10 @@ namespace POS.BackOffice.UI.ViewModels
 
                 SelectedCategory = Categories.FirstOrDefault();
 
-                await LoadDataAsync();
+                // We will call LoadDataAsync from a new PageLoaded command
+                // to prevent any potential double-load issues with the View's lifecycle.
+                StatusMessage = "Barcode management page ready.";
+                _ = LoadDataAsync();
             }
             catch (Exception ex)
             {
@@ -130,6 +132,13 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 IsBusy = false;
             }
+        }
+
+        [RelayCommand]
+        private async Task PageLoadedAsync()
+        {
+            // This is the primary entry point for loading data when the page appears.
+            await LoadDataAsync();
         }
 
         // =========================================================

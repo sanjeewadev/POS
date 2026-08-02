@@ -27,9 +27,6 @@ namespace POS.BackOffice.UI.Services
     {
         private const double MmToDip = 3.779527559055118;
 
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteObject(IntPtr hObject);
-
         public List<string> GetInstalledPrinters()
         {
             var printers = new List<string>();
@@ -261,21 +258,24 @@ namespace POS.BackOffice.UI.Services
 
                 using DrawingBitmap bitmap = writer.Write(item.Barcode);
 
-                IntPtr hBitmap = bitmap.GetHbitmap();
-
-                try
+                using (var memory = new System.IO.MemoryStream())
                 {
-                    var source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                        hBitmap,
-                        IntPtr.Zero,
-                        Int32Rect.Empty,
-                        BitmapSizeOptions.FromEmptyOptions());
+                    bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
+                    memory.Position = 0;
 
-                    source.Freeze();
+                    var bitmapImage = new BitmapImage();
+                    bitmapImage.BeginInit();
+                    bitmapImage.StreamSource = memory;
+                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmapImage.EndInit();
+                    bitmapImage.Freeze();
+
+                    var source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                        bitmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
 
                     var image = new WpfImage
                     {
-                        Source = source,
+                        Source = bitmapImage,
                         Stretch = Stretch.Uniform,
                         HorizontalAlignment = HorizontalAlignment.Center,
                         MaxWidth = pageSize.Width * 0.92,
@@ -283,10 +283,6 @@ namespace POS.BackOffice.UI.Services
                     };
 
                     panel.Children.Add(image);
-                }
-                finally
-                {
-                    DeleteObject(hBitmap);
                 }
 
                 var barcodeText = new TextBlock

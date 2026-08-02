@@ -125,10 +125,6 @@ namespace POS.Cashier.UI.Views
                 if (active == null)
                     return;
 
-                _isDialogOpen = true;
-                if (DimmingCurtain != null)
-                    DimmingCurtain.Visibility = Visibility.Visible;
-
                 var recoveryDialog = new ActiveCartRecoveryDialog(
                     active.ReferenceNo,
                     active.ItemCount,
@@ -137,7 +133,19 @@ namespace POS.Cashier.UI.Views
                     Owner = this
                 };
 
-                recoveryDialog.ShowDialog();
+                _isDialogOpen = true;
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Visible;
+                try
+                {
+                    recoveryDialog.ShowDialog();
+                }
+                finally
+                {
+                    if (DimmingCurtain != null)
+                        DimmingCurtain.Visibility = Visibility.Collapsed;
+                    _isDialogOpen = false;
+                }
 
                 if (recoveryDialog.SelectedAction == ActiveCartRecoveryAction.Resume)
                 {
@@ -155,7 +163,22 @@ namespace POS.Cashier.UI.Views
                         Owner = this
                     };
 
-                    if (reasonDialog.ShowDialog() == true)
+                    bool? reasonResult;
+                    _isDialogOpen = true;
+                    if (DimmingCurtain != null)
+                        DimmingCurtain.Visibility = Visibility.Visible;
+                    try
+                    {
+                        reasonResult = reasonDialog.ShowDialog();
+                    }
+                    finally
+                    {
+                        if (DimmingCurtain != null)
+                            DimmingCurtain.Visibility = Visibility.Collapsed;
+                        _isDialogOpen = false;
+                    }
+
+                    if (reasonResult == true)
                     {
                         await ViewModel.CancelRecoveredActiveCartAsync(
                             active,
@@ -188,13 +211,6 @@ namespace POS.Cashier.UI.Views
                     "Cart Recovery Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
-            }
-            finally
-            {
-                if (DimmingCurtain != null)
-                    DimmingCurtain.Visibility = Visibility.Collapsed;
-
-                _isDialogOpen = false;
             }
         }
 
@@ -1245,8 +1261,58 @@ namespace POS.Cashier.UI.Views
                 if (amount <= 0m)
                     amount = ViewModel.BalanceDue;
 
-                ViewModel.AddConfirmedCustomerCreditPayment(amount);
-                await FinalizePaymentIfCompleteAsync();
+                if (ViewModel.ActiveB2BCustomer == null)
+                {
+                    await ViewModel.ShowNotificationAsync("Customer Credit requires a selected customer.", "#EF4444");
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                if (amount <= 0m || amount > ViewModel.BalanceDue)
+                {
+                    await ViewModel.ShowNotificationAsync("Invalid Customer Credit amount.", "#EF4444");
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                if (!ViewModel.ActiveB2BCustomer.CanUseCredit)
+                {
+                    await ViewModel.ShowNotificationAsync(ViewModel.ActiveB2BCustomer.CreditWarningText, "#EF4444");
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                _isDialogOpen = true;
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Visible;
+
+                try
+                {
+                    var dialog = new CashierConfirmationDialog(
+                        "Confirm Customer Credit",
+                        "Apply Customer Credit",
+                        $"Apply Rs. {amount:N2} credit for {ViewModel.ActiveB2BCustomer.DisplayName}?",
+                        "This action will be recorded and cannot be undone.",
+                        "Confirm",
+                        "Cancel")
+                    {
+                        Owner = this
+                    };
+
+                    if (dialog.ShowDialog() == true)
+                    {
+                        ViewModel.AddConfirmedCustomerCreditPayment(amount);
+                        await FinalizePaymentIfCompleteAsync();
+                    }
+                }
+                finally
+                {
+                    if (DimmingCurtain != null)
+                        DimmingCurtain.Visibility = Visibility.Collapsed;
+
+                    _isDialogOpen = false;
+                }
+
                 ReturnFocusToTerminalInput();
                 return;
             }
@@ -1818,11 +1884,6 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            _isDialogOpen = true;
-
-            if (DimmingCurtain != null)
-                DimmingCurtain.Visibility = Visibility.Visible;
-
             try
             {
                 var heldCarts = await ViewModel.GetHeldCartsAsync();
@@ -1832,62 +1893,70 @@ namespace POS.Cashier.UI.Views
                     await ViewModel.ShowNotificationAsync(
                         "There are no held carts for this cashier and shift.",
                         "#F59E0B");
+            ReturnFocusToTerminalInput();
                     return;
                 }
 
-                var dialog = new HoldRecallDialog(heldCarts)
+        _isDialogOpen = true;
+        if (DimmingCurtain != null)
+            DimmingCurtain.Visibility = Visibility.Visible;
+
+        try
+                {
+            var dialog = new HoldRecallDialog(heldCarts)
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() != true || dialog.SelectedCart == null)
+                return;
+
+            if (dialog.RequestedAction == HoldRecallAction.Recall)
+            {
+                CashierCartSessionDto recalled =
+                    await ViewModel.RecallHeldCartAsync(dialog.SelectedCart.Id);
+
+                ResetTerminalActionMode();
+                await ViewModel.ShowNotificationAsync(
+                    $"Recalled {recalled.ReferenceNo}. Payment must be entered again.",
+                    "#10B981");
+                return;
+            }
+
+            if (dialog.RequestedAction == HoldRecallAction.Cancel)
+                    {
+                var reasonDialog = new CartCancellationReasonDialog
                 {
                     Owner = this
                 };
 
-                if (dialog.ShowDialog() != true || dialog.SelectedCart == null)
-                    return;
-
-                if (dialog.RequestedAction == HoldRecallAction.Recall)
+                if (reasonDialog.ShowDialog() == true)
                 {
-                    CashierCartSessionDto recalled =
-                        await ViewModel.RecallHeldCartAsync(dialog.SelectedCart.Id);
+                    await ViewModel.CancelHeldCartAsync(
+                        dialog.SelectedCart.Id,
+                        reasonDialog.ReasonCode,
+                        reasonDialog.ReasonText);
 
-                    ResetTerminalActionMode();
                     await ViewModel.ShowNotificationAsync(
-                        $"Recalled {recalled.ReferenceNo}. Payment must be entered again.",
-                        "#10B981");
-                    return;
+                        $"Cancelled held cart {dialog.SelectedCart.ReferenceNo}.",
+                        "#F59E0B");
                 }
-
-                if (dialog.RequestedAction == HoldRecallAction.Cancel)
-                {
-                    var reasonDialog = new CartCancellationReasonDialog
-                    {
-                        Owner = this
-                    };
-
-                    if (reasonDialog.ShowDialog() == true)
-                    {
-                        await ViewModel.CancelHeldCartAsync(
-                            dialog.SelectedCart.Id,
-                            reasonDialog.ReasonCode,
-                            reasonDialog.ReasonText);
-
-                        await ViewModel.ShowNotificationAsync(
-                            $"Cancelled held cart {dialog.SelectedCart.ReferenceNo}.",
-                            "#F59E0B");
                     }
                 }
+        finally
+        {
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Collapsed;
+
+            _isDialogOpen = false;
+            ReturnFocusToTerminalInput();
+        }
             }
             catch (Exception ex)
             {
                 await ViewModel.ShowNotificationAsync(
                     $"Recall failed: {ex.Message}",
                     "#EF4444");
-            }
-            finally
-            {
-                if (DimmingCurtain != null)
-                    DimmingCurtain.Visibility = Visibility.Collapsed;
-
-                _isDialogOpen = false;
-                ReturnFocusToTerminalInput();
             }
         }
 
@@ -2709,7 +2778,14 @@ namespace POS.Cashier.UI.Views
 
                 if (dialog.SelectedPrintOption == "LastBill")
                 {
-                    await ShowLastReceiptWorkflowAsync();
+                    if (ViewModel != null)
+                    {
+                        PreparedSalesDocument? document = await ViewModel.PrepareLastReceiptAsync();
+                        if (document != null)
+                        {
+                            await ShowPreparedDocumentDialogAsync(document);
+                        }
+                    }
                     return;
                 }
 
@@ -2743,24 +2819,76 @@ namespace POS.Cashier.UI.Views
             object sender,
             RoutedEventArgs e)
         {
-            await RunStandalonePrintWorkflowAsync(
-                ShowLastReceiptWorkflowAsync);
+            if (_isDialogOpen || ViewModel == null)
+                return;
+
+            try
+            {
+                PreparedSalesDocument? document = await ViewModel.PrepareLastReceiptAsync();
+
+                if (document == null)
+                {
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
+                _isDialogOpen = true;
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Visible;
+
+                try
+                {
+                    await ShowPreparedDocumentDialogAsync(document);
+                }
+                finally
+                {
+                    if (DimmingCurtain != null)
+                        DimmingCurtain.Visibility = Visibility.Collapsed;
+                    _isDialogOpen = false;
+                    ReturnFocusToTerminalInput();
+                }
+            }
+            catch (Exception ex)
+            {
+                HandlePrintWorkflowException(ex);
+            }
         }
 
         private async void PrintQuotationBtn_Click(
             object sender,
             RoutedEventArgs e)
         {
-            await RunStandalonePrintWorkflowAsync(
-                async () =>
-                {
-                    if (ViewModel != null)
-                        await ViewModel.PrintCurrentCartQuotationAsync();
-                });
+            if (_isDialogOpen || ViewModel == null)
+                return;
+
+            if (await CanPrintQuotationAsync() == false)
+                return;
+
+            await RunWorkflowWithDimmingAsync(ViewModel.PrintCurrentCartQuotationAsync);
         }
 
-        private async Task RunStandalonePrintWorkflowAsync(
-            Func<Task> workflow)
+        private async Task<bool> CanPrintQuotationAsync()
+        {
+            if (ViewModel == null) return false;
+
+            if (ViewModel.IsPaymentModeActive)
+            {
+                await ViewModel.ShowNotificationAsync("Cancel payment mode before printing quotation.", "#F59E0B");
+                ReturnFocusToTerminalInput();
+                return false;
+            }
+
+            if (!ViewModel.Cart.Any())
+            {
+                await ViewModel.ShowNotificationAsync("Cannot print quotation. Cart is empty.", "#F59E0B");
+                ReturnFocusToTerminalInput();
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task RunWorkflowWithDimmingAsync(Func<Task> workflow)
         {
             if (_isDialogOpen)
                 return;
@@ -2788,7 +2916,6 @@ namespace POS.Cashier.UI.Views
             }
         }
 
-
         private void HandlePrintWorkflowException(Exception ex)
         {
             LocalLogService.WriteException(
@@ -2809,34 +2936,6 @@ namespace POS.Cashier.UI.Views
                 "Document Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
-        }
-
-        private async Task ShowLastReceiptWorkflowAsync()
-        {
-            if (ViewModel == null)
-                return;
-
-            PreparedSalesDocument? document =
-                await ViewModel.PrepareLastReceiptAsync();
-
-            if (document == null)
-                return;
-
-            string preview =
-                await ViewModel.BuildDocumentPreviewAsync(document);
-
-            var dialog = new SalesDocumentPreviewDialog(
-                "Sales Receipt",
-                preview,
-                document.DocumentNumber)
-            {
-                Owner = this
-            };
-
-            bool? result = dialog.ShowDialog();
-
-            if (result == true && dialog.PrintRequested)
-                await ViewModel.PrintPreparedDocumentAsync(document);
         }
 
         private async Task ShowTaxInvoiceWorkflowAsync()
@@ -2902,6 +3001,30 @@ namespace POS.Cashier.UI.Views
 
             if (result == true && previewDialog.PrintRequested)
                 await ViewModel.PrintPreparedDocumentAsync(document);
+        }
+
+        private async Task ShowPreparedDocumentDialogAsync(PreparedSalesDocument document)
+        {
+            if (ViewModel == null)
+                return;
+
+            string preview =
+                await ViewModel.BuildDocumentPreviewAsync(document);
+
+            var dialog = new SalesDocumentPreviewDialog(
+                document.DocumentType == SalesDocumentTypes.TaxInvoice ? "Tax Invoice" : "Sales Receipt",
+                preview,
+                document.DocumentNumber)
+            {
+                Owner = this
+            };
+
+            bool? result = dialog.ShowDialog();
+
+            if (result == true && dialog.PrintRequested)
+            {
+                await ViewModel.PrintPreparedDocumentAsync(document);
+            }
         }
 
         private void StartClock()

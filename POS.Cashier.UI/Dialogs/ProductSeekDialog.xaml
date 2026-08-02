@@ -23,13 +23,23 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="PRODUCT SEARCH" Style="{StaticResource CashierOperationalHeaderTitle}"/>
                     <TextBlock Text="Find by name, code, SKU, or barcode" Foreground="{StaticResource CashierHeaderHintBrush}" FontSize="11"/>
                 </StackPanel>
+                <!-- Add this CheckBox to your ProductSeekDialog.xaml -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox
+                    Content="Show available stock only"
+                    IsChecked="{Binding ShowAvailableOnly}"
+                    VerticalAlignment="Center"
+                    Margin="10,0,0,0"
+                    ToolTip="When checked, hides items with zero or negative stock."/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="MODE: " Style="{StaticResource CashierShortcutHint}"/>
                     <TextBlock Text="{Binding PricingModeText}" Foreground="{StaticResource CashierHeaderHintBrush}" FontWeight="Bold" Margin="0,0,24,0"/>
                     <TextBlock Text="ENTER = CONFIRM   |   ESC = CLOSE" Style="{StaticResource CashierShortcutHint}"/>
