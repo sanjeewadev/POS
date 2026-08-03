@@ -7,6 +7,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using POS.Core.Configuration;
 using POS.Core.Models.DTOs;
@@ -38,7 +39,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
 
         public IReadOnlyList<string> PriceActions { get; } = new[]
         {
-            GrnSellingPriceActionCodes.UseCurrentMasterPrice,
             GrnSellingPriceActionCodes.UpdateMasterPrice,
             GrnSellingPriceActionCodes.SetBatchPriceOverride
         };
@@ -227,6 +227,16 @@ namespace POS.BackOffice.UI.Views.Dialogs
 
         private static decimal RoundMoney(decimal value) =>
             Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+        private void TextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                // Defer the SelectAll call to allow the TextBox to finish its focus processing.
+                // This is a common pattern to handle timing issues in WPF DataGrids.
+                Dispatcher.BeginInvoke(new Action(() => textBox.SelectAll()), DispatcherPriority.Input);
+            }
+        }
     }
 
     public partial class GrnBulkSellingPricePreviewRow : ObservableObject
@@ -234,12 +244,33 @@ namespace POS.BackOffice.UI.Views.Dialogs
         public GrnBulkSellingPricePreviewRow(GrnLineEntryDto sourceLine)
         {
             SourceLine = sourceLine ?? throw new ArgumentNullException(nameof(sourceLine));
-            _sellingPriceAction = GrnSellingPriceActionCodes.Normalize(sourceLine.SellingPriceAction, sourceLine.UpdateSellingPrices);
+
+            string initialAction = GrnSellingPriceActionCodes.Normalize(sourceLine.SellingPriceAction, sourceLine.UpdateSellingPrices);
+
+            // If the initial action is the (now hidden) 'UseCurrentMasterPrice',
+            // we must set it to a valid UI option. 'UpdateMasterPrice' is the new default.
+            if (initialAction == GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+            {
+                _sellingPriceAction = GrnSellingPriceActionCodes.UpdateMasterPrice;
+            }
+            else
+            {
+                _sellingPriceAction = initialAction;
+            }
+
             _newRetailPrice = sourceLine.NewRetailPrice;
             _newWholesalePrice = sourceLine.NewWholesalePrice;
             _newMinimumPrice = sourceLine.NewMinimumPrice;
             _newMaximumPrice = sourceLine.NewMaximumPrice;
             _apply = true;
+
+            var actions = new List<string> { GrnSellingPriceActionCodes.UpdateMasterPrice };
+            if (CanUseBatchOverride)
+            {
+                actions.Add(GrnSellingPriceActionCodes.SetBatchPriceOverride);
+            }
+            AvailablePriceActions = actions;
+
             NormalizeForAction();
         }
 
@@ -262,25 +293,38 @@ namespace POS.BackOffice.UI.Views.Dialogs
         [ObservableProperty] private decimal _newMinimumPrice;
         [ObservableProperty] private decimal _newMaximumPrice;
 
+        public IReadOnlyList<string> AvailablePriceActions { get; }
+
         public bool IsUseCurrentMaster => SellingPriceAction == GrnSellingPriceActionCodes.UseCurrentMasterPrice;
         public bool IsMasterUpdate => SellingPriceAction == GrnSellingPriceActionCodes.UpdateMasterPrice;
         public bool IsBatchOverride => SellingPriceAction == GrnSellingPriceActionCodes.SetBatchPriceOverride;
-        public bool CanEditRetailWholesale => !IsUseCurrentMaster;
-        public bool CanEditMasterBounds => IsMasterUpdate;
         public string PriceActionText => GrnSellingPriceActionCodes.ToDisplayText(SellingPriceAction);
 
         public string ValidationMessage
         {
             get
             {
+                bool priceChanged = NewRetailPrice != CurrentRetailPrice ||
+                                    NewWholesalePrice != CurrentWholesalePrice ||
+                                    NewMinimumPrice != CurrentMinimumPrice ||
+                                    NewMaximumPrice != CurrentMaximumPrice;
+
                 if (IsUseCurrentMaster)
-                    return string.Empty;
+                {
+                    return priceChanged
+                        ? "Price was changed. You must select 'Update Master' or 'Set Batch Override'."
+                        : string.Empty;
+                }
 
                 if (IsBatchOverride && !CanUseBatchOverride)
                     return "Batch-only pricing requires a true batch-tracked stock row.";
 
-                if (NewRetailPrice <= 0m || NewWholesalePrice <= 0m)
-                    return "Retail and Wholesale prices must be greater than zero.";
+                if (NewRetailPrice <= 0m)
+                    return "Retail price must be greater than zero.";
+
+                // Allow wholesale to be zero for retail-only stores, but not negative.
+                if (NewWholesalePrice < 0m)
+                    return "Wholesale price cannot be negative.";
 
                 decimal minimum = IsMasterUpdate ? NewMinimumPrice : CurrentMinimumPrice;
                 decimal maximum = IsMasterUpdate ? NewMaximumPrice : CurrentMaximumPrice;
@@ -334,7 +378,7 @@ namespace POS.BackOffice.UI.Views.Dialogs
             }
 
             if (IsBatchOverride && !CanUseBatchOverride)
-                SellingPriceAction = GrnSellingPriceActionCodes.UseCurrentMasterPrice;
+                SellingPriceAction = GrnSellingPriceActionCodes.UpdateMasterPrice;
 
             NormalizeForAction();
             RaiseDerivedProperties();
@@ -367,8 +411,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
             OnPropertyChanged(nameof(IsUseCurrentMaster));
             OnPropertyChanged(nameof(IsMasterUpdate));
             OnPropertyChanged(nameof(IsBatchOverride));
-            OnPropertyChanged(nameof(CanEditRetailWholesale));
-            OnPropertyChanged(nameof(CanEditMasterBounds));
             OnPropertyChanged(nameof(PriceActionText));
             OnPropertyChanged(nameof(ValidationMessage));
             OnPropertyChanged(nameof(WarningText));

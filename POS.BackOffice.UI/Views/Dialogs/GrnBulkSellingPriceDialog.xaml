@@ -93,7 +93,7 @@
                         </DataGridTemplateColumn.CellTemplate>
                         <DataGridTemplateColumn.CellEditingTemplate>
                             <DataTemplate>
-                                <ComboBox ItemsSource="{Binding DataContext.PriceActions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                <ComboBox ItemsSource="{Binding AvailablePriceActions}"
                                           SelectedItem="{Binding SellingPriceAction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellEditingTemplate>
@@ -101,24 +101,24 @@
                     <DataGridTextColumn Header="Current Retail" Binding="{Binding CurrentRetailPrice, StringFormat=N2}" IsReadOnly="True" Width="92"/>
                     <DataGridTemplateColumn Header="New Retail" Width="92">
                         <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewRetailPrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewRetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditRetailWholesale}" HorizontalContentAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewRetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Current W/S" Binding="{Binding CurrentWholesalePrice, StringFormat=N2}" IsReadOnly="True" Width="92"/>
                     <DataGridTemplateColumn Header="New W/S" Width="92">
                         <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewWholesalePrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewWholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditRetailWholesale}" HorizontalContentAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewWholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Master Min" Binding="{Binding CurrentMinimumPrice, StringFormat=N2}" IsReadOnly="True" Width="88"/>
                     <DataGridTemplateColumn Header="New Min" Width="88">
                         <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewMinimumPrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMinimumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditMasterBounds}" HorizontalContentAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMinimumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Master Max" Binding="{Binding CurrentMaximumPrice, StringFormat=N2}" IsReadOnly="True" Width="88"/>
                     <DataGridTemplateColumn Header="New Max" Width="88">
                         <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewMaximumPrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMaximumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditMasterBounds}" HorizontalContentAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMaximumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Status / Warning" Binding="{Binding WarningText}" IsReadOnly="True" Width="210"/>
+                    <DataGridTextColumn Header="Status / Warning" Binding="{Binding WarningText}" IsReadOnly="True" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

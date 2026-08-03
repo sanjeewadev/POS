@@ -1831,6 +1831,22 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 line.RecalculateLineAmounts();
 
+                // New Validation: If a selling price is changed, the user must explicitly
+                // choose to either update the master price or set a batch override.
+                // The "Use Current Master Price" option becomes invalid in this case.
+                bool priceChanged = line.NewRetailPrice != line.CurrentRetailPrice ||
+                                    line.NewWholesalePrice != line.CurrentWholesalePrice ||
+                                    line.NewMinimumPrice != line.CurrentMinimumPrice ||
+                                    line.NewMaximumPrice != line.CurrentMaximumPrice;
+
+                string action = GrnSellingPriceActionCodes.Normalize(line.SellingPriceAction);
+
+                if (priceChanged && action == GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+                {
+                    errors.Add(
+                        $"{line.DisplayName}: A selling price was changed. You must choose to either 'Update Master Price' or 'Set Batch Override'.");
+                }
+
                 errors.AddRange(line.ValidateForPost(isPoLinked));
 
                 if (line.ExpiryDate.HasValue &&

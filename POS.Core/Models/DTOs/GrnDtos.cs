@@ -625,7 +625,7 @@ namespace POS.Core.Models.DTOs
             if (priceAction == GrnSellingPriceActionCodes.UpdateMasterPrice ||
                 priceAction == GrnSellingPriceActionCodes.SetBatchPriceOverride)
             {
-                if (NewRetailPrice <= 0m || NewWholesalePrice <= 0m)
+                if (NewRetailPrice <= 0m || NewWholesalePrice < 0m)
                     errors.Add($"{DisplayName}: Retail and Wholesale prices must be greater than zero.");
 
                 if (NewRetailPrice < 0m || NewWholesalePrice < 0m ||

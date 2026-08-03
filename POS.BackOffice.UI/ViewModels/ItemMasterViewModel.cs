@@ -59,11 +59,13 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly UnitOfMeasureRepository _uomRepository;
         private readonly SupplierRepository _supplierRepository;
 
+        private readonly StoreSettingsRepository _storeSettingsRepository;
         // FIXED: Using your actual TaxRateRepository
         private readonly TaxRateRepository _taxRateRepository;
         private readonly IMessageBoxService _messageBoxService;
 
         private bool _isInitialized;
+        private bool _isVatRegisteredStore;
         private bool _isLoadingItem;
         private bool _isClearing;
         private bool _isUpdatingSupplierSelection;
@@ -349,12 +351,14 @@ namespace POS.BackOffice.UI.ViewModels
             AttributeRepository attributeRepository,
             UnitOfMeasureRepository uomRepository,
             SupplierRepository supplierRepository,
+            StoreSettingsRepository storeSettingsRepository,
             TaxRateRepository taxRateRepository, // FIXED
             IMessageBoxService messageBoxService)
         {
             _itemMasterRepository = itemMasterRepository ?? throw new ArgumentNullException(nameof(itemMasterRepository));
             _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
             _subCategoryRepository = subCategoryRepository ?? throw new ArgumentNullException(nameof(subCategoryRepository));
+            _storeSettingsRepository = storeSettingsRepository ?? throw new ArgumentNullException(nameof(storeSettingsRepository));
             _attributeRepository = attributeRepository ?? throw new ArgumentNullException(nameof(attributeRepository));
             _uomRepository = uomRepository ?? throw new ArgumentNullException(nameof(uomRepository));
             _supplierRepository = supplierRepository ?? throw new ArgumentNullException(nameof(supplierRepository));
@@ -445,9 +449,21 @@ namespace POS.BackOffice.UI.ViewModels
 
             await _taxRateRepository.EnsureDefaultsAsync();
 
+            var storeSettings = await _storeSettingsRepository.GetOrCreateDefaultAsync();
+            _isVatRegisteredStore = !string.IsNullOrWhiteSpace(storeSettings.TaxNo);
+
             var taxCategories = await _taxRateRepository.GetApprovedCategoriesAsync();
             foreach (var taxCategory in taxCategories.Where(t => t.IsActive))
+            {
+                // Only show "Standard VAT" as an option if the store is VAT registered.
+                if (!_isVatRegisteredStore &&
+                    string.Equals(taxCategory.CategoryCode, TaxCategoryCodes.Standard, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 TaxCategories.Add(taxCategory);
+            }
 
             var taxes = await _taxRateRepository.GetActiveAsync();
             foreach (var tax in taxes.OrderBy(t => t.DisplayOrder).ThenBy(t => t.TaxCode))
@@ -465,9 +481,13 @@ namespace POS.BackOffice.UI.ViewModels
 
                 SelectedTaxCategory =
                     TaxCategories.FirstOrDefault(t => t.Id == CurrentItem.TaxCategoryId)
-                    ?? ResolveUnambiguousLegacyTaxCategory(CurrentItem.TaxCode)
-                    ?? TaxCategories.FirstOrDefault(t =>
-                        t.CategoryCode == TaxCategoryCodes.Standard);
+                    ?? ResolveUnambiguousLegacyTaxCategory(CurrentItem.TaxCode);
+
+                if (SelectedTaxCategory == null)
+                {
+                    SelectedTaxCategory = TaxCategories.FirstOrDefault(t =>
+                        t.CategoryCode == (_isVatRegisteredStore ? TaxCategoryCodes.Standard : TaxCategoryCodes.OutOfScope));
+                }
 
                 ApplyTaxCategoryToCurrentItem();
             }
@@ -1259,17 +1279,11 @@ namespace POS.BackOffice.UI.ViewModels
                 if (!selectedVariants.Any())
                     return;
 
-                decimal defaultCost = selectedVariants
-                    .FirstOrDefault(v => v.CostPrice > 0)?.CostPrice
-                    ?? BulkCost;
-
-                if (defaultCost < 0)
-                    defaultCost = 0m;
-
+                // The dialog no longer needs a default cost. We assume its constructor
+                // and UI have been updated to remove the cost field.
                 var dialog = new AssignVariantSuppliersDialog(
                     AvailableSuppliers.ToList(),
-                    defaultCost,
-                    1,
+                    1, // Default MOQ
                     selectedVariants.Count)
                 {
                     Owner = GetDialogOwner()
@@ -1286,10 +1300,11 @@ namespace POS.BackOffice.UI.ViewModels
 
                 foreach (var variant in selectedVariants)
                 {
+                    // Use the variant's own CostPrice instead of a single cost from the dialog.
                     AddOrUpdateSupplierLinkForVariant(
                         variant,
                         dialog.SelectedSupplier,
-                        dialog.SupplierCost,
+                        variant.CostPrice,
                         dialog.MinimumOrderQuantity,
                         ref addedCount,
                         ref updatedCount);
@@ -1677,7 +1692,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             SelectedTaxCategory =
                 TaxCategories.FirstOrDefault(t =>
-                    t.CategoryCode == TaxCategoryCodes.Standard)
+                    t.CategoryCode == (_isVatRegisteredStore ? TaxCategoryCodes.Standard : TaxCategoryCodes.OutOfScope))
                 ?? TaxCategories.FirstOrDefault();
 
             ApplyTaxCategoryToCurrentItem();

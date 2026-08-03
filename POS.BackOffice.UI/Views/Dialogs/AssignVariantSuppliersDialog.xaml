@@ -96,7 +96,7 @@
                 <TextBlock Text="ASSIGN SUPPLIER TO SELECTED VARIANTS"
                            Style="{StaticResource HeaderLabel}"/>
 
-                <TextBlock Text="This will add or update the selected supplier link for all ticked variants. Click SAVE FULL ITEM after this to permanently save the item."
+                <TextBlock Text="This will assign the selected supplier to all ticked variants, using the individual cost price already set on each variant. Click SAVE FULL ITEM after this to permanently save the item."
                            Foreground="#555555"
                            TextWrapping="Wrap"
                            FontSize="11"/>
@@ -127,11 +127,9 @@
             <Grid Grid.Row="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="10"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="10"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="10" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
                 <Grid.ColumnDefinitions>
@@ -169,26 +167,13 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
 
-                <TextBlock Grid.Row="2"
-                           Grid.Column="0"
-                           Text="Cost Rs. *"
-                           Style="{StaticResource InlineLabel}"/>
-
-                <TextBox x:Name="txtSupplierCost"
-                         Grid.Row="2"
-                         Grid.Column="1"
-                         Style="{StaticResource ClassicInput}"
-                         HorizontalContentAlignment="Right"
-                         FontWeight="Bold"
-                         Background="#FFFFE0"/>
-
-                <TextBlock Grid.Row="4"
+                <TextBlock Grid.Row="2" 
                            Grid.Column="0"
                            Text="MOQ *"
                            Style="{StaticResource InlineLabel}"/>
 
-                <TextBox x:Name="txtMinimumOrderQty"
-                         Grid.Row="4"
+                <TextBox x:Name="txtMinimumOrderQty" 
+                         Grid.Row="2"
                          Grid.Column="1"
                          Style="{StaticResource ClassicInput}"
                          HorizontalContentAlignment="Right"

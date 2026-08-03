@@ -1150,7 +1150,15 @@ namespace POS.Core.Repositories
 
                 string priceAction = GetSellingPriceAction(line);
 
-                if (priceAction == GrnSellingPriceActionCodes.UpdateMasterPrice)
+                if (priceAction == GrnSellingPriceActionCodes.UseCurrentMasterPrice)
+                {
+                    if (variant.RetailPrice <= 0m)
+                    {
+                        throw new InvalidOperationException(
+                            $"Cannot receive item '{variant.SkuCode}' because its current master retail price is zero. Please update the price before posting.");
+                    }
+                }
+                else if (priceAction == GrnSellingPriceActionCodes.UpdateMasterPrice)
                 {
                     ValidateSellingPrices(line, variant.SkuCode);
                 }
@@ -1162,10 +1170,16 @@ namespace POS.Core.Repositories
                             $"Batch-only pricing is not available for item '{variant.SkuCode}'.");
                     }
 
-                    if (line.NewRetailPrice <= 0m || line.NewWholesalePrice <= 0m)
+                    if (line.NewRetailPrice <= 0m)
                     {
                         throw new InvalidOperationException(
-                            $"Batch override Retail and Wholesale prices must be greater than zero for item '{variant.SkuCode}'.");
+                            $"Batch override Retail price must be greater than zero for item '{variant.SkuCode}'.");
+                    }
+
+                    if (line.NewWholesalePrice < 0m)
+                    {
+                        throw new InvalidOperationException(
+                            $"Batch override Wholesale price cannot be negative for item '{variant.SkuCode}'.");
                     }
                 }
 
@@ -1314,19 +1328,19 @@ namespace POS.Core.Repositories
                     $"Selling prices cannot be negative for item '{skuCode}'.");
             }
 
-            bool retailChanged = RoundMoney(line.CurrentRetailPrice) != RoundMoney(line.NewRetailPrice);
             bool wholesaleChanged = RoundMoney(line.CurrentWholesalePrice) != RoundMoney(line.NewWholesalePrice);
 
-            if (retailChanged && line.NewRetailPrice <= 0m)
+            if (line.NewRetailPrice <= 0m)
             {
                 throw new InvalidOperationException(
                     $"New retail price must be greater than zero for item '{skuCode}'.");
             }
 
-            if (wholesaleChanged && line.NewWholesalePrice <= 0m)
+            // Allow wholesale to be zero for retail-only stores, but not negative.
+            if (wholesaleChanged && line.NewWholesalePrice < 0m)
             {
                 throw new InvalidOperationException(
-                    $"New wholesale price must be greater than zero for item '{skuCode}'.");
+                    $"New wholesale price cannot be negative for item '{skuCode}'.");
             }
 
             if (line.NewMaximumPrice > 0 &&

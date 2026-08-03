@@ -10,14 +10,10 @@ namespace POS.BackOffice.UI.Views.Dialogs
     public partial class AssignVariantSuppliersDialog : Window
     {
         public Supplier? SelectedSupplier { get; private set; }
-
-        public decimal SupplierCost { get; private set; }
-
         public int MinimumOrderQuantity { get; private set; }
 
         public AssignVariantSuppliersDialog(
             IReadOnlyList<Supplier> suppliers,
-            decimal defaultCost,
             int defaultMoq,
             int selectedVariantCount)
         {
@@ -34,7 +30,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
             if (orderedSuppliers.Any())
                 cmbSupplier.SelectedIndex = 0;
 
-            txtSupplierCost.Text = Math.Max(0m, defaultCost).ToString("0.##", CultureInfo.CurrentCulture);
             txtMinimumOrderQty.Text = Math.Max(1, defaultMoq).ToString(CultureInfo.CurrentCulture);
             txtSelectedVariantCount.Text = selectedVariantCount.ToString(CultureInfo.CurrentCulture);
 
@@ -53,7 +48,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
                 return;
 
             SelectedSupplier = cmbSupplier.SelectedItem as Supplier;
-            SupplierCost = ParseDecimal(txtSupplierCost.Text);
             MinimumOrderQuantity = ParseInt(txtMinimumOrderQty.Text);
 
             DialogResult = true;
@@ -77,32 +71,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
                     MessageBoxImage.Warning);
 
                 cmbSupplier.Focus();
-                return false;
-            }
-
-            if (!TryParseDecimal(txtSupplierCost.Text, out decimal cost))
-            {
-                MessageBox.Show(
-                    "Supplier cost must be a valid number.",
-                    "Assign Supplier",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-
-                txtSupplierCost.Focus();
-                txtSupplierCost.SelectAll();
-                return false;
-            }
-
-            if (cost < 0)
-            {
-                MessageBox.Show(
-                    "Supplier cost cannot be negative.",
-                    "Assign Supplier",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-
-                txtSupplierCost.Focus();
-                txtSupplierCost.SelectAll();
                 return false;
             }
 
@@ -135,26 +103,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
             return true;
         }
 
-        private static bool TryParseDecimal(string? value, out decimal result)
-        {
-            string text = (value ?? string.Empty).Trim();
-
-            if (decimal.TryParse(
-                    text,
-                    NumberStyles.Number,
-                    CultureInfo.CurrentCulture,
-                    out result))
-            {
-                return true;
-            }
-
-            return decimal.TryParse(
-                text,
-                NumberStyles.Number,
-                CultureInfo.InvariantCulture,
-                out result);
-        }
-
         private static bool TryParseInt(string? value, out int result)
         {
             string text = (value ?? string.Empty).Trim();
@@ -173,12 +121,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
                 out result);
-        }
-
-        private static decimal ParseDecimal(string? value)
-        {
-            TryParseDecimal(value, out decimal result);
-            return result;
         }
 
         private static int ParseInt(string? value)

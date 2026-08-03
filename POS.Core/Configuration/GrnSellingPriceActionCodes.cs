@@ -32,7 +32,7 @@ namespace POS.Core.Configuration
             {
                 UpdateMasterPrice => "Update Master Price",
                 SetBatchPriceOverride => "Set Price for This Batch Only",
-                _ => "Use Current Master Price"
+                _ => "Keep Current Price"
             };
         }
     }

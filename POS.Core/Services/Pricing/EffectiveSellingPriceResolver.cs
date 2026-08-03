@@ -158,8 +158,9 @@ namespace POS.Core.Services.Pricing
             if (retailPrice <= 0m)
                 throw new InvalidOperationException("Batch override Retail price must be greater than zero.");
 
-            if (wholesalePrice <= 0m)
-                throw new InvalidOperationException("Batch override Wholesale price must be greater than zero.");
+            // Allow wholesale to be zero for retail-only stores, but not negative.
+            if (wholesalePrice < 0m)
+                throw new InvalidOperationException("Batch override Wholesale price cannot be negative.");
 
             if (minimumPrice > 0m)
             {
