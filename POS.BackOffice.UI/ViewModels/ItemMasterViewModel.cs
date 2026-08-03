@@ -1500,12 +1500,19 @@ namespace POS.BackOffice.UI.ViewModels
             if (!ValidateBeforeSave(itemCode)) return;
 
             bool saveStartedAsNewItem = CurrentItem.Id == 0;
+            // For new items, if the suffix is blank, we are relying on the repository
+            // to auto-generate a unique suffix. We can therefore skip the client-side
+            // uniqueness check which would otherwise fail.
+            bool isAutoGeneratingCode = saveStartedAsNewItem && string.IsNullOrWhiteSpace(ItemSuffix);
+
             IsBusy = true;
             try
             {
                 ApplyParentDisplayNamesToAllVariants();
 
-                if (!await _itemMasterRepository.IsItemCodeUniqueAsync(itemCode, CurrentItem.Id))
+                // Only perform the client-side uniqueness check for manually entered full codes.
+                // For auto-generated codes, the repository guarantees uniqueness.
+                if (!isAutoGeneratingCode && !await _itemMasterRepository.IsItemCodeUniqueAsync(itemCode, CurrentItem.Id))
                 {
                     _messageBoxService.ShowWarning($"Item code '{itemCode}' already exists.", "Duplicate");
                     return;

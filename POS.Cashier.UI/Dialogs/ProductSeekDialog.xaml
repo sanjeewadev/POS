@@ -75,12 +75,10 @@
                           IsReadOnly="True"
                           SelectionMode="Single">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="110" ElementStyle="{StaticResource CashierOperationalBoldCellText}"/>
-                        <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="2*"/>
-                        <DataGridTextColumn Header="Variant" Binding="{Binding VariantDescription}" Width="1.5*"/>
-                        <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" Width="130"/>
-                        <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}" Width="130"/>
-                        <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="140"/>
+                        <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="130" ElementStyle="{StaticResource CashierOperationalBoldCellText}"/>
+                        <DataGridTextColumn Header="Description" Binding="{Binding ItemName}" Width="3*" ElementStyle="{StaticResource CashierOperationalLeftCellText}"/>
+                        <DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="140" ElementStyle="{StaticResource CashierOperationalLeftCellText}"/>
+                        <DataGridTextColumn Header="Expiry" Binding="{Binding EarliestExpiryDateDisplayText}" Width="100" ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                         <DataGridTextColumn Header="Retail" Binding="{Binding RetailPrice, StringFormat={}{0:N2}}" Width="90" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
                         <DataGridTextColumn Header="Wholesale" Binding="{Binding WholesalePrice, StringFormat={}{0:N2}}" Width="95" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
                         <DataGridTextColumn Header="Stock" Binding="{Binding StockOnHand}" Width="80" ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>

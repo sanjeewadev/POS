@@ -16,7 +16,7 @@
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="58"/>
-            <RowDefinition Height="64"/>
+            <RowDefinition Height="72"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="58"/>
         </Grid.RowDefinitions>
@@ -39,8 +39,7 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="1.25*"/>
-                    <ColumnDefinition Width="1.25*"/>
+                    <ColumnDefinition Width="3*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
@@ -52,10 +51,6 @@
                 <StackPanel Grid.Column="1" Margin="12,0,0,0">
                     <TextBlock Text="SKU / Barcode" Style="{StaticResource CashierFieldLabel}"/>
                     <TextBlock><Run Text="{Binding SkuCode, Mode=OneWay}"/><Run Text=" / "/><Run Text="{Binding Barcode, Mode=OneWay}"/></TextBlock>
-                </StackPanel>
-                <StackPanel Grid.Column="2" Margin="12,0,0,0">
-                    <TextBlock Text="Requested Quantity" Style="{StaticResource CashierFieldLabel}"/>
-                    <TextBlock Text="{Binding RequestedQuantity}" FontWeight="Bold"/>
                 </StackPanel>
                 <Border Grid.Column="3" Background="{StaticResource CashierPanelAltBrush}" BorderBrush="{StaticResource CashierBorderBrush}" BorderThickness="1" Padding="12,5" CornerRadius="2">
                     <StackPanel>
@@ -76,16 +71,13 @@
                       IsReadOnly="True"
                       SelectionMode="Single">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo}" Width="125" ElementStyle="{StaticResource CashierOperationalBoldCellText}"/>
-                    <DataGridTextColumn Header="Internal Barcode" Binding="{Binding InternalBatchBarcode}" Width="145"/>
+                    <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo}" Width="*" ElementStyle="{StaticResource CashierOperationalBoldCellText}"/>
                     <DataGridTextColumn Header="Expiry" Binding="{Binding ExpiryDisplayText}" Width="90" ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                     <DataGridTextColumn Header="Received" Binding="{Binding ReceivedDisplayText}" Width="90" ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
                     <DataGridTextColumn Header="Available" Binding="{Binding AvailabilityText}" Width="110" ElementStyle="{StaticResource CashierOperationalCenterCellText}"/>
-                    <DataGridTextColumn Header="Effective Retail" Binding="{Binding RetailPrice, StringFormat={}{0:N2}}" Width="105" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
-                    <DataGridTextColumn Header="Effective Wholesale" Binding="{Binding WholesalePrice, StringFormat={}{0:N2}}" Width="120" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
-                    <DataGridTextColumn Header="Active Price" Binding="{Binding ActivePrice, StringFormat={}{0:N2}}" Width="95" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
-                    <DataGridTextColumn Header="Price Source" Binding="{Binding PriceSourceText}" Width="105"/>
-                    <DataGridTextColumn Header="Warning" Binding="{Binding WarningText}" Width="*" ElementStyle="{StaticResource CashierOperationalBoldCellText}"/>
+                    <DataGridTextColumn Header="Retail" Binding="{Binding RetailPrice, StringFormat={}{0:N2}}" Width="105" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
+                    <DataGridTextColumn Header="Wholesale" Binding="{Binding WholesalePrice, StringFormat={}{0:N2}}" Width="120" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
+                    <DataGridTextColumn Header="Price Source" Binding="{Binding PriceSourceText}" Width="125" ElementStyle="{StaticResource CashierOperationalRightCellText}"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
