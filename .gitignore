@@ -11,6 +11,8 @@
 *.sln.docstates
 *.csproj.user
 
+.prerequisites/
+
 # .NET build output
 [Bb]in/
 [Oo]bj/
