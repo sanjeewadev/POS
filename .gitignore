@@ -11,7 +11,9 @@
 *.sln.docstates
 *.csproj.user
 
-.prerequisites/
+# SQL Server installer
+prerequisites/SQLEXPR_x64_ENU.exe
+prerequisites/
 
 # .NET build output
 [Bb]in/
