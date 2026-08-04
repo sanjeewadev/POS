@@ -661,14 +661,14 @@
              ========================================================= -->
 
         <Style TargetType="TextBlock" x:Key="SmallStatusText">
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
 
         <Style TargetType="TextBlock" x:Key="TotalSmallValueText">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -968,7 +968,7 @@
                     <!-- TOTALS -->
                     <Border Grid.Row="2"
                             Background="{StaticResource TotalsPanelBgBrush}"
-                            Padding="12"
+                            Padding="8"
                             BorderBrush="#0F172A"
                             BorderThickness="1"
                             Margin="0,2,0,0">
@@ -982,26 +982,52 @@
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0"
-                                  Margin="0,0,0,8">
+                                  Margin="0,0,0,6">
 
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="280"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0"
+                                <Grid Grid.Column="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal">
+                                        <TextBlock Text="{Binding PaymentStatusText}"
+                                               
+                                               VerticalAlignment="Center"
+                                               Background="{Binding PaymentStatusColor}"
+                                               Foreground="White"
+                                               Padding="8,2"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Margin="2,0"
+                                               MaxWidth="250"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="1"
                                            Text="NET VALUE"
+                                               TextAlignment="Right"
                                            FontSize="24"
                                            FontWeight="SemiBold"
                                            Foreground="White"
                                            VerticalAlignment="Center"
                                            Margin="0,0,18,0"/>
 
+
+                                </Grid>
+
                                 <Border Grid.Column="1"
                                         Background="White"
                                         BorderBrush="#CBD5E1"
                                         BorderThickness="1"
-                                        Padding="5">
+                                        Padding="2">
 
                                     <TextBlock Text="{Binding NetValue, StringFormat=N2}"
                                                FontSize="38"
@@ -1020,7 +1046,6 @@
                                     <ColumnDefinition Width="1.05*"/>
                                     <ColumnDefinition Width="1.05*"/>
                                     <ColumnDefinition Width="1.05*"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Column="0"
@@ -1034,7 +1059,7 @@
                                 <Border Grid.Column="1"
                                         Background="White"
                                         Margin="0,0,6,0"
-                                        Padding="2"
+                                        Padding="1"
                                         BorderBrush="#CBD5E1"
                                         BorderThickness="1">
 
@@ -1046,7 +1071,7 @@
                                 <Border Grid.Column="2"
                                         Background="White"
                                         Margin="0,0,6,0"
-                                        Padding="2"
+                                        Padding="1"
                                         BorderBrush="#CBD5E1"
                                         BorderThickness="1">
 
@@ -1059,7 +1084,7 @@
                                 <Border Grid.Column="3"
                                         Background="White"
                                         Margin="0,0,8,0"
-                                        Padding="2"
+                                        Padding="1"
                                         BorderBrush="#CBD5E1"
                                         BorderThickness="1">
 
@@ -1071,7 +1096,7 @@
                                 <Border Grid.Column="4"
                                         Background="#ECFDF5"
                                         Margin="0,0,6,0"
-                                        Padding="3"
+                                        Padding="2"
                                         BorderBrush="#10B981"
                                         BorderThickness="1">
 
@@ -1098,7 +1123,7 @@
                                 <Border Grid.Column="5"
                                         Background="#FFF7ED"
                                         Margin="0,0,6,0"
-                                        Padding="3"
+                                        Padding="2"
                                         BorderBrush="#D97706"
                                         BorderThickness="1">
 
@@ -1125,7 +1150,7 @@
                                 <Border Grid.Column="6"
                                         Background="#ECFDF5"
                                         Margin="0,0,8,0"
-                                        Padding="3"
+                                        Padding="2"
                                         BorderBrush="#047857"
                                         BorderThickness="1">
 
@@ -1148,22 +1173,9 @@
                                                    Style="{StaticResource SmallStatusText}"/>
                                     </Grid>
                                 </Border>
-
-                                <StackPanel Grid.Column="7" Orientation="Horizontal">
-                                    <TextBlock Text="{Binding PaymentStatusText}"
-                                               Background="{Binding PaymentStatusColor}"
-                                               Foreground="White"
-                                               Padding="8,2"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               Margin="2,0"
-                                               MaxWidth="250"
-                                               TextTrimming="CharacterEllipsis"/>
-
-                                </StackPanel>
                             </Grid>
 
-                            <Grid Grid.Row="2" Margin="0,8,0,0">
+                            <Grid Grid.Row="2" Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1*"/>
                                     <ColumnDefinition Width="1*"/>
@@ -1176,42 +1188,42 @@
 
                                 <Border Grid.Column="0" Background="#EFF6FF" BorderBrush="#60A5FA" BorderThickness="1" Padding="4" Margin="0,0,5,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="TAXABLE" Foreground="#1E3A8A" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="TAXABLE" Foreground="#1E3A8A" FontSize="11" FontWeight="SemiBold" Margin="0,0,5,0"/>
                                         <TextBlock Text="{Binding TaxableAmountTotal, StringFormat={}{0:N2}}" Foreground="#1E3A8A" FontSize="11" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
 
                                 <Border Grid.Column="1" Background="#FEF2F2" BorderBrush="#F87171" BorderThickness="1" Padding="4" Margin="0,0,5,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="VAT" Foreground="#991B1B" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="VAT" Foreground="#991B1B" FontSize="11" FontWeight="SemiBold" Margin="0,0,5,0"/>
                                         <TextBlock Text="{Binding TotalVatAmount, StringFormat={}{0:N2}}" Foreground="#991B1B" FontSize="11" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
 
                                 <Border Grid.Column="2" Background="#F0FDF4" BorderBrush="#4ADE80" BorderThickness="1" Padding="4" Margin="0,0,5,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="ZERO" Foreground="#166534" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="ZERO" Foreground="#166534" FontSize="11" FontWeight="SemiBold" Margin="0,0,5,0"/>
                                         <TextBlock Text="{Binding ZeroRatedAmount, StringFormat={}{0:N2}}" Foreground="#166534" FontSize="11" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
 
                                 <Border Grid.Column="3" Background="#FFFBEB" BorderBrush="#FBBF24" BorderThickness="1" Padding="4" Margin="0,0,5,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="EXEMPT" Foreground="#92400E" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="EXEMPT" Foreground="#92400E" FontSize="11" FontWeight="SemiBold" Margin="0,0,5,0"/>
                                         <TextBlock Text="{Binding ExemptAmount, StringFormat={}{0:N2}}" Foreground="#92400E" FontSize="11" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
 
                                 <Border Grid.Column="4" Background="#F8FAFC" BorderBrush="#94A3B8" BorderThickness="1" Padding="4" Margin="0,0,5,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="O/S" Foreground="#334155" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="O/S" Foreground="#334155" FontSize="11" FontWeight="SemiBold" Margin="0,0,5,0"/>
                                         <TextBlock Text="{Binding OutOfScopeAmount, StringFormat={}{0:N2}}" Foreground="#334155" FontSize="11" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
 
                                 <Border Grid.Column="5" Background="#FAF5FF" BorderBrush="#C084FC" BorderThickness="1" Padding="4" Margin="0,0,8,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="INV DISC" Foreground="#6B21A8" FontSize="10" FontWeight="SemiBold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="INV DISC" Foreground="#6B21A8" FontSize="12" FontWeight="SemiBold" Margin="0,0,5,0"/>
                                         <TextBlock Text="{Binding InvoiceDiscountAmount, StringFormat={}{0:N2}}" Foreground="#6B21A8" FontSize="11" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>

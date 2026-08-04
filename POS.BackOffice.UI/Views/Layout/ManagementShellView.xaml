@@ -76,12 +76,12 @@
                 <MenuItem Header="Suppliers"
                           Command="{Binding NavigateToSupplierCommand}"/>
                 <Separator/>
-                <MenuItem Header="New Purchase Order"
+                <MenuItem Header="Purchase Order"
                           Command="{Binding NavigateToPurchaseOrderCommand}"/>
                 <MenuItem Header="Purchase Order History"
                           Command="{Binding NavigateToPurchaseOrderDashboardCommand}"/>
                 <Separator/>
-                <MenuItem Header="New Goods Received Note"
+                <MenuItem Header="Goods Received Note"
                           Command="{Binding NavigateToGoodsReceivedNoteCommand}"/>
                 <MenuItem Header="GRN History"
                           Command="{Binding NavigateToGrnDashboardCommand}"/>

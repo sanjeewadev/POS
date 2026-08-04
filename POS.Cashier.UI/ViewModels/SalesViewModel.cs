@@ -2722,7 +2722,7 @@ namespace POS.Cashier.UI.ViewModels
                 TaxSummaryStatusText =
                     _isVatRegisteredStore
                         ? "VAT-inclusive totals"
-                        : "Non-VAT store / Out of Scope";
+                        : "Non-VAT store";
             }
             catch (Exception ex)
             {

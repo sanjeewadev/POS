@@ -253,7 +253,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Code"
                                             Binding="{Binding ItemCode, Mode=OneWay}"
-                                            Width="95"
+                                            Width="50"
                                             FontWeight="Bold"/>
 
                         <DataGridTextColumn Header="Name"
@@ -264,11 +264,11 @@
 
                         <DataGridTextColumn Header="Type"
                                             Binding="{Binding ItemTypeText, Mode=OneWay}"
-                                            Width="78"/>
+                                            Width="70"/>
 
                         <DataGridTextColumn Header="Vars"
                                             Binding="{Binding VariantCount, Mode=OneWay}"
-                                            Width="45">
+                                            Width="42">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -278,7 +278,7 @@
 
                         <DataGridTextColumn Header="Status"
                                             Binding="{Binding StatusText, Mode=OneWay}"
-                                            Width="90"/>
+                                            Width="55"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>

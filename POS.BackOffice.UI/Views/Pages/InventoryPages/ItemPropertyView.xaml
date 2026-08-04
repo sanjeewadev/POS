@@ -304,9 +304,9 @@
                         </DataGrid.Resources>
 
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Order"
+                            <DataGridTextColumn Header="Ord."
                                                 Binding="{Binding DisplayOrder}"
-                                                Width="60"
+                                                Width="40"
                                                 IsReadOnly="True"/>
 
                             <DataGridTextColumn Header="Group Name"
@@ -317,7 +317,7 @@
 
                             <DataGridCheckBoxColumn Header="Inactive"
                                                     Binding="{Binding IsDeactivated}"
-                                                    Width="85">
+                                                    Width="55">
                                 <DataGridCheckBoxColumn.ElementStyle>
                                     <Style TargetType="CheckBox">
                                         <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -328,13 +328,13 @@
                             </DataGridCheckBoxColumn>
 
                             <DataGridTextColumn Header="Created"
-                                                Binding="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
-                                                Width="125"
+                                                Binding="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd}}"
+                                                Width="85"
                                                 IsReadOnly="True"/>
 
                             <DataGridTextColumn Header="Updated"
-                                                Binding="{Binding UpdatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
-                                                Width="125"
+                                                Binding="{Binding UpdatedAt, StringFormat={}{0:yyyy-MM-dd}}"
+                                                Width="85"
                                                 IsReadOnly="True"/>
                         </DataGrid.Columns>
                     </DataGrid>
