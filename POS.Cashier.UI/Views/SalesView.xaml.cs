@@ -468,6 +468,12 @@ namespace POS.Cashier.UI.Views
                     return;
                 }
 
+                if (ShouldCancelForZeroValueSale())
+                {
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
                 await ViewModel.HandleTerminalEnterAsync();
 
                 ResetTerminalActionMode();
@@ -848,8 +854,8 @@ namespace POS.Cashier.UI.Views
             string approvedBy = string.Empty;
             CartItem? selectedItem = ViewModel.SelectedCartItem;
             if (selectedItem != null &&
-                selectedItem.MinimumPrice > 0m &&
-                newPrice < selectedItem.MinimumPrice)
+                (newPrice <= 0m ||
+                (selectedItem.MinimumPrice > 0m && newPrice < selectedItem.MinimumPrice)))
             {
                 ManagerAuthViewModel authViewModel = App.Services!
                     .GetRequiredService<ManagerAuthViewModel>();
@@ -857,6 +863,15 @@ namespace POS.Cashier.UI.Views
                 {
                     Owner = this
                 };
+
+                if (newPrice <= 0m)
+                {
+                    authDialog.Title = "Manager Approval — Zero Price";
+                }
+                else
+                {
+                    authDialog.Title = "Manager Approval — Below Minimum Price";
+                }
 
                 _isDialogOpen = true;
                 try
@@ -1374,6 +1389,12 @@ namespace POS.Cashier.UI.Views
 
             if (ViewModel.BalanceDue <= 0m)
             {
+                if (ShouldCancelForZeroValueSale())
+                {
+                    ReturnFocusToTerminalInput();
+                    return;
+                }
+
                 await FinalizePaymentIfCompleteAsync();
                 ReturnFocusToTerminalInput();
                 return;
@@ -2323,6 +2344,46 @@ namespace POS.Cashier.UI.Views
                     DimmingCurtain.Visibility = Visibility.Collapsed;
                 _isDialogOpen = false;
                 ReturnFocusToTerminalInput();
+            }
+        }
+
+        private bool ShouldCancelForZeroValueSale()
+        {
+            if (ViewModel == null)
+                return false; // Don't cancel if VM is missing
+
+            // This check is for an "instant zero-value sale" that would otherwise complete without any payment lines.
+            bool requiresApproval =
+                ViewModel.IsPaymentModeActive &&
+                ViewModel.NetValue <= 0m &&
+                !ViewModel.PaymentLines.Any();
+
+            if (!requiresApproval)
+            {
+                return false; // Approval not needed, don't cancel.
+            }
+
+            _isDialogOpen = true;
+            if (DimmingCurtain != null)
+                DimmingCurtain.Visibility = Visibility.Visible;
+            try
+            {
+                ManagerAuthViewModel authViewModel = App.Services!.GetRequiredService<ManagerAuthViewModel>();
+                var authDialog = new ManagerAuthDialogView(authViewModel) { Owner = this, Title = "Manager Approval — Zero Value Sale" };
+                if (authDialog.ShowDialog() != true)
+                {
+                    // Manager approval was cancelled
+                    _ = ViewModel.ShowNotificationAsync("Zero value sale cancelled: Manager approval required.", "#F59E0B");
+                    return true; // Yes, cancel the sale.
+                }
+                // If approved, we can proceed.
+                return false; // Don't cancel.
+            }
+            finally
+            {
+                if (DimmingCurtain != null)
+                    DimmingCurtain.Visibility = Visibility.Collapsed;
+                _isDialogOpen = false;
             }
         }
 

@@ -2937,7 +2937,7 @@ namespace POS.Cashier.UI.ViewModels
                     DiscountRequiresAdminApproval = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount && c.DiscountRequiresAdminApproval,
                     DiscountApprovedBy = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount ? c.DiscountApprovedBy : string.Empty,
                     DiscountApprovedAt = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsRuleDiscount ? c.DiscountApprovedAt : null,
-                    OriginalUnitPrice = c.OriginalUnitPrice > 0m ? c.OriginalUnitPrice : c.UnitPrice,
+                    OriginalUnitPrice = c.OriginalUnitPrice,
                     IsPriceOverridden = !c.IsGiftVoucherSale && !c.IsFreeItem && c.IsPriceOverridden,
                     PriceOverrideAmount = !c.IsGiftVoucherSale && !c.IsFreeItem ? c.PriceOverrideAmount : 0m,
                     PriceOverrideApprovedBy = !c.IsGiftVoucherSale && !c.IsFreeItem ? c.PriceOverrideApprovedBy : string.Empty,
