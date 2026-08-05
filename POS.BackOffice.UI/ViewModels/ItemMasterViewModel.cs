@@ -1218,8 +1218,16 @@ namespace POS.BackOffice.UI.ViewModels
                 variant.ReorderLevel = IsServiceItem ? 0 : BulkReorderLevel;
 
                 if (IsServiceItem)
+                {
                     variant.ItemSuppliers.Clear();
-
+                }
+                else
+                {
+                    // Also update the cost for any existing supplier links
+                    foreach (var supplierLink in variant.ItemSuppliers)
+                        supplierLink.LastCostPrice = BulkCost;
+                }
+ 
                 ApplyParentDisplayNames(variant);
             }
             RefreshGeneratedVariantGrid(variants);

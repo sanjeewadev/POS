@@ -43,65 +43,6 @@ namespace POS.BackOffice.UI.Views.Dialogs
             GrnSellingPriceActionCodes.SetBatchPriceOverride
         };
 
-        private void ApplyBulkValues_Click(object sender, RoutedEventArgs e)
-        {
-            Keyboard.ClearFocus();
-
-            string action = GrnSellingPriceActionCodes.Normalize(cboBulkAction.SelectedValue?.ToString());
-
-            if (!TryParseOptionalMoney(txtBulkRetail.Text, "Retail Price", out decimal? retail) ||
-                !TryParseOptionalMoney(txtBulkWholesale.Text, "Wholesale Price", out decimal? wholesale) ||
-                !TryParseOptionalMoney(txtBulkMinimum.Text, "Minimum Price", out decimal? minimum) ||
-                !TryParseOptionalMoney(txtBulkMaximum.Text, "Maximum Price", out decimal? maximum))
-            {
-                return;
-            }
-
-            List<GrnBulkSellingPricePreviewRow> selected = Rows.Where(row => row.Apply).ToList();
-            if (selected.Count == 0)
-            {
-                MessageBox.Show(this, "Select at least one GRN row.", "No Rows Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (action == GrnSellingPriceActionCodes.SetBatchPriceOverride &&
-                selected.Any(row => !row.CanUseBatchOverride))
-            {
-                MessageBox.Show(
-                    this,
-                    "Batch-only pricing can be applied only to true batch-tracked stock rows.",
-                    "Incompatible Rows",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            foreach (GrnBulkSellingPricePreviewRow row in selected)
-            {
-                row.SellingPriceAction = action;
-
-                if (action == GrnSellingPriceActionCodes.UseCurrentMasterPrice)
-                    continue;
-
-                if (retail.HasValue)
-                    row.NewRetailPrice = RoundMoney(retail.Value);
-
-                if (wholesale.HasValue)
-                    row.NewWholesalePrice = RoundMoney(wholesale.Value);
-
-                if (action == GrnSellingPriceActionCodes.UpdateMasterPrice)
-                {
-                    if (minimum.HasValue)
-                        row.NewMinimumPrice = RoundMoney(minimum.Value);
-
-                    if (maximum.HasValue)
-                        row.NewMaximumPrice = RoundMoney(maximum.Value);
-                }
-            }
-
-            UpdateSummary();
-        }
-
         private void SelectAll_Click(object sender, RoutedEventArgs e)
         {
             foreach (GrnBulkSellingPricePreviewRow row in Rows)
@@ -203,21 +144,141 @@ namespace POS.BackOffice.UI.Views.Dialogs
             txtSummary.Text = $"{selected} selected | {master} master | {batch} batch override | {keep} keep current";
         }
 
-        private bool TryParseOptionalMoney(string? text, string label, out decimal? value)
+        private void ApplyRetail_Click(object sender, RoutedEventArgs e)
+        {
+            Keyboard.ClearFocus();
+            string action = GrnSellingPriceActionCodes.Normalize(cboBulkAction.SelectedValue?.ToString());
+
+            if (!TryParseMoney(txtBulkRetail.Text, "Retail Price", out decimal retail)) return;
+
+            var selected = GetSelectedRows();
+            if (selected == null) return;
+
+            if (!ValidateActionForSelectedRows(action, selected)) return;
+
+            foreach (var row in selected)
+            {
+                row.SellingPriceAction = action;
+                row.NewRetailPrice = retail;
+            }
+            UpdateSummary();
+        }
+
+        private void ApplyWholesale_Click(object sender, RoutedEventArgs e)
+        {
+            Keyboard.ClearFocus();
+            string action = GrnSellingPriceActionCodes.Normalize(cboBulkAction.SelectedValue?.ToString());
+
+            if (!TryParseMoney(txtBulkWholesale.Text, "Wholesale Price", out decimal wholesale)) return;
+
+            var selected = GetSelectedRows();
+            if (selected == null) return;
+
+            if (!ValidateActionForSelectedRows(action, selected)) return;
+
+            foreach (var row in selected)
+            {
+                row.SellingPriceAction = action;
+                row.NewWholesalePrice = wholesale;
+            }
+            UpdateSummary();
+        }
+
+        private void ApplyMinimum_Click(object sender, RoutedEventArgs e)
+        {
+            Keyboard.ClearFocus();
+            string action = GrnSellingPriceActionCodes.Normalize(cboBulkAction.SelectedValue?.ToString());
+
+            if (action != GrnSellingPriceActionCodes.UpdateMasterPrice)
+            {
+                MessageBox.Show(this, "Minimum price can only be applied with the 'Update Master Price' action.", "Action Mismatch", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!TryParseMoney(txtBulkMinimum.Text, "Minimum Price", out decimal minimum)) return;
+
+            var selected = GetSelectedRows();
+            if (selected == null) return;
+
+            if (!ValidateActionForSelectedRows(action, selected)) return;
+
+            foreach (var row in selected)
+            {
+                row.SellingPriceAction = action;
+                row.NewMinimumPrice = minimum;
+            }
+            UpdateSummary();
+        }
+
+        private void ApplyMaximum_Click(object sender, RoutedEventArgs e)
+        {
+            Keyboard.ClearFocus();
+            string action = GrnSellingPriceActionCodes.Normalize(cboBulkAction.SelectedValue?.ToString());
+
+            if (action != GrnSellingPriceActionCodes.UpdateMasterPrice)
+            {
+                MessageBox.Show(this, "Maximum price can only be applied with the 'Update Master Price' action.", "Action Mismatch", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!TryParseMoney(txtBulkMaximum.Text, "Maximum Price", out decimal maximum)) return;
+
+            var selected = GetSelectedRows();
+            if (selected == null) return;
+
+            if (!ValidateActionForSelectedRows(action, selected)) return;
+
+            foreach (var row in selected)
+            {
+                row.SellingPriceAction = action;
+                row.NewMaximumPrice = maximum;
+            }
+            UpdateSummary();
+        }
+
+        private List<GrnBulkSellingPricePreviewRow>? GetSelectedRows()
+        {
+            List<GrnBulkSellingPricePreviewRow> selected = Rows.Where(row => row.Apply).ToList();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show(this, "Select at least one GRN row.", "No Rows Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return null;
+            }
+            return selected;
+        }
+
+        private bool ValidateActionForSelectedRows(string action, List<GrnBulkSellingPricePreviewRow> selected)
+        {
+            if (action == GrnSellingPriceActionCodes.SetBatchPriceOverride &&
+                selected.Any(row => !row.CanUseBatchOverride))
+            {
+                MessageBox.Show(
+                    this,
+                    "Batch-only pricing can be applied only to true batch-tracked stock rows.",
+                    "Incompatible Rows",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        private bool TryParseMoney(string? text, string label, out decimal value)
         {
             string normalized = (text ?? string.Empty).Trim();
             if (normalized.Length == 0)
             {
-                value = null;
-                return true;
+                MessageBox.Show(this, $"{label} must be entered.", "Value Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                value = 0m;
+                return false;
             }
 
             if ((!decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.CurrentCulture, out decimal parsed) &&
                  !decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out parsed)) ||
                 parsed < 0m)
             {
-                MessageBox.Show(this, $"{label} must be a valid non-negative number or left blank.", "Invalid Bulk Value", MessageBoxButton.OK, MessageBoxImage.Warning);
-                value = null;
+                MessageBox.Show(this, $"{label} must be a valid non-negative number.", "Invalid Value", MessageBoxButton.OK, MessageBoxImage.Warning);
+                value = 0m;
                 return false;
             }
 
@@ -299,6 +360,8 @@ namespace POS.BackOffice.UI.Views.Dialogs
         public bool IsMasterUpdate => SellingPriceAction == GrnSellingPriceActionCodes.UpdateMasterPrice;
         public bool IsBatchOverride => SellingPriceAction == GrnSellingPriceActionCodes.SetBatchPriceOverride;
         public string PriceActionText => GrnSellingPriceActionCodes.ToDisplayText(SellingPriceAction);
+        public bool IsMasterPriceFieldsEditable => IsMasterUpdate;
+
 
         public string ValidationMessage
         {
@@ -412,6 +475,7 @@ namespace POS.BackOffice.UI.Views.Dialogs
             OnPropertyChanged(nameof(IsMasterUpdate));
             OnPropertyChanged(nameof(IsBatchOverride));
             OnPropertyChanged(nameof(PriceActionText));
+            OnPropertyChanged(nameof(IsMasterPriceFieldsEditable));
             OnPropertyChanged(nameof(ValidationMessage));
             OnPropertyChanged(nameof(WarningText));
         }

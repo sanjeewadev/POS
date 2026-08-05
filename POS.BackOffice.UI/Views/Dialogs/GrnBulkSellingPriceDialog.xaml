@@ -20,6 +20,18 @@
         <Style x:Key="PrimaryDialogButton" TargetType="Button" BasedOn="{StaticResource DialogButton}">
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
+        <!-- New styles for conditional bolding -->
+        <Style x:Key="EditablePriceTextBlock" TargetType="TextBlock">
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMasterPriceFieldsEditable}" Value="True">
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="AlwaysEditablePriceTextBlock" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
         <Style x:Key="DialogInput" TargetType="TextBox">
             <Setter Property="Height" Value="26"/>
             <Setter Property="Padding" Value="4,2"/>
@@ -50,25 +62,45 @@
         <Border Grid.Row="2" Padding="8" Background="#F0F0F0" BorderBrush="#A0A0A0" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="82"/><ColumnDefinition Width="210"/><ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="62"/><ColumnDefinition Width="95"/><ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="72"/><ColumnDefinition Width="95"/><ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="62"/><ColumnDefinition Width="95"/><ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="68"/><ColumnDefinition Width="95"/><ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="210"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="95"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="95"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="95"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="95"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="Price Action" VerticalAlignment="Center" FontWeight="SemiBold"/>
                 <ComboBox x:Name="cboBulkAction" Grid.Column="1" Height="26"
                           ItemsSource="{Binding PriceActions}" SelectedIndex="0"/>
+
                 <TextBlock Grid.Column="3" Text="Retail" VerticalAlignment="Center" FontWeight="SemiBold"/>
                 <TextBox x:Name="txtBulkRetail" Grid.Column="4" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Column="6" Text="Wholesale" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <TextBox x:Name="txtBulkWholesale" Grid.Column="7" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Column="9" Text="Minimum" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <TextBox x:Name="txtBulkMinimum" Grid.Column="10" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Column="12" Text="Maximum" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                <TextBox x:Name="txtBulkMaximum" Grid.Column="13" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
-                <Button Grid.Column="15" Content="APPLY TO SELECTED" Click="ApplyBulkValues_Click" Style="{StaticResource PrimaryDialogButton}"/>
+                <Button Grid.Column="5" Content="Apply Retail" Click="ApplyRetail_Click" Style="{StaticResource DialogButton}" ToolTip="Apply the bulk Retail Price to selected rows."/>
+
+                <TextBlock Grid.Column="7" Text="Wholesale" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBox x:Name="txtBulkWholesale" Grid.Column="8" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
+                <Button Grid.Column="9" Content="Apply W/S" Click="ApplyWholesale_Click" Style="{StaticResource DialogButton}" ToolTip="Apply the bulk Wholesale Price to selected rows."/>
+
+                <TextBlock Grid.Column="11" Text="Minimum" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBox x:Name="txtBulkMinimum" Grid.Column="12" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
+                <Button Grid.Column="13" Content="Apply Min" Click="ApplyMinimum_Click" Style="{StaticResource DialogButton}" ToolTip="Apply the bulk Minimum Price to selected rows (requires 'Update Master Price' action)."/>
+
+                <TextBlock Grid.Column="15" Text="Maximum" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBox x:Name="txtBulkMaximum" Grid.Column="16" Style="{StaticResource DialogInput}" HorizontalContentAlignment="Right"/>
+                <Button Grid.Column="17" Content="Apply Max" Click="ApplyMaximum_Click" Style="{StaticResource DialogButton}" ToolTip="Apply the bulk Maximum Price to selected rows (requires 'Update Master Price' action)."/>
             </Grid>
         </Border>
 
@@ -76,12 +108,18 @@
             <DataGrid x:Name="PriceGrid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False"
                       CanUserAddRows="False" CanUserDeleteRows="False" RowHeaderWidth="0"
                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                      AlternatingRowBackground="#F7F7F7" SelectionMode="Single" SelectionUnit="FullRow"
-                      FrozenColumnCount="4" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                      AlternatingRowBackground="#F7F7F7" SelectionMode="Single" SelectionUnit="FullRow" 
+                      FrozenColumnCount="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <DataGrid.Columns>
-                    <DataGridCheckBoxColumn Header="Use" Binding="{Binding Apply, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="44"/>
+                    <DataGridTemplateColumn Header="Use" Width="44">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding Apply, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Item / Variant" Binding="{Binding DisplayName}" IsReadOnly="True" Width="210"/>
-                    <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" IsReadOnly="True" Width="105"/>
                     <DataGridTextColumn Header="Batch" Binding="{Binding BatchNo}" IsReadOnly="True" Width="120"/>
                     <DataGridTextColumn Header="Landed Cost" Binding="{Binding LandedCost, StringFormat=N2}" IsReadOnly="True" Width="90"/>
                     <DataGridTextColumn Header="Current Source" Binding="{Binding CurrentPriceSource}" IsReadOnly="True" Width="105"/>
@@ -100,23 +138,23 @@
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Current Retail" Binding="{Binding CurrentRetailPrice, StringFormat=N2}" IsReadOnly="True" Width="92"/>
                     <DataGridTemplateColumn Header="New Retail" Width="92">
-                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewRetailPrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewRetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewRetailPrice, StringFormat=N2}" Style="{StaticResource AlwaysEditablePriceTextBlock}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewRetailPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus" FontWeight="Bold"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Current W/S" Binding="{Binding CurrentWholesalePrice, StringFormat=N2}" IsReadOnly="True" Width="92"/>
                     <DataGridTemplateColumn Header="New W/S" Width="92">
-                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewWholesalePrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewWholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewWholesalePrice, StringFormat=N2}" Style="{StaticResource AlwaysEditablePriceTextBlock}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewWholesalePrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus" FontWeight="Bold"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Master Min" Binding="{Binding CurrentMinimumPrice, StringFormat=N2}" IsReadOnly="True" Width="88"/>
+                    <DataGridTextColumn Header="Current Min" Binding="{Binding CurrentMinimumPrice, StringFormat=N2}" IsReadOnly="True" Width="88"/>
                     <DataGridTemplateColumn Header="New Min" Width="88">
-                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewMinimumPrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMinimumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewMinimumPrice, StringFormat=N2}" Style="{StaticResource EditablePriceTextBlock}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMinimumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus" FontWeight="Bold"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Master Max" Binding="{Binding CurrentMaximumPrice, StringFormat=N2}" IsReadOnly="True" Width="88"/>
+                    <DataGridTextColumn Header="Current Max" Binding="{Binding CurrentMaximumPrice, StringFormat=N2}" IsReadOnly="True" Width="88"/>
                     <DataGridTemplateColumn Header="New Max" Width="88">
-                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewMaximumPrice, StringFormat=N2}" TextAlignment="Right"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMaximumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
+                        <DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="{Binding NewMaximumPrice, StringFormat=N2}" Style="{StaticResource EditablePriceTextBlock}"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate><DataTemplate><TextBox Text="{Binding NewMaximumPrice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus" FontWeight="Bold"/></DataTemplate></DataGridTemplateColumn.CellEditingTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Status / Warning" Binding="{Binding WarningText}" IsReadOnly="True" Width="*"/>
                 </DataGrid.Columns>
