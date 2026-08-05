@@ -312,17 +312,35 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="GRN Number"
-                                        Binding="{Binding GrnNumber}"
-                                        Width="130"
-                                        FontWeight="Bold"
-                                        Foreground="#003366"
-                                        CellStyle="{StaticResource FrozenCell}"/>
+                    <DataGridTemplateColumn Header="GRN Number" Width="130">
+                        <DataGridTemplateColumn.CellStyle>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource FrozenCell}"/>
+                        </DataGridTemplateColumn.CellStyle>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding GrnNumber}"
+                                         IsReadOnly="True"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         VerticalAlignment="Center"
+                                         FontWeight="Bold"
+                                         Foreground="#003366"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                    <DataGridTextColumn Header="Supplier Invoice"
-                                        Binding="{Binding SupplierInvoiceNo}"
-                                        Width="140"
-                                        FontWeight="SemiBold"/>
+                    <DataGridTemplateColumn Header="Supplier Invoice" Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding SupplierInvoiceNo}"
+                                         IsReadOnly="True"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         VerticalAlignment="Center"
+                                         FontWeight="SemiBold"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                     <DataGridTextColumn Header="PO Number"
                                         Binding="{Binding PurchaseOrderNo}"

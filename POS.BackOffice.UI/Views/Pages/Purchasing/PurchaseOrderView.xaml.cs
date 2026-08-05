@@ -57,7 +57,7 @@ namespace POS.BackOffice.UI.Views.Pages.Purchasing
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                 }
-            }), DispatcherPriority.Background);
+            }), DispatcherPriority.Input);
         }
     }
 

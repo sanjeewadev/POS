@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -148,7 +148,6 @@ namespace POS.BackOffice.UI.ViewModels
                 ZeroRatedAmount = 0m;
                 ExemptAmount = 0m;
                 OutOfScopeAmount = 0m;
-                RefreshPoLineGrid();
                 SaveOrderCommand.NotifyCanExecuteChanged();
                 return;
             }
@@ -238,7 +237,6 @@ namespace POS.BackOffice.UI.ViewModels
                 ExemptAmount = calculation.ExemptAmount;
                 OutOfScopeAmount = calculation.OutOfScopeAmount;
 
-                RefreshPoLineGrid();
                 SaveOrderCommand.NotifyCanExecuteChanged();
             }
             catch (InvalidOperationException ex)
@@ -274,7 +272,6 @@ namespace POS.BackOffice.UI.ViewModels
 
                 StatusMessage = ex.Message;
 
-                RefreshPoLineGrid();
                 SaveOrderCommand.NotifyCanExecuteChanged();
             }
         }

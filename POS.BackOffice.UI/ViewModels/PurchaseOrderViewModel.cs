@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -141,11 +142,17 @@ namespace POS.BackOffice.UI.ViewModels
             _exportAuthorization = exportAuthorization ?? throw new ArgumentNullException(nameof(exportAuthorization));
             _messageBoxService = messageBoxService ?? throw new ArgumentNullException(nameof(messageBoxService));
 
-            PoLines.CollectionChanged += (_, _) =>
+            PoLines.CollectionChanged += (_, e) =>
             {
                 SaveOrderCommand.NotifyCanExecuteChanged();
                 ApplyBulkDiscountModeToLinesCommand.NotifyCanExecuteChanged();
                 ApplyBulkDiscountValueToLinesCommand.NotifyCanExecuteChanged();
+
+                if (e.NewItems != null) foreach (PoLine line in e.NewItems) SubscribeToLineEvents(line);
+                if (e.OldItems != null) foreach (PoLine line in e.OldItems) UnsubscribeFromLineEvents(line);
+
+                // A line was added or removed, so recalculate totals.
+                RecalculateTotals();
             };
 
         }
@@ -423,7 +430,7 @@ namespace POS.BackOffice.UI.ViewModels
                 LineStatus = "Open"
             };
 
-            RecalculateLine(line);
+            line.RecalculateLineAmounts();
 
             return line;
         }
@@ -591,7 +598,7 @@ namespace POS.BackOffice.UI.ViewModels
                 LineStatus = "Open"
             };
 
-            RecalculateLine(line);
+            line.RecalculateLineAmounts();
             return line;
         }
 
@@ -626,9 +633,8 @@ namespace POS.BackOffice.UI.ViewModels
             existing.TaxNameSnapshot = newLine.TaxNameSnapshot;
             existing.TaxRatePercentSnapshot = newLine.TaxRatePercentSnapshot;
             existing.Moq = newLine.Moq;
-
-            RecalculateLine(existing);
-            RefreshPoLineGrid();
+            // The setters on the 'existing' PoLine will trigger its own recalculation.
+            // The PropertyChanged event will then bubble up to the ViewModel to update document totals.
 
             SaveOrderCommand.NotifyCanExecuteChanged();
         }
@@ -639,6 +645,7 @@ namespace POS.BackOffice.UI.ViewModels
             if (line == null)
                 return;
 
+            UnsubscribeFromLineEvents(line);
             PoLines.Remove(line);
             SelectedLine = null;
             RecalculateTotals();
@@ -678,7 +685,7 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var line in PoLines)
             {
                 line.LineDiscountMode = mode;
-                RecalculateLine(line);
+                // The setter on LineDiscountMode will trigger RecalculateLineAmounts()
             }
 
             RecalculateTotals();
@@ -706,7 +713,7 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 line.LineDiscountMode = mode;
                 line.LineDiscountValue = BulkDiscountValue;
-                RecalculateLine(line);
+                // The setter on LineDiscountValue will trigger RecalculateLineAmounts()
             }
 
             RecalculateTotals();
@@ -756,52 +763,9 @@ namespace POS.BackOffice.UI.ViewModels
 
         private static void RecalculateLine(PoLine line)
         {
-            line.LineDiscountMode = NormalizeDiscountMode(line.LineDiscountMode);
-
-            if (line.LineDiscountValue <= 0 &&
-                line.LineDiscount > 0 &&
-                line.LineDiscountMode == "Amount")
-            {
-                line.LineDiscountValue = line.LineDiscount;
-            }
-
-            decimal gross = line.OrderQty * line.ExpectedCost;
-
-            line.LineDiscount = CalculateDiscountAmount(
-                gross,
-                line.LineDiscountMode,
-                line.LineDiscountValue);
-
-            decimal afterDiscount = gross - line.LineDiscount;
-
-            if (afterDiscount < 0)
-                afterDiscount = 0m;
-
-            decimal vatRate = line.VatRatePercent / 100m;
-
-            if (line.VatRatePercent <= 0)
-            {
-                line.TaxAmount = 0m;
-                line.LineTotal = Math.Round(afterDiscount, 2);
-            }
-            else if (line.IsVatIncluded)
-            {
-                line.TaxAmount = Math.Round(
-                    afterDiscount - (afterDiscount / (1 + vatRate)),
-                    2);
-
-                line.LineTotal = Math.Round(afterDiscount, 2);
-            }
-            else
-            {
-                line.TaxAmount = Math.Round(afterDiscount * vatRate, 2);
-                line.LineTotal = Math.Round(afterDiscount + line.TaxAmount, 2);
-            }
-        }
-
-        private void RefreshPoLineGrid()
-        {
-            CollectionViewSource.GetDefaultView(PoLines)?.Refresh();
+            // This method is now just a proxy to the line's own calculation method.
+            // It's kept for any parts of the code that were calling the static helper.
+            line.RecalculateLineAmounts();
         }
 
         // =========================================================
@@ -1019,7 +983,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             foreach (var line in activeLines)
             {
-                RecalculateLine(line);
+                line.RecalculateLineAmounts();
 
                 string name = string.IsNullOrWhiteSpace(line.DisplayName)
                     ? line.Description
@@ -1155,6 +1119,7 @@ namespace POS.BackOffice.UI.ViewModels
                 OutOfScopeAmount = 0m;
                 SelectedLine = null;
 
+                UnsubscribeAllLineEvents();
                 PoLines.Clear();
                 AvailableItems.Clear();
 
@@ -1191,6 +1156,35 @@ namespace POS.BackOffice.UI.ViewModels
         private bool CanRunCommand()
         {
             return !IsBusy;
+        }
+
+        // =========================================================
+        // PO LINE EVENT HANDLING
+        // =========================================================
+
+        private void SubscribeToLineEvents(PoLine line)
+        {
+            line.PropertyChanged += PoLine_PropertyChanged;
+        }
+
+        private void UnsubscribeFromLineEvents(PoLine line)
+        {
+            line.PropertyChanged -= PoLine_PropertyChanged;
+        }
+
+        private void UnsubscribeAllLineEvents()
+        {
+            foreach (var line in PoLines)
+            {
+                UnsubscribeFromLineEvents(line);
+            }
+        }
+
+        private void PoLine_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // When a line's calculated total changes, we need to update the document totals.
+            if (e.PropertyName == nameof(PoLine.LineTotal))
+                RecalculateTotals();
         }
 
         // =========================================================
