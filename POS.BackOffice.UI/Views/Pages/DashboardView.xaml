@@ -9,22 +9,25 @@
         <Style x:Key="DashboardMetricCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource WhiteBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="3,1,1,1"/>
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="Margin" Value="0,0,7,7"/>
-            <Setter Property="MinHeight" Value="68"/>
+            <!-- Thick 4px top border, standard 1px borders elsewhere -->
+            <Setter Property="BorderThickness" Value="1,4,1,1"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="MinHeight" Value="75"/>
         </Style>
 
         <Style x:Key="DashboardMetricLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
-            <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,0,0,3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
 
         <Style x:Key="DashboardMetricValue" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontSize" Value="20"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
@@ -35,7 +38,8 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="10">
+    <!-- Restored the native 10px margin around the entire workspace -->
+    <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -44,27 +48,29 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Heading -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,8" LastChildFill="False">
-            <StackPanel DockPanel.Dock="Left">
-                <TextBlock Text="Dashboard"
-                           FontSize="18"
+        <Border  Grid.Row="0" Margin="0,0,0,5" Background="#F0F0F0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" >
+        <!-- 1. Heading (Native style, aligned with the rest of the app) -->
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left" Margin="10">
+                    <TextBlock Text="Dashboard"
+                           FontSize="24"
                            FontWeight="Bold"
                            Foreground="{DynamicResource HeaderTextBrush}"/>
-                <TextBlock Text="A practical overview of sales, cash, stock and open operations"
+                    <TextBlock Text="A practical overview of sales, cash, stock and open operations"
                            Foreground="{DynamicResource SecondaryTextBrush}"/>
-            </StackPanel>
-            <TextBlock DockPanel.Dock="Right"
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" Margin="10"
                        Text="{Binding StatusMessage}"
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        VerticalAlignment="Center"
                        TextAlignment="Right"
                        TextWrapping="Wrap"
                        MaxWidth="430"/>
-        </DockPanel>
+            </DockPanel>
+        </Border>
 
-        <!-- Period filter -->
-        <Border Grid.Row="1" Style="{StaticResource BoFilterBar}">
+        <!-- 2. Period filter (Restored to BoFilterBar style) -->
+        <Border Grid.Row="1" Style="{StaticResource BoFilterBar}" Margin="0,0,0,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -81,36 +87,37 @@
 
                 <TextBlock Grid.Column="0" Text="From" Style="{StaticResource BoInlineLabel}"/>
                 <DatePicker Grid.Column="1" SelectedDate="{Binding StartDate}" Style="{StaticResource BoInputDatePicker}"/>
+
                 <TextBlock Grid.Column="3" Text="To" Style="{StaticResource BoInlineLabel}"/>
                 <DatePicker Grid.Column="4" SelectedDate="{Binding EndDate}" Style="{StaticResource BoInputDatePicker}"/>
 
                 <Button Grid.Column="6"
-                        Content="Refresh"
-                        Command="{Binding RefreshCommand}"
-                        Style="{StaticResource BoPrimaryButton}"
-                        Margin="0,0,6,0"/>
+                    Content="Refresh"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource BoPrimaryButton}"
+                    Margin="0,0,6,0"/>
                 <Button Grid.Column="7"
-                        Content="Today"
-                        Command="{Binding TodayCommand}"
-                        Style="{StaticResource BoButton}"
-                        Margin="0,0,6,0"/>
+                    Content="Today"
+                    Command="{Binding TodayCommand}"
+                    Style="{StaticResource BoButton}"
+                    Margin="0,0,6,0"/>
                 <Button Grid.Column="8"
-                        Content="This Month"
-                        Command="{Binding ThisMonthCommand}"
-                        Style="{StaticResource BoButton}"
-                        MinWidth="88"/>
+                    Content="This Month"
+                    Command="{Binding ThisMonthCommand}"
+                    Style="{StaticResource BoButton}"
+                    MinWidth="88"/>
             </Grid>
         </Border>
 
-        <!-- Period summary -->
-        <Grid Grid.Row="2" Margin="0,0,0,1">
+        <!-- 3. Period summary metrics -->
+        <Grid Grid.Row="2" Margin="0,0,0,4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Text="Period Summary" Style="{StaticResource BoSectionHeader}" Margin="0,1,0,6"/>
+            <TextBlock Grid.Row="0" Text="Period Summary" FontSize="18" Style="{StaticResource BoSectionHeader}" Margin="0,1,0,8"/>
 
             <UniformGrid Grid.Row="1" Columns="4">
                 <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#4A78A8">
@@ -119,22 +126,25 @@
                         <TextBlock Text="{Binding MerchandiseSales, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
                     </StackPanel>
                 </Border>
+
                 <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#A94044">
                     <StackPanel>
                         <TextBlock Text="Customer Returns" Style="{StaticResource DashboardMetricLabel}"/>
-                        <TextBlock Text="{Binding CustomerReturns, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
+                        <TextBlock Text="{Binding CustomerReturns, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}" Foreground="#A94044"/>
                     </StackPanel>
                 </Border>
+
                 <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#005555">
                     <StackPanel>
                         <TextBlock Text="Net Sales" Style="{StaticResource DashboardMetricLabel}"/>
-                        <TextBlock Text="{Binding NetSales, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
+                        <TextBlock Text="{Binding NetSales, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}" Foreground="#005555"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#3D8B40" Margin="0,0,0,7">
+
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#3D8B40">
                     <StackPanel>
                         <TextBlock Text="Gross Profit" Style="{StaticResource DashboardMetricLabel}"/>
-                        <TextBlock Text="{Binding GrossProfit, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
+                        <TextBlock Text="{Binding GrossProfit, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}" Foreground="#3D8B40"/>
                     </StackPanel>
                 </Border>
             </UniformGrid>
@@ -143,74 +153,65 @@
                 <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#7A5A9E">
                     <StackPanel>
                         <TextBlock Text="Customer Credit Outstanding" Style="{StaticResource DashboardMetricLabel}"/>
-                        <TextBlock Text="{Binding CustomerCreditOutstanding, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="14"/>
+                        <TextBlock Text="{Binding CustomerCreditOutstanding, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
                     </StackPanel>
                 </Border>
+
                 <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#9B6B32">
                     <StackPanel>
                         <TextBlock Text="Supplier Outstanding" Style="{StaticResource DashboardMetricLabel}"/>
-                        <TextBlock Text="{Binding SupplierOutstanding, StringFormat={}Rs. {0:N2}}" FontWeight="Bold" FontSize="14"/>
+                        <TextBlock Text="{Binding SupplierOutstanding, StringFormat={}Rs. {0:N2}}" Style="{StaticResource DashboardMetricValue}"/>
                     </StackPanel>
                 </Border>
+
                 <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#C36B22">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Stock Attention" Style="{StaticResource DashboardMetricLabel}"/>
-                            <TextBlock Text="Stock items requiring review" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="10,0,12,0">
-                            <TextBlock Text="Low" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
-                            <TextBlock Text="{Binding LowStockCount}" FontWeight="Bold" FontSize="15" TextAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="Negative" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
-                            <TextBlock Text="{Binding NegativeStockCount}" FontWeight="Bold" FontSize="15" TextAlignment="Center" Foreground="#A94044"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Stock Attention" Style="{StaticResource DashboardMetricLabel}"/>
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding LowStockCount}" Style="{StaticResource DashboardMetricValue}" Foreground="#C36B22"/>
+                            <TextBlock Text=" Low" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" Margin="0,0,12,3"/>
+
+                            <TextBlock Text="{Binding NegativeStockCount}" Style="{StaticResource DashboardMetricValue}" Foreground="#A94044"/>
+                            <TextBlock Text=" Negative" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" Margin="0,0,0,3"/>
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#006A6A" Margin="0,0,0,7">
+
+                <Border Style="{StaticResource DashboardMetricCard}" BorderBrush="#006A6A">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Open Operations" Style="{StaticResource DashboardMetricLabel}"/>
-                            <TextBlock Text="Current operational workload" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="8,0">
-                            <TextBlock Text="Shifts" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
-                            <TextBlock Text="{Binding OpenShiftCount}" FontWeight="Bold" FontSize="14" TextAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Margin="8,0">
-                            <TextBlock Text="Held" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
-                            <TextBlock Text="{Binding HeldCartCount}" FontWeight="Bold" FontSize="14" TextAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="3" Margin="8,0,0,0">
-                            <TextBlock Text="Claims" Style="{StaticResource DashboardMetricLabel}" TextAlignment="Center"/>
-                            <TextBlock FontWeight="Bold" FontSize="14" TextAlignment="Center">
-                                <Run Text="{Binding DraftSupplierClaimCount}"/><Run Text="/"/><Run Text="{Binding SubmittedSupplierClaimCount}"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Open Operations" Style="{StaticResource DashboardMetricLabel}"/>
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding OpenShiftCount}" Style="{StaticResource DashboardMetricValue}"/>
+                            <TextBlock Text=" Shifts" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" Margin="0,0,10,3"/>
+
+                            <TextBlock Text="{Binding HeldCartCount}" Style="{StaticResource DashboardMetricValue}"/>
+                            <TextBlock Text=" Held" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" Margin="0,0,10,3"/>
+
+                            <TextBlock FontSize="20" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}">
+                            <Run Text="{Binding DraftSupplierClaimCount}"/><Run Text="/"/><Run Text="{Binding SubmittedSupplierClaimCount}"/>
                             </TextBlock>
+                            <TextBlock Text=" Claims" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" Margin="0,0,0,3"/>
                         </StackPanel>
                     </Grid>
                 </Border>
             </UniformGrid>
         </Grid>
 
-        <!-- Operational detail -->
+        <!-- 4. Operational detail data grids -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.05*" MinWidth="240"/>
-                <ColumnDefinition Width="7"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="1.25*" MinWidth="280"/>
-                <ColumnDefinition Width="7"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="1.55*" MinWidth="340"/>
             </Grid.ColumnDefinitions>
 
@@ -220,8 +221,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
-                        <TextBlock Text="Tender Totals" FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"/>
+                    <Border Grid.Row="0" Background="#003366" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                        <TextBlock Text="Tender Totals" FontWeight="Bold" Foreground="White"/>
                     </Border>
                     <DataGrid Grid.Row="1" ItemsSource="{Binding TenderTotals}" Style="{StaticResource BoDataGrid}" BorderThickness="0" RowHeight="25">
                         <DataGrid.Columns>
@@ -233,7 +234,7 @@
                 </Grid>
             </Border>
 
-            <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" Background="{DynamicResource WindowBackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
 
             <Border Grid.Column="2" Style="{StaticResource DashboardPanel}">
                 <Grid>
@@ -241,8 +242,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
-                        <TextBlock Text="Top Items and Services" FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"/>
+                    <Border Grid.Row="0" Background="#003366" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                        <TextBlock Text="Top Items and Services" FontWeight="Bold" Foreground="White"/>
                     </Border>
                     <DataGrid Grid.Row="1" ItemsSource="{Binding TopItems}" Style="{StaticResource BoDataGrid}" BorderThickness="0" RowHeight="25">
                         <DataGrid.Columns>
@@ -255,7 +256,7 @@
                 </Grid>
             </Border>
 
-            <GridSplitter Grid.Column="3" Width="7" HorizontalAlignment="Stretch" Background="{DynamicResource WindowBackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
+            <GridSplitter Grid.Column="3" Width="8" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"/>
 
             <Border Grid.Column="4" Style="{StaticResource DashboardPanel}">
                 <Grid>
@@ -263,10 +264,10 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Grid.Row="0" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
+                    <Border Grid.Row="0" Background="#003366" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,6">
                         <DockPanel LastChildFill="False">
-                            <TextBlock Text="Attention Required" FontWeight="Bold" Foreground="{DynamicResource HeaderTextBrush}"/>
-                            <TextBlock DockPanel.Dock="Right" Text="Review high-priority items first" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10.5"/>
+                            <TextBlock Text="Attention Required" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock DockPanel.Dock="Right" Text="Review high-priority items first" Foreground="#A0C0E0" FontSize="10.5"/>
                         </DockPanel>
                     </Border>
                     <DataGrid Grid.Row="1" ItemsSource="{Binding AttentionItems}" Style="{StaticResource BoDataGrid}" BorderThickness="0" RowHeight="27">
@@ -281,21 +282,17 @@
             </Border>
         </Grid>
 
-        <!-- Status / busy indicator -->
-        <Grid Grid.Row="4" Margin="0,7,0,0">
+        <!-- 5. Status / busy indicator -->
+        <Grid Grid.Row="4" Margin="0,8,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <ProgressBar Grid.Row="0"
-                         Height="3"
-                         IsIndeterminate="True"
-                         Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            <TextBlock Grid.Row="1"
-                       Text="{Binding StatusMessage}"
-                       Foreground="{DynamicResource SecondaryTextBrush}"
-                       HorizontalAlignment="Right"
-                       Margin="0,4,0,0"/>
+                     Height="3"
+                     IsIndeterminate="True"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </Grid>
     </Grid>
+
 </UserControl>

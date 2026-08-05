@@ -114,6 +114,25 @@ namespace POS.Core.Services.Exports
                 }
             }
 
+            // Add a space after the table and before the totals
+            section.AddParagraph().Format.SpaceAfter = Unit.FromPoint(6);
+
+            if (data.PostTableSummaryLines != null && data.PostTableSummaryLines.Any())
+            {
+                foreach (string line in data.PostTableSummaryLines)
+                {
+                    Paragraph summary = section.AddParagraph(line.Trim());
+                    summary.Format.Font.Size = 9;
+                    summary.Format.Alignment = ParagraphAlignment.Right; // Align totals to the right
+                    summary.Format.SpaceAfter = Unit.FromPoint(1);
+                    if (line.Contains("Net Payable", StringComparison.OrdinalIgnoreCase))
+                    {
+                        summary.Format.Font.Bold = true;
+                        summary.Format.Font.Size = 10;
+                    }
+                }
+            }
+
             Render(document, filePath);
         }
 
@@ -156,12 +175,6 @@ namespace POS.Core.Services.Exports
                 subheading.Format.Alignment = ParagraphAlignment.Center;
                 subheading.Format.SpaceAfter = Unit.FromPoint(5);
             }
-
-            Paragraph generated = section.AddParagraph(
-                $"Generated {DateTime.Now:yyyy-MM-dd HH:mm} by {NormalizeCell(generatedBy, "System")}");
-            generated.Format.Font.Size = 7.5;
-            generated.Format.Alignment = ParagraphAlignment.Right;
-            generated.Format.SpaceAfter = Unit.FromPoint(6);
 
             Paragraph footer = section.Footers.Primary.AddParagraph();
             footer.Format.Font.Size = 7;

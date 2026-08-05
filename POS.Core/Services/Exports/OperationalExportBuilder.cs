@@ -43,13 +43,11 @@ namespace POS.Core.Services.Exports
                     $"Order date: {purchaseOrder.OrderDate:yyyy-MM-dd}    Expected: {purchaseOrder.ExpectedDate:yyyy-MM-dd}",
                     $"Terms: {purchaseOrder.Terms}    Credit days: {purchaseOrder.CreditDays}",
                     $"Tax mode: {(purchaseOrder.IsTaxInclusive ? "Prices include VAT" : "VAT added on top")}",
-                    $"Subtotal: Rs. {purchaseOrder.Subtotal:N2}    Discounts: Rs. {purchaseOrder.TotalDiscountAmount:N2}    VAT: Rs. {purchaseOrder.TotalTaxAmount:N2}    Net: Rs. {purchaseOrder.NetPayable:N2}",
                     string.IsNullOrWhiteSpace(purchaseOrder.Remarks) ? string.Empty : $"Remarks: {purchaseOrder.Remarks}"
                 },
                 Columns = new[]
                 {
-                    Column("Item", 4.4),
-                    Column("SKU", 2.5),
+                    Column("Item", 6.9), // Increased width (4.4 + 2.5 from SKU)
                     Column("UOM", 1.4),
                     Column("Qty", 1.6, true),
                     Column("Unit Cost", 2.0, true),
@@ -62,7 +60,6 @@ namespace POS.Core.Services.Exports
                     .Select(line => (IReadOnlyList<string?>)new string?[]
                     {
                         FirstNonEmpty(line.ReceiptDisplayName, line.Description, line.ItemCode),
-                        FirstNonEmpty(line.SkuCode, line.ItemVariant?.SkuCode),
                         line.Uom,
                         Quantity(line.OrderQty),
                         Money(line.ExpectedCost),
@@ -70,7 +67,14 @@ namespace POS.Core.Services.Exports
                         Money(line.TaxAmount),
                         Money(line.LineTotal)
                     })
-                    .ToList()
+                    .ToList(),
+                PostTableSummaryLines = new[]
+                {
+                    $"Subtotal: {Money(purchaseOrder.Subtotal)}",
+                    $"Discounts: {Money(purchaseOrder.TotalDiscountAmount)}",
+                    $"VAT: {Money(purchaseOrder.TotalTaxAmount)}",
+                    $"Net Payable: {Money(purchaseOrder.NetPayable)}"
+                }
             };
         }
 

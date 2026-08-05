@@ -21,6 +21,11 @@ namespace POS.Core.Models.DTOs
         public IReadOnlyList<string> SummaryLines { get; init; } = Array.Empty<string>();
         public IReadOnlyList<PdfTableColumnDto> Columns { get; init; } = Array.Empty<PdfTableColumnDto>();
         public IReadOnlyList<IReadOnlyList<string?>> Rows { get; init; } = Array.Empty<IReadOnlyList<string?>>();
+
+        // In POS.Core\Models\DTOs\PdfTableDocumentDto.cs (or wherever your PdfTableDocumentDto is defined)
+
+        public IReadOnlyList<string>? PostTableSummaryLines { get; set; }
+
     }
 
     public sealed class DashboardSummaryDto

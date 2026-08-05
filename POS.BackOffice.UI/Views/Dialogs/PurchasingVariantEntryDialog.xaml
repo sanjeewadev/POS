@@ -132,7 +132,7 @@
                     <DataGridTextColumn Header="Item / Variant"
                                         Binding="{Binding DisplayName}"
                                         IsReadOnly="True"
-                                        Width="220"/>
+                                        Width="*"/>
                     <DataGridTextColumn Header="SKU"
                                         Binding="{Binding SkuCode}"
                                         IsReadOnly="True"
@@ -153,22 +153,39 @@
                                         Header="MOQ"
                                         Binding="{Binding MinimumQuantityDisplay}"
                                         IsReadOnly="True"
-                                        Width="65"/>
-                    <DataGridTextColumn x:Name="QuantityColumn"
-                                        Binding="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}"
-                                        Width="82"/>
-                    <DataGridTextColumn x:Name="UnitCostColumn"
-                                        Binding="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
-                                        Width="105"/>
+                                        Width="65" />
+                    <DataGridTemplateColumn x:Name="QuantityColumn" Width="82">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Quantity, StringFormat={}{0:0.###}}" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4,0"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding Quantity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}" FontWeight="Bold" HorizontalContentAlignment="Right"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellEditingTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn x:Name="UnitCostColumn" Width="105">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding UnitCost, StringFormat=N2}" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4,0"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding UnitCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" FontWeight="Bold" HorizontalContentAlignment="Right"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellEditingTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTemplateColumn x:Name="ExpiryColumn"
                                             Header="Expiry"
                                             Width="120">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <DatePicker SelectedDate="{Binding ExpiryDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
-                                            IsEnabled="{Binding RequiresExpiry}"
-                                            SelectedDateFormat="Short"
-                                            Height="23"/>
+                                            IsEnabled="{Binding RequiresExpiry}" SelectedDateFormat="Short"
+                                            Height="23" FontWeight="Bold"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

@@ -220,7 +220,7 @@
                            Text="2. PURCHASE ORDER LINES"
                            Style="{StaticResource SectionTitle}"/>
 
-                <Grid Grid.Row="1" Margin="0,4,0,3">
+                <Grid Grid.Row="1" Margin="0,0,0,3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="75"/>
                         <ColumnDefinition Width="220"/>
@@ -300,17 +300,26 @@
                           AlternatingRowBackground="#F7F7F7"
                           CellEditEnding="DgPoLines_CellEditEnding">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Item / Variant" Binding="{Binding DisplayName}" Width="*" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" Width="100" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="55" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Tracking" Binding="{Binding TrackingText}" Width="95" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Item / Variant" Binding="{Binding DisplayName}" Width="*" IsReadOnly="True" />
+                        <DataGridTextColumn Header="SKU" Binding="{Binding SkuCode}" Width="100" IsReadOnly="True" />
+                        <DataGridTextColumn Header="UOM" Binding="{Binding Uom}" Width="55" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Tracking" Binding="{Binding TrackingText}" Width="95" IsReadOnly="True" />
 
                         <DataGridTemplateColumn Header="Qty" Width="72">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBox Text="{Binding OrderQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             TextAlignment="Right"
-                                             BorderThickness="0">
+                                    <TextBlock Text="{Binding OrderQty, StringFormat={}{0:0.###}}"
+                                               FontWeight="Bold"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding OrderQty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.###}}"
+                                             FontWeight="Bold"
+                                             HorizontalContentAlignment="Right">
                                         <TextBox.Background>
                                             <MultiBinding Converter="{StaticResource MoqColorConverter}">
                                                 <Binding Path="OrderQty"/>
@@ -319,37 +328,62 @@
                                         </TextBox.Background>
                                     </TextBox>
                                 </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
 
                         <DataGridTemplateColumn Header="Expected Cost" Width="98">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBox Text="{Binding ExpectedCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource GridMoneyBox}"
-                                             Background="#FFF7ED"/>
+                                    <TextBlock Text="{Binding ExpectedCost, StringFormat=N2}"
+                                               FontWeight="Bold"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding ExpectedCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                             Style="{StaticResource GridMoneyBox}"
+                                             Background="#FFF7ED"
+                                             FontWeight="Bold"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
 
                         <DataGridTemplateColumn Header="Disc Type" Width="82">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <ComboBox ItemsSource="{Binding DataContext.DiscountModes, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                              SelectedItem="{Binding LineDiscountMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              Height="24"/>
+                                    <TextBlock Text="{Binding LineDiscountMode}"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center"
+                                               Margin="4,0"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding DataContext.DiscountModes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              SelectedItem="{Binding LineDiscountMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              Height="24"
+                                              FontWeight="Bold"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
 
                         <DataGridTemplateColumn Header="Disc Value" Width="78">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBox Text="{Binding LineDiscountValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             Style="{StaticResource GridMoneyBox}"
-                                             Background="#FFFFE0"/>
+                                    <TextBlock Text="{Binding LineDiscountValue, StringFormat=N2}" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4,0"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding LineDiscountValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"
+                                             Style="{StaticResource GridMoneyBox}"
+                                             Background="#FFFFE0"
+                                             FontWeight="Bold"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
 
                         <DataGridTextColumn Header="Disc Amt" Binding="{Binding LineDiscount, StringFormat=N2}" Width="78" IsReadOnly="True"/>
@@ -462,7 +496,7 @@
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="110"/>
-                            <ColumnDefinition Width="145"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="SUBTOTAL" Foreground="#666666" FontWeight="Bold" HorizontalAlignment="Right"/>
