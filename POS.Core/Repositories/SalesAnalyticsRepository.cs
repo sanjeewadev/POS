@@ -21,15 +21,13 @@ namespace POS.Core.Repositories
         public async Task<ItemSalesAnalyticsResultDto> GetAnalyticsAsync(
             DateTime startDate,
             DateTime endDate,
-            string searchText,
-            int slowMovingDays = 90)
+            string searchText)
         {
             if (startDate.Date > endDate.Date)
                 throw new ArgumentException("Start date cannot be later than end date.");
 
             DateTime start = startDate.Date;
             DateTime endExclusive = endDate.Date.AddDays(1);
-            DateTime slowThreshold = endDate.Date.AddDays(-Math.Max(1, slowMovingDays));
             string search = Normalize(searchText);
 
             await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
@@ -169,9 +167,9 @@ namespace POS.Core.Repositories
                     SaleCost = Money(itemSales.Sum(item => item.CostPrice * item.Quantity)),
                     ReturnedCost = Money(itemReturns.Sum(item => item.CostPrice * item.QuantityReturned)),
                     LastSaleDate = lastSaleDate,
-                    IsSlowOrNonSelling = !string.Equals(variant.ItemType, ItemTypeCodes.Service, StringComparison.Ordinal) &&
+                    IsNonSelling = !string.Equals(variant.ItemType, ItemTypeCodes.Service, StringComparison.Ordinal) &&
                         currentStock > 0m &&
-                        (!lastSaleDate.HasValue || lastSaleDate.Value < slowThreshold)
+                        itemSales.Count == 0
                 };
 
                 if (!string.IsNullOrWhiteSpace(search) &&
@@ -209,7 +207,7 @@ namespace POS.Core.Repositories
                     SoldQuantity = RoundQuantity(items.Sum(row => row.SoldQuantity)),
                     ReturnedQuantity = RoundQuantity(items.Sum(row => row.ReturnedQuantity)),
                     SellingItemCount = items.Count(row => row.SoldQuantity > 0m),
-                    SlowOrNonSellingStockItemCount = items.Count(row => row.IsSlowOrNonSelling)
+                    NonSellingStockItemCount = items.Count(row => row.IsNonSelling)
                 }
             };
         }

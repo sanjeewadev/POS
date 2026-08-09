@@ -18,6 +18,19 @@ namespace POS.Core.Repositories
             _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
         }
 
+        public async Task<IReadOnlyList<string>> GetDistinctCashierNamesAsync()
+        {
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.SalesHeaders
+                .AsNoTracking()
+                .Where(h => h.Status == "Completed" && !h.IsVoided && !string.IsNullOrWhiteSpace(h.CashierName))
+                .Select(h => h.CashierName)
+                .Distinct()
+                .OrderBy(name => name)
+                .ToListAsync();
+        }
+
         public Task<PagedSalesResult> GetPagedSalesAsync(
             DateTime startDate,
             DateTime endDate,
@@ -33,6 +46,7 @@ namespace POS.Core.Repositories
                 endDate,
                 searchText,
                 string.Empty,
+                string.Empty,
                 "All",
                 pageIndex,
                 pageSize);
@@ -43,6 +57,7 @@ namespace POS.Core.Repositories
             DateTime endDate,
             string searchText,
             string terminalFilter,
+            string cashierFilter,
             string returnStatusFilter,
             int pageIndex,
             int pageSize)
@@ -56,6 +71,7 @@ namespace POS.Core.Repositories
             DateTime endExclusive = endDate.Date.AddDays(1);
             string search = Normalize(searchText);
             string terminal = Normalize(terminalFilter);
+            string cashier = Normalize(cashierFilter);
             string returnFilter = Normalize(returnStatusFilter);
 
             await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
@@ -70,6 +86,9 @@ namespace POS.Core.Repositories
 
             if (!string.IsNullOrWhiteSpace(terminal))
                 query = query.Where(header => header.TerminalNo.Contains(terminal));
+
+            if (!string.IsNullOrWhiteSpace(cashier) && cashier != "All")
+                query = query.Where(header => header.CashierName == cashier);
 
             if (!string.IsNullOrWhiteSpace(search))
             {

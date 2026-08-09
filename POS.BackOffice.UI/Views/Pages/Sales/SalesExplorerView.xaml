@@ -12,10 +12,11 @@
         <Border Grid.Row="1" Margin="0,6" Padding="7" Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
             <WrapPanel>
                 <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,4,0"/><DatePicker SelectedDate="{Binding StartDate}" Width="115" Height="25"/>
-                <TextBlock Text="To" VerticalAlignment="Center" Margin="8,0,4,0"/><DatePicker SelectedDate="{Binding EndDate}" Width="115" Height="25"/>
-                <TextBlock Text="Search" VerticalAlignment="Center" Margin="8,0,4,0"/><TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="190" Height="25" Padding="4,2"/>
-                <TextBlock Text="Terminal" VerticalAlignment="Center" Margin="8,0,4,0"/><TextBox Text="{Binding TerminalFilter}" Width="80" Height="25" Padding="4,2"/>
-                <TextBlock Text="Return" VerticalAlignment="Center" Margin="8,0,4,0"/><ComboBox ItemsSource="{Binding ReturnStatuses}" SelectedItem="{Binding SelectedReturnStatus}" Width="135" Height="25"/>
+                <TextBlock Text="To" VerticalAlignment="Center" Margin="8,0,4,0"/><DatePicker SelectedDate="{Binding EndDate}" Width="115" Height="25"/><Button Content="Today" Command="{Binding SetDateToTodayCommand}" Style="{StaticResource CompactButton}"/><Button Content="This Month" Command="{Binding SetDateToThisMonthCommand}" Style="{StaticResource CompactButton}"/><Button Content="This Year" Command="{Binding SetDateToThisYearCommand}" Style="{StaticResource CompactButton}"/>
+                <TextBlock Text="Search" VerticalAlignment="Center" Margin="8,0,4,0"/><TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="120" Height="25" Padding="4,2"/>
+                <TextBlock Text="Terminal" VerticalAlignment="Center" Margin="8,0,4,0"/><TextBox Text="{Binding TerminalFilter}" Width="50" Height="25" Padding="4,2"/>
+                <TextBlock Text="Cashier" VerticalAlignment="Center" Margin="8,0,4,0"/><ComboBox ItemsSource="{Binding CashierNames}" SelectedItem="{Binding SelectedCashier}" Width="120" Height="25"/>
+                <TextBlock Text="Return" VerticalAlignment="Center" Margin="8,0,4,0"/><ComboBox ItemsSource="{Binding ReturnStatuses}" SelectedItem="{Binding SelectedReturnStatus}" Width="120" Height="25"/>
                 <Button Content="Load" Command="{Binding ApplyFiltersCommand}" Style="{StaticResource CompactButton}"/><Button Content="Reset" Command="{Binding ResetCommand}" Style="{StaticResource CompactButton}"/>
             </WrapPanel>
         </Border>

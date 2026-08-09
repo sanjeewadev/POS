@@ -177,7 +177,7 @@ internal static class StoreIdentitySourcePolicyAuditTests
             "Neutral BackOffice title");
 
         AuditAssert.Equal(
-            "Advanced POS BackOffice — Current Trading Name",
+            "Advanced POS BackOffice - Current Trading Name",
             StoreIdentityDisplayFormatter.BuildBackOfficeTitle(
                 " Current Trading Name ",
                 "Current Legal Name (Pvt) Ltd"),

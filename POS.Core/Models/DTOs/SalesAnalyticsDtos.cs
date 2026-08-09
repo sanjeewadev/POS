@@ -16,7 +16,7 @@ namespace POS.Core.Models.DTOs
         public decimal ReturnedQuantity { get; set; }
         public decimal NetQuantity => SoldQuantity - ReturnedQuantity;
         public int SellingItemCount { get; set; }
-        public int SlowOrNonSellingStockItemCount { get; set; }
+        public int NonSellingStockItemCount { get; set; }
     }
 
     public sealed class ItemPerformanceDto
@@ -44,7 +44,7 @@ namespace POS.Core.Models.DTOs
             ? 0m
             : Math.Round(GrossProfit / NetSales * 100m, 2);
         public DateTime? LastSaleDate { get; set; }
-        public bool IsSlowOrNonSelling { get; set; }
+        public bool IsNonSelling { get; set; }
         public string StockDisplay => CurrentStock.HasValue ? QuantityDisplayFormatter.Format(CurrentStock.Value) : "N/A";
     }
 

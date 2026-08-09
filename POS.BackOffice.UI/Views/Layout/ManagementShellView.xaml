@@ -26,8 +26,8 @@
               VerticalAlignment="Center">
 
             <MenuItem Header="_System">
-                <MenuItem Header="Cashier Terminal Settings"
-                          Command="{Binding NavigateToTerminalSettingsCommand}"/>
+                <MenuItem Header="License Management"
+                          Command="{Binding NavigateToLicenseManagementCommand}"/>
                 <MenuItem Header="Database Backup / Restore"
                           Command="{Binding NavigateToBackupRestoreCommand}"/>
                 <Separator/>
@@ -41,10 +41,6 @@
             <MenuItem Header="_Products">
                 <MenuItem Header="Item Master"
                           Command="{Binding NavigateToItemMasterCommand}"/>
-                <MenuItem Header="Selling Prices"
-                          Command="{Binding NavigateToPriceManagementCommand}"/>
-                <MenuItem Header="Price Change History"
-                          Command="{Binding NavigateToPriceChangeHistoryCommand}"/>
                 <Separator/>
                 <MenuItem Header="Categories"
                           Command="{Binding NavigateToCategoryCommand}"/>
@@ -57,10 +53,6 @@
                 <MenuItem Header="Tax Rates"
                           Command="{Binding NavigateToTaxRateCommand}"/>
                 <Separator/>
-                <MenuItem Header="Barcode Management"
-                          Command="{Binding NavigateToBarcodeManagementCommand}"/>
-                <MenuItem Header="Print Barcode Labels"
-                          Command="{Binding NavigateToBarcodePrinterCommand}"/>
                 <MenuItem Header="Express Item Buttons"
                           Command="{Binding NavigateToExpressItemAdminCommand}"/>
             </MenuItem>
@@ -70,6 +62,20 @@
                           Command="{Binding NavigateToStockBalanceCommand}"/>
                 <MenuItem Header="Stock Adjustment"
                           Command="{Binding NavigateToStockAdjustmentCommand}"/>
+            </MenuItem>
+
+            <MenuItem Header="_Pricing">
+                <MenuItem Header="Selling Prices"
+                          Command="{Binding NavigateToPriceManagementCommand}"/>
+                <MenuItem Header="Price Change History"
+                          Command="{Binding NavigateToPriceChangeHistoryCommand}"/>
+            </MenuItem>
+
+            <MenuItem Header="_Barcode">
+                <MenuItem Header="Barcode Management"
+                          Command="{Binding NavigateToBarcodeManagementCommand}"/>
+                <MenuItem Header="Print Barcode Labels"
+                          Command="{Binding NavigateToBarcodePrinterCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Purchasing">
@@ -85,6 +91,7 @@
                           Command="{Binding NavigateToGoodsReceivedNoteCommand}"/>
                 <MenuItem Header="GRN History"
                           Command="{Binding NavigateToGrnDashboardCommand}"/>
+                <Separator/>
                 <MenuItem Header="Supplier Return"
                           Command="{Binding NavigateToSupplierReturnCommand}"/>
                 <MenuItem Header="Supplier Claims"
@@ -94,8 +101,6 @@
             <MenuItem Header="_Sales">
                 <MenuItem Header="Sales Explorer"
                           Command="{Binding NavigateToSalesExplorerCommand}"/>
-                <MenuItem Header="Customer Returns"
-                          Command="{Binding NavigateToCustomerReturnsAuditCommand}"/>
                 <MenuItem Header="Item Sales Analysis"
                           Command="{Binding NavigateToItemSalesAnalyticsCommand}"/>
                 <Separator/>
@@ -110,17 +115,20 @@
                           Command="{Binding NavigateToCustomerMasterCommand}"/>
                 <MenuItem Header="Customer Accounts &amp; Credit"
                           Command="{Binding NavigateToCustomerLedgerCommand}"/>
+                <MenuItem Header="Customer Returns"
+                          Command="{Binding NavigateToCustomerReturnsAuditCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Finance">
                 <MenuItem Header="Supplier Accounts"
                           Command="{Binding NavigateToSupplierLedgerCommand}"/>
+                <MenuItem Header="Financial Summary"
+                          Command="{Binding NavigateToFinancialSummaryCommand}"/>
+                <Separator/>
                 <MenuItem Header="Cash Movement"
                           Command="{Binding NavigateToCashMovementDashboardCommand}"/>
                 <MenuItem Header="Shift Reconciliation"
                           Command="{Binding NavigateToFloatCashLogCommand}"/>
-                <MenuItem Header="Financial Summary"
-                          Command="{Binding NavigateToFinancialSummaryCommand}"/>
             </MenuItem>
 
             <MenuItem Header="_Reports">
@@ -136,14 +144,15 @@
             </MenuItem>
 
             <MenuItem Header="_Administration">
-                <MenuItem Header="Store Settings"
-                          Command="{Binding NavigateToStoreSettingsCommand}"/>
                 <MenuItem Header="User Management"
                           Command="{Binding NavigateToUserManagementCommand}"/>
-                <MenuItem Header="License Management"
-                          Command="{Binding NavigateToLicenseManagementCommand}"/>
+                <Separator/>
+                <MenuItem Header="Store Settings"
+                          Command="{Binding NavigateToStoreSettingsCommand}"/>
                 <MenuItem Header="Cashier Terminal Management"
                           Command="{Binding NavigateToTerminalManagementCommand}"/>
+                <MenuItem Header="Cashier Terminal Settings"
+                          Command="{Binding NavigateToTerminalSettingsCommand}"/>
                 <Separator/>
                 <MenuItem Header="Security Audit"
                           Command="{Binding NavigateToSecurityAuditCommand}"/>

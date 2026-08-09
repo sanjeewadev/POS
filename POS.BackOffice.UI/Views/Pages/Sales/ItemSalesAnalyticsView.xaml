@@ -28,7 +28,7 @@
             <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Gross Profit" Foreground="Gray"/><TextBlock Text="{Binding GrossProfit, StringFormat={}Rs. {0:N2}}" FontWeight="Bold"/></StackPanel></Border>
             <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Sold Qty" Foreground="Gray"/><TextBlock Text="{Binding SoldQuantity, StringFormat={}{0:#,##0.###}}" FontWeight="Bold"/></StackPanel></Border>
             <Border Style="{StaticResource KpiBorder}"><StackPanel><TextBlock Text="Returned Qty" Foreground="Gray"/><TextBlock Text="{Binding ReturnedQuantity, StringFormat={}{0:#,##0.###}}" FontWeight="Bold"/></StackPanel></Border>
-            <Border Style="{StaticResource KpiBorder}" Margin="0"><StackPanel><TextBlock Text="Slow / Non-Selling" Foreground="Gray"/><TextBlock Text="{Binding SlowOrNonSellingCount}" FontWeight="Bold"/></StackPanel></Border>
+            <Border Style="{StaticResource KpiBorder}" Margin="0"><StackPanel><TextBlock Text="Non-Selling Items" Foreground="Gray"/><TextBlock Text="{Binding SlowOrNonSellingCount}" FontWeight="Bold"/></StackPanel></Border>
         </UniformGrid>
         <TabControl Grid.Row="3">
             <TabItem Header="All Items and Services">
@@ -56,7 +56,7 @@
                     <DataGrid.Columns><DataGridTextColumn Header="Item" Binding="{Binding ItemName}" Width="*"/><DataGridTextColumn Header="Type" Binding="{Binding ItemType}" Width="90"/><DataGridTextColumn Header="Net Qty" Binding="{Binding NetQuantity, StringFormat={}{0:#,##0.###}}" Width="90"/><DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="110"/><DataGridTextColumn Header="Profit" Binding="{Binding GrossProfit, StringFormat=N2}" Width="110"/></DataGrid.Columns>
                 </DataGrid>
             </TabItem>
-            <TabItem Header="Slow / Non-Selling Stock">
+            <TabItem Header="Non-Selling Stock">
                 <DataGrid ItemsSource="{Binding SlowOrNonSellingItems}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" RowHeight="25" CellStyle="{StaticResource SelectedCellStyle}">
                     <DataGrid.Columns><DataGridTextColumn Header="Item" Binding="{Binding ItemName}" Width="*"/><DataGridTextColumn Header="Category" Binding="{Binding CategoryName}" Width="140"/><DataGridTextColumn Header="Current Stock" Binding="{Binding StockDisplay}" Width="110"/><DataGridTextColumn Header="Last Sale" Binding="{Binding LastSaleDate, StringFormat=yyyy-MM-dd}" Width="110"/></DataGrid.Columns>
                 </DataGrid>

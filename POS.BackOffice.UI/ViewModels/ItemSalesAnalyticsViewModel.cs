@@ -85,9 +85,9 @@ namespace POS.BackOffice.UI.ViewModels
 
                 foreach (ItemPerformanceDto row in result.Items)
                     Items.Add(row);
-                foreach (ItemPerformanceDto row in result.Items.Where(row => row.NetQuantity > 0m).OrderByDescending(row => row.NetQuantity).Take(20))
+                foreach (ItemPerformanceDto row in result.Items.Where(row => row.NetQuantity > 0m).OrderByDescending(row => row.NetSales).Take(20))
                     TopSellers.Add(row);
-                foreach (ItemPerformanceDto row in result.Items.Where(row => row.IsSlowOrNonSelling).OrderBy(row => row.LastSaleDate).Take(50))
+                foreach (ItemPerformanceDto row in result.Items.Where(row => row.IsNonSelling).OrderBy(row => row.LastSaleDate).Take(50))
                     SlowOrNonSellingItems.Add(row);
 
                 GrossSales = result.Summary.GrossSales;
@@ -98,7 +98,7 @@ namespace POS.BackOffice.UI.ViewModels
                 SoldQuantity = result.Summary.SoldQuantity;
                 ReturnedQuantity = result.Summary.ReturnedQuantity;
                 SellingItemCount = result.Summary.SellingItemCount;
-                SlowOrNonSellingCount = result.Summary.SlowOrNonSellingStockItemCount;
+                SlowOrNonSellingCount = result.Summary.NonSellingStockItemCount;
                 SelectedItem = Items.Count > 0 ? Items[0] : null;
                 StatusMessage = $"{Items.Count:N0} item/service row(s). Period activity basis.";
             }

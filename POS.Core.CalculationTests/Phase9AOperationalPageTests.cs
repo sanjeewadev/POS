@@ -143,7 +143,7 @@ internal static class Phase9AOperationalPageTests
         var repository = new MasterSalesAnalyticsRepository(factory);
 
         PagedSalesResult result = repository
-            .GetPagedSalesAsync(DateTime.Today, DateTime.Today, documents.InvoiceNo, "T01", "All", 1, 50)
+            .GetPagedSalesAsync(DateTime.Today, DateTime.Today, documents.InvoiceNo, "T01", "All", "All", 1, 50)
             .GetAwaiter().GetResult();
         AssertEqual(1, result.TotalCount, "sales explorer count");
         AssertMoney(3440m, result.Records[0].NetAmount, "merchandise net excludes voucher issue");
@@ -312,7 +312,7 @@ internal static class Phase9AOperationalPageTests
         DateTime start = DateTime.Today;
         DateTime end = start.AddDays(-1);
         AssertThrowsArgument(() => new SalesAnalyticsRepository(factory).GetAnalyticsAsync(start, end, string.Empty).GetAwaiter().GetResult());
-        AssertThrowsArgument(() => new MasterSalesAnalyticsRepository(factory).GetPagedSalesAsync(start, end, string.Empty, string.Empty, "All", 1, 50).GetAwaiter().GetResult());
+        AssertThrowsArgument(() => new MasterSalesAnalyticsRepository(factory).GetPagedSalesAsync(start, end, string.Empty, string.Empty, "All", "All", 1, 50).GetAwaiter().GetResult());
         AssertThrowsArgument(() => new SecurityAuditRepository(factory).GetAuditAsync(start, end, string.Empty).GetAwaiter().GetResult());
         AssertThrowsArgument(() => new FinancialAnalyticsRepository(factory).GetFinancialSummaryAsync(start, end).GetAwaiter().GetResult());
     }

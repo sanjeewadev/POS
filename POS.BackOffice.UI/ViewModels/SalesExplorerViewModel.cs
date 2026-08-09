@@ -17,6 +17,7 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private DateTime _endDate = DateTime.Today;
         [ObservableProperty] private string _searchText = string.Empty;
         [ObservableProperty] private string _terminalFilter = string.Empty;
+        [ObservableProperty] private string _selectedCashier = "All";
         [ObservableProperty] private string _selectedReturnStatus = "All";
         [ObservableProperty] private int _currentPage = 1;
         [ObservableProperty] private int _pageSize = 50;
@@ -33,6 +34,7 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty] private SalesExplorerRecordDto? _selectedSale;
         [ObservableProperty] private SaleReceiptDetailsDto? _selectedDetails;
 
+        public ObservableCollection<string> CashierNames { get; } = new();
         public ObservableCollection<string> ReturnStatuses { get; } = new()
         {
             "All", "Not Returned", "Partially Returned", "Fully Returned"
@@ -65,11 +67,25 @@ namespace POS.BackOffice.UI.ViewModels
             StatusMessage = "Loading completed sales...";
             try
             {
+                if (CashierNames.Count == 0)
+                {
+                    var cashiers = await _repository.GetDistinctCashierNamesAsync();
+                    CashierNames.Add("All");
+                    foreach (var cashier in cashiers)
+                    {
+                        if (!string.IsNullOrWhiteSpace(cashier))
+                        {
+                            CashierNames.Add(cashier);
+                        }
+                    }
+                }
+
                 PagedSalesResult result = await _repository.GetPagedSalesAsync(
                     StartDate,
                     EndDate,
                     SearchText,
                     TerminalFilter,
+                    SelectedCashier,
                     SelectedReturnStatus,
                     CurrentPage,
                     PageSize);
@@ -135,12 +151,39 @@ namespace POS.BackOffice.UI.ViewModels
         }
 
         [RelayCommand]
+        private async Task SetDateToTodayAsync()
+        {
+            StartDate = DateTime.Today;
+            EndDate = DateTime.Today;
+            await ApplyFiltersAsync();
+        }
+
+        [RelayCommand]
+        private async Task SetDateToThisMonthAsync()
+        {
+            var today = DateTime.Today;
+            StartDate = new DateTime(today.Year, today.Month, 1);
+            EndDate = today;
+            await ApplyFiltersAsync();
+        }
+
+        [RelayCommand]
+        private async Task SetDateToThisYearAsync()
+        {
+            var today = DateTime.Today;
+            StartDate = new DateTime(today.Year, 1, 1);
+            EndDate = today;
+            await ApplyFiltersAsync();
+        }
+
+        [RelayCommand]
         private async Task ResetAsync()
         {
             StartDate = DateTime.Today.AddDays(-7);
             EndDate = DateTime.Today;
             SearchText = string.Empty;
             TerminalFilter = string.Empty;
+            SelectedCashier = "All";
             SelectedReturnStatus = "All";
             CurrentPage = 1;
             await LoadPageAsync();
