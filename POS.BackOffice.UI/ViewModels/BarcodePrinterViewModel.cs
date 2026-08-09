@@ -20,9 +20,7 @@ namespace POS.BackOffice.UI.ViewModels
         private readonly IBarcodePrintService _printService;
         private readonly BarcodePrinterRepository _printerRepository;
         private readonly StoreSettingsRepository _storeSettingsRepository;
-
-        private const int RecentGrnDaysBack = 30;
-        private const int RecentGrnTakeLimit = 50;
+        private readonly AuthService _authService;
 
         private string _configuredStoreName = string.Empty;
 
@@ -44,6 +42,15 @@ namespace POS.BackOffice.UI.ViewModels
         // =========================================================
         // GRN INTAKE
         // =========================================================
+
+        public ObservableCollection<string> GrnDateFilterOptions { get; } = new()
+        {
+            "Last 10 Days",
+            "Last 30 Days",
+            "Last 90 Days"
+        };
+
+        [ObservableProperty] private string _selectedGrnDateFilter = "Last 10 Days";
 
         public ObservableCollection<BarcodeRecentGrnDto> RecentGrns { get; } = new();
 
@@ -105,7 +112,8 @@ namespace POS.BackOffice.UI.ViewModels
         public BarcodePrinterViewModel(
             IBarcodePrintService printService,
             BarcodePrinterRepository printerRepository,
-            StoreSettingsRepository storeSettingsRepository)
+            StoreSettingsRepository storeSettingsRepository,
+            AuthService authService)
         {
             _printService = printService ??
                 throw new ArgumentNullException(
@@ -119,6 +127,9 @@ namespace POS.BackOffice.UI.ViewModels
                 storeSettingsRepository ??
                 throw new ArgumentNullException(
                     nameof(storeSettingsRepository));
+
+            _authService = authService ??
+                throw new ArgumentNullException(nameof(authService));
 
             PrintQueue.CollectionChanged += PrintQueue_CollectionChanged;
 
@@ -211,9 +222,20 @@ namespace POS.BackOffice.UI.ViewModels
             {
                 RecentGrns.Clear();
 
+                int days = SelectedGrnDateFilter switch
+                {
+                    "Last 30 Days" => 30,
+                    "Last 90 Days" => 90,
+                    _ => 10
+                };
+
+                // The take limit is now hardcoded to a safe maximum.
+                // The repository also enforces a cap for extra safety.
+                const int takeLimit = 100;
+
                 var grns = await _printerRepository.GetRecentPostedGrnsAsync(
-                    daysBack: RecentGrnDaysBack,
-                    take: RecentGrnTakeLimit);
+                    daysBack: days,
+                    take: takeLimit);
 
                 foreach (var grn in grns)
                     RecentGrns.Add(grn);
@@ -621,9 +643,11 @@ namespace POS.BackOffice.UI.ViewModels
 
                 await _printService.PrintLabelsAsync(modelItems, modelSettings);
 
+                string userName = GetCurrentUserName();
+
                 await _printerRepository.MarkBatchLabelsPrintedAsync(
                     selectedQueue,
-                    printedBy: "Admin");
+                    printedBy: userName);
 
                 DateTime now = DateTime.Now;
 
@@ -631,7 +655,7 @@ namespace POS.BackOffice.UI.ViewModels
                 {
                     item.BarcodePrintedCount += item.PrintQuantity;
                     item.LastBarcodePrintedAt = now;
-                    item.LastBarcodePrintedBy = "Admin";
+                    item.LastBarcodePrintedBy = userName;
                     item.PrintQuantity = 0;
                     item.IsSelected = false;
                 }
@@ -734,6 +758,13 @@ namespace POS.BackOffice.UI.ViewModels
                 return 0;
 
             return (int)Math.Ceiling(qty);
+        }
+
+        private string GetCurrentUserName()
+        {
+            return string.IsNullOrWhiteSpace(_authService.CurrentUser?.Username)
+                ? "BackOffice"
+                : _authService.CurrentUser.Username.Trim();
         }
     }
 }

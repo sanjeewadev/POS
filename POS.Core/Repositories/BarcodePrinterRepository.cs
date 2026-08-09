@@ -31,8 +31,8 @@ namespace POS.Core.Repositories
             if (take <= 0)
                 take = 50;
 
-            if (take > 200)
-                take = 200;
+            if (take > 100)
+                take = 100;
 
             await using var context = await _contextFactory.CreateDbContextAsync();
 

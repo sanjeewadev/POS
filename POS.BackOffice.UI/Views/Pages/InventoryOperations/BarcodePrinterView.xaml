@@ -193,9 +193,9 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="170"/>
                             <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="85"/>
                             <ColumnDefinition Width="20"/>
                             <ColumnDefinition Width="260"/>
                             <ColumnDefinition Width="8"/>
@@ -206,17 +206,29 @@
 
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Recent Posted GRN:" Style="{StaticResource InlineLabel}"/>
-                            <ComboBox ItemsSource="{Binding RecentGrns}"
+                            <ComboBox ItemsSource="{Binding RecentGrnsView}"
                                       SelectedItem="{Binding SelectedGrn, Mode=TwoWay}"
                                       DisplayMemberPath="DisplayText"
-                                      Style="{StaticResource ClassicCombo}"/>
+                                      Style="{StaticResource ClassicCombo}"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="False"
+                                      Text="{Binding GrnSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                      IsDropDownOpen="{Binding IsGrnDropdownOpen, Mode=TwoWay}"/>
                         </StackPanel>
 
-                        <Button Grid.Column="2"
-                                Content="Refresh"
-                                Command="{Binding LoadRecentGrnsCommand}"
-                                Style="{StaticResource ClassicBtn}"
-                                VerticalAlignment="Bottom"/>
+                        <Grid Grid.Column="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" ItemsSource="{Binding GrnDateFilterOptions}" SelectedItem="{Binding SelectedGrnDateFilter}" Style="{StaticResource ClassicCombo}" VerticalAlignment="Bottom" Margin="0,0,4,0"/>
+                            <Button Grid.Column="1"
+                                    Content="Refresh"
+                                    Command="{Binding LoadRecentGrnsCommand}"
+                                    Style="{StaticResource ClassicBtn}"
+                                    VerticalAlignment="Bottom"
+                                    Width="70"/>
+                        </Grid>
 
                         <Button Grid.Column="4"
                                 Content="Load GRN"
