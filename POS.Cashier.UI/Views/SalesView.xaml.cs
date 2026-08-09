@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -22,6 +23,22 @@ namespace POS.Cashier.UI.Views
 {
     public partial class SalesView : Window
     {
+        // P/Invoke declarations for modifying window style
+        private const int GWL_STYLE = -16;
+        private const int WS_MINIMIZEBOX = 0x00020000;
+        private const int WS_SYSMENU = 0x00080000; // Required for minimize box to work from taskbar
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_FRAMECHANGED = 0x0020;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
         private readonly CashierLockService _lockService;
         private readonly int _autoLockTimeoutMinutes;
         private bool _isReturningToLogin;
@@ -76,6 +93,7 @@ namespace POS.Cashier.UI.Views
 
             viewModel.PropertyChanged += ViewModel_PropertyChanged;
             Loaded += SalesView_Loaded;
+            SourceInitialized += SalesView_SourceInitialized; // Hook into SourceInitialized
             Closed += SalesView_Closed;
         }
 
@@ -94,6 +112,22 @@ namespace POS.Cashier.UI.Views
             ReturnFocusToTerminalInput();
 
             // start the live clock
+            StartClock();
+        }
+
+        // NEW: Event handler to modify window style after it's initialized
+        private void SalesView_SourceInitialized(object? sender, EventArgs e)
+        {
+            var hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+            if (hwndSource == null) return;
+
+            IntPtr hWnd = hwndSource.Handle;
+
+            long currentStyle = GetWindowLongPtr(hWnd, GWL_STYLE).ToInt64();
+            long newStyle = currentStyle | WS_MINIMIZEBOX | WS_SYSMENU;
+
+            SetWindowLongPtr(hWnd, GWL_STYLE, new IntPtr(newStyle));
+            SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
             StartClock();
         }
 

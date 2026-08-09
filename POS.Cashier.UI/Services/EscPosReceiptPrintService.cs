@@ -205,8 +205,6 @@ namespace POS.Cashier.UI.Services
             return Task.Run(() =>
             {
                 var bytes = new List<byte>();
-                bytes.AddRange(EscInitialize);
-                bytes.AddRange(AlignLeft);
                 AddText(bytes, documentText);
                 AddText(bytes, "\n");
                 bytes.AddRange(PaperCut);

@@ -4,6 +4,7 @@
         Title="Sales Checkout"
         WindowState="Maximized"
         WindowStyle="None"
+        ResizeMode="CanMinimize"
         Background="{StaticResource MainBgBrush}"
         FontFamily="Segoe UI, Arial"
         FontSize="13"

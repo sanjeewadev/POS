@@ -617,6 +617,13 @@ namespace POS.Core.Repositories
                             {
                                 variant.SkuCode = parent.ItemCode;
                             }
+                        // This handles matrix variants where the SkuCode starts with the prefix.
+                        else if (variant.SkuCode.StartsWith(originalItemCode, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Rebuild the SKU with the new unique parent code.
+                            // The rest of the SKU (after the prefix) contains the variant-specific parts.
+                            variant.SkuCode = parent.ItemCode + variant.SkuCode.Substring(originalItemCode.Length);
+                        }
                         }
                     }
                     else

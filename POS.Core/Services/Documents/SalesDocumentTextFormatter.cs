@@ -11,6 +11,21 @@ namespace POS.Core.Services.Documents
 {
     public sealed class SalesDocumentTextFormatter
     {
+        private const string ESC = "\x1B";
+        private const string GS = "\x1D";
+        private static readonly string Initialize = $"{ESC}@";
+        private static readonly string AlignCenter = $"{ESC}a1";
+        private static readonly string AlignLeft = $"{ESC}a0";
+        private static readonly string AlignRight = $"{ESC}a2";
+        private static readonly string BoldOn = $"{ESC}E\x01";
+        private static readonly string BoldOff = $"{ESC}E\x00";
+        private static readonly string DoubleHeightOn = $"{GS}!\x10";
+        private static readonly string NormalSize = $"{GS}!\x00";
+        private static readonly string BarcodeHeight = $"{GS}h\x50"; // Set height to 80 dots
+        private static readonly string BarcodeWidth = $"{GS}w\x02";  // Set width to 2 dots
+        private static readonly string BarcodeHriBelow = $"{GS}H\x02"; // HRI characters below barcode
+        private static readonly string BarcodePrintCode128 = $"{GS}kI"; // 'I' is ASCII 73 for CODE128
+
         public string FormatReceipt(
             SalesHeader sale,
             StoreSettings settings,
@@ -21,11 +36,17 @@ namespace POS.Core.Services.Documents
 
             int columns = GetColumns(paperWidth);
             var text = new StringBuilder();
+            text.Append(Initialize);
 
             AppendStoreHeader(text, settings, columns, true, sale);
-            AppendCentered(text, "SALES RECEIPT", columns);
-            AppendCentered(text, "NOT A TAX INVOICE", columns);
-            AppendCentered(text, NormalizeCopyLabel(copyLabel), columns);
+
+            text.Append(AlignCenter);
+            text.AppendLine("SALES RECEIPT");
+            string copyText = NormalizeCopyLabel(copyLabel);
+            if (!string.IsNullOrWhiteSpace(copyText))
+                text.AppendLine(copyText);
+            text.Append(AlignLeft);
+
             AppendBlank(text);
 
             AppendLabel(text, "Invoice", sale.InvoiceNo, columns);
@@ -38,8 +59,9 @@ namespace POS.Core.Services.Documents
             AppendLines(text, sale, settings, columns, includeTaxColumns: false);
             AppendTotals(text, sale, settings, columns);
             AppendPaymentSummary(text, sale, settings, columns);
-            AppendTaxSummary(text, sale, settings, columns, formalTaxInvoice: false);
+            // AppendTaxSummary(text, sale, settings, columns, formalTaxInvoice: false); // Removed for standard receipt
             AppendStoreFooter(text, settings, columns);
+            AppendBarcode(text, sale.InvoiceNo, columns);
 
             return text.ToString();
         }
@@ -76,10 +98,17 @@ namespace POS.Core.Services.Documents
 
             int columns = GetColumns(paperWidth);
             var text = new StringBuilder();
+            text.Append(Initialize);
 
             AppendStoreHeader(text, settings, columns, true, sale);
-            AppendCentered(text, "TAX INVOICE", columns);
-            AppendCentered(text, NormalizeCopyLabel(copyLabel), columns);
+
+            text.Append(AlignCenter);
+            text.AppendLine("TAX INVOICE");
+            string copyText = NormalizeCopyLabel(copyLabel);
+            if (!string.IsNullOrWhiteSpace(copyText))
+                text.AppendLine(copyText);
+            text.Append(AlignLeft);
+
             AppendBlank(text);
 
             AppendLabel(text, "Tax Inv", sale.TaxInvoiceNo, columns);
@@ -105,6 +134,7 @@ namespace POS.Core.Services.Documents
             AppendTaxSummary(text, sale, settings, columns, formalTaxInvoice: true);
             AppendPaymentSummary(text, sale, settings, columns);
             AppendStoreFooter(text, settings, columns);
+            AppendBarcode(text, sale.InvoiceNo, columns);
 
             return text.ToString();
         }
@@ -116,13 +146,14 @@ namespace POS.Core.Services.Documents
             bool useSavedTaxNumbers,
             SalesHeader sale)
         {
-            AppendCentered(
-                text,
-                FirstNonEmpty(
-                    settings.StoreName,
-                    settings.LegalName,
-                    "My Store"),
-                columns);
+            text.Append(AlignCenter);
+
+            text.Append(DoubleHeightOn);
+            text.AppendLine(FirstNonEmpty(
+                settings.StoreName,
+                settings.LegalName,
+                "My Store"));
+            text.Append(NormalSize);
 
             if (!string.IsNullOrWhiteSpace(settings.LegalName) &&
                 !string.Equals(
@@ -130,38 +161,40 @@ namespace POS.Core.Services.Documents
                     settings.StoreName?.Trim(),
                     StringComparison.OrdinalIgnoreCase))
             {
-                AppendCentered(text, settings.LegalName, columns);
+                text.AppendLine(settings.LegalName);
             }
 
-            AppendWrappedCentered(text, settings.ReceiptHeader, columns);
-            AppendWrappedCentered(text, settings.AddressLine1, columns);
-            AppendWrappedCentered(text, settings.AddressLine2, columns);
-            AppendWrappedCentered(
-                text,
-                JoinNonEmpty(", ", settings.City, settings.PostalCode),
-                columns);
-            AppendWrappedCentered(text, settings.Country, columns);
+            foreach (string line in Wrap(Sanitize(settings.ReceiptHeader), columns))
+                text.AppendLine(line);
+            foreach (string line in Wrap(Sanitize(settings.AddressLine1), columns))
+                text.AppendLine(line);
+            foreach (string line in Wrap(Sanitize(settings.AddressLine2), columns))
+                text.AppendLine(line);
+            foreach (string line in Wrap(Sanitize(JoinNonEmpty(", ", settings.City, settings.PostalCode)), columns))
+                text.AppendLine(line);
+            foreach (string line in Wrap(Sanitize(settings.Country), columns))
+                text.AppendLine(line);
 
             if (!string.IsNullOrWhiteSpace(settings.Phone))
-                AppendCentered(text, $"Tel: {settings.Phone.Trim()}", columns);
+                text.AppendLine($"Tel: {settings.Phone.Trim()}");
 
             if (!string.IsNullOrWhiteSpace(settings.Email))
-                AppendCentered(text, $"Email: {settings.Email.Trim()}", columns);
+                text.AppendLine($"Email: {settings.Email.Trim()}");
 
             string tin = useSavedTaxNumbers
                 ? sale.SupplierTinSnapshot
                 : settings.TaxpayerIdentificationNumber;
-
             string vatNo = useSavedTaxNumbers
                 ? sale.SupplierVatNoSnapshot
                 : settings.VatRegistrationNumber;
 
             if (!string.IsNullOrWhiteSpace(tin))
-                AppendCentered(text, $"TIN: {tin.Trim()}", columns);
+                text.AppendLine($"TIN: {tin.Trim()}");
 
             if (!string.IsNullOrWhiteSpace(vatNo))
-                AppendCentered(text, $"VAT No: {vatNo.Trim()}", columns);
+                text.AppendLine($"VAT No: {vatNo.Trim()}");
 
+            text.Append(AlignLeft);
             AppendBlank(text);
         }
 
@@ -279,7 +312,20 @@ namespace POS.Core.Services.Documents
                     columns);
             }
 
-            AppendTwoColumns(text, "NET TOTAL", FormatMoney(sale.NetTotal, settings), columns);
+            // Manually format the NET TOTAL line to make it bold
+            string netTotalLabel = "NET TOTAL";
+            string netTotalValue = FormatMoney(sale.NetTotal, settings);
+            int availableLeft = Math.Max(0, columns - netTotalValue.Length - 1);
+            string safeLabel = Truncate(netTotalLabel, availableLeft);
+            int spaces = Math.Max(1, columns - safeLabel.Length - netTotalValue.Length);
+
+            text.Append(BoldOn);
+            text.Append(safeLabel);
+            text.Append(new string(' ', spaces));
+            text.Append(netTotalValue);
+            text.Append(BoldOff);
+            text.AppendLine();
+
             AppendSeparator(text, columns);
         }
 
@@ -291,7 +337,7 @@ namespace POS.Core.Services.Documents
         {
             if (sale.SalesPayments.Count > 0)
             {
-                AppendWrapped(text, "PAYMENTS", columns);
+                AppendWrapped(text, $"{BoldOn}PAYMENTS{BoldOff}", columns);
 
                 foreach (SalesPayment payment in
                          sale.SalesPayments.OrderBy(row => row.Id))
@@ -301,7 +347,11 @@ namespace POS.Core.Services.Documents
                         : FirstNonEmpty(payment.PaymentType, "Payment");
 
                     if (!string.IsNullOrWhiteSpace(payment.ReferenceNo))
-                        label += $" ({payment.ReferenceNo.Trim()})";
+                    {
+                        // For card payments, the reference is often the last few digits. Don't print it for security.
+                        if (!string.Equals(payment.PaymentType, "Card", StringComparison.OrdinalIgnoreCase))
+                            label += $" ({payment.ReferenceNo.Trim()})";
+                    }
 
                     AppendTwoColumns(
                         text,
@@ -335,7 +385,7 @@ namespace POS.Core.Services.Documents
             int columns,
             bool formalTaxInvoice)
         {
-            AppendWrapped(text, "TAX SUMMARY", columns);
+            AppendWrapped(text, $"{BoldOn}TAX SUMMARY{BoldOff}", columns);
 
             if (!string.Equals(
                     sale.TaxSnapshotStatus,
@@ -394,13 +444,48 @@ namespace POS.Core.Services.Documents
             int columns)
         {
             AppendBlank(text);
-            AppendWrappedCentered(
-                text,
-                FirstNonEmpty(
+
+            text.Append(AlignCenter);
+            foreach (string line in Wrap(Sanitize(FirstNonEmpty(
                     settings.ReceiptFooter,
-                    "Thank You! Come Again."),
-                columns);
+                    "Thank You! Come Again.")), columns))
+                text.AppendLine(line);
+            text.Append(AlignLeft);
+
             AppendBlank(text);
+        }
+
+        private static void AppendBarcode(
+            StringBuilder text,
+            string data,
+            int columns)
+        {
+            if (string.IsNullOrWhiteSpace(data))
+                return;
+
+            // Barcode data can have restrictions. Let's sanitize it for Code 128.
+            string safeData = new string(data.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
+            if (string.IsNullOrWhiteSpace(safeData))
+                return;
+
+            // The data for CODE128 with auto-switching is prefixed with {B
+            string barcodeData = "{B" + safeData;
+
+            text.Append(AlignCenter);
+            text.Append(BarcodeHeight);
+            text.Append(BarcodeWidth);
+            text.Append(BarcodeHriBelow);
+
+            // Command: GS k m n d1...dk
+            // m = 73 (ASCII 'I') for CODE128
+            // n = length of data
+            text.Append(BarcodePrintCode128);
+            text.Append((char)barcodeData.Length); // n = length
+            text.Append(barcodeData); // d1...dk
+
+            text.AppendLine();
+            text.Append(NormalSize); // Reset any text sizing
+            text.Append(AlignLeft); // Reset alignment
         }
 
         private static void ValidateCommon(
@@ -431,8 +516,8 @@ namespace POS.Core.Services.Documents
                     value?.Trim(),
                     SalesDocumentCopyLabels.Reprint,
                     StringComparison.OrdinalIgnoreCase)
-                ? SalesDocumentCopyLabels.Reprint
-                : SalesDocumentCopyLabels.Original;
+                ? SalesDocumentCopyLabels.Reprint.Trim()
+                : string.Empty;
         }
 
         private static string FormatMoney(
