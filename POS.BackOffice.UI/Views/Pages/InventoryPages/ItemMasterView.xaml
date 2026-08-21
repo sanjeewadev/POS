@@ -140,17 +140,15 @@
     </UserControl.Resources>
 
     <Grid Margin="5">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="410"/>
-            <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <Border Grid.Column="0"
-                Background="{DynamicResource HeaderTextBrush}"
-                Padding="8"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1">
+        <TabControl SelectedIndex="{Binding SelectedMainTabIndex}"
+                    Background="{DynamicResource WhiteBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}">
+            
+            <TabItem Header="1. ITEM DATABASE" Style="{StaticResource ClassicTab}">
+                <Border Background="{DynamicResource HeaderTextBrush}"
+                        Padding="8"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1">
 
             <Grid>
                 <Grid.RowDefinitions>
@@ -283,8 +281,10 @@
                 </DataGrid>
             </Grid>
         </Border>
+    </TabItem>
 
-        <Grid Grid.Column="2">
+    <TabItem Header="2. CREATE / UPDATE ITEM" Style="{StaticResource ClassicTab}">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -1495,5 +1495,7 @@
                 </TabItem>
             </TabControl>
         </Grid>
-    </Grid>
+    </TabItem>
+    </TabControl>
+</Grid>
 </UserControl>

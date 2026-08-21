@@ -248,6 +248,9 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private string _statusMessage = "Ready.";
 
+        [ObservableProperty]
+        private int _selectedMainTabIndex = 0;
+
         public bool IsExistingItem => CurrentItem.Id > 0;
 
         public bool HasItemHistory => IsExistingItem && _loadedItemHasHistory;
@@ -656,7 +659,10 @@ namespace POS.BackOffice.UI.ViewModels
             if (_isClearing) return;
 
             if (value != null)
+            {
                 _ = LoadFullItemDetailsAsync(value.ParentId);
+                SelectedMainTabIndex = 1;
+            }
             else
             {
                 IsCodeReadOnly = false;
@@ -1686,6 +1692,7 @@ namespace POS.BackOffice.UI.ViewModels
         [RelayCommand]
         private void Clear()
         {
+            SelectedMainTabIndex = 1;
             _isClearing = true;
             _loadedItemWasDeactivated = false;
             _loadedItemHasHistory = false;
