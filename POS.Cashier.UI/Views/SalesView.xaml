@@ -1485,7 +1485,7 @@
                             Tag="&#xE735;"
                             Content="LOYALTY"
                             FontSize="14"
-                            Click="LoyaltyBtn_Click"/>
+                            />
 
                 </UniformGrid>
 
@@ -1547,7 +1547,7 @@
                                 Tag="&#xE7B8;"
                                 Content="Gift Voucher"
                                 FontSize="13"
-                                Click="AlternatePaymentBtn_Click"/>
+                                />
                     </UniformGrid>
 
                     <Button Grid.Column="1"

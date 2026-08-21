@@ -104,8 +104,8 @@
                 <MenuItem Header="Item Sales Analysis"
                           Command="{Binding NavigateToItemSalesAnalyticsCommand}"/>
                 <Separator/>
-                <MenuItem Header="Gift Vouchers"
-                          Command="{Binding NavigateToGiftVoucherCommand}"/>
+                <!--- <MenuItem Header="Gift Vouchers"
+                          Command="{Binding NavigateToGiftVoucherCommand}"/> -->
                 <MenuItem Header="Free Issue Rules"
                           Command="{Binding NavigateToFreeIssueRuleSetupCommand}"/>
             </MenuItem>
