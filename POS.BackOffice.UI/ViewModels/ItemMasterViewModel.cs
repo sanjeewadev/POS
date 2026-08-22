@@ -195,6 +195,15 @@ namespace POS.BackOffice.UI.ViewModels
         private string _selectedItemTypeFilter = "All Items";
 
         [ObservableProperty]
+        private Category? _selectedCategoryFilter;
+
+        [ObservableProperty]
+        private SubCategory? _selectedSubCategoryFilter;
+
+        public ObservableCollection<Category> DatabaseFilterCategories { get; } = new();
+        public ObservableCollection<SubCategory> DatabaseFilterSubCategories { get; } = new();
+
+        [ObservableProperty]
         private ItemMasterSummaryDto? _selectedDatabaseItem;
 
         public ObservableCollection<ItemVariant> GeneratedVariants { get; } = new();
@@ -414,6 +423,8 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 await LoadLookupsAsync();
+                SelectedCategoryFilter = DatabaseFilterCategories.FirstOrDefault();
+                await UpdateDatabaseFilterSubCategoriesAsync(SelectedCategoryFilter?.Id);
                 await LoadMasterGridInternalAsync();
                 _isInitialized = true;
                 StatusMessage = "Item Master page loaded.";
@@ -439,8 +450,15 @@ namespace POS.BackOffice.UI.ViewModels
             AvailableTaxes.Clear();
 
             var categories = await _categoryRepository.GetAllAsync();
+            
+            DatabaseFilterCategories.Clear();
+            DatabaseFilterCategories.Add(new Category { Id = 0, CategoryName = "All Categories" });
+
             foreach (var category in categories.Where(c => !c.IsDeactivated).OrderBy(c => c.CategoryName))
+            {
                 Categories.Add(category);
+                DatabaseFilterCategories.Add(category);
+            }
 
             var uoms = await _uomRepository.GetActiveAsync();
             foreach (var uom in uoms)
@@ -661,13 +679,72 @@ namespace POS.BackOffice.UI.ViewModels
             if (value != null)
             {
                 _ = LoadFullItemDetailsAsync(value.ParentId);
-                SelectedMainTabIndex = 1;
             }
             else
             {
                 IsCodeReadOnly = false;
                 RaiseItemStateProperties();
             }
+        }
+
+        [RelayCommand]
+        private void EditItem(ItemMasterSummaryDto item)
+        {
+            if (item != null)
+            {
+                SelectedDatabaseItem = item;
+                SelectedMainTabIndex = 1;
+            }
+        }
+
+        [RelayCommand]
+        private async Task DuplicateItemAsync(ItemMasterSummaryDto item)
+        {
+            if (item == null) return;
+
+            // Load the full item into memory
+            await LoadFullItemDetailsAsync(item.ParentId);
+
+            // Strip identity to make it a new item
+            CurrentItem.Id = 0;
+            CurrentItem.ItemCode = string.Empty;
+            ItemPrefix = string.Empty;
+            ItemSuffix = string.Empty;
+            IsCodeReadOnly = false;
+
+            _generatedVariantItemCode = string.Empty;
+
+            foreach (var variant in GeneratedVariants)
+            {
+                variant.Id = 0;
+                variant.ItemParentId = 0;
+                variant.SkuCode = string.Empty;
+                variant.Barcode = string.Empty;
+
+                if (variant.PropertyMappings != null)
+                {
+                    foreach (var mapping in variant.PropertyMappings)
+                    {
+                        mapping.ItemVariantId = 0;
+                    }
+                }
+
+                if (variant.ItemSuppliers != null)
+                {
+                    foreach (var supplierLink in variant.ItemSuppliers)
+                    {
+                        supplierLink.Id = 0;
+                        supplierLink.ItemVariantId = 0;
+                    }
+                }
+            }
+
+            _loadedItemHasHistory = false;
+            _loadedItemWasDeactivated = false;
+            
+            SelectedMainTabIndex = 1;
+            StatusMessage = "Creating a duplicate. Please enter a new Item Code.";
+            RaiseItemStateProperties();
         }
 
         private async Task LoadFullItemDetailsAsync(int parentId)
@@ -1670,7 +1747,9 @@ namespace POS.BackOffice.UI.ViewModels
             var data = await _itemMasterRepository.GetSummariesAsync(
                 searchTerm: MasterSearchText,
                 includeDeactivated: IncludeDeactivatedItems,
-                itemType: itemType);
+                itemType: itemType,
+                categoryId: SelectedCategoryFilter?.Id > 0 ? SelectedCategoryFilter.Id : null,
+                subCategoryId: SelectedSubCategoryFilter?.Id > 0 ? SelectedSubCategoryFilter.Id : null);
 
             foreach (var item in data)
                 Items.Add(item);
@@ -1686,6 +1765,19 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task RefreshDatabaseAsync()
         {
             MasterSearchText = string.Empty;
+            await LoadMasterGridAsync();
+        }
+
+        [RelayCommand(CanExecute = nameof(CanRunCommand))]
+        private async Task ClearFiltersAsync()
+        {
+            _isInitialized = false;
+            MasterSearchText = string.Empty;
+            SelectedItemTypeFilter = "All Items";
+            SelectedCategoryFilter = DatabaseFilterCategories.FirstOrDefault();
+            await UpdateDatabaseFilterSubCategoriesAsync(SelectedCategoryFilter?.Id);
+            IncludeDeactivatedItems = false;
+            _isInitialized = true;
             await LoadMasterGridAsync();
         }
 
@@ -1930,6 +2022,37 @@ namespace POS.BackOffice.UI.ViewModels
         partial void OnMasterSearchTextChanged(string value) { if (_isInitialized) StatusMessage = "Type search text and click SEARCH."; }
         partial void OnIncludeDeactivatedItemsChanged(bool value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
         partial void OnSelectedItemTypeFilterChanged(string value) { if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync(); }
+
+        partial void OnSelectedCategoryFilterChanged(Category? value)
+        {
+            if (_isInitialized)
+            {
+                _ = UpdateDatabaseFilterSubCategoriesAsync(value?.Id);
+                if (!IsBusy) _ = LoadMasterGridAsync();
+            }
+        }
+
+        partial void OnSelectedSubCategoryFilterChanged(SubCategory? value)
+        {
+            if (_isInitialized && !IsBusy) _ = LoadMasterGridAsync();
+        }
+
+        private async Task UpdateDatabaseFilterSubCategoriesAsync(int? categoryId)
+        {
+            DatabaseFilterSubCategories.Clear();
+            DatabaseFilterSubCategories.Add(new SubCategory { Id = 0, SubCategoryName = "All Subcategories" });
+
+            if (categoryId.HasValue && categoryId.Value > 0)
+            {
+                var subCategories = await _subCategoryRepository.GetAllAsync();
+                foreach (var subCategory in subCategories.Where(s => !s.IsDeactivated && s.CategoryId == categoryId.Value).OrderBy(s => s.SubCategoryName))
+                {
+                    DatabaseFilterSubCategories.Add(subCategory);
+                }
+            }
+            
+            SelectedSubCategoryFilter = DatabaseFilterSubCategories.FirstOrDefault();
+        }
 
         partial void OnItemPrefixChanged(string value) =>
             HandleItemCodeInputChanged();

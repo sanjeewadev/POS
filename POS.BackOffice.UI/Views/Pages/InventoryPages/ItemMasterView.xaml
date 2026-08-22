@@ -154,14 +154,39 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                    <TextBlock Text="ITEM DATABASE"
-                               Foreground="{DynamicResource WhiteBackgroundBrush}"
-                               FontSize="14"
-                               FontWeight="Bold"
-                               Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" 
+                                   Text="ITEM DATABASE"
+                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                   FontSize="14"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"/>
+
+                        <TextBlock Grid.Column="1" 
+                                   Text="{Binding StatusMessage}"
+                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                   Opacity="0.8"
+                                   FontSize="11"
+                                   VerticalAlignment="Center"
+                                   Margin="15,0,0,0"
+                                   TextWrapping="Wrap"/>
+
+                        <Button Grid.Column="2"
+                                Content="+ ADD NEW ITEM"
+                                Command="{Binding ClearCommand}"
+                                Style="{StaticResource ActionBtn}"
+                                Padding="15,4"/>
+                    </Grid>
 
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
@@ -196,32 +221,63 @@
 
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="145"/>
-                            <ColumnDefinition Width="12"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0"
-                                   Text="Type:"
-                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"
-                                   Margin="2,0,6,0"/>
+                        <WrapPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="Type:"
+                                       Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Margin="2,0,6,0"/>
+                            <ComboBox ItemsSource="{Binding ItemTypeFilters}"
+                                      SelectedItem="{Binding SelectedItemTypeFilter, Mode=TwoWay}"
+                                      Style="{StaticResource ClassicCombo}"
+                                      Width="105"
+                                      Margin="0,0,10,0"
+                                      ToolTip="Filter by Type"/>
 
-                        <ComboBox Grid.Column="1"
-                                  ItemsSource="{Binding ItemTypeFilters}"
-                                  SelectedItem="{Binding SelectedItemTypeFilter, Mode=TwoWay}"
-                                  Style="{StaticResource ClassicCombo}"
-                                  ToolTip="Filter the Item Database without changing the selected item's type."/>
+                            <TextBlock Text="Cat:"
+                                       Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,6,0"/>
+                            <ComboBox ItemsSource="{Binding DatabaseFilterCategories}"
+                                      SelectedItem="{Binding SelectedCategoryFilter, Mode=TwoWay}"
+                                      DisplayMemberPath="CategoryName"
+                                      Style="{StaticResource ClassicCombo}"
+                                      Width="105"
+                                      Margin="0,0,10,0"
+                                      ToolTip="Filter by Category"/>
 
-                        <CheckBox Grid.Column="3"
+                            <TextBlock Text="Sub:"
+                                       Foreground="{DynamicResource WhiteBackgroundBrush}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,6,0"/>
+                            <ComboBox ItemsSource="{Binding DatabaseFilterSubCategories}"
+                                      SelectedItem="{Binding SelectedSubCategoryFilter, Mode=TwoWay}"
+                                      DisplayMemberPath="SubCategoryName"
+                                      Style="{StaticResource ClassicCombo}"
+                                      Width="105"
+                                      Margin="0,0,10,0"
+                                      ToolTip="Filter by SubCategory"/>
+
+                            <Button Content="CLEAR FILTERS"
+                                    Command="{Binding ClearFiltersCommand}"
+                                    Style="{StaticResource ClassicBtn}"
+                                    Padding="10,0"
+                                    Margin="0,0,10,0"/>
+                        </WrapPanel>
+
+                        <CheckBox Grid.Column="1"
                                   Content="Include Deactivated Items"
                                   IsChecked="{Binding IncludeDeactivatedItems, Mode=TwoWay}"
                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
                                   FontWeight="SemiBold"
                                   VerticalAlignment="Center"
-                                  Margin="2,0,0,0"/>
+                                  Margin="2,0,0,6"/>
                     </Grid>
                 </StackPanel>
 
@@ -277,8 +333,41 @@
                         <DataGridTextColumn Header="Status"
                                             Binding="{Binding StatusText, Mode=OneWay}"
                                             Width="55"/>
+
+                        <DataGridTemplateColumn Header="Actions" Width="140">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Button Content="Edit"
+                                                Command="{Binding DataContext.EditItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource ClassicBtn}"
+                                                Padding="10,0"
+                                                Height="22"
+                                                Margin="0,0,5,0"/>
+                                        <Button Content="Duplicate"
+                                                Command="{Binding DataContext.DuplicateItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource ClassicBtn}"
+                                                Padding="10,0"
+                                                Height="22"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="0,8,0,0">
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
             </Grid>
         </Border>
     </TabItem>
@@ -348,14 +437,7 @@
                                 <Run Text="{Binding ItemStatusText, Mode=OneWay}" FontWeight="Bold"/>
                             </TextBlock>
                         </Border>
-
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   Foreground="{DynamicResource SecondaryTextBrush}"
-                                   FontSize="11"
-                                   VerticalAlignment="Center"
-                                   TextWrapping="Wrap"/>
                     </StackPanel>
-
                     <Button Grid.Column="4"
                             Content="CLEAR"
                             Command="{Binding ClearCommand}"

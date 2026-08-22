@@ -338,6 +338,8 @@ namespace POS.Core.Repositories
             string searchTerm = "",
             bool includeDeactivated = false,
             string? itemType = null,
+            int? categoryId = null,
+            int? subCategoryId = null,
             int take = DefaultTakeLimit)
         {
             take = NormalizeTakeLimit(take);
@@ -350,6 +352,16 @@ namespace POS.Core.Repositories
             if (!includeDeactivated)
             {
                 query = query.Where(p => !p.IsDeactivated);
+            }
+
+            if (categoryId.HasValue)
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            if (subCategoryId.HasValue)
+            {
+                query = query.Where(p => p.SubCategoryId == subCategoryId.Value);
             }
 
             string normalizedItemType = (itemType ?? string.Empty).Trim();
