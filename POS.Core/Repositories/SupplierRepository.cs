@@ -191,10 +191,15 @@ namespace POS.Core.Repositories
             if (supplier == null)
                 throw new ArgumentNullException(nameof(supplier));
 
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            if (string.IsNullOrWhiteSpace(supplier.SupplierCode))
+            {
+                supplier.SupplierCode = await GenerateSupplierCodeAsync(context);
+            }
+
             NormalizeSupplierForSave(supplier, isNew: true);
             ValidateSupplierForSave(supplier);
-
-            await using var context = await _contextFactory.CreateDbContextAsync();
             string caseInsensitiveCollation =
                 DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
 
@@ -462,6 +467,50 @@ namespace POS.Core.Repositories
 
             if (supplier.DefaultCreditDays < 0 || supplier.DefaultCreditDays > 365)
                 throw new InvalidOperationException("Default credit days must be between 0 and 365.");
+        }
+
+        private async Task<string> GenerateSupplierCodeAsync(AppDbContext context)
+        {
+            var sequence = await context.DocumentSequences
+                .FirstOrDefaultAsync(d => d.DocumentType == "SUP");
+
+            if (sequence == null)
+            {
+                sequence = new DocumentSequence
+                {
+                    DocumentType = "SUP",
+                    Prefix = "SUP-",
+                    NextSequenceNumber = 1,
+                    PaddingLength = 4,
+                    UpdatedAt = DateTime.Now
+                };
+
+                context.DocumentSequences.Add(sequence);
+            }
+
+            int attempts = 0;
+
+            while (attempts < 1000)
+            {
+                int nextNumber = sequence.NextSequenceNumber;
+                int padding = sequence.PaddingLength <= 0 ? 4 : sequence.PaddingLength;
+
+                string code = $"{sequence.Prefix}{nextNumber.ToString($"D{padding}")}";
+
+                sequence.NextSequenceNumber++;
+                sequence.UpdatedAt = DateTime.Now;
+
+                string caseInsensitiveCollation = DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
+                bool exists = await context.Suppliers
+                    .AnyAsync(s => EF.Functions.Collate(s.SupplierCode, caseInsensitiveCollation) == code);
+
+                if (!exists)
+                    return code;
+
+                attempts++;
+            }
+
+            throw new InvalidOperationException("Unable to generate a unique supplier code.");
         }
 
         private static int NormalizeTakeLimit(int take)

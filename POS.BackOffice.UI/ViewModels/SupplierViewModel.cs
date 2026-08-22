@@ -285,18 +285,22 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 int currentSupplierId = SelectedSupplier?.Id ?? 0;
+                bool isAutoGenerating = SelectedSupplier == null && string.IsNullOrWhiteSpace(supplierCode);
 
-                bool isCodeUnique = await _supplierRepository.IsCodeUniqueAsync(
-                    supplierCode,
-                    currentSupplierId);
-
-                if (!isCodeUnique)
+                if (!isAutoGenerating)
                 {
-                    _messageBoxService.ShowWarning(
-                        $"The Supplier Code '{supplierCode}' is already in use.",
-                        "Duplicate Supplier Code");
+                    bool isCodeUnique = await _supplierRepository.IsCodeUniqueAsync(
+                        supplierCode,
+                        currentSupplierId);
 
-                    return;
+                    if (!isCodeUnique)
+                    {
+                        _messageBoxService.ShowWarning(
+                            $"The Supplier Code '{supplierCode}' is already in use.",
+                            "Duplicate Supplier Code");
+
+                        return;
+                    }
                 }
 
                 if (SelectedSupplier == null)
@@ -655,11 +659,13 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanSave()
         {
-            return !IsBusy &&
-                   !string.IsNullOrWhiteSpace(SupplierCode) &&
-                   !string.IsNullOrWhiteSpace(SupplierName) &&
-                   !string.IsNullOrWhiteSpace(Phone1) &&
-                   (!HasVat || !string.IsNullOrWhiteSpace(VatNumber));
+            if (IsBusy || string.IsNullOrWhiteSpace(SupplierName) || string.IsNullOrWhiteSpace(Phone1) || (HasVat && string.IsNullOrWhiteSpace(VatNumber)))
+                return false;
+
+            if (SelectedSupplier != null && string.IsNullOrWhiteSpace(SupplierCode))
+                return false;
+
+            return true;
         }
 
         private bool CanDeleteSupplier()
@@ -694,22 +700,28 @@ namespace POS.BackOffice.UI.ViewModels
             string vatNumber,
             int defaultCreditDays)
         {
-            if (string.IsNullOrWhiteSpace(supplierCode))
-            {
-                _messageBoxService.ShowWarning("Supplier Code is required.", "Validation Error");
-                return false;
-            }
+            bool isNew = SelectedSupplier == null;
+            bool isAutoGenerating = isNew && string.IsNullOrWhiteSpace(supplierCode);
 
-            if (supplierCode.Length > 20)
+            if (!isAutoGenerating)
             {
-                _messageBoxService.ShowWarning("Supplier Code cannot be longer than 20 characters.", "Validation Error");
-                return false;
-            }
+                if (string.IsNullOrWhiteSpace(supplierCode))
+                {
+                    _messageBoxService.ShowWarning("Supplier Code is required.", "Validation Error");
+                    return false;
+                }
 
-            if (!SupplierCodeRegex.IsMatch(supplierCode))
-            {
-                _messageBoxService.ShowWarning("Supplier Code can only contain letters, numbers, dash, and underscore.", "Validation Error");
-                return false;
+                if (supplierCode.Length > 20)
+                {
+                    _messageBoxService.ShowWarning("Supplier Code cannot be longer than 20 characters.", "Validation Error");
+                    return false;
+                }
+
+                if (!SupplierCodeRegex.IsMatch(supplierCode))
+                {
+                    _messageBoxService.ShowWarning("Supplier Code can only contain letters, numbers, dash, and underscore.", "Validation Error");
+                    return false;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(supplierName))

@@ -172,14 +172,24 @@
                                    FontWeight="Bold"
                                    VerticalAlignment="Center"/>
 
-                        <TextBlock Grid.Column="1" 
-                                   Text="{Binding StatusMessage}"
-                                   Foreground="{DynamicResource WhiteBackgroundBrush}"
-                                   Opacity="0.8"
-                                   FontSize="11"
-                                   VerticalAlignment="Center"
-                                   Margin="15,0,0,0"
-                                   TextWrapping="Wrap"/>
+                        <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="25,0,0,0">
+                            <TextBlock Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <Run Text="Loaded Items: "/>
+                                <Run Text="{Binding TotalLoadedItems}"/>
+                            </TextBlock>
+                            <TextBlock Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <Run Text="Total Variants: "/>
+                                <Run Text="{Binding TotalLoadedVariants}"/>
+                            </TextBlock>
+                            <TextBlock Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <Run Text="Active: "/>
+                                <Run Text="{Binding ActiveItems}"/>
+                            </TextBlock>
+                            <TextBlock Foreground="#FF6B6B" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <Run Text="Deactivated: "/>
+                                <Run Text="{Binding DeactivatedItems}"/>
+                            </TextBlock>
+                        </WrapPanel>
 
                         <Button Grid.Column="2"
                                 Content="+ ADD NEW ITEM"
@@ -316,6 +326,10 @@
                                             MinWidth="120"
                                             FontWeight="SemiBold"/>
 
+                        <DataGridTextColumn Header="Category"
+                                            Binding="{Binding CategoryName, Mode=OneWay}"
+                                            Width="120"/>
+
                         <DataGridTextColumn Header="Type"
                                             Binding="{Binding ItemTypeText, Mode=OneWay}"
                                             Width="70"/>
@@ -358,16 +372,6 @@
                     </DataGrid.Columns>
                 </DataGrid>
 
-                <StackPanel Grid.Row="2"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center"
-                            Margin="0,8,0,0">
-                    <TextBlock Text="{Binding StatusMessage}"
-                               Foreground="{DynamicResource SecondaryTextBrush}"
-                               FontSize="11"
-                               VerticalAlignment="Center"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
             </Grid>
         </Border>
     </TabItem>
@@ -573,25 +577,7 @@
                             </Border.Style>
 
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <Border Grid.Column="0"
-                                        Background="{DynamicResource ButtonDefaultBrush}"
-                                        BorderBrush="{DynamicResource LightBorderBrush}"
-                                        BorderThickness="0,0,1,0">
-
-                                    <TextBlock Text="{Binding ItemPrefix}"
-                                               Foreground="{DynamicResource SecondaryTextBrush}"
-                                               Padding="6,0"
-                                               VerticalAlignment="Center"
-                                               FontWeight="Bold"/>
-                                </Border>
-
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding ItemSuffix, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBox Text="{Binding ItemCodeInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                          IsReadOnly="{Binding IsCodeReadOnly}"
                                          IsEnabled="{Binding IsSetupEditable}"
                                          BorderThickness="0"

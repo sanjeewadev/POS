@@ -81,6 +81,18 @@ namespace POS.BackOffice.UI.ViewModels
             new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         [ObservableProperty]
+        private int _totalLoadedItems;
+
+        [ObservableProperty]
+        private int _totalLoadedVariants;
+
+        [ObservableProperty]
+        private int _activeItems;
+
+        [ObservableProperty]
+        private int _deactivatedItems;
+
+        [ObservableProperty]
         private ItemParent _currentItem = new()
         {
             ItemType = ItemTypeCodes.StockItem,
@@ -98,10 +110,7 @@ namespace POS.BackOffice.UI.ViewModels
         private SubCategory? _selectedSubCategory;
 
         [ObservableProperty]
-        private string _itemPrefix = string.Empty;
-
-        [ObservableProperty]
-        private string _itemSuffix = string.Empty;
+        private string _itemCodeInput = string.Empty;
 
         [ObservableProperty]
         private bool _isCodeReadOnly = false;
@@ -560,9 +569,6 @@ namespace POS.BackOffice.UI.ViewModels
                 await LoadSubCategoriesAsync(categoryId);
                 await LoadPropertyKeysForCategoryAsync(categoryId);
 
-                if (!IsCodeReadOnly && SelectedCategory != null)
-                    ItemPrefix = BuildItemCodePrefix(SelectedCategory, null);
-
                 StatusMessage = "Category changed. Sub-category is optional. Build variants again.";
             }
             catch (Exception ex)
@@ -585,42 +591,6 @@ namespace POS.BackOffice.UI.ViewModels
                 return;
 
             CurrentItem.SubCategoryId = value?.Id;
-
-            if (!IsCodeReadOnly)
-                ItemPrefix = BuildItemCodePrefix(SelectedCategory, value);
-        }
-
-        private static string BuildItemCodePrefix(
-            Category category,
-            SubCategory? subCategory)
-        {
-            string categoryCode =
-                NormalizeCode(category.CategoryCode);
-
-            if (string.IsNullOrWhiteSpace(categoryCode))
-                return string.Empty;
-
-            string categoryPrefix = categoryCode + "-";
-
-            if (subCategory == null)
-                return categoryPrefix;
-
-            string subCategoryCode =
-                NormalizeCode(subCategory.SubCategoryCode);
-
-            if (string.IsNullOrWhiteSpace(subCategoryCode))
-                return categoryPrefix;
-
-            if (subCategoryCode.StartsWith(
-                    categoryPrefix,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return subCategoryCode.EndsWith("-")
-                    ? subCategoryCode
-                    : subCategoryCode + "-";
-            }
-
-            return $"{categoryCode}-{subCategoryCode}-";
         }
 
         private async Task LoadSubCategoriesAsync(int categoryId)
@@ -708,8 +678,7 @@ namespace POS.BackOffice.UI.ViewModels
             // Strip identity to make it a new item
             CurrentItem.Id = 0;
             CurrentItem.ItemCode = string.Empty;
-            ItemPrefix = string.Empty;
-            ItemSuffix = string.Empty;
+            ItemCodeInput = string.Empty;
             IsCodeReadOnly = false;
 
             _generatedVariantItemCode = string.Empty;
@@ -777,8 +746,7 @@ namespace POS.BackOffice.UI.ViewModels
                     ?? ResolveUnambiguousLegacyTaxCategory(fullItem.TaxCode);
 
                 IsCodeReadOnly = true;
-                ItemPrefix = fullItem.ItemCode;
-                ItemSuffix = string.Empty;
+                ItemCodeInput = fullItem.ItemCode;
 
                 SelectedCategory = Categories.FirstOrDefault(c => c.Id == fullItem.CategoryId);
                 await LoadSubCategoriesAsync(fullItem.CategoryId);
@@ -1591,10 +1559,10 @@ namespace POS.BackOffice.UI.ViewModels
             if (!ValidateBeforeSave(itemCode)) return;
 
             bool saveStartedAsNewItem = CurrentItem.Id == 0;
-            // For new items, if the suffix is blank, we are relying on the repository
-            // to auto-generate a unique suffix. We can therefore skip the client-side
+            // For new items, if the code is blank, we are relying on the repository
+            // to auto-generate a unique code. We can therefore skip the client-side
             // uniqueness check which would otherwise fail.
-            bool isAutoGeneratingCode = saveStartedAsNewItem && string.IsNullOrWhiteSpace(ItemSuffix);
+            bool isAutoGeneratingCode = saveStartedAsNewItem && string.IsNullOrWhiteSpace(ItemCodeInput);
 
             IsBusy = true;
             try
@@ -1660,6 +1628,21 @@ namespace POS.BackOffice.UI.ViewModels
                 await LoadMasterGridInternalAsync();
                 Clear();
                 _messageBoxService.ShowInformation("Item saved successfully.", "Success");
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (saveStartedAsNewItem)
+                    ResetTransientNewItemIdentities();
+
+                StatusMessage =
+                    "Validation failed. Correct the highlighted errors and try again.";
+
+                string userMessage =
+                    ItemMasterSaveFailureFormatter.GetUserMessage(ex);
+
+                _messageBoxService.ShowError(
+                    userMessage,
+                    "Validation Error");
             }
             catch (Exception ex)
             {
@@ -1754,8 +1737,13 @@ namespace POS.BackOffice.UI.ViewModels
             foreach (var item in data)
                 Items.Add(item);
 
+            TotalLoadedItems = Items.Count;
+            TotalLoadedVariants = Items.Sum(i => i.VariantCount);
+            ActiveItems = Items.Count(i => !i.IsDeactivated);
+            DeactivatedItems = Items.Count(i => i.IsDeactivated);
+
             StatusMessage =
-                $"Loaded {Items.Count} item record(s). Filter: {SelectedItemTypeFilter}.";
+                $"Loaded {TotalLoadedItems} item record(s). Filter: {SelectedItemTypeFilter}.";
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -1811,8 +1799,7 @@ namespace POS.BackOffice.UI.ViewModels
 
             ApplyTaxCategoryToCurrentItem();
 
-            ItemPrefix = string.Empty;
-            ItemSuffix = string.Empty;
+            ItemCodeInput = string.Empty;
             IsCodeReadOnly = false;
             SelectedCategory = null;
             SelectedSubCategory = null;
@@ -2054,10 +2041,7 @@ namespace POS.BackOffice.UI.ViewModels
             SelectedSubCategoryFilter = DatabaseFilterSubCategories.FirstOrDefault();
         }
 
-        partial void OnItemPrefixChanged(string value) =>
-            HandleItemCodeInputChanged();
-
-        partial void OnItemSuffixChanged(string value) =>
+        partial void OnItemCodeInputChanged(string value) =>
             HandleItemCodeInputChanged();
 
         partial void OnSelectedUomChanged(UnitOfMeasure? value) =>
@@ -2282,7 +2266,7 @@ namespace POS.BackOffice.UI.ViewModels
         private bool CanReactivateItem() => !IsBusy && IsExistingItem && _loadedItemWasDeactivated;
         private bool CanDelete() => CanDeactivateItem();
 
-        private string BuildItemCode() => NormalizeCode(IsCodeReadOnly && string.IsNullOrWhiteSpace(ItemSuffix) ? ItemPrefix : $"{ItemPrefix}{ItemSuffix}");
+        private string BuildItemCode() => NormalizeCode(ItemCodeInput);
 
         private bool ValidateBeforeVariantGeneration(string itemCode)
         {
@@ -2311,20 +2295,25 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(itemCode))
-            {
-                _messageBoxService.ShowWarning(
-                    "Enter the item-code suffix.",
-                    "Validation Error");
-                return false;
-            }
+            bool isAutoGenerating = !IsExistingItem && string.IsNullOrWhiteSpace(itemCode);
 
-            if (!CodeRegex.IsMatch(itemCode))
+            if (!isAutoGenerating)
             {
-                _messageBoxService.ShowWarning(
-                    "Item code may contain only letters, numbers, underscore, and hyphen.",
-                    "Validation Error");
-                return false;
+                if (string.IsNullOrWhiteSpace(itemCode))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Enter the item code.",
+                        "Validation Error");
+                    return false;
+                }
+
+                if (!CodeRegex.IsMatch(itemCode))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Item code may contain only letters, numbers, underscore, and hyphen.",
+                        "Validation Error");
+                    return false;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(CurrentItem.ItemName))
@@ -2373,17 +2362,22 @@ namespace POS.BackOffice.UI.ViewModels
 
             if (!IsExistingItem)
             {
-                string misalignmentMessage =
-                    ItemVariantIdentityPolicy.BuildMisalignmentMessage(
-                        itemCode,
-                        GeneratedVariants);
-
-                if (!string.IsNullOrWhiteSpace(misalignmentMessage))
+                bool isAutoGenerating = string.IsNullOrWhiteSpace(itemCode);
+                
+                if (!isAutoGenerating)
                 {
-                    _messageBoxService.ShowWarning(
-                        misalignmentMessage,
-                        "Generate Variants Again");
-                    return false;
+                    string misalignmentMessage =
+                        ItemVariantIdentityPolicy.BuildMisalignmentMessage(
+                            itemCode,
+                            GeneratedVariants);
+
+                    if (!string.IsNullOrWhiteSpace(misalignmentMessage))
+                    {
+                        _messageBoxService.ShowWarning(
+                            misalignmentMessage,
+                            "Generate Variants Again");
+                        return false;
+                    }
                 }
             }
 

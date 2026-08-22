@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -256,18 +256,23 @@ namespace POS.BackOffice.UI.ViewModels
 
             try
             {
-                bool isCodeUnique = await _subCategoryRepository.IsCodeUniqueAsync(
-                    SelectedParentCategory.Id,
-                    code,
-                    0);
+                bool isAutoGenerating = SelectedSubCategory == null && string.IsNullOrWhiteSpace(suffix);
 
-                if (!isCodeUnique)
+                if (!isAutoGenerating)
                 {
-                    _messageBoxService.ShowWarning(
-                        $"The Sub-Category Code '{code}' already exists under this parent category.",
-                        "Duplicate Sub-Category Code");
+                    bool isCodeUnique = await _subCategoryRepository.IsCodeUniqueAsync(
+                        SelectedParentCategory.Id,
+                        code,
+                        0);
 
-                    return;
+                    if (!isCodeUnique)
+                    {
+                        _messageBoxService.ShowWarning(
+                            $"The Sub-Category Code '{code}' already exists under this parent category.",
+                            "Duplicate Sub-Category Code");
+
+                        return;
+                    }
                 }
 
                 bool isNameUnique = await _subCategoryRepository.IsNameUniqueAsync(
@@ -642,7 +647,6 @@ namespace POS.BackOffice.UI.ViewModels
             if (SelectedSubCategory == null)
             {
                 return SelectedParentCategory != null &&
-                       !string.IsNullOrWhiteSpace(SubCategorySuffix) &&
                        !string.IsNullOrWhiteSpace(SubCategoryName);
             }
 
@@ -736,49 +740,55 @@ namespace POS.BackOffice.UI.ViewModels
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(suffix))
+            bool isNew = SelectedSubCategory == null;
+            bool isAutoGenerating = isNew && string.IsNullOrWhiteSpace(suffix);
+
+            if (!isAutoGenerating)
             {
-                _messageBoxService.ShowWarning(
-                    "Sub-Category Code suffix is required.",
-                    "Validation Error");
+                if (string.IsNullOrWhiteSpace(suffix))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Sub-Category Code suffix is required.",
+                        "Validation Error");
 
-                return false;
-            }
+                    return false;
+                }
 
-            if (string.IsNullOrWhiteSpace(code))
-            {
-                _messageBoxService.ShowWarning(
-                    "Sub-Category Code is required.",
-                    "Validation Error");
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Sub-Category Code is required.",
+                        "Validation Error");
 
-                return false;
-            }
+                    return false;
+                }
 
-            if (code.EndsWith("-", StringComparison.Ordinal))
-            {
-                _messageBoxService.ShowWarning(
-                    "Sub-Category Code is incomplete. Enter the code part after the parent prefix.",
-                    "Validation Error");
+                if (code.EndsWith("-", StringComparison.Ordinal))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Sub-Category Code is incomplete. Enter the code part after the parent prefix.",
+                        "Validation Error");
 
-                return false;
-            }
+                    return false;
+                }
 
-            if (code.Length > MaxSubCategoryCodeLength)
-            {
-                _messageBoxService.ShowWarning(
-                    $"Sub-Category Code cannot be longer than {MaxSubCategoryCodeLength} characters.",
-                    "Validation Error");
+                if (code.Length > MaxSubCategoryCodeLength)
+                {
+                    _messageBoxService.ShowWarning(
+                        $"Sub-Category Code cannot be longer than {MaxSubCategoryCodeLength} characters.",
+                        "Validation Error");
 
-                return false;
-            }
+                    return false;
+                }
 
-            if (!SubCategoryCodeRegex.IsMatch(code))
-            {
-                _messageBoxService.ShowWarning(
-                    "Sub-Category Code can only contain letters, numbers, dash, and underscore.\n\nExample: 001-01",
-                    "Validation Error");
+                if (!SubCategoryCodeRegex.IsMatch(code))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Sub-Category Code can only contain uppercase letters, numbers, hyphens (-), and underscores (_).",
+                        "Validation Error");
 
-                return false;
+                    return false;
+                }
             }
 
             return ValidateNameAndDisplayOrder(name, displayOrder);

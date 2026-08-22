@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -231,10 +231,6 @@ namespace POS.Core.Repositories
             string normalizedName = NormalizeName(subCategory.SubCategoryName);
             int displayOrder = NormalizeDisplayOrder(subCategory.DisplayOrder);
 
-            ValidateSubCategoryCode(normalizedCode);
-            ValidateSubCategoryName(normalizedName);
-            ValidateDisplayOrder(displayOrder);
-
             await using var context = await _contextFactory.CreateDbContextAsync();
 
             var parentCategory = await context.Categories
@@ -242,6 +238,17 @@ namespace POS.Core.Repositories
 
             if (parentCategory == null)
                 throw new InvalidOperationException("Selected parent category was not found.");
+
+            if (string.IsNullOrWhiteSpace(normalizedCode) || normalizedCode.EndsWith("-", StringComparison.Ordinal))
+            {
+                string prefix = string.IsNullOrWhiteSpace(normalizedCode) ? $"{parentCategory.CategoryCode}-" : normalizedCode;
+                normalizedCode = await GenerateSubCategoryCodeAsync(context, subCategory.CategoryId, prefix);
+                subCategory.SubCategoryCode = normalizedCode;
+            }
+
+            ValidateSubCategoryCode(normalizedCode);
+            ValidateSubCategoryName(normalizedName);
+            ValidateDisplayOrder(displayOrder);
 
             if (parentCategory.IsDeactivated)
                 throw new InvalidOperationException("Cannot create a sub-category under a deactivated parent category.");
@@ -514,6 +521,51 @@ namespace POS.Core.Repositories
                 return username.Trim();
 
             return Environment.UserName ?? "System";
+        }
+
+        private async Task<string> GenerateSubCategoryCodeAsync(AppDbContext context, int categoryId, string prefix)
+        {
+            string docType = $"SUBCAT-{categoryId}";
+            var sequence = await context.DocumentSequences
+                .FirstOrDefaultAsync(d => d.DocumentType == docType);
+
+            if (sequence == null)
+            {
+                sequence = new DocumentSequence
+                {
+                    DocumentType = docType,
+                    Prefix = prefix,
+                    NextSequenceNumber = 1,
+                    PaddingLength = 3,
+                    UpdatedAt = DateTime.Now
+                };
+
+                context.DocumentSequences.Add(sequence);
+            }
+
+            int attempts = 0;
+
+            while (attempts < 1000)
+            {
+                int nextNumber = sequence.NextSequenceNumber;
+                int padding = sequence.PaddingLength <= 0 ? 3 : sequence.PaddingLength;
+
+                string code = $"{sequence.Prefix}{nextNumber.ToString($"D{padding}")}";
+
+                sequence.NextSequenceNumber++;
+                sequence.UpdatedAt = DateTime.Now;
+
+                // SubCategory code must be unique per category
+                bool exists = await context.SubCategories
+                    .AnyAsync(s => s.CategoryId == categoryId && s.SubCategoryCode == code);
+
+                if (!exists)
+                    return code;
+
+                attempts++;
+            }
+
+            throw new InvalidOperationException("Unable to generate a unique sub-category code.");
         }
 
         private static int NormalizeTakeLimit(int take)

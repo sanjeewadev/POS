@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -185,12 +185,18 @@ namespace POS.Core.Repositories
             string normalizedDescription = NormalizeDescription(category.Description);
             int displayOrder = NormalizeDisplayOrder(category.DisplayOrder);
 
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+            {
+                normalizedCode = await GenerateCategoryCodeAsync(context);
+                category.CategoryCode = normalizedCode;
+            }
+
             ValidateCategoryCode(normalizedCode);
             ValidateCategoryName(normalizedName);
             ValidateDescription(normalizedDescription);
             ValidateDisplayOrder(displayOrder);
-
-            await using var context = await _contextFactory.CreateDbContextAsync();
 
             bool codeExists = await context.Categories.AnyAsync(c =>
                 c.CategoryCode == normalizedCode);
@@ -424,6 +430,49 @@ namespace POS.Core.Repositories
                 return username.Trim();
 
             return Environment.UserName ?? "System";
+        }
+
+        private async Task<string> GenerateCategoryCodeAsync(AppDbContext context)
+        {
+            var sequence = await context.DocumentSequences
+                .FirstOrDefaultAsync(d => d.DocumentType == "CAT");
+
+            if (sequence == null)
+            {
+                sequence = new DocumentSequence
+                {
+                    DocumentType = "CAT",
+                    Prefix = "CAT-",
+                    NextSequenceNumber = 1,
+                    PaddingLength = 3,
+                    UpdatedAt = DateTime.Now
+                };
+
+                context.DocumentSequences.Add(sequence);
+            }
+
+            int attempts = 0;
+
+            while (attempts < 1000)
+            {
+                int nextNumber = sequence.NextSequenceNumber;
+                int padding = sequence.PaddingLength <= 0 ? 3 : sequence.PaddingLength;
+
+                string code = $"{sequence.Prefix}{nextNumber.ToString($"D{padding}")}";
+
+                sequence.NextSequenceNumber++;
+                sequence.UpdatedAt = DateTime.Now;
+
+                bool exists = await context.Categories
+                    .AnyAsync(c => c.CategoryCode == code);
+
+                if (!exists)
+                    return code;
+
+                attempts++;
+            }
+
+            throw new InvalidOperationException("Unable to generate a unique category code.");
         }
 
         private static int NormalizeTakeLimit(int take)

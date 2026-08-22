@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -144,14 +144,18 @@ namespace POS.BackOffice.UI.ViewModels
             try
             {
                 int currentId = SelectedCategory?.Id ?? 0;
+                bool isAutoGenerating = SelectedCategory == null && string.IsNullOrWhiteSpace(code);
 
-                bool isCodeUnique = await _categoryRepository.IsCodeUniqueAsync(code, currentId);
-                if (!isCodeUnique)
+                if (!isAutoGenerating)
                 {
-                    _messageBoxService.ShowWarning(
-                        $"The Category Code '{code}' is already in use. Please enter a unique code.",
-                        "Duplicate Category Code");
-                    return;
+                    bool isCodeUnique = await _categoryRepository.IsCodeUniqueAsync(code, currentId);
+                    if (!isCodeUnique)
+                    {
+                        _messageBoxService.ShowWarning(
+                            $"The Category Code '{code}' is already in use. Please enter a unique code.",
+                            "Duplicate Category Code");
+                        return;
+                    }
                 }
 
                 bool isNameUnique = await _categoryRepository.IsNameUniqueAsync(name, currentId);
@@ -395,9 +399,13 @@ namespace POS.BackOffice.UI.ViewModels
 
         private bool CanSave()
         {
-            return !IsBusy &&
-                   !string.IsNullOrWhiteSpace(CategoryCode) &&
-                   !string.IsNullOrWhiteSpace(CategoryName);
+            if (IsBusy || string.IsNullOrWhiteSpace(CategoryName))
+                return false;
+
+            if (SelectedCategory != null && string.IsNullOrWhiteSpace(CategoryCode))
+                return false;
+
+            return true;
         }
 
         private bool CanDelete()
@@ -475,31 +483,37 @@ namespace POS.BackOffice.UI.ViewModels
             string description,
             int displayOrder)
         {
-            if (string.IsNullOrWhiteSpace(code))
+            bool isNew = SelectedCategory == null;
+            bool isAutoGenerating = isNew && string.IsNullOrWhiteSpace(code);
+
+            if (!isAutoGenerating)
             {
-                _messageBoxService.ShowWarning(
-                    "Category Code is required.",
-                    "Validation Error");
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Category Code is required.",
+                        "Validation Error");
 
-                return false;
-            }
+                    return false;
+                }
 
-            if (code.Length > 20)
-            {
-                _messageBoxService.ShowWarning(
-                    "Category Code cannot be longer than 20 characters.",
-                    "Validation Error");
+                if (code.Length > 20)
+                {
+                    _messageBoxService.ShowWarning(
+                        "Category Code cannot be longer than 20 characters.",
+                        "Validation Error");
 
-                return false;
-            }
+                    return false;
+                }
 
-            if (!CategoryCodeRegex.IsMatch(code))
-            {
-                _messageBoxService.ShowWarning(
-                    "Category Code can only contain letters, numbers, dash, and underscore.\n\nExample: CAT-001",
-                    "Validation Error");
+                if (!CategoryCodeRegex.IsMatch(code))
+                {
+                    _messageBoxService.ShowWarning(
+                        "Category Code can only contain letters, numbers, dash, and underscore.\n\nExample: CAT-001",
+                        "Validation Error");
 
-                return false;
+                    return false;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(name))
