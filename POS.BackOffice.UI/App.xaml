@@ -123,6 +123,9 @@
             <DataTemplate DataType="{x:Type viewmodels:SecurityAuditViewModel}">
                 <sales:SecurityAuditView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:DataImportCenterViewModel}">
+                <admin:DataImportCenterView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type viewmodels:ItemSalesAnalyticsViewModel}">
                 <sales:ItemSalesAnalyticsView />
             </DataTemplate>

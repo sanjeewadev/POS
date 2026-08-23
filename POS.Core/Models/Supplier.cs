@@ -23,7 +23,6 @@ namespace POS.Core.Models
         [MaxLength(50)]
         public string ContactPerson { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(20)]
         public string Phone1 { get; set; } = string.Empty;
 

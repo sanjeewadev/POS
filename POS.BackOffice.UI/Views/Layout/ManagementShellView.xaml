@@ -154,6 +154,8 @@
                 <MenuItem Header="Cashier Terminal Settings"
                           Command="{Binding NavigateToTerminalSettingsCommand}"/>
                 <Separator/>
+                <MenuItem Header="Data Import Center"
+                          Command="{Binding NavigateToDataImportCenterCommand}"/>
                 <MenuItem Header="Security Audit"
                           Command="{Binding NavigateToSecurityAuditCommand}"/>
             </MenuItem>

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using POS.BackOffice.UI.Services;
 using POS.BackOffice.UI.ViewModels;
@@ -222,6 +222,7 @@ services.AddTransient<ShopCostFreeIssueReportViewModel>();
             services.AddTransient<SalesExplorerViewModel>();
             services.AddTransient<FloatCashLogViewModel>();
             services.AddTransient<FinancialSummaryViewModel>();
+            services.AddTransient<DataImportCenterViewModel>();
             services.AddTransient<SecurityAuditViewModel>();
             services.AddTransient<ItemSalesAnalyticsViewModel>();
             services.AddTransient<CashMovementDashboardViewModel>();

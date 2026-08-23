@@ -237,6 +237,57 @@ namespace POS.Core.Repositories
             await context.SaveChangesAsync();
         }
 
+        public async Task AddBulkAsync(IEnumerable<Category> categories)
+        {
+            if (categories == null || !categories.Any()) return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            DateTime now = DateTime.Now;
+            string currentUser = GetCurrentUsername();
+
+            foreach (var category in categories)
+            {
+                string normalizedCode = NormalizeCode(category.CategoryCode);
+                string normalizedName = NormalizeName(category.CategoryName);
+                string normalizedDescription = NormalizeDescription(category.Description);
+                int displayOrder = NormalizeDisplayOrder(category.DisplayOrder);
+
+                if (string.IsNullOrWhiteSpace(normalizedCode))
+                {
+                    normalizedCode = await GenerateCategoryCodeAsync(context);
+                }
+
+                ValidateCategoryCode(normalizedCode);
+                ValidateCategoryName(normalizedName);
+                ValidateDescription(normalizedDescription);
+                ValidateDisplayOrder(displayOrder);
+
+                category.CategoryCode = normalizedCode;
+                category.CategoryName = normalizedName;
+                category.Description = normalizedDescription;
+                category.DisplayOrder = displayOrder;
+                category.CreatedAt = now;
+                category.CreatedBy = currentUser;
+                category.UpdatedAt = now;
+                category.UpdatedBy = currentUser;
+
+                if (category.IsDeactivated)
+                {
+                    category.DeactivatedAt = now;
+                    category.DeactivatedBy = currentUser;
+                }
+                else
+                {
+                    category.DeactivatedAt = null;
+                    category.DeactivatedBy = string.Empty;
+                }
+
+                await context.Categories.AddAsync(category);
+            }
+
+            await context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(Category category)
         {
             if (category == null)

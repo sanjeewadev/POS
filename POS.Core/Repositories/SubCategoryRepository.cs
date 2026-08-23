@@ -293,6 +293,69 @@ namespace POS.Core.Repositories
             await context.SaveChangesAsync();
         }
 
+        public async Task AddBulkAsync(IEnumerable<SubCategory> subCategories)
+        {
+            if (subCategories == null || !subCategories.Any()) return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            DateTime now = DateTime.Now;
+            string currentUser = GetCurrentUsername();
+
+            var categories = await context.Categories.ToListAsync();
+
+            foreach (var subCategory in subCategories)
+            {
+                if (subCategory.CategoryId <= 0)
+                    throw new InvalidOperationException("A valid parent category is required.");
+
+                string normalizedCode = NormalizeCode(subCategory.SubCategoryCode);
+                string normalizedName = NormalizeName(subCategory.SubCategoryName);
+                int displayOrder = NormalizeDisplayOrder(subCategory.DisplayOrder);
+
+                var parentCategory = categories.FirstOrDefault(c => c.Id == subCategory.CategoryId);
+
+                if (parentCategory == null)
+                    throw new InvalidOperationException("Selected parent category was not found.");
+                    
+                if (parentCategory.IsDeactivated)
+                    throw new InvalidOperationException("Cannot create a sub-category under a deactivated parent category.");
+
+                if (string.IsNullOrWhiteSpace(normalizedCode) || normalizedCode.EndsWith("-", StringComparison.Ordinal))
+                {
+                    string prefix = string.IsNullOrWhiteSpace(normalizedCode) ? $"{parentCategory.CategoryCode}-" : normalizedCode;
+                    normalizedCode = await GenerateSubCategoryCodeAsync(context, subCategory.CategoryId, prefix);
+                    subCategory.SubCategoryCode = normalizedCode;
+                }
+
+                ValidateSubCategoryCode(normalizedCode);
+                ValidateSubCategoryName(normalizedName);
+                ValidateDisplayOrder(displayOrder);
+
+                subCategory.SubCategoryCode = normalizedCode;
+                subCategory.SubCategoryName = normalizedName;
+                subCategory.DisplayOrder = displayOrder;
+                subCategory.CreatedAt = now;
+                subCategory.CreatedBy = currentUser;
+                subCategory.UpdatedAt = now;
+                subCategory.UpdatedBy = currentUser;
+
+                if (subCategory.IsDeactivated)
+                {
+                    subCategory.DeactivatedAt = now;
+                    subCategory.DeactivatedBy = currentUser;
+                }
+                else
+                {
+                    subCategory.DeactivatedAt = null;
+                    subCategory.DeactivatedBy = string.Empty;
+                }
+
+                await context.SubCategories.AddAsync(subCategory);
+            }
+
+            await context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(SubCategory subCategory)
         {
             if (subCategory == null)

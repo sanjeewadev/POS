@@ -318,6 +318,10 @@ namespace POS.BackOffice.UI.ViewModels
             NavigateTo<SalesExplorerViewModel>();
 
         [RelayCommand]
+        private void NavigateToDataImportCenter() =>
+            NavigateTo<DataImportCenterViewModel>();
+
+        [RelayCommand]
         private void NavigateToSecurityAudit() =>
             NavigateTo<SecurityAuditViewModel>();
 

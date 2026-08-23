@@ -219,6 +219,35 @@ namespace POS.Core.Repositories
             await context.SaveChangesAsync();
         }
 
+        public async Task AddBulkAsync(IEnumerable<Supplier> suppliers)
+        {
+            if (suppliers == null || !suppliers.Any()) return;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            string caseInsensitiveCollation = DatabaseProviderModelConventions.GetCaseInsensitive(context.Database);
+            DateTime now = DateTime.Now;
+
+            foreach (var supplier in suppliers)
+            {
+                if (string.IsNullOrWhiteSpace(supplier.SupplierCode))
+                {
+                    supplier.SupplierCode = await GenerateSupplierCodeAsync(context);
+                }
+
+                NormalizeSupplierForSave(supplier, isNew: true);
+                ValidateSupplierForSave(supplier);
+
+                supplier.CreatedAt = now;
+                supplier.UpdatedAt = now;
+                supplier.DeactivatedAt = supplier.IsDeactivated ? now : null;
+                supplier.CurrentBalance = 0m;
+
+                await context.Suppliers.AddAsync(supplier);
+            }
+
+            await context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(Supplier supplier)
         {
             if (supplier == null)
