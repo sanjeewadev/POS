@@ -625,6 +625,25 @@ namespace POS.Core.Repositories
                 if (!exists)
                     return code;
 
+                // If collision is detected on the first attempt, self-heal the sequence to the current max + 1
+                if (attempts == 0)
+                {
+                    var allCodes = await context.SubCategories
+                        .Where(s => s.CategoryId == categoryId && s.SubCategoryCode.StartsWith(sequence.Prefix))
+                        .Select(s => s.SubCategoryCode)
+                        .ToListAsync();
+
+                    int max = nextNumber;
+                    foreach(var c in allCodes)
+                    {
+                        if (c.Length > sequence.Prefix.Length && int.TryParse(c.Substring(sequence.Prefix.Length), out int num))
+                        {
+                            if (num > max) max = num;
+                        }
+                    }
+                    sequence.NextSequenceNumber = max + 1;
+                }
+
                 attempts++;
             }
 

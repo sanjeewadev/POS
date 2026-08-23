@@ -185,6 +185,13 @@ namespace POS.BackOffice.UI.ViewModels
         [ObservableProperty]
         private bool _bulkIsSerialized = false;
 
+        private int _currentPage = 1;
+        private int _pageSize = 200;
+        private bool _isFullyLoaded = false;
+
+        [ObservableProperty]
+        private bool _isLoadingMore;
+
         public ObservableCollection<ItemMasterSummaryDto> Items { get; } = new();
 
         [ObservableProperty]
@@ -1719,6 +1726,8 @@ namespace POS.BackOffice.UI.ViewModels
         private async Task LoadMasterGridInternalAsync()
         {
             Items.Clear();
+            _currentPage = 1;
+            _isFullyLoaded = false;
 
             string? itemType = SelectedItemTypeFilter switch
             {
@@ -1727,23 +1736,80 @@ namespace POS.BackOffice.UI.ViewModels
                 _ => null
             };
 
-            var data = await _itemMasterRepository.GetSummariesAsync(
+            // 1. Fetch exact total counts for UI metrics without fetching the data payload
+            var counts = await _itemMasterRepository.GetItemsSummaryCountsAsync(
                 searchTerm: MasterSearchText,
                 includeDeactivated: IncludeDeactivatedItems,
                 itemType: itemType,
                 categoryId: SelectedCategoryFilter?.Id > 0 ? SelectedCategoryFilter.Id : null,
                 subCategoryId: SelectedSubCategoryFilter?.Id > 0 ? SelectedSubCategoryFilter.Id : null);
 
-            foreach (var item in data)
-                Items.Add(item);
+            TotalLoadedItems = counts.TotalItems;
+            TotalLoadedVariants = counts.TotalVariants;
+            ActiveItems = counts.ActiveItems;
+            DeactivatedItems = counts.DeactivatedItems;
 
-            TotalLoadedItems = Items.Count;
-            TotalLoadedVariants = Items.Sum(i => i.VariantCount);
-            ActiveItems = Items.Count(i => !i.IsDeactivated);
-            DeactivatedItems = Items.Count(i => i.IsDeactivated);
+            // 2. Fetch the first batch (PageSize)
+            await LoadMoreItemsInternalAsync();
 
             StatusMessage =
-                $"Loaded {TotalLoadedItems} item record(s). Filter: {SelectedItemTypeFilter}.";
+                $"Total Database Items: {TotalLoadedItems}. Filter: {SelectedItemTypeFilter}.";
+        }
+
+        [RelayCommand]
+        private async Task LoadMoreItemsAsync()
+        {
+            if (_isFullyLoaded || IsLoadingMore || IsBusy) return;
+
+            IsLoadingMore = true;
+            try
+            {
+                await LoadMoreItemsInternalAsync();
+            }
+            catch (Exception ex)
+            {
+                _messageBoxService.ShowError($"Failed to load more items:\n\n{ex.Message}", "Database Error");
+            }
+            finally
+            {
+                IsLoadingMore = false;
+            }
+        }
+
+        private async Task LoadMoreItemsInternalAsync()
+        {
+            if (_isFullyLoaded) return;
+
+            string? itemType = SelectedItemTypeFilter switch
+            {
+                "Stock Items" => ItemTypeCodes.StockItem,
+                "Services" => ItemTypeCodes.Service,
+                _ => null
+            };
+
+            var data = await _itemMasterRepository.GetSummariesPagedAsync(
+                searchTerm: MasterSearchText,
+                includeDeactivated: IncludeDeactivatedItems,
+                itemType: itemType,
+                categoryId: SelectedCategoryFilter?.Id > 0 ? SelectedCategoryFilter.Id : null,
+                subCategoryId: SelectedSubCategoryFilter?.Id > 0 ? SelectedSubCategoryFilter.Id : null,
+                pageNumber: _currentPage,
+                pageSize: _pageSize);
+
+            if (data.Count < _pageSize)
+            {
+                _isFullyLoaded = true;
+            }
+
+            foreach (var item in data)
+            {
+                Items.Add(item);
+            }
+
+            if (data.Any())
+            {
+                _currentPage++;
+            }
         }
 
         [RelayCommand(CanExecute = nameof(CanRunCommand))]

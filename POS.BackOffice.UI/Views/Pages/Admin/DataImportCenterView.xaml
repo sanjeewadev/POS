@@ -72,11 +72,14 @@
 
         <!-- Header -->
         <Border Grid.Row="0" Background="{DynamicResource HeaderTextBrush}" Padding="15" Margin="0,0,0,10">
-            <TextBlock Text="DATA IMPORT CENTER" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="16" FontWeight="Bold"/>
+            <TextBlock Text="DATA TRANSFER CENTER" Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="16" FontWeight="Bold"/>
         </Border>
 
-        <!-- Step 1: Upload (Visible when CurrentStep == 1) -->
-        <Grid Grid.Row="1" Visibility="{Binding IsStep1Visible, Converter={StaticResource BoolToVis}, FallbackValue=Visible}">
+        <TabControl Grid.Row="1" SelectedIndex="0" Background="Transparent" BorderThickness="0">
+            <TabItem Header="IMPORT DATA" FontSize="14" FontWeight="SemiBold">
+                <Grid Margin="0,10,0,0">
+                    <!-- Step 1: Upload (Visible when CurrentStep == 1) -->
+                    <Grid Visibility="{Binding IsStep1Visible, Converter={StaticResource BoolToVis}, FallbackValue=Visible}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="Step 1: Download Template or Upload Data" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,20" Foreground="{DynamicResource PrimaryTextBrush}"/>
                 
@@ -219,11 +222,26 @@
         </Grid>
         
         <!-- Step 3: Success -->
-        <Grid Grid.Row="1" Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+        <Grid Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="Processing Import..." FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
             </StackPanel>
         </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="EXPORT DATA" FontSize="14" FontWeight="SemiBold">
+                <Grid Margin="0,20,0,0">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,50,0,0">
+                        <TextBlock Text="Export Master Data to CSV" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,30" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center"/>
+                        
+                        <Button Content="EXPORT CATEGORIES" Command="{Binding ExportCategoriesCommand}" Style="{StaticResource ActionBtn}" Height="45" Width="250" Margin="0,0,0,15" FontSize="14"/>
+                        <Button Content="EXPORT SUB-CATEGORIES" Command="{Binding ExportSubCategoriesCommand}" Style="{StaticResource ActionBtn}" Height="45" Width="250" Margin="0,0,0,15" FontSize="14"/>
+                        <Button Content="EXPORT ITEMS" Command="{Binding ExportItemsCommand}" Style="{StaticResource ActionBtn}" Height="45" Width="250" FontSize="14"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
 
     </Grid>
 </UserControl>

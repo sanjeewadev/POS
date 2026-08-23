@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behaviors="clr-namespace:POS.BackOffice.UI.Behaviors"
              mc:Ignorable="d"
              d:DesignHeight="900"
              d:DesignWidth="1400"
@@ -174,7 +176,7 @@
 
                         <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="25,0,0,0">
                             <TextBlock Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
-                                <Run Text="Loaded Items: "/>
+                                <Run Text="Total Database Items: "/>
                                 <Run Text="{Binding TotalLoadedItems}"/>
                             </TextBlock>
                             <TextBlock Foreground="{DynamicResource WhiteBackgroundBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
@@ -188,6 +190,10 @@
                             <TextBlock Foreground="#FF6B6B" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
                                 <Run Text="Deactivated: "/>
                                 <Run Text="{Binding DeactivatedItems}"/>
+                            </TextBlock>
+                            <TextBlock Foreground="#A0D1FF" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0">
+                                <Run Text="Loaded in Grid: "/>
+                                <Run Text="{Binding Items.Count, Mode=OneWay}"/>
                             </TextBlock>
                         </WrapPanel>
 
@@ -310,6 +316,10 @@
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           ScrollViewer.VerticalScrollBarVisibility="Auto">
 
+                    <b:Interaction.Behaviors>
+                        <behaviors:DataGridInfiniteScrollBehavior LoadMoreCommand="{Binding LoadMoreItemsCommand}" />
+                    </b:Interaction.Behaviors>
+
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell" BasedOn="{StaticResource BaseCell}"/>
                     </DataGrid.Resources>
@@ -317,7 +327,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Code"
                                             Binding="{Binding ItemCode, Mode=OneWay}"
-                                            Width="50"
+                                            Width="95"
                                             FontWeight="Bold"/>
 
                         <DataGridTextColumn Header="Name"
@@ -328,11 +338,11 @@
 
                         <DataGridTextColumn Header="Category"
                                             Binding="{Binding CategoryName, Mode=OneWay}"
-                                            Width="120"/>
+                                            Width="160"/>
 
                         <DataGridTextColumn Header="Type"
                                             Binding="{Binding ItemTypeText, Mode=OneWay}"
-                                            Width="70"/>
+                                            Width="80"/>
 
                         <DataGridTextColumn Header="Vars"
                                             Binding="{Binding VariantCount, Mode=OneWay}"
@@ -346,9 +356,9 @@
 
                         <DataGridTextColumn Header="Status"
                                             Binding="{Binding StatusText, Mode=OneWay}"
-                                            Width="55"/>
+                                            Width="60"/>
 
-                        <DataGridTemplateColumn Header="Actions" Width="140">
+                        <DataGridTemplateColumn Header="Actions" Width="160">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">

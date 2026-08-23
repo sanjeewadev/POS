@@ -620,6 +620,132 @@ namespace POS.BackOffice.UI.ViewModels
             }
             UpdateStats();
         }
+
+        [RelayCommand]
+        private async Task ExportCategoriesAsync()
+        {
+            var sfd = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                FileName = "Categories_Export.csv"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    var categories = await _categoryRepository.GetAllAsync();
+                    var dtos = categories.Where(c => !c.IsDeactivated).Select(c => new CategoryImportDto
+                    {
+                        CategoryCode = string.Empty, // Intentionally blank for collision safety
+                        CategoryName = c.CategoryName,
+                        Description = c.Description ?? string.Empty,
+                        DisplayOrder = c.DisplayOrder
+                    }).ToList();
+
+                    using var writer = new System.IO.StreamWriter(sfd.FileName);
+                    using var csv = new CsvHelper.CsvWriter(writer, System.Globalization.CultureInfo.InvariantCulture);
+                    csv.WriteRecords(dtos);
+
+                    _messageBoxService.ShowInformation($"Successfully exported {dtos.Count} categories.");
+                }
+                catch (Exception ex)
+                {
+                    _messageBoxService.ShowError($"Export failed: {ex.Message}");
+                }
+            }
+        }
+
+        [RelayCommand]
+        private async Task ExportSubCategoriesAsync()
+        {
+            var sfd = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                FileName = "SubCategories_Export.csv"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    var subCategories = await _subCategoryRepository.GetAllAsync();
+                    var dtos = subCategories.Where(s => !s.IsDeactivated).Select(s => new SubCategoryImportDto
+                    {
+                        ParentCategoryName = s.Category?.CategoryName ?? string.Empty,
+                        SubCategoryCode = string.Empty, // Intentionally blank for collision safety
+                        SubCategoryName = s.SubCategoryName,
+                        DisplayOrder = s.DisplayOrder
+                    }).ToList();
+
+                    using var writer = new System.IO.StreamWriter(sfd.FileName);
+                    using var csv = new CsvHelper.CsvWriter(writer, System.Globalization.CultureInfo.InvariantCulture);
+                    csv.WriteRecords(dtos);
+
+                    _messageBoxService.ShowInformation($"Successfully exported {dtos.Count} sub-categories.");
+                }
+                catch (Exception ex)
+                {
+                    _messageBoxService.ShowError($"Export failed: {ex.Message}");
+                }
+            }
+        }
+
+        [RelayCommand]
+        private async Task ExportItemsAsync()
+        {
+            var sfd = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv",
+                FileName = "Items_Export.csv"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    var items = await _itemMasterRepository.GetAllExportableItemsAsync();
+                    var dtos = new List<ItemImportDto>();
+
+                    foreach (var item in items)
+                    {
+                        foreach (var variant in item.Variants)
+                        {
+                            var itemName = item.ItemName;
+                            
+                            // Matrix Flattener Logic
+                            if (!string.IsNullOrWhiteSpace(variant.VariantDescription) && 
+                                !variant.VariantDescription.Equals("Standard", StringComparison.OrdinalIgnoreCase))
+                            {
+                                itemName = $"{itemName} - {variant.VariantDescription}";
+                            }
+
+                            dtos.Add(new ItemImportDto
+                            {
+                                ItemCode = string.Empty, // Intentionally left blank as discussed to avoid collisions
+                                ItemName = itemName,
+                                CategoryName = item.Category?.CategoryName ?? string.Empty,
+                                SubCategoryName = item.SubCategory?.SubCategoryName ?? string.Empty,
+                                Barcode = variant.Barcode,
+                                CostPrice = variant.CostPrice,
+                                RetailPrice = variant.RetailPrice,
+                                WholesalePrice = variant.WholesalePrice
+                            });
+                        }
+                    }
+
+                    using var writer = new System.IO.StreamWriter(sfd.FileName);
+                    using var csv = new CsvHelper.CsvWriter(writer, System.Globalization.CultureInfo.InvariantCulture);
+                    csv.WriteRecords(dtos);
+
+                    _messageBoxService.ShowInformation($"Successfully exported {dtos.Count} items.");
+                }
+                catch (Exception ex)
+                {
+                    _messageBoxService.ShowError($"Export failed: {ex.Message}");
+                }
+            }
+        }
     }
 }
 

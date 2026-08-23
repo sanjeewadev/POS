@@ -446,9 +446,168 @@ namespace POS.Core.Repositories
             return itemsList;
         }
 
+        public async Task<(int TotalItems, int TotalVariants, int ActiveItems, int DeactivatedItems)> GetItemsSummaryCountsAsync(
+            string searchTerm = "",
+            bool includeDeactivated = false,
+            string? itemType = null,
+            int? categoryId = null,
+            int? subCategoryId = null)
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var query = BuildItemSummaryQuery(context, searchTerm, includeDeactivated, itemType, categoryId, subCategoryId);
+
+            int totalItems = await query.CountAsync();
+            int activeItems = await query.CountAsync(p => !p.IsDeactivated);
+            int deactivatedItems = await query.CountAsync(p => p.IsDeactivated);
+            
+            // Total variants (we need to apply the deactivated filter for variants if needed, but typically total variants means all)
+            int totalVariants = await query.SelectMany(p => p.Variants).CountAsync();
+
+            return (totalItems, totalVariants, activeItems, deactivatedItems);
+        }
+
+        public async Task<IReadOnlyList<ItemMasterSummaryDto>> GetSummariesPagedAsync(
+            string searchTerm = "",
+            bool includeDeactivated = false,
+            string? itemType = null,
+            int? categoryId = null,
+            int? subCategoryId = null,
+            int pageNumber = 1,
+            int pageSize = 200)
+        {
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize <= 0) pageSize = 200;
+            if (pageSize > MaxTakeLimit) pageSize = MaxTakeLimit;
+
+            await using var context = await _contextFactory.CreateDbContextAsync();
+            var query = BuildItemSummaryQuery(context, searchTerm, includeDeactivated, itemType, categoryId, subCategoryId);
+
+            var itemsList = await query
+                .OrderBy(p => p.IsDeactivated)
+                .ThenBy(p => p.ItemName)
+                .ThenBy(p => p.ItemCode)
+                .Select(p => new ItemMasterSummaryDto
+                {
+                    ParentId = p.Id,
+                    ItemCode = p.ItemCode,
+                    ItemName = p.ItemName,
+                    CategoryName = p.Category.CategoryName,
+                    ItemType = p.ItemType,
+                    VariantCount = includeDeactivated
+                        ? p.Variants.Count()
+                        : p.Variants.Count(v => !v.IsDeactivated),
+                    TotalStockOnHand = 0m,
+                    IsDeactivated = p.IsDeactivated,
+                    StatusText = p.IsDeactivated ? "Deactivated" : "Active",
+                    HasBatchTracking = p.HasBatchTracking,
+                    HasExpiryTracking = p.HasExpiryTracking || p.HasBatchExpiry
+                })
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            if (!itemsList.Any())
+                return itemsList;
+
+            var parentIds = itemsList.Select(i => i.ParentId).ToList();
+
+            var rawStockData = await context.ItemBatches
+                .AsNoTracking()
+                .Where(b =>
+                    parentIds.Contains(b.ItemVariant.ItemParentId) &&
+                    !b.IsDeactivated &&
+                    !b.ItemVariant.IsDeactivated)
+                .Select(b => new { b.ItemVariant.ItemParentId, b.CurrentStock })
+                .ToListAsync();
+
+            foreach (var item in itemsList)
+            {
+                item.TotalStockOnHand = rawStockData
+                    .Where(s => s.ItemParentId == item.ParentId)
+                    .Sum(s => s.CurrentStock);
+            }
+
+            return itemsList;
+        }
+
+        private IQueryable<ItemParent> BuildItemSummaryQuery(
+            AppDbContext context,
+            string searchTerm,
+            bool includeDeactivated,
+            string? itemType,
+            int? categoryId,
+            int? subCategoryId)
+        {
+            IQueryable<ItemParent> query = context.ItemParents.AsNoTracking();
+
+            if (!includeDeactivated)
+            {
+                query = query.Where(p => !p.IsDeactivated);
+            }
+
+            if (categoryId.HasValue)
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            if (subCategoryId.HasValue)
+            {
+                query = query.Where(p => p.SubCategoryId == subCategoryId.Value);
+            }
+
+            string normalizedItemType = (itemType ?? string.Empty).Trim();
+
+            if (string.Equals(normalizedItemType, ItemTypeCodes.StockItem, StringComparison.Ordinal) ||
+                string.Equals(normalizedItemType, ItemTypeCodes.Service, StringComparison.Ordinal))
+            {
+                query = query.Where(p => p.ItemType == normalizedItemType);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                string term = searchTerm.Trim();
+
+                query = query.Where(p =>
+                    EF.Functions.Like(p.ItemCode, $"%{term}%") ||
+                    EF.Functions.Like(p.ItemName, $"%{term}%") ||
+                    EF.Functions.Like(p.Category.CategoryName, $"%{term}%") ||
+                    EF.Functions.Like(p.ItemType, $"%{term}%") ||
+                    p.Variants.Any(v =>
+                        EF.Functions.Like(v.SkuCode, $"%{term}%") ||
+                        EF.Functions.Like(v.Barcode, $"%{term}%") ||
+                        EF.Functions.Like(v.VariantDescription, $"%{term}%")));
+            }
+
+            return query;
+        }
+
         // =========================================================
         // FULL MATRIX FETCH
         // =========================================================
+
+        public async Task<IReadOnlyList<ItemParent>> GetAllExportableItemsAsync()
+        {
+            await using var context = await _contextFactory.CreateDbContextAsync();
+
+            return await context.ItemParents
+                .Include(p => p.Category)
+                .Include(p => p.SubCategory)
+                .Include(p => p.UnitOfMeasure)
+                .Include(p => p.TaxCategory)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.PropertyMappings)
+                        .ThenInclude(m => m.AttributeGroup)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.PropertyMappings)
+                        .ThenInclude(m => m.AttributeValue)
+                .Include(p => p.Variants)
+                    .ThenInclude(v => v.ItemSuppliers)
+                        .ThenInclude(s => s.Supplier)
+                .AsNoTracking()
+                .Where(p => !p.IsDeactivated)
+                .OrderBy(p => p.ItemName)
+                .ToListAsync();
+        }
 
         public async Task<ItemParent?> GetFullMatrixByIdAsync(int parentId)
         {
@@ -2975,6 +3134,25 @@ namespace POS.Core.Repositories
 
                 if (!exists)
                     return code;
+
+                // If collision is detected on the first attempt, self-heal the sequence to the current max + 1
+                if (attempts == 0)
+                {
+                    var allCodes = await context.ItemParents
+                        .Where(i => i.ItemCode.StartsWith(sequence.Prefix))
+                        .Select(i => i.ItemCode)
+                        .ToListAsync();
+                        
+                    int max = nextNumber;
+                    foreach(var c in allCodes)
+                    {
+                        if (c.Length > sequence.Prefix.Length && int.TryParse(c.Substring(sequence.Prefix.Length), out int num))
+                        {
+                            if (num > max) max = num;
+                        }
+                    }
+                    sequence.NextSequenceNumber = max + 1;
+                }
 
                 attempts++;
             }
