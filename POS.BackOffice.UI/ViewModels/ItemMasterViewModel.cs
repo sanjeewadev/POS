@@ -81,6 +81,9 @@ namespace POS.BackOffice.UI.ViewModels
             new("^[A-Z0-9_-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         [ObservableProperty]
+        private string _notificationMessage = string.Empty;
+
+        [ObservableProperty]
         private int _totalLoadedItems;
 
         [ObservableProperty]
@@ -901,6 +904,16 @@ namespace POS.BackOffice.UI.ViewModels
             if (!ValidateBeforeVariantGeneration(itemCode))
                 return;
 
+            if (GeneratedVariants.Any() || CurrentItem.Id > 0)
+            {
+                bool confirmed = _messageBoxService.ShowConfirmation(
+                    "You already have generated variants for this item. Generating them again will overwrite the existing structure. Are you sure you want to proceed?",
+                    "Confirm Generation");
+
+                if (!confirmed)
+                    return;
+            }
+
             try
             {
                 bool isStandardOnly = !DynamicProperties.Any();
@@ -993,6 +1006,8 @@ namespace POS.BackOffice.UI.ViewModels
                 StatusMessage = isStandardOnly
                     ? "1 standard variant generated."
                     : $"{generatedVariants.Count} variant(s) generated.";
+                
+                ShowTemporaryNotification("Variants successfully generated!");
             }
             catch (Exception ex)
             {
@@ -1263,6 +1278,13 @@ namespace POS.BackOffice.UI.ViewModels
         private void ApplyBulkDefaults()
         {
             if (!GeneratedVariants.Any()) return;
+
+            bool confirmed = _messageBoxService.ShowConfirmation(
+                "This will overwrite the pricing and settings for all generated variants. Are you sure you want to proceed?",
+                "Confirm Bulk Apply");
+
+            if (!confirmed)
+                return;
 
             var variants = GeneratedVariants.ToList();
             foreach (var variant in variants)
@@ -1634,7 +1656,7 @@ namespace POS.BackOffice.UI.ViewModels
                 await _itemMasterRepository.SaveFullMatrixAsync(CurrentItem, GeneratedVariants.ToList(), mappingsList);
                 await LoadMasterGridInternalAsync();
                 Clear();
-                _messageBoxService.ShowInformation("Item saved successfully.", "Success");
+                ShowTemporaryNotification("Item saved successfully!");
             }
             catch (InvalidOperationException ex)
             {
@@ -2524,5 +2546,13 @@ namespace POS.BackOffice.UI.ViewModels
 
         private static string NormalizeCode(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
         private static string NormalizeText(string? value) => (value ?? string.Empty).Trim();
+
+        private async void ShowTemporaryNotification(string message)
+        {
+            NotificationMessage = message;
+            await Task.Delay(4000);
+            if (NotificationMessage == message)
+                NotificationMessage = string.Empty;
+        }
     }
 }

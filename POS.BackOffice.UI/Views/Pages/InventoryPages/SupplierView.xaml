@@ -79,7 +79,7 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="Supplier Code *" Style="{DynamicResource BoInlineLabel}" Foreground="DarkRed"/>
+                                <TextBlock Grid.Row="0" Text="Supplier Code" Style="{DynamicResource BoInlineLabel}"/>
                                 <TextBox Grid.Row="0" Grid.Column="1"
                                          Text="{Binding SupplierCode, UpdateSourceTrigger=PropertyChanged}"
                                          IsReadOnly="{Binding IsSupplierCodeReadOnly}"

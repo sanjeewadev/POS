@@ -451,6 +451,10 @@
                                 <Run Text="{Binding ItemStatusText, Mode=OneWay}" FontWeight="Bold"/>
                             </TextBlock>
                         </Border>
+                        <TextBlock Text="{Binding NotificationMessage}"
+                                   Foreground="SeaGreen"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button Grid.Column="4"
                             Content="CLEAR"
@@ -567,9 +571,8 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0"
-                                   Text="Item Code *"
-                                   Style="{StaticResource InlineLabel}"
-                                   Foreground="{DynamicResource WarningTextBrush}"/>
+                                   Text="Item Code"
+                                   Style="{StaticResource InlineLabel}"/>
 
                         <Border Grid.Column="1"
                                 BorderBrush="{DynamicResource InputBoxBorderBrush}"
@@ -1006,7 +1009,7 @@
                                 </Border>
 
                                 <Button Grid.Row="3"
-                                        Content="GENERATE VARIANTS"
+                                        Content="Create Item (With/Without Variants)"
                                         Command="{Binding GenerateVariantsCommand}"
                                         IsEnabled="{Binding IsSetupEditable}"
                                         Style="{StaticResource ActionBtn}"
@@ -1275,7 +1278,7 @@
 
                             <DataGrid.Columns>
 
-                                <DataGridTemplateColumn Header="Select" Width="65">
+                                <DataGridTemplateColumn Header="Select" Width="50">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <CheckBox IsChecked="{Binding IsSelectedForSupplierAssignment, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -1296,7 +1299,7 @@
 
                                 <DataGridTextColumn Header="Receipt Name"
                                     Binding="{Binding ReceiptDisplayName, Mode=OneWay}"
-                                    Width="200"
+                                    Width="*"
                                     IsReadOnly="True"
                                     CellStyle="{StaticResource FrozenCell}"/>
 
@@ -1314,31 +1317,31 @@
                                     Binding="{Binding Barcode, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                     Width="135"/>
 
-                                <DataGridTextColumn Header="Cost / Std Cost"
+                                <DataGridTextColumn Header="Cost"
                                     Binding="{Binding CostPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                    Width="80"/>
+                                    Width="85"/>
 
-                                <DataGridTextColumn Header="Retail Inc VAT"
+                                <DataGridTextColumn Header="Retail In.VAT"
                                     Binding="{Binding RetailPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                    Width="90"
+                                    Width="95"
                                     FontWeight="Bold"
                                     Foreground="{DynamicResource SuccessBorderBrush}"
                                     CellStyle="{StaticResource RetailCell}"/>
 
-                                <DataGridTextColumn Header="W/S Inc VAT"
+                                <DataGridTextColumn Header="W/S In.VAT"
                                     Binding="{Binding WholesalePrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                    Width="90"/>
+                                    Width="95"/>
 
-                                <DataGridTextColumn Header="Min Inc VAT"
+                                <DataGridTextColumn Header="Min In.VAT"
                                     Binding="{Binding MinimumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                    Width="70"/>
+                                    Width="80"/>
 
-                                <DataGridTextColumn Header="Max Inc VAT"
+                                <DataGridTextColumn Header="Max In.VAT"
                                     Binding="{Binding MaximumPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                    Width="70"/>
+                                    Width="80"/>
 
                                 <DataGridTemplateColumn Header="Reorder"
-                                                        Width="75">
+                                                        Width="55">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock Text="{Binding ReorderLevel, Mode=OneWay}"
@@ -1359,7 +1362,7 @@
 
                                 <DataGridCheckBoxColumn Header="Inactive"
                                         Binding="{Binding IsDeactivated, Mode=TwoWay}"
-                                        Width="80"/>
+                                        Width="55"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>

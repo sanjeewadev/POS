@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace POS.Core.Models
@@ -7,12 +7,12 @@ namespace POS.Core.Models
     {
         // Primary Key (e.g., "GRN", "INV", "PO")
         [Key]
-        [MaxLength(10)]
+        [MaxLength(50)]
         public string DocumentType { get; set; } = string.Empty;
 
         // E.g., "GRN-", "INV-"
         [Required]
-        [MaxLength(10)]
+        [MaxLength(50)]
         public string Prefix { get; set; } = string.Empty;
 
         // The actual counter
