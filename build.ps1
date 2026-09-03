@@ -6,7 +6,7 @@
 # You only need to edit this section.
 
 # 1. Set your application version.
-$appVersion = "1.2.10"
+$appVersion = "1.2.11"
 
 # 2. (Optional) Set a branch name for pre-release builds. Leave empty for a final release.
 #    This will create a setup file like: Advanced-POS-Setup-1.0.8-my-feature.exe

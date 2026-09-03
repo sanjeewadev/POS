@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 
 namespace POS.Core.Configuration;
 
@@ -10,7 +10,7 @@ public static class ProductReleaseInfo
         ResolveProductVersion();
 
     public const string RequiredSqlServerMigration =
-        "20260726121000_CompleteBatchPricingBackOfficeWorkflow";
+        "20260903063514_ExpandDocumentSequenceLengthProperly";
 
     private static string ResolveProductVersion()
     {

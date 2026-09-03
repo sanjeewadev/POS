@@ -1780,12 +1780,12 @@ namespace POS.Core.Data
             {
                 entity.Property(d => d.DocumentType)
                     .IsRequired()
-                    .HasMaxLength(10)
+                    .HasMaxLength(50)
                     .UseCollation(CaseInsensitiveCollation);
 
                 entity.Property(d => d.Prefix)
                     .IsRequired()
-                    .HasMaxLength(10);
+                    .HasMaxLength(50);
 
                 entity.HasKey(d => d.DocumentType);
 
