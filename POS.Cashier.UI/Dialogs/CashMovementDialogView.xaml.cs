@@ -17,7 +17,8 @@ namespace POS.Cashier.UI.Dialogs
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            ReasonListBox.Focus();
+            AmountInputBox.Focus();
+            AmountInputBox.SelectAll();
         }
 
         private void OnActionCompleted(bool success)

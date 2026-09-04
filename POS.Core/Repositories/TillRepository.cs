@@ -505,6 +505,122 @@ namespace POS.Core.Repositories
             return true;
         }
 
+        public async Task<bool> ForceCloseAbandonedShiftAsync(int shiftId, string managerName)
+        {
+            if (string.IsNullOrWhiteSpace(managerName))
+                throw new InvalidOperationException("Manager authorization is required to force-close a shift.");
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            try
+            {
+                ShiftSession? shift = await context.ShiftSessions
+                    .FirstOrDefaultAsync(row => row.Id == shiftId);
+
+                if (shift == null)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                if (!string.Equals(shift.Status, ShiftStatusCodes.Open, StringComparison.OrdinalIgnoreCase))
+                {
+                    await transaction.RollbackAsync();
+                    return false; // Already closed or closing
+                }
+
+                // 1. Force cancel any active/held carts for this abandoned shift
+                var abandonedCarts = await context.CashierCartSessions
+                    .Where(cart => cart.ShiftSessionId == shift.Id &&
+                                  (cart.Status == CashierCartStatusCodes.Active || cart.Status == CashierCartStatusCodes.Held))
+                    .ToListAsync();
+
+                DateTime now = DateTime.UtcNow;
+                string authorizedBy = Truncate(Normalize(managerName), 100);
+
+                foreach (var cart in abandonedCarts)
+                {
+                    cart.Status = CashierCartStatusCodes.Cancelled;
+                    cart.CancellationReasonCode = "Other";
+                    cart.CancellationReasonText = Truncate($"System forced close by {authorizedBy}", 250);
+                    cart.CancelledAtUtc = now;
+                    cart.CancelledBy = authorizedBy;
+                    cart.UpdatedAtUtc = now;
+                    cart.UpdatedBy = authorizedBy;
+                    cart.Revision++;
+                }
+
+                await context.SaveChangesAsync();
+
+                // 2. Build summary and force close
+                ShiftCashSummaryDto preview = await BuildLiveSummaryAsync(context, shift);
+                
+                // For a forced close, we assume physical cash counted is 0. 
+                // Any missing cash is fully variance.
+                decimal countedCash = 0m;
+                decimal variance = RoundMoney(countedCash - preview.ExpectedCash);
+                
+                string zReportNo = await AllocateDocumentNumberAsync(context, ShiftDocumentSequenceCodes.ZReport, "Z-", 6);
+                DateTime closedAt = DateTime.Now;
+
+                var snapshot = new ShiftCloseSnapshot
+                {
+                    ShiftSessionId = shift.Id,
+                    CloseToken = Guid.NewGuid(),
+                    ZReportNo = zReportNo,
+                    TerminalNo = shift.TerminalNo,
+                    CashierName = shift.CashierName,
+                    OpenedAt = shift.StartTime,
+                    ClosedAt = closedAt,
+                    CompletedSaleCount = preview.CompletedSaleCount,
+                    CustomerReturnCount = preview.CustomerReturnCount,
+                    GrossSales = preview.GrossSales,
+                    TotalDiscount = preview.TotalDiscount,
+                    NetSales = preview.NetSales,
+                    VatTotal = preview.VatTotal,
+                    CashTenderTotal = preview.CashTenderTotal,
+                    CardTenderTotal = preview.CardTenderTotal,
+                    ChequeTenderTotal = preview.ChequeTenderTotal,
+                    GiftVoucherTenderTotal = preview.GiftVoucherTenderTotal,
+                    CustomerCreditTenderTotal = preview.CustomerCreditTenderTotal,
+                    OtherTenderTotal = preview.OtherTenderTotal,
+                    OpeningCash = preview.OpeningCash,
+                    PaidInTotal = preview.PaidInTotal,
+                    FloatInTotal = preview.FloatInTotal,
+                    PaidOutTotal = preview.PaidOutTotal,
+                    FloatOutTotal = preview.FloatOutTotal,
+                    CashRefundTotal = preview.CashRefundTotal,
+                    ExpectedCash = preview.ExpectedCash,
+                    CountedCash = countedCash,
+                    Variance = variance,
+                    ClosedBy = authorizedBy,
+                    AuthorizedBy = authorizedBy,
+                    VarianceNote = Truncate($"System forced close by {authorizedBy}. Drawer not physically counted.", 500),
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+
+                context.ShiftCloseSnapshots.Add(snapshot);
+
+                shift.TotalCashSales = preview.CashTenderTotal;
+                shift.ExpectedCash = preview.ExpectedCash;
+                shift.ActualCash = countedCash;
+                shift.Variance = variance;
+                shift.EndTime = closedAt;
+                shift.Status = ShiftStatusCodes.Closed;
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task<CashDrawerEvent> RecordCashDrawerEventAsync(CashDrawerEventRequest request)
         {
             if (request == null)

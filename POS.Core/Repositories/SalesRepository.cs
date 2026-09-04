@@ -766,13 +766,12 @@ namespace POS.Core.Repositories
                         $"Saved line total does not reconcile with VAT calculation for '{line.ItemDescription}'.");
                 }
 
-                line.DiscountAmount = Math.Round(
-                    lineResult.LineDiscountAmount +
-                    lineResult.InvoiceDiscountAllocation,
-                    2);
+                // Preserve original line discount and net line total (Gross - Line Discount)
+                // for accurate itemized reporting, rather than overwriting them with 
+                // the tax service's invoice discount allocation.
+                line.DiscountAmount = Math.Round(lineResult.LineDiscountAmount, 2);
 
-                line.LineTotal =
-                    lineResult.TaxInclusiveAmount;
+                line.LineTotal = Math.Round(line.GrossAmount - line.DiscountAmount, 2);
 
                 line.ProfitAmount = Math.Round(
                     line.LineTotal -

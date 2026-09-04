@@ -10,8 +10,10 @@ namespace POS.Cashier.UI.ViewModels
     public partial class LoginViewModel : ObservableObject
     {
         private readonly AuthService _authService;
+        private readonly POS.Core.Repositories.TillRepository _tillRepository;
 
         public event Func<Task<bool>>? LoginCompletedAsync;
+        public event Func<Task>? ManagerOverrideRequested;
 
         [ObservableProperty]
         private string _username = string.Empty;
@@ -33,12 +35,54 @@ namespace POS.Cashier.UI.ViewModels
 
         public bool HasOpenShift { get; private set; }
 
-        private string _openShiftCashierName =
-            string.Empty;
+        private string _openShiftCashierName = string.Empty;
+        private int _openShiftId = 0;
 
-        public LoginViewModel(AuthService authService)
+        public LoginViewModel(AuthService authService, POS.Core.Repositories.TillRepository tillRepository)
         {
             _authService = authService;
+            _tillRepository = tillRepository;
+        }
+
+        [RelayCommand]
+        public async Task RequestManagerOverrideAsync()
+        {
+            if (ManagerOverrideRequested != null)
+                await ManagerOverrideRequested.Invoke();
+        }
+
+        public async Task ProcessManagerOverrideAsync(string managerName)
+        {
+            if (_openShiftId <= 0) return;
+
+            try
+            {
+                IsBusy = true;
+                bool success = await _tillRepository.ForceCloseAbandonedShiftAsync(_openShiftId, managerName);
+
+                if (success)
+                {
+                    // Reset UI to clean login state
+                    HasOpenShift = false;
+                    IsTerminalLocked = false;
+                    _openShiftId = 0;
+                    _openShiftCashierName = string.Empty;
+                    LockoutMessage = "LOGIN TO OPEN A SHIFT";
+                    ErrorMessage = "Shift successfully force-closed. You may now log in.";
+                }
+                else
+                {
+                    ErrorMessage = "Failed to force close the active shift.";
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Manager override failed: {ex.Message}";
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         public void InitializeShiftState(
@@ -52,6 +96,7 @@ namespace POS.Cashier.UI.ViewModels
             {
                 HasOpenShift = true;
                 IsTerminalLocked = true;
+                _openShiftId = activeShift.Id;
 
                 _openShiftCashierName =
                     activeShift.CashierName?.Trim()

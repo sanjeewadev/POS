@@ -2227,15 +2227,8 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            if (TryReadTerminalDecimal(
-                    out decimal amount,
-                    "Amount required before Paid In.",
-                    "Enter a valid Paid In amount.") &&
-                amount > 0m)
-            {
-                ViewModel.ClearTerminalInput();
-                OpenCashMovementDialog("Paid In", amount, ViewModel);
-            }
+            ViewModel.ClearTerminalInput();
+            OpenCashMovementDialog("Paid In", 0m, ViewModel);
 
             ResetTerminalActionMode();
             ReturnFocusToTerminalInput();
@@ -2253,15 +2246,8 @@ namespace POS.Cashier.UI.Views
                 return;
             }
 
-            if (TryReadTerminalDecimal(
-                    out decimal amount,
-                    "Amount required before Paid Out.",
-                    "Enter a valid Paid Out amount.") &&
-                amount > 0m)
-            {
-                ViewModel.ClearTerminalInput();
-                OpenCashMovementDialog("Paid Out", amount, ViewModel);
-            }
+            ViewModel.ClearTerminalInput();
+            OpenCashMovementDialog("Paid Out", 0m, ViewModel);
 
             ResetTerminalActionMode();
             ReturnFocusToTerminalInput();

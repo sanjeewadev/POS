@@ -242,7 +242,7 @@
                             Command="{Binding AddItemCommand}"
                             Style="{StaticResource ClassicButton}"/>
                     <Button Grid.Column="3"
-                            Content="ADD STOCK ITEM VARIANTS..."
+                            Content="ADD ITEMS/VARIANTS"
                             Command="{Binding OpenPurchasingVariantEntryDialogCommand}"
                             Style="{StaticResource PrimaryButton}"
                             Margin="8,0,3,0"/>

@@ -944,7 +944,7 @@
                             </DataGridTextColumn>
 
                             <DataGridTextColumn Header="AMOUNT"
-                                                Binding="{Binding FinalLineAmount, StringFormat={}{0:N2}}"
+                                                Binding="{Binding LineAmount, StringFormat={}{0:N2}}"
                                                 Width="125"
                                                 IsReadOnly="True"
                                                 CellStyle="{StaticResource NativeCartCellStyle}">

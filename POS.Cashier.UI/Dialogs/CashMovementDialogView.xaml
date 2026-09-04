@@ -89,14 +89,21 @@
             <StackPanel>
                 <Border Style="{StaticResource CashierTransactionContentPanel}" Margin="0,0,0,4">
                     <StackPanel>
-                        <TextBlock Text="AMOUNT" Style="{StaticResource CashierTransactionFieldLabel}"/>
+                        <TextBlock Text="AMOUNT (Rs.)" Style="{StaticResource CashierTransactionFieldLabel}"/>
                         <Border Style="{StaticResource CashierTransactionAmountPanel}"
                                 Background="{StaticResource CashierTransactionDueBrush}"
                                 BorderBrush="{StaticResource CashierTransactionDueBorderBrush}"
                                 Margin="0,4,0,0">
-                            <TextBlock Text="{Binding Amount, StringFormat='Rs. {0:N2}'}"
-                                       Style="{StaticResource CashierTransactionAmountText}"
-                                       Foreground="White"/>
+                            <TextBox x:Name="AmountInputBox"
+                                     Text="{Binding AmountText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource CashierTransactionAmountText}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="White"
+                                     CaretBrush="White"
+                                     HorizontalContentAlignment="Center"
+                                     VerticalContentAlignment="Center"
+                                     Padding="0,5,0,5"/>
                         </Border>
                     </StackPanel>
                 </Border>

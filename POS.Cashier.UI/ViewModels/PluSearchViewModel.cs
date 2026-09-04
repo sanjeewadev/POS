@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Linq;
@@ -57,6 +57,9 @@ namespace POS.Cashier.UI.ViewModels
 
         // CONTINUOUS SCANNING: Used to send items to the cart in the background
         public event Action<ProductSeekResult>? ItemSelected;
+
+        // Fired when the search resets after selection, so the UI can refocus the search box
+        public event Action? SearchResetRequested;
 
         public PluSearchViewModel(
             ItemMasterRepository itemRepository,
@@ -295,6 +298,8 @@ namespace POS.Cashier.UI.ViewModels
 
             StatusText = "Item added! Ready for next search.";
             StatusColorHex = "#10B981";
+
+            SearchResetRequested?.Invoke();
         }
 
         [RelayCommand]

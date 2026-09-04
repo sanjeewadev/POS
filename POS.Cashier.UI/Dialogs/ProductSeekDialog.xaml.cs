@@ -1,4 +1,4 @@
-﻿using POS.Cashier.UI.Models;
+using POS.Cashier.UI.Models;
 using POS.Cashier.UI.ViewModels;
 using System;
 using System.Windows;
@@ -19,6 +19,15 @@ namespace POS.Cashier.UI.Dialogs
             viewModel.ActionCompleted += (result) =>
             {
                 if (result == null) Close();
+            };
+
+            // Refocus the search bar automatically after continuous scanning resets
+            viewModel.SearchResetRequested += () =>
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    SearchTxt.Focus();
+                }), System.Windows.Threading.DispatcherPriority.Background);
             };
         }
 

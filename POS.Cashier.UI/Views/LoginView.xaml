@@ -9,7 +9,9 @@
         Height="480"
         Width="520"
         FocusManager.FocusedElement="{Binding ElementName=UsernameTextBox}">
-
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
     <Grid Margin="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="54"/>
@@ -107,6 +109,7 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="170"/>
                     <ColumnDefinition Width="160"/>
                 </Grid.ColumnDefinitions>
 
@@ -116,6 +119,14 @@
                            TextWrapping="Wrap"/>
 
                 <Button Grid.Column="1"
+                        Content="MANAGER OVERRIDE"
+                        Command="{Binding RequestManagerOverrideCommand}"
+                        Visibility="{Binding HasOpenShift, Converter={StaticResource BoolToVis}}"
+                        Style="{StaticResource CashierSecondaryButton}"
+                        Margin="0,0,10,0"
+                        Height="38"/>
+
+                <Button Grid.Column="2"
                         Content="LOGIN"
                         Command="{Binding LoginCommand}"
                         CommandParameter="{Binding ElementName=txtPassword}"

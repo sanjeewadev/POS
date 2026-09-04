@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 namespace POS.Cashier.AuditTests;
 
@@ -236,7 +236,7 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "The removed inline PO item-parent selector is still visible.");
         AuditAssert.Equal(
             1,
-            CountOccurrences(xaml, "Content=\"ADD STOCK ITEM VARIANTS...\""),
+            CountOccurrences(xaml, "Content=\"ADD ITEMS/VARIANTS\""),
             "PO reusable variant-entry action count");
         AuditAssert.Contains(
             xaml,
@@ -604,7 +604,7 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             "GRN view code-behind must resolve the WPF UserControl type explicitly.");
         AuditAssert.Contains(
             grnXaml,
-            "Content=\"ADD STOCK ITEM VARIANTS...\"",
+            "Content=\"ADD ITEMS/VARIANTS\"",
             "GRN reusable variant-entry action");
         AuditAssert.Contains(
             grnXaml,
@@ -751,8 +751,8 @@ internal static class BackOfficeOperationalSourcePolicyAuditTests
             1,
             CountOccurrences(grnXaml, "Command=\"{Binding OpenBulkSellingPriceDialogCommand}\""),
             "GRN selling-price dialog entry-point count");
-        AuditAssert.Contains(grnXaml, "Content=\"SET PRICE ACTIONS...\"", "GRN price-action label");
-        AuditAssert.Contains(grnXaml, "Content=\"RESET PRICE ACTIONS\"", "GRN price-action reset");
+        AuditAssert.Contains(grnXaml, "Content=\"EDIT PRICE\"", "GRN price-action label");
+        AuditAssert.Contains(grnXaml, "Content=\"RESET PRICE\"", "GRN price-action reset");
         AuditAssert.False(
             grnXaml.Contains("BULK SELLING PRICES", StringComparison.OrdinalIgnoreCase),
             "The duplicate matrix selling-price action remains visible.");

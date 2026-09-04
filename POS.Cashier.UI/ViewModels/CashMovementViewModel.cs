@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using POS.Cashier.UI.Messages;
@@ -23,7 +23,7 @@ namespace POS.Cashier.UI.ViewModels
         private string _cashierName = string.Empty;
 
         [ObservableProperty] private string _movementType = string.Empty;
-        [ObservableProperty] private decimal _amount;
+        [ObservableProperty] private string _amountText = string.Empty;
         [ObservableProperty] private string _headerTitle = string.Empty;
         [ObservableProperty] private string _themeColorHex = "#003366";
         [ObservableProperty] private string _buttonText = string.Empty;
@@ -46,7 +46,7 @@ namespace POS.Cashier.UI.ViewModels
             _shiftId = shiftId;
             _cashierName = (cashierName ?? string.Empty).Trim();
             MovementType = movementType;
-            Amount = decimal.Round(amount, 2, MidpointRounding.AwayFromZero);
+            AmountText = amount > 0 ? decimal.Round(amount, 2, MidpointRounding.AwayFromZero).ToString("0.00") : string.Empty;
             ReasonCategories.Clear();
 
             if (string.Equals(movementType, CashMovementTypeCodes.PaidIn, StringComparison.OrdinalIgnoreCase))
@@ -73,9 +73,9 @@ namespace POS.Cashier.UI.ViewModels
         [RelayCommand]
         private async Task ConfirmAsync()
         {
-            if (Amount <= 0m)
+            if (!decimal.TryParse(AmountText, out decimal parsedAmount) || parsedAmount <= 0m)
             {
-                MessageBox.Show("Amount must be greater than zero.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter a valid amount greater than zero.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (string.IsNullOrWhiteSpace(SelectedReason))
@@ -102,7 +102,7 @@ namespace POS.Cashier.UI.ViewModels
                     {
                         ShiftSessionId = _shiftId,
                         MovementType = MovementType,
-                        Amount = Amount,
+                        Amount = parsedAmount,
                         ReasonCategory = SelectedReason,
                         Remarks = Remarks,
                         CashierName = _cashierName,
@@ -130,7 +130,7 @@ namespace POS.Cashier.UI.ViewModels
                         MessageBoxImage.Warning);
                 }
 
-                WeakReferenceMessenger.Default.Send(new TopBarNotificationMessage(($"{MovementType}: Rs. {Amount:N2}", ThemeColorHex)));
+                WeakReferenceMessenger.Default.Send(new TopBarNotificationMessage(($"{MovementType}: Rs. {parsedAmount:N2}", ThemeColorHex)));
                 ActionCompleted?.Invoke(true);
             }
             catch (InvalidOperationException ex)

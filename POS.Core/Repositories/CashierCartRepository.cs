@@ -162,7 +162,7 @@ namespace POS.Core.Repositories
                         LineTotal = Math.Round(
                             line.IsGiftVoucherSale || line.IsFreeItem
                                 ? Math.Max(0m, line.UnitPrice * line.Quantity)
-                                : Math.Max(0m, line.TaxInclusiveAmount > 0m ? line.TaxInclusiveAmount : line.UnitPrice * line.Quantity),
+                                : Math.Max(0m, (line.UnitPrice * line.Quantity) - (line.ManualDiscountAmount + (line.UnitPrice * line.Quantity * line.DiscountPercentage / 100m))),
                             2),
                         SnapshotJson = JsonSerializer.Serialize(line, JsonOptions)
                     });
@@ -627,6 +627,57 @@ namespace POS.Core.Repositories
         {
             return TimeZoneInfo.ConvertTimeToUtc(
                 DateTime.SpecifyKind(localDate, DateTimeKind.Local));
+        }
+
+        public async Task<int> CancelAllCartsForShiftAsync(int shiftSessionId, string authorizedBy)
+        {
+            if (shiftSessionId <= 0)
+                throw new InvalidOperationException("Shift session ID is required.");
+            if (string.IsNullOrWhiteSpace(authorizedBy))
+                throw new InvalidOperationException("Authorization identity is required.");
+
+            await using AppDbContext context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                var cartsToCancel = await context.CashierCartSessions
+                    .Where(s => s.ShiftSessionId == shiftSessionId &&
+                                (s.Status == CashierCartStatusCodes.Active || s.Status == CashierCartStatusCodes.Held))
+                    .ToListAsync();
+
+                if (cartsToCancel.Count == 0)
+                {
+                    await transaction.CommitAsync();
+                    return 0;
+                }
+
+                DateTime now = DateTime.UtcNow;
+                string reasonCode = CashierCartCancellationReasons.Other;
+                string reasonText = Truncate($"Forced close by manager {authorizedBy}", 250);
+                string authNormal = Normalize(authorizedBy);
+
+                foreach (var session in cartsToCancel)
+                {
+                    session.Status = CashierCartStatusCodes.Cancelled;
+                    session.CancellationReasonCode = Truncate(reasonCode, 50);
+                    session.CancellationReasonText = reasonText;
+                    session.CancelledAtUtc = now;
+                    session.CancelledBy = authNormal;
+                    session.UpdatedAtUtc = now;
+                    session.UpdatedBy = authNormal;
+                    session.Revision++;
+                }
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return cartsToCancel.Count;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         private static DateTime ToLocal(DateTime utcDate)
