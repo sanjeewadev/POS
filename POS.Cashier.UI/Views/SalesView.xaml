@@ -776,7 +776,20 @@
                                Foreground="#FDBA74"
                                FontSize="13"
                                FontWeight="SemiBold"
+                               Margin="0,0,12,0"
                                VerticalAlignment="Center"/>
+
+                    <Button Content="—"
+                            Click="MinimizeBtn_Click"
+                            Width="28"
+                            Height="28"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#CBD5E1"
+                            FontSize="14"
+                            FontWeight="Bold"
+                            Cursor="Hand"
+                            ToolTip="Minimize Terminal"/>
                 </StackPanel>
             </Grid>
         </Border>

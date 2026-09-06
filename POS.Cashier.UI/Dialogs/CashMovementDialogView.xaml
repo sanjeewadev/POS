@@ -96,7 +96,9 @@
                                 Margin="0,4,0,0">
                             <TextBox x:Name="AmountInputBox"
                                      Text="{Binding AmountText, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource CashierTransactionAmountText}"
+                                     FontSize="24"
+                                     FontWeight="Bold"
+                                     TextAlignment="Right"
                                      Background="Transparent"
                                      BorderThickness="0"
                                      Foreground="White"

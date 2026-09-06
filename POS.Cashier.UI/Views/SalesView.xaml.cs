@@ -2426,6 +2426,11 @@ namespace POS.Cashier.UI.Views
                 "Locked manually from the Sales screen.");
         }
 
+        private void MinimizeBtn_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
         private void ShiftMenuBtn_Click(object sender, RoutedEventArgs e)
         {
             if (_isDialogOpen)

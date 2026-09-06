@@ -122,7 +122,7 @@
                         Content="MANAGER OVERRIDE"
                         Command="{Binding RequestManagerOverrideCommand}"
                         Visibility="{Binding HasOpenShift, Converter={StaticResource BoolToVis}}"
-                        Style="{StaticResource CashierSecondaryButton}"
+                        Style="{StaticResource CashierButton}"
                         Margin="0,0,10,0"
                         Height="38"/>
 
