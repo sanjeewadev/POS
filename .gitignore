@@ -10,7 +10,10 @@
 *.userosscache
 *.sln.docstates
 *.csproj.user
-dist
+Output/
+dist/
+sqlite_tools/
+*.zip
 
 # SQL Server installer
 prerequisites/SQLEXPR_x64_ENU.exe
